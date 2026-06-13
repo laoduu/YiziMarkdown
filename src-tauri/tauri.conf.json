@@ -1,0 +1,50 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicedoc/tauri/dev/.schema/config.schema.json",
+  "productName": "YiziMarkdown",
+  "version": "0.1.0",
+  "identifier": "com.yizimarkdown.editor",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "YiziMarkdown",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "themes/*": "themes/",
+      "templates/*": "templates/",
+      "user.css": "user.css",
+      "keybindings.json": "keybindings.json",
+      "readme.md": "readme.md",
+      "welcome.md": "welcome.md",
+      "changelog.md": "changelog.md"
+    }
+  },
+  "plugins": {
+    "shell": {
+      "open": true
+    }
+  }
+}

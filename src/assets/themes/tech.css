@@ -1,0 +1,84 @@
+/* 科技感 (Tech) */
+:root.theme-tech {
+  --editor-bg: #0d1117;
+  --editor-text: #c9d1d9;
+  --editor-accent: #58a6ff;
+  --editor-border: #30363d;
+  --editor-surface: #161b22;
+  --editor-hover: #1c2128;
+  --editor-selection: #58a6ff;
+  --editor-selection-bg: rgba(88, 166, 255, 0.35);
+  --editor-cursor: #58a6ff;
+  --sidebar-bg: #0d1117;
+  --sidebar-text: #8b949e;
+  --toolbar-bg: #161b22;
+  --statusbar-bg: #1f6feb;
+  --statusbar-text: #ffffff;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+  --font-size-base: 15px;
+  --line-height: 1.7;
+  --paragraph-spacing: 1.2em;
+  --border-radius: 6px;
+}
+
+/* 科技风 - 标题样式 */
+.theme-tech h1 { 
+  font-size: 2em; 
+  font-weight: 700; 
+  margin: 1.2em 0 0.4em; 
+  color: #f0f6fc;
+  border-bottom: 1px solid var(--editor-border);
+  padding-bottom: 0.3em;
+}
+.theme-tech h2 { 
+  font-size: 1.5em; 
+  font-weight: 600; 
+  margin: 1.1em 0 0.35em; 
+  color: #f0f6fc;
+}
+.theme-tech h3 { 
+  font-size: 1.25em; 
+  font-weight: 600; 
+  margin: 1em 0 0.3em; 
+  color: #e6edf3;
+}
+.theme-tech p { margin: 0 0 var(--paragraph-spacing); }
+.theme-tech blockquote { 
+  border-left: 3px solid var(--editor-accent); 
+  padding: 0.5em 1em; 
+  margin: 1em 0; 
+  background: var(--editor-surface);
+  border-radius: 0 var(--border-radius) var(--border-radius) 0;
+}
+.theme-tech code { 
+  font-family: var(--font-mono); 
+  font-size: 0.9em; 
+  background: #161b2288; 
+  padding: 0.2em 0.4em; 
+  border-radius: 4px;
+  color: #79c0ff;
+}
+.theme-tech pre { 
+  background: #161b22; 
+  padding: 1em; 
+  border-radius: var(--border-radius); 
+  margin: 1em 0; 
+  overflow-x: auto;
+  border: 1px solid var(--editor-border);
+}
+.theme-tech pre code { background: none; padding: 0; color: inherit; }
+.theme-tech a { color: var(--editor-accent); text-decoration: none; }
+.theme-tech a:hover { text-decoration: underline; }
+.theme-tech img { max-width: 100%; border-radius: var(--border-radius); margin: 1em 0; }
+.theme-tech table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+.theme-tech th, .theme-tech td { border: 1px solid var(--editor-border); padding: 0.5em 1em; text-align: left; }
+.theme-tech th { background: var(--editor-surface); font-weight: 600; }
+.theme-tech hr { border: none; border-top: 1px solid var(--editor-border); margin: 2em 0; }
+
+/* 科技风 - 代码高亮额外样式 */
+.theme-tech .token-keyword { color: #ff7b72; }
+.theme-tech .token-string { color: #a5d6ff; }
+.theme-tech .token-comment { color: #8b949e; }
+.theme-tech .token-function { color: #d2a8ff; }
+.theme-tech .token-number { color: #79c0ff; }

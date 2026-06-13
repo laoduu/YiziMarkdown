@@ -1,0 +1,7 @@
+{
+  "ctrl+s": "save",
+  "ctrl+n": "newFile",
+  "ctrl+o": "openFile",
+  "ctrl+f": "search",
+  "f12": "toggleDevtools"
+}

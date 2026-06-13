@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+src-tauri/target/
+
+# IDE
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.obsidian/workspace*
+.obsidian/cache
+
+# Temp files
+*.tmp
+*~
+
+# Dev artifacts
+output/
+_build_log.txt
+_diag_build.bat
+.solomd/
+.web_builder/

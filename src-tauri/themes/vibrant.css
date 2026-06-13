@@ -1,0 +1,102 @@
+/* 活力橙 (Vibrant Orange) */
+:root.theme-vibrant {
+  --editor-bg: #FFF8F2;
+  --editor-text: #2a1a0e;
+  --editor-accent: #F3641E;
+  --editor-border: #FFE6D5;
+  --editor-surface: #FEF1F1;
+  --editor-hover: #ffe0cc;
+  --editor-selection: #F3641E;
+  --editor-selection-bg: rgba(243, 100, 30, 0.25);
+  --editor-cursor: #F3641E;
+  --sidebar-bg: #FEF1F1;
+  --sidebar-text: #b06030;
+  --toolbar-bg: #FFF8F2;
+  --statusbar-bg: #F3641E;
+  --statusbar-text: #ffffff;
+  --font-sans: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --font-size-base: 16px;
+  --line-height: 1.8;
+  --paragraph-spacing: 1.5em;
+  --border-radius: 4px;
+}
+
+:root.theme-vibrant.dark {
+  --editor-bg: #1a1410;
+  --editor-text: #e0d0c0;
+  --editor-accent: #ffb060;
+  --editor-border: #3a2820;
+  --editor-surface: #241c14;
+  --editor-hover: #2e241c;
+  --editor-selection: #ffb060;
+  --editor-selection-bg: rgba(255, 176, 96, 0.35);
+  --editor-cursor: #ffb060;
+  --sidebar-bg: #1e1610;
+  --sidebar-text: #a08060;
+  --toolbar-bg: #1a1410;
+  --statusbar-bg: #2e241c;
+  --statusbar-text: #e0c0a0;
+}
+
+/* 活力橙 - 标题样式 */
+.theme-vibrant h1 {
+  font-size: 2em;
+  font-weight: 700;
+  margin: 1.5em 0 0.5em;
+  color: #d04a10;
+  letter-spacing: -0.02em;
+}
+.theme-vibrant h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin: 1.3em 0 0.4em;
+  color: #e05a20;
+  letter-spacing: -0.01em;
+}
+.theme-vibrant h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin: 1.2em 0 0.3em;
+  color: #e06a30;
+}
+.theme-vibrant p { margin: 0 0 var(--paragraph-spacing); }
+.theme-vibrant blockquote {
+  border-left: 3px solid var(--editor-accent);
+  padding-left: 1em;
+  margin: 1em 0;
+  color: var(--sidebar-text);
+}
+.theme-vibrant code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--editor-surface);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+}
+.theme-vibrant pre {
+  background: var(--editor-surface);
+  padding: 1em;
+  border-radius: var(--border-radius);
+  margin: 1em 0;
+  overflow-x: auto;
+  border: 1px solid var(--editor-border);
+}
+.theme-vibrant pre code { background: none; padding: 0; }
+.theme-vibrant a { color: var(--editor-accent); text-decoration: none; }
+.theme-vibrant a:hover { text-decoration: underline; }
+.theme-vibrant img { max-width: 100%; border-radius: var(--border-radius); margin: 1em 0; }
+.theme-vibrant table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+.theme-vibrant th, .theme-vibrant td { padding: 0.6em 1em; border: 1px solid var(--editor-border); text-align: left; }
+.theme-vibrant th { background: var(--editor-surface); font-weight: 600; }
+.theme-vibrant hr { border: none; border-top: 1px solid var(--editor-border); margin: 2em 0; }
+.theme-vibrant ul, .theme-vibrant ol { padding-left: 2em; margin: 0.5em 0; }
+.theme-vibrant li { margin: 0.3em 0; }
+
+/* 预览模式排版 */
+.editor-content.theme-vibrant {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2em;
+  color: var(--editor-text);
+}

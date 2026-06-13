@@ -1,0 +1,101 @@
+/* 科技感 (Tech) */
+:root.theme-tech {
+  --editor-bg: #f0f4f8;
+  --editor-text: #1a202c;
+  --editor-accent: #2b6cb0;
+  --editor-border: #cbd5e0;
+  --editor-surface: #e2e8f0;
+  --editor-hover: #edf2f7;
+  --editor-selection: #2b6cb0;
+  --editor-selection-bg: rgba(43, 108, 176, 0.25);
+  --editor-cursor: #2b6cb0;
+  --sidebar-bg: #e8edf2;
+  --sidebar-text: #4a5568;
+  --toolbar-bg: #f7fafc;
+  --statusbar-bg: #2b6cb0;
+  --statusbar-text: #ffffff;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+  --font-size-base: 15px;
+  --line-height: 1.7;
+  --paragraph-spacing: 1.2em;
+  --border-radius: 6px;
+}
+
+:root.theme-tech.dark {
+  --editor-bg: #0d1117;
+  --editor-text: #c9d1d9;
+  --editor-accent: #58a6ff;
+  --editor-border: #30363d;
+  --editor-surface: #161b22;
+  --editor-hover: #1c2128;
+  --editor-selection: #58a6ff;
+  --editor-selection-bg: rgba(88, 166, 255, 0.35);
+  --editor-cursor: #58a6ff;
+  --sidebar-bg: #0d1117;
+  --sidebar-text: #8b949e;
+  --toolbar-bg: #161b22;
+  --statusbar-bg: #1f6feb;
+  --statusbar-text: #ffffff;
+}
+
+/* 科技风 - 标题样式 */
+.theme-tech h1 {
+  font-size: 2em;
+  font-weight: 700;
+  margin: 1.2em 0 0.4em;
+  border-bottom: 1px solid var(--editor-border);
+  padding-bottom: 0.3em;
+}
+.theme-tech h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin: 1.1em 0 0.35em;
+}
+.theme-tech h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin: 1em 0 0.3em;
+}
+.theme-tech p { margin: 0 0 var(--paragraph-spacing); }
+.theme-tech blockquote {
+  border-left: 3px solid var(--editor-accent);
+  padding: 0.5em 1em;
+  margin: 1em 0;
+  background: var(--editor-surface);
+  border-radius: 0 var(--border-radius) var(--border-radius) 0;
+}
+.theme-tech code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--editor-surface);
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  color: var(--editor-accent);
+}
+.theme-tech pre {
+  background: var(--editor-surface);
+  padding: 1em;
+  border-radius: var(--border-radius);
+  margin: 1em 0;
+  overflow-x: auto;
+  border: 1px solid var(--editor-border);
+}
+.theme-tech pre code { background: none; padding: 0; color: inherit; }
+.theme-tech a { color: var(--editor-accent); text-decoration: none; }
+.theme-tech a:hover { text-decoration: underline; }
+.theme-tech img { max-width: 100%; border-radius: var(--border-radius); margin: 1em 0; }
+.theme-tech table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+.theme-tech th, .theme-tech td { padding: 0.6em 1em; border: 1px solid var(--editor-border); text-align: left; }
+.theme-tech th { background: var(--editor-surface); font-weight: 600; }
+.theme-tech hr { border: none; border-top: 1px solid var(--editor-border); margin: 2em 0; }
+.theme-tech ul, .theme-tech ol { padding-left: 2em; margin: 0.5em 0; }
+.theme-tech li { margin: 0.3em 0; }
+
+/* 预览模式排版 */
+.editor-content.theme-tech {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2em;
+  color: var(--editor-text);
+}

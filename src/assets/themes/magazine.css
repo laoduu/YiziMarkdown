@@ -1,0 +1,85 @@
+/* 杂志感 (Magazine) */
+:root.theme-magazine {
+  --editor-bg: #faf8f5;
+  --editor-text: #2c2416;
+  --editor-accent: #8b4513;
+  --editor-border: #e0d8c8;
+  --editor-surface: #f5f0e8;
+  --editor-hover: #f0ebe0;
+  --editor-selection: #8b4513;
+  --editor-selection-bg: rgba(139, 69, 19, 0.35);
+  --editor-cursor: #8b4513;
+  --sidebar-bg: #f5f0e8;
+  --sidebar-text: #7a6e5d;
+  --toolbar-bg: #faf8f5;
+  --statusbar-bg: #e8e0d0;
+  --statusbar-text: #7a6e5d;
+  --font-sans: 'Source Serif Pro', 'Noto Serif SC', Georgia, serif;
+  --font-mono: 'Fira Code', 'Consolas', monospace;
+  --font-serif: 'Playfair Display', 'Noto Serif SC', Georgia, serif;
+  --font-size-base: 17px;
+  --line-height: 1.9;
+  --paragraph-spacing: 1.8em;
+  --border-radius: 2px;
+}
+
+:root.theme-magazine.dark {
+  --editor-bg: #1a1612;
+  --editor-text: #d4cfc4;
+  --editor-accent: #c9956b;
+  --editor-border: #3a3228;
+  --editor-surface: #241f18;
+  --editor-hover: #2e261e;
+  --editor-selection: #c9956b;
+  --editor-selection-bg: rgba(201, 149, 107, 0.45);
+  --editor-cursor: #c9956b;
+  --sidebar-bg: #1e1a14;
+  --sidebar-text: #8a7e6e;
+  --toolbar-bg: #1a1612;
+  --statusbar-bg: #2a241c;
+  --statusbar-text: #8a7e6e;
+}
+
+/* 杂志风 - 标题样式 */
+.theme-magazine h1 { 
+  font-family: var(--font-serif); 
+  font-size: 2.5em; 
+  font-weight: 700; 
+  margin: 2em 0 0.6em; 
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.theme-magazine h2 { 
+  font-family: var(--font-serif); 
+  font-size: 1.8em; 
+  font-weight: 600; 
+  margin: 1.8em 0 0.5em; 
+  font-style: italic;
+}
+.theme-magazine h3 { 
+  font-family: var(--font-serif); 
+  font-size: 1.4em; 
+  font-weight: 600; 
+  margin: 1.5em 0 0.4em; 
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.theme-magazine p { margin: 0 0 var(--paragraph-spacing); text-align: justify; }
+.theme-magazine blockquote { 
+  border-left: 4px solid var(--editor-accent); 
+  padding: 0.5em 1.5em; 
+  margin: 1.5em 0; 
+  font-style: italic;
+  color: var(--sidebar-text);
+  font-size: 1.1em;
+}
+.theme-magazine code { font-family: var(--font-mono); font-size: 0.85em; background: var(--editor-surface); padding: 0.2em 0.5em; border-radius: 2px; }
+.theme-magazine pre { background: var(--editor-surface); padding: 1.2em; border-radius: var(--border-radius); margin: 1.5em 0; border: 1px solid var(--editor-border); }
+.theme-magazine pre code { background: none; padding: 0; }
+.theme-magazine a { color: var(--editor-accent); text-decoration: none; border-bottom: 1px solid var(--editor-accent); }
+.theme-magazine img { max-width: 100%; border-radius: var(--border-radius); margin: 1.5em 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.theme-magazine table { border-collapse: collapse; width: 100%; margin: 1.5em 0; border: 1px solid var(--editor-border); }
+.theme-magazine th, .theme-magazine td { border: 1px solid var(--editor-border); padding: 0.6em 1em; text-align: left; }
+.theme-magazine th { background: var(--editor-surface); font-weight: 600; font-family: var(--font-serif); }
+.theme-magazine hr { border: none; text-align: center; margin: 2.5em 0; }
+.theme-magazine hr::after { content: '⁕ ⁕ ⁕'; color: var(--editor-accent); letter-spacing: 1em; }

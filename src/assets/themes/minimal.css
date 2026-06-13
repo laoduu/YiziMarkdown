@@ -1,0 +1,57 @@
+/* 极简风 (Minimal) - 默认主题 */
+:root.theme-minimal {
+  --editor-bg: #ffffff;
+  --editor-text: #333333;
+  --editor-accent: #0066cc;
+  --editor-border: #e8e8e8;
+  --editor-surface: #fafafa;
+  --editor-hover: #f5f5f5;
+  --editor-selection: #0066cc;
+  --editor-selection-bg: rgba(0, 102, 204, 0.35);
+  --editor-cursor: #0066cc;
+  --sidebar-bg: #f8f8f8;
+  --sidebar-text: #666666;
+  --toolbar-bg: #ffffff;
+  --statusbar-bg: #f0f0f0;
+  --statusbar-text: #888888;
+  --font-sans: 'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif;
+  --font-mono: 'DengXian', 'Consolas', 'Courier New', monospace;
+  --font-size-base: 16px;
+  --line-height: 1.8;
+  --paragraph-spacing: 1.5em;
+  --border-radius: 4px;
+}
+
+:root.theme-minimal.dark {
+  --editor-bg: #1a1a1a;
+  --editor-text: #d4d4d4;
+  --editor-accent: #4a9eff;
+  --editor-border: #2e2e2e;
+  --editor-surface: #222222;
+  --editor-hover: #2a2a2a;
+  --editor-selection: #4a9eff;
+  --editor-selection-bg: rgba(74, 158, 255, 0.45);
+  --editor-cursor: #4a9eff;
+  --sidebar-bg: #1e1e1e;
+  --sidebar-text: #777777;
+  --toolbar-bg: #1a1a1a;
+  --statusbar-bg: #2a2a2a;
+  --statusbar-text: #888888;
+}
+
+/* 极简风 - 标题样式 */
+.theme-minimal h1 { font-size: 2em; font-weight: 600; margin: 1.5em 0 0.5em; letter-spacing: -0.02em; }
+.theme-minimal h2 { font-size: 1.5em; font-weight: 600; margin: 1.3em 0 0.4em; letter-spacing: -0.01em; }
+.theme-minimal h3 { font-size: 1.25em; font-weight: 500; margin: 1.2em 0 0.3em; }
+.theme-minimal p { margin: 0 0 var(--paragraph-spacing); }
+.theme-minimal blockquote { border-left: 3px solid var(--editor-accent); padding-left: 1em; margin: 1em 0; color: var(--sidebar-text); }
+.theme-minimal code { font-family: var(--font-mono); font-size: 0.9em; background: var(--editor-surface); padding: 0.2em 0.4em; border-radius: 3px; }
+.theme-minimal pre { background: var(--editor-surface); padding: 1em; border-radius: var(--border-radius); margin: 1em 0; overflow-x: auto; }
+.theme-minimal pre code { background: none; padding: 0; }
+.theme-minimal a { color: var(--editor-accent); text-decoration: none; border-bottom: 1px solid transparent; }
+.theme-minimal a:hover { border-bottom-color: var(--editor-accent); }
+.theme-minimal img { max-width: 100%; border-radius: var(--border-radius); margin: 1em 0; }
+.theme-minimal table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+.theme-minimal th, .theme-minimal td { border: 1px solid var(--editor-border); padding: 0.5em 1em; text-align: left; }
+.theme-minimal th { background: var(--editor-surface); font-weight: 500; }
+.theme-minimal hr { border: none; border-top: 1px solid var(--editor-border); margin: 2em 0; }

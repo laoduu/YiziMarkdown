@@ -1,0 +1,103 @@
+/* 自然风 (Nature) */
+:root.theme-nature {
+  --editor-bg: #f5f2eb;
+  --editor-text: #2d3a2e;
+  --editor-accent: #4a7c59;
+  --editor-border: #d4cfc0;
+  --editor-surface: #eae7de;
+  --editor-hover: #e5e0d5;
+  --editor-selection: #4a7c59;
+  --editor-selection-bg: rgba(74, 124, 89, 0.35);
+  --editor-cursor: #4a7c59;
+  --sidebar-bg: #eae7de;
+  --sidebar-text: #6b7a6c;
+  --toolbar-bg: #f5f2eb;
+  --statusbar-bg: #d4cfc0;
+  --statusbar-text: #6b7a6c;
+  --font-sans: 'Lora', 'Merriweather', 'Noto Serif SC', Georgia, serif;
+  --font-mono: 'Fira Code', 'Consolas', monospace;
+  --font-serif: 'Lora', Georgia, serif;
+  --font-size-base: 16px;
+  --line-height: 1.85;
+  --paragraph-spacing: 1.6em;
+  --border-radius: 8px;
+}
+
+:root.theme-nature.dark {
+  --editor-bg: #1a1f1a;
+  --editor-text: #c8d4c5;
+  --editor-accent: #7db88e;
+  --editor-border: #2e3a2e;
+  --editor-surface: #242c24;
+  --editor-hover: #2a332a;
+  --editor-selection: #7db88e;
+  --editor-selection-bg: rgba(125, 184, 142, 0.45);
+  --editor-cursor: #7db88e;
+  --sidebar-bg: #1e241e;
+  --sidebar-text: #7a8a78;
+  --toolbar-bg: #1a1f1a;
+  --statusbar-bg: #2a332a;
+  --statusbar-text: #7a8a78;
+}
+
+/* 自然风 - 标题样式 */
+.theme-nature h1 { 
+  font-family: var(--font-serif); 
+  font-size: 2.2em; 
+  font-weight: 600; 
+  margin: 1.8em 0 0.5em; 
+  color: #3a5a3c;
+  letter-spacing: -0.01em;
+}
+.theme-nature h2 { 
+  font-family: var(--font-serif); 
+  font-size: 1.6em; 
+  font-weight: 600; 
+  margin: 1.5em 0 0.4em; 
+  color: #4a6a4c;
+}
+.theme-nature h3 { 
+  font-family: var(--font-serif); 
+  font-size: 1.3em; 
+  font-weight: 500; 
+  margin: 1.3em 0 0.35em; 
+  color: #5a7a5c;
+}
+.theme-nature p { margin: 0 0 var(--paragraph-spacing); }
+.theme-nature blockquote { 
+  border-left: 4px solid var(--editor-accent); 
+  padding: 0.6em 1.2em; 
+  margin: 1.2em 0; 
+  color: var(--sidebar-text);
+  font-style: italic;
+  background: linear-gradient(to right, var(--editor-surface), transparent);
+  border-radius: 0 var(--border-radius) var(--border-radius) 0;
+}
+.theme-nature code { 
+  font-family: var(--font-mono); 
+  font-size: 0.9em; 
+  background: var(--editor-surface); 
+  padding: 0.2em 0.5em; 
+  border-radius: 4px;
+  color: var(--editor-accent);
+}
+.theme-nature pre { 
+  background: var(--editor-surface); 
+  padding: 1.2em; 
+  border-radius: var(--border-radius); 
+  margin: 1.2em 0; 
+  border: 1px solid var(--editor-border);
+}
+.theme-nature pre code { background: none; padding: 0; color: inherit; }
+.theme-nature a { color: var(--editor-accent); text-decoration: none; border-bottom: 1px solid var(--editor-accent); }
+.theme-nature a:hover { opacity: 0.8; }
+.theme-nature img { max-width: 100%; border-radius: var(--border-radius); margin: 1.2em 0; }
+.theme-nature table { border-collapse: collapse; width: 100%; margin: 1.2em 0; border-radius: var(--border-radius); overflow: hidden; }
+.theme-nature th, .theme-nature td { border: 1px solid var(--editor-border); padding: 0.6em 1em; text-align: left; }
+.theme-nature th { background: var(--editor-surface); font-weight: 600; }
+.theme-nature hr { border: none; height: 1px; background: linear-gradient(to right, transparent, var(--editor-border), transparent); margin: 2em 0; }
+
+/* 自然风 - 装饰元素 */
+.theme-nature ul, .theme-nature ol { padding-left: 1.5em; margin: 1em 0; }
+.theme-nature li { margin: 0.3em 0; }
+.theme-nature li::marker { color: var(--editor-accent); }
