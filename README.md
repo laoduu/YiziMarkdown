@@ -1,5 +1,9 @@
 # YiziMarkdown
 
+<p align="center">
+  <img src="docs/index.png" alt="YiziMarkdown" width="100%" />
+</p>
+
 一款简洁精致的 Windows 便携 `Markdown` 编辑器。免安装，解压即用。
 
 为什么要开发一款 `Markdown` 编辑器？`Typora` 很漂亮，但要收费，免费的各种 `Markdown` 工具，太复杂也太丑，始终找不到趁手的 `Markdown` 编辑器。
