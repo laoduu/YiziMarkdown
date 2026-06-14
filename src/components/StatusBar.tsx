@@ -1,4 +1,18 @@
+import { useState, useEffect } from 'react'
 import { FileText, Clock, Check, FolderOpen, Save, PanelLeftClose, Eye, Code } from 'lucide-react'
+
+const invokeTauri = async <T,>(cmd: string, args?: Record<string, unknown>): Promise<T | null> => {
+  try {
+    const tauri = (window as any).__TAURI_INTERNALS__
+    if (tauri && typeof tauri.invoke === 'function') {
+      return await tauri.invoke(cmd, args)
+    }
+    return null
+  } catch (error) {
+    console.warn(`Tauri command failed: ${cmd}`, error)
+    return null
+  }
+}
 
 interface StatusBarProps {
   wordCount: number
@@ -10,30 +24,37 @@ interface StatusBarProps {
   isPreviewMode?: boolean
   onTogglePreview?: (preview: boolean) => void
   onToggleSidebar?: () => void
+  onOpenAbout?: () => void
 }
 
-export default function StatusBar({ 
+export default function StatusBar({
   wordCount, readingTime, cursorLine, cursorColumn,
   filePath, isSaved,
-  isPreviewMode, onTogglePreview, onToggleSidebar,
+  isPreviewMode, onTogglePreview, onToggleSidebar, onOpenAbout,
 }: StatusBarProps) {
+  const [version, setVersion] = useState('')
+
+  useEffect(() => {
+    invokeTauri<string>('get_app_version').then((v) => { if (v) setVersion(v) })
+  }, [])
+
   return (
     <div className="statusbar">
       {/* 左侧控制区 */}
       <button
         onClick={onToggleSidebar}
-        className="flex items-center justify-center p-1 rounded hover:bg-[var(--editor-hover)] text-[var(--sidebar-text)] transition-colors"
+        className="statusbar-item"
         title="切换侧边栏"
       >
-        <PanelLeftClose size={14} />
+        <PanelLeftClose size={12} />
       </button>
 
       <button
         onClick={() => onTogglePreview?.(!isPreviewMode)}
-        className="flex items-center justify-center p-1 rounded hover:bg-[var(--editor-hover)] text-[var(--sidebar-text)] transition-colors"
+        className="statusbar-item"
         title={isPreviewMode ? '切换到源代码' : '切换到预览'}
       >
-        {isPreviewMode ? <Code size={14} /> : <Eye size={14} />}
+        {isPreviewMode ? <Code size={12} /> : <Eye size={12} />}
       </button>
 
       {filePath && (
@@ -55,8 +76,8 @@ export default function StatusBar({
 
       <div className="flex-1" />
 
-      <div className="flex items-center gap-1.5 text-[var(--sidebar-text)] opacity-60 select-none" style={{ fontSize: '11px' }}>
-        <span>YiziMarkdown 0.1.0</span>
+      <div className="statusbar-item" onClick={onOpenAbout} style={{ cursor: onOpenAbout ? 'pointer' : 'default' }} title="关于 YiziMarkdown">
+        <span>YiziMarkdown {version}</span>
       </div>
 
       <div className="flex-1" />

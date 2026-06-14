@@ -138,6 +138,22 @@ body {
   flex-shrink: 0;
 }
 
+.statusbar-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 2px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--statusbar-text);
+  font-size: 12px;
+  transition: opacity 0.15s;
+}
+.statusbar-item:hover {
+  opacity: 0.8;
+}
+
 /* ===== 编辑器核心 ===== */
 
 /* ===== 滚动条 ===== */
@@ -715,16 +731,21 @@ body {
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25), 0 8px 20px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   animation: settingsIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: 'Inter', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
 }
 
 .settings-modal-header {
   display: flex;
   align-items: center;
-  padding: 4px 12px;
+  padding: 0 14px;
   border-bottom: 1px solid var(--editor-border);
   flex-shrink: 0;
-  gap: 4px;
-  height: 32px;
+  gap: 6px;
+  height: 40px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--editor-text);
+  letter-spacing: 0.01em;
 }
 
 .settings-modal-sidebar {
@@ -746,8 +767,8 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 16px;
-  font-size: 12px;
+  padding: 10px 16px;
+  font-size: 13px;
   color: var(--editor-text);
   text-align: left;
   border: none;
@@ -768,7 +789,7 @@ body {
 
 /* Section 标题 */
 .settings-section-title {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--sidebar-text);
   letter-spacing: 0.04em;
@@ -873,7 +894,7 @@ body {
 .settings-textarea {
   width: 100%;
   padding: 8px 10px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
   background: var(--editor-surface);
   border: 1px solid var(--editor-border);
@@ -889,8 +910,8 @@ body {
 }
 
 .settings-btn-primary {
-  padding: 6px 16px;
-  font-size: 12px;
+  padding: 7px 18px;
+  font-size: 13px;
   font-weight: 500;
   color: #fff;
   background: var(--editor-accent);
@@ -907,8 +928,8 @@ body {
 }
 
 .settings-btn-secondary {
-  padding: 6px 16px;
-  font-size: 12px;
+  padding: 7px 18px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--editor-text);
   background: var(--editor-surface);
@@ -936,8 +957,8 @@ body {
 
 .settings-footer-bar .settings-btn-primary,
 .settings-footer-bar .settings-btn-secondary {
-  padding: 5px 14px;
-  font-size: 12px;
+  padding: 6px 16px;
+  font-size: 13px;
 }
 
 .settings-content-scroll {

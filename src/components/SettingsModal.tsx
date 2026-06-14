@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { X, Loader2, ChevronRight, FolderOpen, Palette, FileText, Keyboard, Settings2, Eye, Info } from 'lucide-react'
+import { X, Loader2, ChevronRight, FolderOpen, Palette, FileText, Keyboard, Settings2, Eye, Info, Github, History, BookOpen, ExternalLink } from 'lucide-react'
 import { useSettingsStore } from '../stores/settingsStore'
 
 const invokeTauri = async <T,>(cmd: string, args?: Record<string, unknown>): Promise<T | null> => {
@@ -35,6 +35,7 @@ const DEFAULTS_EDITOR = {
 interface SettingsModalProps {
   isOpen: boolean
   onClose: () => void
+  defaultTab?: CategoryKey
 }
 
 type CategoryKey = 'general' | 'appearance' | 'editor' | 'shortcuts' | 'templates' | 'about'
@@ -159,14 +160,14 @@ function GeneralSettings() {
             <Row label={`保存间隔: ${local.autoSaveInterval / 1000} 秒`}>
               <div className="w-full">
                 <input type="range" min="1000" max="10000" step="1000" value={local.autoSaveInterval} onChange={(e) => setLocal({ ...local, autoSaveInterval: Number(e.target.value) })} className="settings-range" />
-                <div className="flex justify-between text-[10px] text-[var(--sidebar-text)] mt-0.5"><span>1 秒</span><span>10 秒</span></div>
+                <div className="flex justify-between text-[11px] text-[var(--sidebar-text)] mt-0.5"><span>1 秒</span><span>10 秒</span></div>
               </div>
             </Row>
           </Section>
           <Section title="配置目录">
             {configDir && (
               <div className="px-4 py-2 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg">
-                <p className="text-[10px] text-[var(--sidebar-text)] mb-1">用户配置存储位置</p>
+                <p className="text-[11px] text-[var(--sidebar-text)] mb-1">用户配置存储位置</p>
                 <p className="text-xs text-[var(--editor-text)] font-mono break-all">{configDir}</p>
               </div>
             )}
@@ -190,14 +191,15 @@ function UserCssEditor() {
   const handleSave = async () => {
     await invokeTauri('write_user_css', { content: cssContent })
     let el = document.getElementById('yizimarkdown-user-css')
-    if (!el) { el = document.createElement('style'); el.id = 'yizimarkdown-user-css'; document.head.appendChild(el) }
+    if (!el) { el = document.createElement('style'); el.id = 'yizimarkdown-user-css'; }
     el.textContent = cssContent
+    document.head.appendChild(el)  // 移到末尾确保优先级
     setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
 
   return (
     <div className="space-y-2">
-      <p className="text-[10px] text-[var(--sidebar-text)]">自定义 CSS 会加载在所有主题之后，优先级最高。</p>
+      <p className="text-[11px] text-[var(--sidebar-text)]">自定义 CSS 会加载在所有主题之后，优先级最高。保存并手动重启后生效。</p>
       <textarea value={cssContent} onChange={(e) => { setCssContent(e.target.value); setSaved(false) }}
         className="settings-textarea font-mono" rows={6} spellCheck={false} />
       <button onClick={handleSave} className="settings-btn-primary">{saved ? '已保存' : '保存 CSS'}</button>
@@ -315,7 +317,7 @@ function EditorSettings() {
             <div className="flex gap-2 mb-2">
               {(['edit', 'preview'] as const).map((m) => (
                 <button key={m} onClick={() => setMode(m)}
-                  className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${mode === m ? 'bg-[var(--editor-accent)] text-white' : 'bg-[var(--editor-surface)] text-[var(--sidebar-text)] hover:bg-[var(--editor-hover)]'}`}>
+                  className={`px-2.5 py-1 text-[12px] rounded-md transition-colors ${mode === m ? 'bg-[var(--editor-accent)] text-white' : 'bg-[var(--editor-surface)] text-[var(--sidebar-text)] hover:bg-[var(--editor-hover)]'}`}>
                   {m === 'edit' ? '源代码模式' : '预览模式'}
                 </button>
               ))}
@@ -326,7 +328,7 @@ function EditorSettings() {
               {filtered.map((f) => (
                 <button key={f} onClick={() => setFont(`'${f}', sans-serif`)}
                   className={`w-full px-3 py-1.5 text-left text-xs hover:bg-[var(--editor-hover)] flex items-center justify-between ${cur.includes(f) ? 'bg-[var(--editor-accent)] text-white' : 'text-[var(--editor-text)]'}`}>
-                  <span>{f}</span><span className="text-[10px] opacity-60" style={{ fontFamily: `'${f}', sans-serif` }}>Aa</span>
+                  <span>{f}</span><span className="text-[11px] opacity-60" style={{ fontFamily: `'${f}', sans-serif` }}>Aa</span>
                 </button>
               ))}
               {fontsLoaded && filtered.length === 0 && <div className="px-3 py-3 text-xs text-[var(--sidebar-text)] text-center">无匹配</div>}
@@ -337,13 +339,13 @@ function EditorSettings() {
             <Row label={`字体大小: ${local.fontSize}px`}>
               <div className="w-full">
                 <input type="range" min="12" max="32" value={local.fontSize} onChange={(e) => setLocal({ ...local, fontSize: Number(e.target.value) })} className="settings-range" />
-                <div className="flex justify-between text-[10px] text-[var(--sidebar-text)] mt-0.5"><span>12px</span><span>32px</span></div>
+                <div className="flex justify-between text-[11px] text-[var(--sidebar-text)] mt-0.5"><span>12px</span><span>32px</span></div>
               </div>
             </Row>
             <Row label={`行高: ${local.lineHeight}`}>
               <div className="w-full">
                 <input type="range" min="1.2" max="3.0" step="0.1" value={local.lineHeight} onChange={(e) => setLocal({ ...local, lineHeight: Number(e.target.value) })} className="settings-range" />
-                <div className="flex justify-between text-[10px] text-[var(--sidebar-text)] mt-0.5"><span>1.2</span><span>3.0</span></div>
+                <div className="flex justify-between text-[11px] text-[var(--sidebar-text)] mt-0.5"><span>1.2</span><span>3.0</span></div>
               </div>
             </Row>
           </Section>
@@ -351,13 +353,13 @@ function EditorSettings() {
             <Row label={`字体大小: ${local.previewFontSize}px`}>
               <div className="w-full">
                 <input type="range" min="12" max="32" value={local.previewFontSize} onChange={(e) => setLocal({ ...local, previewFontSize: Number(e.target.value) })} className="settings-range" />
-                <div className="flex justify-between text-[10px] text-[var(--sidebar-text)] mt-0.5"><span>12px</span><span>32px</span></div>
+                <div className="flex justify-between text-[11px] text-[var(--sidebar-text)] mt-0.5"><span>12px</span><span>32px</span></div>
               </div>
             </Row>
             <Row label={`行高: ${local.previewLineHeight}`}>
               <div className="w-full">
                 <input type="range" min="1.2" max="3.0" step="0.1" value={local.previewLineHeight} onChange={(e) => setLocal({ ...local, previewLineHeight: Number(e.target.value) })} className="settings-range" />
-                <div className="flex justify-between text-[10px] text-[var(--sidebar-text)] mt-0.5"><span>1.2</span><span>3.0</span></div>
+                <div className="flex justify-between text-[11px] text-[var(--sidebar-text)] mt-0.5"><span>1.2</span><span>3.0</span></div>
               </div>
             </Row>
           </Section>
@@ -375,9 +377,9 @@ function EditorSettings() {
           </Section>
           <Section title="预览">
             <div className="p-3 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg text-[var(--editor-text)]" style={{ fontFamily: local.fontFamily, fontSize: `${local.fontSize}px`, lineHeight: local.lineHeight }}>
-              <div className="text-[10px] text-[var(--sidebar-text)] mb-1">源代码模式</div>
+              <div className="text-[11px] text-[var(--sidebar-text)] mb-1">源代码模式</div>
               <div style={{ fontFamily: "'Consolas', monospace", background: 'var(--editor-bg)', padding: '6px', borderRadius: '4px', fontSize: '12px' }}>function hello() {'{'}<br/>&nbsp;&nbsp;console.log("Hello, YiziMarkdown!");<br/>{'}'}</div>
-              <div className="mt-2 text-[10px] text-[var(--sidebar-text)] mb-1">预览模式</div>
+              <div className="mt-2 text-[11px] text-[var(--sidebar-text)] mb-1">预览模式</div>
               <div style={{ fontFamily: local.previewFontFamily, fontSize: `${local.previewFontSize}px`, lineHeight: local.previewLineHeight }}><h3 style={{ fontWeight: 600, margin: '0.3em 0 0.2em' }}>标题示例</h3><p>这是一段<strong>示例文字</strong>。</p></div>
             </div>
           </Section>
@@ -391,32 +393,37 @@ function EditorSettings() {
 // ===================== 快捷键设置 =====================
 function ShortcutsSettings() {
   const [text, setText] = useState('')
-  const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+  const [originalText, setOriginalText] = useState('')
 
   useEffect(() => {
-    invokeTauri<string>('read_keybindings').then((c) => { if (c) setText(c) })
+    invokeTauri<string>('read_keybindings').then((c) => { if (c) { setText(c); setOriginalText(c) } })
   }, [])
 
+  const hasChanges = text !== originalText
+
   const handleSave = async () => {
-    try { JSON.parse(text); setError(''); await invokeTauri('write_keybindings', { content: text }); setSaved(true); setTimeout(() => setSaved(false), 2000) }
+    try { JSON.parse(text); setError(''); await invokeTauri('write_keybindings', { content: text }); setOriginalText(text) }
     catch { setError('JSON 格式无效') }
   }
 
+  const handleRestore = () => {
+    setText('{\n  "ctrl+s": "save",\n  "ctrl+n": "newFile",\n  "ctrl+o": "openFile",\n  "ctrl+f": "search",\n  "f12": "toggleDevtools"\n}')
+  }
+
   return (
-    <div className="settings-content-scroll">
-      <div className="space-y-4">
-        <Section title="快捷键配置">
-          <p className="text-[10px] text-[var(--sidebar-text)] pb-2">键名使用 <code className="bg-[var(--editor-surface)] px-1 py-0.5 rounded text-[10px]">ctrl+s</code> 格式。</p>
-          <textarea value={text} onChange={(e) => { setText(e.target.value); setSaved(false); setError('') }} className="settings-textarea font-mono" rows={10} spellCheck={false} />
-          {error && <p className="text-[10px] text-red-500">{error}</p>}
-          <div className="flex gap-2">
-            <button onClick={handleSave} className="settings-btn-primary">{saved ? '已保存' : '保存'}</button>
-            <button onClick={() => setText('{\n  "ctrl+s": "save",\n  "ctrl+n": "newFile",\n  "ctrl+o": "openFile",\n  "ctrl+f": "search",\n  "f12": "toggleDevtools"\n}')} className="settings-btn-secondary">恢复默认</button>
-          </div>
-        </Section>
+    <>
+      <div className="settings-content-scroll">
+        <div className="space-y-4">
+          <Section title="快捷键配置">
+            <p className="text-[10px] text-[var(--sidebar-text)] pb-2">键名使用 <code className="bg-[var(--editor-surface)] px-1 py-0.5 rounded text-[11px]">ctrl+s</code> 格式。</p>
+            <textarea value={text} onChange={(e) => { setText(e.target.value); setError('') }} className="settings-textarea font-mono" rows={10} spellCheck={false} />
+            {error && <p className="text-[11px] text-red-500">{error}</p>}
+          </Section>
+        </div>
       </div>
-    </div>
+      <FooterBar hasChanges={hasChanges} onSave={handleSave} onRestore={handleRestore} />
+    </>
   )
 }
 
@@ -448,7 +455,7 @@ function TemplatesSettings() {
       <div className="space-y-4">
         <Section title="文档模板">
           <div className="flex items-center justify-between pb-2">
-            <p className="text-[10px] text-[var(--sidebar-text)]">新建文件时可选择模板</p>
+            <p className="text-[11px] text-[var(--sidebar-text)]">新建文件时可选择模板</p>
             <button onClick={handleNew} className="text-[11px] text-[var(--editor-accent)] hover:underline">+ 新建</button>
           </div>
           {editing ? (
@@ -471,7 +478,7 @@ function TemplatesSettings() {
                 {templates.length === 0 && <div className="px-3 py-3 text-xs text-[var(--sidebar-text)] text-center">暂无模板</div>}
               </div>
               <div className="flex-1 relative">
-                {selected && <div className="absolute top-1 right-1"><button onClick={handleEdit} className="text-[10px] text-[var(--editor-accent)] hover:underline px-2 py-1">编辑</button></div>}
+                {selected && <div className="absolute top-1 right-1"><button onClick={handleEdit} className="text-[11px] text-[var(--editor-accent)] hover:underline px-2 py-1">编辑</button></div>}
                 {selected ? <textarea value={tContent} readOnly className="settings-textarea font-mono opacity-80" rows={12} />
                   : <div className="flex items-center justify-center h-36 text-xs text-[var(--sidebar-text)] border border-[var(--editor-border)] rounded-lg bg-[var(--editor-surface)]">选择左侧模板预览</div>}
               </div>
@@ -485,55 +492,131 @@ function TemplatesSettings() {
 
 // ===================== 关于 =====================
 function AboutSettings() {
-  const [markdown, setMarkdown] = useState('')
-  const [html, setHtml] = useState('')
-
+  const [version, setVersion] = useState('')
   useEffect(() => {
-    invokeTauri<string>('read_readme').then((md) => {
-      if (md) setMarkdown(md)
+    invokeTauri<string>('get_app_version').then((v) => {
+      if (v) setVersion(v)
     })
+    invokeTauri<string>('read_help').then(() => {})
   }, [])
 
-  useEffect(() => {
-    if (!markdown) return
-    const render = async () => {
-      try {
-        const { marked } = await import('marked')
-        const result = await marked.parse(markdown)
-        setHtml(result)
-      } catch {
-        let h = markdown
-          .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-          .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-          .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-          .replace(/`([^`]+)`/g, '<code>$1</code>')
-          .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
-          .replace(/^- (.+)$/gm, '<li>$1</li>')
-          .replace(/\n/g, '<br>')
-        setHtml(h)
-      }
+  const handleOpenHelp = async () => {
+    const root = await invokeTauri<Record<string, string>>('get_config_dir')
+    if (root?.appDir) {
+      const filePath = `${root.appDir}\\help.md`
+      await invokeTauri('open_in_app', { filePath })
     }
-    render()
-  }, [markdown])
+  }
+
+  const handleOpenLink = (url: string) => {
+    invokeTauri('open_url', { url })
+  }
 
   return (
-    <div className="settings-content-scroll" style={{ overflowY: 'auto' }}>
-      <div className="space-y-4">
-        <Section title="关于 YiziMarkdown">
-          <div
-            className="settings-about-content px-1 py-2 text-[var(--editor-text)] text-sm leading-relaxed [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mb-3 [&_h1]:mt-4 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mb-2 [&_h2]:mt-3 [&_h3]:text-sm [&_h3]:font-medium [&_h3]:mb-1 [&_h3]:mt-2 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-2 [&_li]:mb-1 [&_code]:bg-[var(--editor-surface)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_pre]:bg-[var(--editor-surface)] [&_pre]:p-3 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:mb-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_table]:w-full [&_table]:border-collapse [&_th]:text-left [&_th]:px-3 [&_th]:py-1.5 [&_th]:border-b [&_th]:border-[var(--editor-border)] [&_td]:px-3 [&_td]:py-1.5 [&_td]:border-b [&_td]:border-[var(--editor-border)] [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--editor-accent)] [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-[var(--sidebar-text)] [&_hr]:border-[var(--editor-border)] [&_hr]:my-3"
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
-        </Section>
+    <div className="settings-content-scroll" style={{ height: '100%', overflowY: 'auto' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 24px 16px' }}>
+        {/* App Icon */}
+        <img
+          src={new URL('../assets/app-icon.png', import.meta.url).href}
+          alt="YiziMarkdown"
+          style={{ width: 72, height: 72, borderRadius: 16, marginBottom: 16 }}
+        />
+        {/* Product Name */}
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--editor-text)', margin: 0, letterSpacing: '-0.02em' }}>YiziMarkdown</h1>
+        {/* Version */}
+        <span style={{ fontSize: 12, color: 'var(--sidebar-text)', marginTop: 4, marginBottom: 6 }}>
+          v{version}
+        </span>
+        <p style={{ fontSize: 20, fontWeight: 700, color: 'var(--sidebar-text)', textAlign: 'center', margin: '0 0 6px', lineHeight: 1.3, maxWidth: 320 }}>
+          既好看，又彪悍！
+        </p>
+        <p style={{ fontSize: 13, color: 'var(--sidebar-text)', textAlign: 'center', margin: '0 0 4px', lineHeight: 1.5, maxWidth: 320 }}>
+          用YiziMarkdown，开心写出好运气
+        </p>
+        <p style={{ fontSize: 11, color: 'var(--sidebar-text)', textAlign: 'center', margin: 0, opacity: 0.6, lineHeight: 1.4, maxWidth: 320 }}>
+          一款简洁精致的 Windows 便携 Markdown 编辑器 · 免安装，解压即用
+        </p>
+      </div>
+
+      {/* Divider */}
+      <div style={{ height: 1, background: 'var(--editor-border)', margin: '0 24px' }} />
+
+      {/* Link List */}
+      <div style={{ padding: '12px 16px 16px' }}>
+        <button
+          onClick={() => handleOpenLink('https://github.com/laoduu/yizimarkdown')}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+            padding: '10px 12px', border: 'none', borderRadius: 8, cursor: 'pointer',
+            background: 'transparent', color: 'var(--editor-text)', fontSize: 13,
+            transition: 'background 0.15s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--editor-hover)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+        >
+          <Github size={16} style={{ color: 'var(--sidebar-text)', flexShrink: 0 }} />
+          <span style={{ flex: 1, textAlign: 'left' }}>GitHub</span>
+          <span style={{ fontSize: 11, color: 'var(--sidebar-text)' }}>github.com/laoduu/yizimarkdown</span>
+          <ExternalLink size={12} style={{ color: 'var(--sidebar-text)', opacity: 0.5, flexShrink: 0 }} />
+        </button>
+
+        <button
+          onClick={() => handleOpenLink('https://github.com/laoduu/yizimarkdown/releases')}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+            padding: '10px 12px', border: 'none', borderRadius: 8, cursor: 'pointer',
+            background: 'transparent', color: 'var(--editor-text)', fontSize: 13,
+            transition: 'background 0.15s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--editor-hover)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+        >
+          <History size={16} style={{ color: 'var(--sidebar-text)', flexShrink: 0 }} />
+          <span style={{ flex: 1, textAlign: 'left' }}>历史版本</span>
+          <ExternalLink size={12} style={{ color: 'var(--sidebar-text)', opacity: 0.5, flexShrink: 0 }} />
+        </button>
+
+        <button
+          onClick={handleOpenHelp}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+            padding: '10px 12px', border: 'none', borderRadius: 8, cursor: 'pointer',
+            background: 'transparent', color: 'var(--editor-text)', fontSize: 13,
+            transition: 'background 0.15s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--editor-hover)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+        >
+          <BookOpen size={16} style={{ color: 'var(--sidebar-text)', flexShrink: 0 }} />
+          <span style={{ flex: 1, textAlign: 'left' }}>帮助文档</span>
+          <span style={{ fontSize: 11, color: 'var(--sidebar-text)' }}>help.md</span>
+          <ChevronRight size={12} style={{ color: 'var(--sidebar-text)', opacity: 0.5, flexShrink: 0 }} />
+        </button>
+      </div>
+
+      {/* Divider */}
+      <div style={{ height: 1, background: 'var(--editor-border)', margin: '0 24px' }} />
+
+      {/* Copyright */}
+      <div style={{ padding: '16px 24px', textAlign: 'center' }}>
+        <p style={{ fontSize: 11, color: 'var(--sidebar-text)', lineHeight: 1.6, margin: 0 }}>
+          Built with Tauri 2 + React + CodeMirror 6
+        </p>
+        <p style={{ fontSize: 11, color: 'var(--sidebar-text)', lineHeight: 1.6, margin: '4px 0 0', opacity: 0.6 }}>
+          MIT License
+        </p>
       </div>
     </div>
-  )
-}
+  )}
 
 // ===================== 主弹窗 =====================
-export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+export default function SettingsModal({ isOpen, onClose, defaultTab }: SettingsModalProps) {
   const [active, setActive] = useState<CategoryKey>('general')
+
+  useEffect(() => {
+    if (isOpen) setActive(defaultTab || 'general')
+  }, [isOpen, defaultTab])
+
   if (!isOpen) return null
 
   const content: Record<CategoryKey, React.ReactNode> = {
@@ -541,15 +624,13 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     shortcuts: <ShortcutsSettings />, templates: <TemplatesSettings />, about: <AboutSettings />,
   }
 
-  const hasFooter = active === 'general' || active === 'appearance' || active === 'editor'
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="settings-modal-container">
         <div className="settings-modal-header">
           <button onClick={onClose} className="mr-2 p-0.5 rounded hover:bg-[var(--editor-hover)] text-[var(--sidebar-text)]"><ChevronRight size={14} className="rotate-180" /></button>
-          <h2 className="text-[13px] font-semibold text-[var(--editor-text)]">偏好设置</h2>
+          <span>偏好设置</span>
           <button onClick={onClose} className="ml-auto p-1 rounded-lg hover:bg-[var(--editor-hover)] text-[var(--sidebar-text)]"><X size={14} /></button>
         </div>
         <div className="flex flex-1 overflow-hidden">
@@ -561,7 +642,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               </button>
             ))}
           </div>
-          <div className={`flex-1 overflow-hidden ${hasFooter ? 'flex flex-col' : ''}`}>
+          <div className="flex-1 overflow-hidden flex flex-col">
             {content[active]}
           </div>
         </div>

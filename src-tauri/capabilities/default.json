@@ -1,7 +1,9 @@
 {
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "core:window:default",
@@ -14,6 +16,7 @@
     "core:window:allow-toggle-maximize",
     "shell:allow-open",
     "dialog:default",
-    "fs:default"
+    "fs:default",
+    "core:webview:allow-internal-toggle-devtools"
   ]
 }

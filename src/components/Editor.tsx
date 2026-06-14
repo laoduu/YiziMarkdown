@@ -205,6 +205,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   const isSyncingRef = useRef(false)
   const lastSyncSourceRef = useRef<'editor' | 'preview'>('editor')
   const viewReadyRef = useRef(false)
+  const lastSyncedFromEditorRef = useRef('')
   // 缓存大纲 items，仅在 content 变化时重算
   const outlineCacheRef = useRef<{ content: string; items: ReturnType<typeof computeOutlineItems> }>({ content: '', items: [] })
   const getOutlineItems = (text: string) => {
@@ -487,6 +488,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         margin: '0 auto',
         caretColor: 'var(--editor-cursor)',
         color: 'var(--editor-text)',
+        fontFamily: `var(--font-mono, ${fontFamily})`,
       },
       '.cm-line': {
         padding: '2px 0',
@@ -574,7 +576,9 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         syntaxHighlighting(markdownHighlight),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
-            onChange(update.state.doc.toString())
+            const newContent = update.state.doc.toString()
+            lastSyncedFromEditorRef.current = newContent
+            onChange(newContent)
           }
         }),
       ],
@@ -588,7 +592,27 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     viewRef.current = view
     viewReadyRef.current = true
 
+    // IME修复：Shift切换输入法后contenteditable会丢失首字符按键事件
+    // 检测 Shift + Process（IME模式切换）序列后强制重新聚焦.cm-content
+    let shiftDown = false
+    const handleImeSwitch = (e: KeyboardEvent) => {
+      if (e.key === 'Shift' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        shiftDown = true
+      } else if (e.key === 'Process' && shiftDown) {
+        shiftDown = false
+        setTimeout(() => {
+          if (!viewRef.current) return
+          const cmContent = view.dom.querySelector('.cm-content') as HTMLElement
+          if (cmContent) cmContent.focus()
+        }, 0)
+      } else {
+        shiftDown = false
+      }
+    }
+    view.dom.addEventListener('keydown', handleImeSwitch)
+
     return () => {
+      view.dom.removeEventListener('keydown', handleImeSwitch)
       view.destroy()
       viewReadyRef.current = false
       viewRef.current = null
@@ -610,9 +634,15 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
 
 
 
+  // 同步外部content到编辑器（切换Tab、打开文件时）
+  // 通过记录"最近一次onChange同步的内容"来区分：用户编辑 vs 外部变更
+  // 用户编辑：content由onChange同步，和view一致，无需回写
+  // 外部变更：content来自store但不是当前view写入的，需要同步
   useEffect(() => {
     const view = viewRef.current
-    if (!view) return
+    if (!view || view.composing) return
+    if (content === lastSyncedFromEditorRef.current) return
+    lastSyncedFromEditorRef.current = content
     const currentContent = view.state.doc.toString()
     if (currentContent !== content) {
       view.dispatch({

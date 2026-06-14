@@ -149,6 +149,57 @@ fn pick_and_read_file(app: tauri::AppHandle) -> Result<FileReadResult, String> {
     Ok(FileReadResult { content, path: file_path })
 }
 
+/// 注册 .md 文件关联的默认图标（仅写 HKCU，无需管理员权限）
+/// Tauri MSI 不会自动设置自定义文件图标，需要手动写入 DefaultIcon
+#[cfg(target_os = "windows")]
+fn register_md_file_icon() {
+    use winreg::enums::*;
+    use winreg::RegKey;
+
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+        .unwrap_or_default();
+    let icon_path = exe_dir.join("md-icon.ico");
+    let icon_value = if icon_path.exists() {
+        format!("{},0", icon_path.display())
+    } else {
+        return;
+    };
+
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+
+    // 写入 ProgId DefaultIcon
+    if let Ok(defaulticon_key) = hkcu.create_subkey(r"Software\Classes\YiziMarkdown.md\DefaultIcon").map(|(k, _)| k) {
+        let _ = defaulticon_key.set_value("", &icon_value.as_str());
+    }
+
+    // 写入 ProgId Description
+    if let Ok(progid_key) = hkcu.create_subkey(r"Software\Classes\YiziMarkdown.md").map(|(k, _)| k) {
+        let _ = progid_key.set_value("", &"Markdown File");
+    }
+
+    // 写入 shell\open\command
+    let exe_path = std::env::current_exe().unwrap_or_default();
+    let command = format!("\u{0022}{}\u{0022} \u{0022}%1\u{0022}", exe_path.display());
+    if let Ok(cmd_key) = hkcu.create_subkey(r"Software\Classes\YiziMarkdown.md\shell\open\command").map(|(k, _)| k) {
+        let _ = cmd_key.set_value("", &command.as_str());
+    }
+
+    // 写入 .md 扩展名关联到 ProgId
+    if let Ok(ext_key) = hkcu.create_subkey(r"Software\Classes\.md").map(|(k, _)| k) {
+        let _ = ext_key.set_value("", &"YiziMarkdown.md");
+    }
+
+    // 通知 Shell 刷新
+    unsafe {
+        extern "system" {
+            fn SHChangeNotify(wEventId: u32, uFlags: u32, dwItem1: *const std::ffi::c_void, dwItem2: *const std::ffi::c_void);
+        }
+        SHChangeNotify(0x08000000, 0, std::ptr::null(), std::ptr::null());
+    }
+}
+
 // ===== 应用目录（exe 同级）=====
 
 /// 获取 exe 所在目录作为应用根目录
@@ -308,6 +359,44 @@ fn read_readme() -> Result<String, String> {
         .map_err(|e| format!("Failed to read readme.md: {}", e))
 }
 
+
+// ===== help.md =====
+
+#[tauri::command]
+fn read_help() -> Result<String, String> {
+    let root = get_app_root()?;
+    let path = root.join("help.md");
+    if !path.exists() {
+        return Ok(String::new());
+    }
+    fs::read_to_string(&path)
+        .map_err(|e| format!("Failed to read help.md: {}", e))
+}
+
+/// 获取应用版本号
+#[tauri::command]
+fn get_app_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
+
+/// 在新窗口中用 YiziMarkdown 自身打开指定文件
+#[tauri::command]
+fn open_in_app(file_path: String) -> Result<(), String> {
+    let exe = std::env::current_exe()
+        .map_err(|e| format!("Failed to get exe path: {}", e))?;
+    Command::new(&exe)
+        .arg(&file_path)
+        .spawn()
+        .map_err(|e| format!("Failed to launch: {}", e))?;
+    Ok(())
+}
+
+/// 在系统默认浏览器中打开 URL
+#[tauri::command]
+fn open_url(url: String) -> Result<(), String> {
+    open::that(&url).map_err(|e| format!("Failed to open URL: {}", e))
+}
+
 // ===== 模板管理 =====
 
 #[tauri::command]
@@ -377,9 +466,8 @@ fn associate_md_files() -> Result<bool, String> {
         use winreg::RegKey;
 
         let exe_path = std::env::current_exe()
-            .map_err(|e| format!("Failed to get exe path: {}", e))?
-            .to_string_lossy()
-            .to_string();
+            .map_err(|e| format!("Failed to get exe path: {}", e))?;
+        let exe_dir = exe_path.parent().unwrap_or(Path::new(".")).to_string_lossy().to_string();
 
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
 
@@ -388,13 +476,13 @@ fn associate_md_files() -> Result<bool, String> {
             .map_err(|e| format!("Failed to create type key: {}", e))?;
         type_key.set_value("", &"Markdown File")
             .map_err(|e| format!("Failed to set type default: {}", e))?;
-        type_key.set_value("DefaultIcon", &format!(r#"{} "#, exe_path))
+        type_key.set_value("DefaultIcon", &format!(r#"{}\md-icon.ico,0"#, exe_dir))
             .map_err(|e| format!("Failed to set icon: {}", e))?;
 
         // shell\open\command
         let (cmd_key, _) = type_key.create_subkey(r"shell\open\command")
             .map_err(|e| format!("Failed to create command key: {}", e))?;
-        cmd_key.set_value("", &format!(r#""{}" "%1""#, exe_path))
+        cmd_key.set_value("", &format!(r#""{}" "%1""#, exe_path.to_string_lossy()))
             .map_err(|e| format!("Failed to set command: {}", e))?;
 
         // 2. 将 .md 扩展名指向自定义类型
@@ -556,6 +644,10 @@ fn main() {
             write_user_css,
             read_welcome,
             read_readme,
+            read_help,
+            get_app_version,
+            open_in_app,
+            open_url,
             list_templates,
             read_template,
             read_keybindings,
@@ -572,6 +664,10 @@ fn main() {
                 .and_then(|p| p.parent().map(|d| d.to_path_buf()))
                 .unwrap_or(PathBuf::from("."));
             let _ = ensure_app_structure(&root);
+
+            // 注册 .md 文件图标（覆盖MSI安装后缺失DefaultIcon的问题）
+            #[cfg(target_os = "windows")]
+            register_md_file_icon();
 
             // 解析命令行参数，传递待打开文件路径给前端
             let open_file = parse_cli_args();

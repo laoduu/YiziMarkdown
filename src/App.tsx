@@ -94,45 +94,55 @@ function App() {
   const [cursorPosition] = useState({ line: 1, column: 1 })
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [settingsDefaultTab, setSettingsDefaultTab] = useState<string | undefined>(undefined)
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false })
   const [currentFolder, setCurrentFolder] = useState<string | null>(null)
   const editorRef = useRef<EditorRef>(null)
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const startupDone = useRef(false)
 
-  // 动态加载主题 CSS
+  // 动态加载主题 CSS + user.css（串行，确保顺序和特异性正确）
   useEffect(() => {
-    const loadTheme = async () => {
+    const loadStyles = async () => {
       try {
         const tauri = (window as any).__TAURI_INTERNALS__
         if (!tauri || typeof tauri.invoke !== 'function') return
-        const css = await tauri.invoke('read_theme_css', { name: `${currentTheme}.css` }) as string
-        if (css) {
-          let el = document.getElementById('yizimarkdown-theme-css')
-          if (!el) { el = document.createElement('style'); el.id = 'yizimarkdown-theme-css'; document.head.appendChild(el) }
-          el.textContent = css
-        }
-      } catch {}
-    }
-    loadTheme()
-  }, [currentTheme])
 
-  // 加载用户自定义 CSS
-  useEffect(() => {
-    const loadUserCss = async () => {
-      try {
-        const tauri = (window as any).__TAURI_INTERNALS__
-        if (!tauri || typeof tauri.invoke !== 'function') return
-        const css = await tauri.invoke('read_user_css') as string
-        if (css) {
-          let el = document.getElementById('yizimarkdown-user-css')
-          if (!el) { el = document.createElement('style'); el.id = 'yizimarkdown-user-css'; document.head.appendChild(el) }
-          el.textContent = css
+        // 第一步：加载并注入主题 CSS
+        const themeCss = await tauri.invoke('read_theme_css', { name: `${currentTheme}.css` }) as string
+        if (themeCss) {
+          // 自动将 CSS 中的主题选择器替换为当前 theme-{currentTheme}
+          const selectorMatch = themeCss.match(/(:root)?\.theme-([a-zA-Z0-9_-]+)/)
+          let processedTheme = themeCss
+          if (selectorMatch) {
+            const detectedName = selectorMatch[2]
+            if (detectedName !== currentTheme) {
+              processedTheme = themeCss
+                .replace(new RegExp(`:root\.theme-${detectedName}`, 'g'), `:root.theme-${currentTheme}`)
+                .replace(new RegExp(`\.theme-${detectedName}(?![a-zA-Z-])`, 'g'), `.theme-${currentTheme}`)
+                .replace(new RegExp(`\.theme-${detectedName}\.dark`, 'g'), `.theme-${currentTheme}.dark`)
+            }
+          }
+          let themeEl = document.getElementById('yizimarkdown-theme-css')
+          if (!themeEl) { themeEl = document.createElement('style'); themeEl.id = 'yizimarkdown-theme-css'; document.head.appendChild(themeEl) }
+          themeEl.textContent = processedTheme
+        }
+
+        // 第二步：加载并注入 user.css（排在主题 CSS 之后）
+        const userCss = await tauri.invoke('read_user_css') as string
+        if (userCss) {
+          // 自动提升 :root { } 的特异性为 :root.theme-xxx { }，使变量覆盖能生效
+          let processedUser = userCss
+            .replace(/:root\s*\{/g, `:root.theme-${currentTheme} {`)
+          let userEl = document.getElementById('yizimarkdown-user-css')
+          if (!userEl) { userEl = document.createElement('style'); userEl.id = 'yizimarkdown-user-css'; }
+          userEl.textContent = processedUser
+          document.head.appendChild(userEl)
         }
       } catch {}
     }
-    loadUserCss()
-  }, [])
+    loadStyles()
+  }, [currentTheme])
 
   // 应用字体/排版设置到 CSS 变量
   useEffect(() => {
@@ -266,9 +276,10 @@ function App() {
 
   // 切换主题class
   useEffect(() => {
-    document.documentElement.classList.remove(
-      'theme-academic', 'theme-vibrant', 'theme-minimal', 'theme-magazine', 'theme-tech', 'theme-nature'
-    )
+    // 动态移除所有 theme-* class，添加当前主题 class
+    document.documentElement.classList.forEach((cls) => {
+      if (cls.startsWith('theme-')) document.documentElement.classList.remove(cls)
+    })
     document.documentElement.classList.add(`theme-${currentTheme}`)
     
     if (isDark) {
@@ -485,11 +496,13 @@ function App() {
         isPreviewMode={viewMode === 'preview'}
         onTogglePreview={(preview: boolean) => useEditorStore.getState().updateViewMode(preview ? 'preview' : 'edit')}
         onToggleSidebar={() => setSidebarVisible(!sidebarVisible)}
+        onOpenAbout={() => { setSettingsDefaultTab('about'); setIsSettingsOpen(true) }}
       />
       
       <SettingsModal 
         isOpen={isSettingsOpen} 
-        onClose={() => setIsSettingsOpen(false)} 
+        onClose={() => setIsSettingsOpen(false)}
+        defaultTab={settingsDefaultTab as any}
       />
       
       {toast.visible && (

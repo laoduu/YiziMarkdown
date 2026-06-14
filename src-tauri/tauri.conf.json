@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicedoc/tauri/dev/.schema/config.schema.json",
   "productName": "YiziMarkdown",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "identifier": "com.yizimarkdown.editor",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -39,8 +39,25 @@
       "keybindings.json": "keybindings.json",
       "readme.md": "readme.md",
       "welcome.md": "welcome.md",
-      "changelog.md": "changelog.md"
-    }
+      "changelog.md": "changelog.md",
+      "icons/md-icon.ico": "md-icon.ico",
+      "help.md": "help.md"
+    },
+    "windows": {
+      "nsis": {
+        "installerHooks": "installer.nsh",
+        "displayLanguageSelector": false
+      }
+    },
+    "fileAssociations": [
+      {
+        "ext": [
+          "md"
+        ],
+        "name": "Markdown File",
+        "description": "Markdown Document"
+      }
+    ]
   },
   "plugins": {
     "shell": {

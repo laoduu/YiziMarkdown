@@ -1,5 +1,48 @@
 # YiziMarkdown 开发日志
 
+## v0.1.2
+
+**关于页面重设计**
+
+- 重新设计设置面板「关于」页面：应用图标 + 产品名 + 版本号 + slogan + 链接列表 + 版权信息
+- slogan：「既好看，又彪悍！」「用YiziMarkdown，开心写出好运气」
+- 链接列表：GitHub 仓库、历史版本（Releases）、帮助文档（help.md）
+- 版本号改为从 Rust 端动态读取（`env!("CARGO_PKG_VERSION")`），不再硬编码
+- 状态栏版本号点击可直接打开设置面板的关于页面
+
+**链接修复（Tauri 2 兼容）**
+
+- Tauri 2 的 `shell.open` API 不可用，新增 Rust 端 `open` crate 实现 `open_url` 命令
+- 关于页面 GitHub 仓库链接和 Releases 链接现在可以正常在浏览器中打开
+
+**快捷键设置页统一**
+
+- 保存和恢复默认按钮改为底部固定栏（FooterBar），与其他设置页风格一致
+- 新增未保存修改检测，无修改时保存按钮置灰
+
+**文件关联图标修复**
+
+- `.md` 文件关联的 DefaultIcon 从程序内嵌图标改为独立的 `md-icon.ico` 文件
+- 打包配置 resources 中新增 `md-icon.ico` 资源释放
+- 需安装新版后生效（Windows 图标缓存机制）
+
+**版本号单点管理**
+
+- `tauri.conf.json` 的 `version` 作为唯一版本来源
+- StatusBar 和 SettingsModal 通过 `invoke('get_app_version')` 动态读取
+- `package.json` 和 `Cargo.toml` 保持同步
+
+**DevTools 开放**
+
+- `capabilities/default.json` 新增 `core:window:allow-toggle-devtools` 权限
+- F12 / Ctrl+Shift+I 现在可以在发布版中打开开发者工具
+
+**帮助文档**
+
+- 新增完整 help.md 帮助文档，覆盖所有功能、操作、配置方式和常见问题
+- 打包时随 resources 释放到程序目录
+
+
 ## v0.0.26
 
 **格式化按钮优化**

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { 
   FileText,
   SaveAll, 
@@ -80,6 +80,21 @@ export default function Toolbar({
   const [showExportMenu, setShowExportMenu] = useState(false)
   const [showThemeMenu, setShowThemeMenu] = useState(false)
   const { currentTheme, setField } = useSettingsStore()
+  const [themeFiles, setThemeFiles] = useState<string[]>([])
+
+  // 动态加载主题列表（从 themes/ 目录读取）
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const tauri = (window as any).__TAURI_INTERNALS__
+        if (tauri && typeof tauri.invoke === 'function') {
+          const files = await tauri.invoke('list_themes') as string[]
+          if (files) setThemeFiles(files)
+        }
+      } catch {}
+    }
+    load()
+  }, [])
 
   // 空白处双击最大化/还原
   const handleDoubleClick = useCallback(async () => {
@@ -187,9 +202,12 @@ export default function Toolbar({
                 onClick={() => setShowThemeMenu(false)}
               />
               <div className="absolute top-full right-0 mt-1 py-1 w-48 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50">
-                {Object.entries(themeNames).map(([id, name]) => (
+                {themeFiles.map((file) => {
+                  const id = file.replace(/\.css$/, '')
+                  const name = themeNames[id] || id
+                  return (
                   <button
-                    key={id}
+                    key={file}
                     onMouseDown={(e) => e.stopPropagation()}
                     onClick={() => { setField('currentTheme', id); setShowThemeMenu(false) }}
                     className="w-full px-3 py-2 text-sm text-left text-[var(--editor-text)] hover:bg-[var(--editor-hover)] flex items-center gap-2"
@@ -197,7 +215,8 @@ export default function Toolbar({
                     {currentTheme === id && <Check size={14} className="text-[var(--editor-accent)]" />}
                     <span className={currentTheme === id ? 'text-[var(--editor-accent)] font-medium' : ''}>{name}</span>
                   </button>
-                ))}
+                  )
+                })}
               </div>
             </>
           )}
