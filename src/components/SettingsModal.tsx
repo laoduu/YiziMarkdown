@@ -1,19 +1,7 @@
+import { invokeTauri } from '../lib/tauri'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { X, Loader2, ChevronRight, FolderOpen, Palette, FileText, Keyboard, Settings2, Eye, Info, Github, History, BookOpen, ExternalLink } from 'lucide-react'
+import { X, Loader2, ChevronRight, FolderOpen, Palette, FileText, Keyboard, Settings2, Eye, Info, Github, History, BookOpen, ExternalLink, Zap } from 'lucide-react'
 import { useSettingsStore } from '../stores/settingsStore'
-
-const invokeTauri = async <T,>(cmd: string, args?: Record<string, unknown>): Promise<T | null> => {
-  try {
-    const tauri = (window as any).__TAURI_INTERNALS__
-    if (tauri && typeof tauri.invoke === 'function') {
-      return await tauri.invoke(cmd, args)
-    }
-    return null
-  } catch (error) {
-    console.warn(`Tauri command failed: ${cmd}`, error)
-    return null
-  }
-}
 
 const fallbackFonts = [
   'Consolas', 'Courier New', 'Lucida Console', 'Monaco', 'Menlo',
@@ -26,6 +14,7 @@ const fallbackFonts = [
 const DEFAULTS_GENERAL = { autoSave: true, autoSaveInterval: 3000, defaultTemplate: '' }
 const DEFAULTS_APPEARANCE = { currentTheme: 'academic', isDark: false }
 const DEFAULTS_EDITOR = {
+  liveAnimationMode: 'blur' as const,
   fontFamily: "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif",
   previewFontFamily: "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif",
   fontSize: 20, lineHeight: 2.0, previewFontSize: 20, previewLineHeight: 2.0,
@@ -38,12 +27,13 @@ interface SettingsModalProps {
   defaultTab?: CategoryKey
 }
 
-type CategoryKey = 'general' | 'appearance' | 'editor' | 'shortcuts' | 'templates' | 'about'
+type CategoryKey = 'general' | 'appearance' | 'editor' | 'liveMode' | 'shortcuts' | 'templates' | 'about'
 
 const categories: Array<{ key: CategoryKey; label: string; icon: React.ReactNode }> = [
   { key: 'general', label: '通用', icon: <Settings2 size={16} /> },
   { key: 'appearance', label: '外观', icon: <Palette size={16} /> },
   { key: 'editor', label: '编辑器', icon: <FileText size={16} /> },
+  { key: 'liveMode', label: '实时模式', icon: <Zap size={16} /> },
   { key: 'shortcuts', label: '快捷键', icon: <Keyboard size={16} /> },
   { key: 'templates', label: '模板', icon: <FolderOpen size={16} /> },
   { key: 'about', label: '关于', icon: <Info size={16} /> },
@@ -222,7 +212,7 @@ function AppearanceSettings() {
   }
 
   const nameMap: Record<string, string> = {
-    'minimal': '极简风', 'magazine': '杂志感', 'tech': '科技感', 'nature': '自然风',
+    'academic': '学术蓝', 'vibrant': '活力橙', 'minimal': '极简风', 'magazine': '杂志感', 'tech': '科技感', 'nature': '自然风',
   }
   const descMap: Record<string, string> = {
     'minimal': '清爽干净的默认风格', 'magazine': '温暖优雅的阅读体验',
@@ -267,6 +257,153 @@ function AppearanceSettings() {
   )
 }
 
+
+
+// ===================== 实时模式设置 =====================
+function LiveModeSettings() {
+  const { liveAnimationMode, setField } = useSettingsStore()
+  
+  const animations = [
+    { key: 'blur' as const, name: '聚焦', desc: '文字模糊后重新对焦，简洁干净', css: 'filter: blur(2px) → blur(0)' },
+    { key: 'flash' as const, name: '闪光', desc: '文字闪过一束光，利落干脆', css: 'filter: brightness(1) → 1.5 → 1' },
+    { key: 'glow' as const, name: '辉光', desc: '模糊+闪光叠加，推荐效果', css: 'blur + brightness 组合' },
+    { key: 'ripple' as const, name: '涟漪', desc: '多波峰衰减，像水面波纹', css: '多段 blur + brightness' },
+  ]
+
+  return (
+    <>
+      <div className="settings-content-scroll">
+        <div className="space-y-4">
+          <Section title="动画方案">
+            <p className="text-[11px] text-[var(--sidebar-text)] px-5 mb-3">
+              实时模式下，Markdown标记出现时文字的过渡动画效果。点击下方卡片可实时预览。
+            </p>
+            <div className="grid grid-cols-2 gap-3 px-5">
+              {animations.map(({ key, name, desc, css }) => (
+                <button
+                  key={key}
+                  onClick={() => setField('liveAnimationMode', key)}
+                  className={`p-4 rounded-xl text-left transition-all ${
+                    liveAnimationMode === key
+                      ? 'bg-[var(--editor-accent)] text-white shadow-lg shadow-[var(--editor-accent)]/20'
+                      : 'bg-[var(--editor-surface)] text-[var(--editor-text)] hover:bg-[var(--editor-hover)] border border-[var(--editor-border)]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-sm">{name}</span>
+                    {liveAnimationMode === key && (
+                      <span className="text-[10px] px-1.5 py-0.5 bg-white/20 rounded">当前</span>
+                    )}
+                  </div>
+                  <p className={`text-[11px] ${liveAnimationMode === key ? 'opacity-80' : 'opacity-60'}`}>{desc}</p>
+                  <p className={`text-[10px] mt-2 font-mono ${liveAnimationMode === key ? 'opacity-60' : 'opacity-40'}`}>{css}</p>
+                </button>
+              ))}
+            </div>
+          </Section>
+
+          <Section title="动画预览">
+            <div className="px-5">
+              <div className="p-4 bg-[var(--editor-bg)] rounded-xl border border-[var(--editor-border)]">
+                <div className="text-[11px] text-[var(--sidebar-text)] mb-3">点击下方文字触发动画演示</div>
+                <AnimationDemo mode={liveAnimationMode} />
+              </div>
+            </div>
+          </Section>
+
+          <Section title="说明">
+            <div className="px-5 space-y-2">
+              <div className="flex items-start gap-2">
+                <span className="text-[var(--editor-accent)] mt-0.5">•</span>
+                <p className="text-[11px] text-[var(--sidebar-text)]">动画仅在光标进入新行时触发，离开时不触发，避免干扰</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-[var(--editor-accent)] mt-0.5">•</span>
+                <p className="text-[11px] text-[var(--sidebar-text)]">所有方案均使用GPU加速的CSS动画，性能开销可忽略</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-[var(--editor-accent)] mt-0.5">•</span>
+                <p className="text-[11px] text-[var(--sidebar-text)]">设置即时生效，切换方案后进入新行即可看到效果</p>
+              </div>
+            </div>
+          </Section>
+        </div>
+      </div>
+      <div className="settings-footer-bar">
+        <button onClick={() => setField('liveAnimationMode', 'blur')} className="settings-btn-secondary">恢复默认</button>
+      </div>
+    </>
+  )
+}
+
+function AnimationDemo({ mode }: { mode: string }) {
+  const [active, setActive] = useState(false)
+  
+  const triggerAnimation = () => {
+    setActive(false)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setActive(true))
+    })
+  }
+  
+  useEffect(() => {
+    triggerAnimation()
+  }, [mode])
+  
+  const animClass = `demo-anim-${mode}`
+  
+  return (
+    <div onClick={triggerAnimation} className="cursor-pointer select-none">
+      <style>{`
+        .demo-anim-blur { animation: demo-blur 0.45s ease forwards; }
+        .demo-anim-flash { animation: demo-flash 0.5s ease forwards; }
+        .demo-anim-glow { animation: demo-glow 0.55s ease forwards; }
+        .demo-anim-ripple { animation: demo-ripple 0.7s ease forwards; }
+        @keyframes demo-blur { 0% { filter: blur(3px); } 100% { filter: blur(0); } }
+        @keyframes demo-flash { 0% { filter: brightness(1); } 30% { filter: brightness(1.6); } 100% { filter: brightness(1); } }
+        @keyframes demo-glow { 0% { filter: blur(3px) brightness(0.8); } 30% { filter: blur(0.5px) brightness(1.6); } 100% { filter: blur(0) brightness(1); } }
+        @keyframes demo-ripple { 0% { filter: blur(3px) brightness(0.8); } 20% { filter: blur(1px) brightness(1.7); } 50% { filter: blur(0) brightness(1.3); } 100% { filter: blur(0) brightness(1); } }
+        
+        .demo-mark {
+          display: inline-block;
+          overflow: hidden;
+          max-width: 0;
+          opacity: 0;
+          transition: max-width 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+          color: var(--editor-accent);
+          font-family: var(--font-mono);
+          font-size: 0.85em;
+        }
+        .demo-active .demo-mark {
+          max-width: 3em;
+          opacity: 0.6;
+        }
+      `}</style>
+      
+      <div className={`space-y-2 ${active ? 'demo-active' : ''}`}>
+        <div className="flex items-baseline gap-1">
+          <span className="demo-mark"># </span>
+          <span className={`text-sm font-bold ${active ? animClass : ''}`}>这是一级标题</span>
+        </div>
+        <div className="flex items-baseline gap-1">
+          <span className="demo-mark">## </span>
+          <span className={`text-sm ${active ? animClass : ''}`}>这是二级标题</span>
+        </div>
+        <div className="flex items-baseline gap-1">
+          <span className="demo-mark">- </span>
+          <span className={`text-sm ${active ? animClass : ''}`}>这是列表项</span>
+        </div>
+        <div className="flex items-baseline gap-1">
+          <span className="demo-mark">**</span>
+          <span className={`text-sm font-bold ${active ? animClass : ''}`}>这是加粗文字</span>
+          <span className="demo-mark">**</span>
+        </div>
+      </div>
+      <p className="text-[10px] text-[var(--sidebar-text)] mt-3 text-center">点击此处重新播放动画</p>
+    </div>
+  )
+}
+
 // ===================== 编辑器设置 =====================
 function EditorSettings() {
   const store = useSettingsStore()
@@ -275,6 +412,7 @@ function EditorSettings() {
     fontSize: store.fontSize, lineHeight: store.lineHeight,
     previewFontSize: store.previewFontSize, previewLineHeight: store.previewLineHeight,
     showLineNumbers: store.showLineNumbers, wordWrap: store.wordWrap,
+    liveAnimationMode: store.liveAnimationMode,
   })
   const [systemFonts, setSystemFonts] = useState(fallbackFonts)
   const [fontsLoaded, setFontsLoaded] = useState(false)
@@ -289,6 +427,7 @@ function EditorSettings() {
         fontSize: store.fontSize, lineHeight: store.lineHeight,
         previewFontSize: store.previewFontSize, previewLineHeight: store.previewLineHeight,
         showLineNumbers: store.showLineNumbers, wordWrap: store.wordWrap,
+        liveAnimationMode: store.liveAnimationMode,
       })
       initialized.current = true
     }
@@ -302,6 +441,7 @@ function EditorSettings() {
     || local.fontSize !== store.fontSize || local.lineHeight !== store.lineHeight
     || local.previewFontSize !== store.previewFontSize || local.previewLineHeight !== store.previewLineHeight
     || local.showLineNumbers !== store.showLineNumbers || local.wordWrap !== store.wordWrap
+    || local.liveAnimationMode !== store.liveAnimationMode
   const handleSave = () => { store.updateSettings(local) }
   const handleRestore = () => { setLocal({ ...DEFAULTS_EDITOR }) }
 
@@ -375,6 +515,7 @@ function EditorSettings() {
               </label>
             </Row>
           </Section>
+          
           <Section title="预览">
             <div className="p-3 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg text-[var(--editor-text)]" style={{ fontFamily: local.fontFamily, fontSize: `${local.fontSize}px`, lineHeight: local.lineHeight }}>
               <div className="text-[11px] text-[var(--sidebar-text)] mb-1">源代码模式</div>
@@ -621,6 +762,7 @@ export default function SettingsModal({ isOpen, onClose, defaultTab }: SettingsM
 
   const content: Record<CategoryKey, React.ReactNode> = {
     general: <GeneralSettings />, appearance: <AppearanceSettings />, editor: <EditorSettings />,
+    liveMode: <LiveModeSettings />,
     shortcuts: <ShortcutsSettings />, templates: <TemplatesSettings />, about: <AboutSettings />,
   }
 

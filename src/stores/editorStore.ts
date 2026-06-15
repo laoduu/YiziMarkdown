@@ -3,6 +3,8 @@ import { persist } from 'zustand/middleware'
 
 export type SaveStatus = 'saved' | 'unsaved' | 'just-saved'
 
+export type ViewMode = 'edit' | 'live' | 'split' | 'preview'
+
 export interface FileTab {
   id: string
   name: string
@@ -10,7 +12,7 @@ export interface FileTab {
   content: string
   isSaved: boolean
   saveStatus: SaveStatus
-  viewMode: 'edit' | 'split' | 'preview'
+  viewMode: ViewMode
 }
 
 interface EditorState {
@@ -28,7 +30,7 @@ interface EditorState {
   forceCloseTab: (tabId: string) => void
   switchTab: (tabId: string | null) => void
   updateContent: (content: string) => void
-  updateViewMode: (viewMode: 'edit' | 'split' | 'preview') => void
+  updateViewMode: (viewMode: ViewMode) => void
   markAsSaved: () => void
   clearJustSaved: (tabId: string) => void
   updateTabName: (tabId: string, name: string) => void
@@ -36,7 +38,7 @@ interface EditorState {
   addRecentFile: (filePath: string) => void
   removeRecentFile: (filePath: string) => void
   setActiveHeadingId: (id: string | null) => void
-  setViewMode: (tabId: string, viewMode: 'edit' | 'split' | 'preview') => void
+  setViewMode: (tabId: string, viewMode: ViewMode) => void
   cursorPosition: { line: number; column: number }
   setCursorPosition: (position: { line: number; column: number }) => void
   activeHeadingId: string | null

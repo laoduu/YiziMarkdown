@@ -6,33 +6,10 @@ import StatusBar from './components/StatusBar'
 import SettingsModal from './components/SettingsModal'
 import TabBar from './components/TabBar'
 import HomePage from './components/HomePage'
+import { PanelLeftClose, PanelLeft } from 'lucide-react'
+import { invokeTauri } from './lib/tauri'
 import { useSettingsStore } from './stores/settingsStore'
 import { useEditorStore } from './stores/editorStore'
-
-// Tauri API 调用函数
-const invokeTauri = async <T,>(cmd: string, args?: Record<string, unknown>): Promise<T | null> => {
-  try {
-    const tauriV2 = (window as any).__TAURI_INTERNALS__
-    if (tauriV2 && typeof tauriV2.invoke === 'function') {
-      return await tauriV2.invoke(cmd, args)
-    }
-    
-    const tauriV1 = (window as any).__TAURI__
-    if (tauriV1 && typeof tauriV1.invoke === 'function') {
-      return await tauriV1.invoke(cmd, args)
-    }
-    
-    if (typeof (window as any).invoke === 'function') {
-      return await (window as any).invoke(cmd, args)
-    }
-    
-    console.warn('Tauri API 不可用')
-    return null
-  } catch (error) {
-    console.warn(`调用 Tauri 命令失败: ${cmd}`, error)
-    return null
-  }
-}
 
 // 打开文件对话框 - Tauri 环境用 Rust 命令，浏览器降级用 HTML input
 const openFileDialog = async (): Promise<{ name: string; content: string; filePath?: string } | null> => {
@@ -91,7 +68,7 @@ function App() {
     updateContent, markAsSaved, updateTabName, updateTabFilePath,
   } = useEditorStore()
   const [sidebarVisible, setSidebarVisible] = useState(true)
-  const [cursorPosition] = useState({ line: 1, column: 1 })
+  const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 })
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [settingsDefaultTab, setSettingsDefaultTab] = useState<string | undefined>(undefined)
@@ -290,7 +267,8 @@ function App() {
   }, [currentTheme, isDark])
 
   const handleNewFile = useCallback(() => {
-    openNewFile('')
+    const { defaultTemplate } = useSettingsStore.getState()
+    openNewFile(defaultTemplate || '')
   }, [openNewFile])
 
   const handleOpenFile = useCallback(async () => {
@@ -368,29 +346,27 @@ function App() {
     setIsSettingsOpen(prev => !prev)
   }, [])
 
-  const handleExport = useCallback((format: 'html' | 'md' | 'txt') => {
+  const handleExport = useCallback(async (format: 'html' | 'md' | 'txt') => {
     const tab = currentTab()
     if (!tab) return
 
     let output = ''
-    let filename = 'document'
-    let mimeType = 'text/plain'
-    
+    let baseName = 'document'
+    let ext = 'txt'
+
     if (tab.filePath) {
-      filename = tab.filePath.split('\\').pop()?.replace(/\.[^/.]+$/, '') || 'document'
+      baseName = tab.filePath.split('\\').pop()?.replace(/\.[^/.]+$/, '') || 'document'
     }
     
     switch (format) {
       case 'html':
         const previewElement = document.querySelector('.editor-content')
         output = previewElement?.innerHTML || tab.content
-        filename += '.html'
-        mimeType = 'text/html'
+        ext = 'html'
         break
       case 'md':
         output = tab.content
-        filename += '.md'
-        mimeType = 'text/markdown'
+        ext = 'md'
         break
       case 'txt':
         output = tab.content
@@ -408,19 +384,25 @@ function App() {
           .replace(/^>\s/gm, '')
           .replace(/\|/g, '')
           .replace(/---/g, '')
-        filename += '.txt'
-        mimeType = 'text/plain'
+        ext = 'txt'
         break
     }
-    
-    const blob = new Blob([output], { type: mimeType })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename
-    a.click()
-    URL.revokeObjectURL(url)
-    showToast('已导出 ' + filename)
+
+    // 弹出保存文件对话框
+    const savedPath = await invokeTauri<string | null>('save_file_dialog', {
+      fileName: baseName + '.' + ext,
+      extensions: [ext],
+    })
+
+    if (!savedPath) return  // 用户取消
+
+    // 写入文件
+    try {
+      await invokeTauri('save_file', { path: savedPath, content: output })
+      showToast('已导出 ' + savedPath.split('\\').pop())
+    } catch {
+      showToast('导出失败')
+    }
   }, [currentTab, showToast])
 
   const handleFolderChange = useCallback((folderPath: string) => {
@@ -455,6 +437,8 @@ function App() {
         onSearch={handleSearchToggle}
         onSettings={handleSettings}
         isDark={isDark}
+        onUndo={() => editorRef.current?.undo()}
+        onRedo={() => editorRef.current?.redo()}
       />
       
       <TabBar onNew={handleNewFile} />
@@ -471,19 +455,43 @@ function App() {
           activeHeadingId={useEditorStore(s => s.activeHeadingId)}
         />
         
-        {/* 首页 or 编辑器 */}
-        {activeTabId === null ? (
-          <HomePage onOpenFile={handleOpenRecent} />
-        ) : (
-          <Editor 
-            ref={editorRef}
-            content={content} 
-            onChange={updateContent}
-            isSearchOpen={isSearchOpen}
-            onSearchToggle={handleSearchToggle}
-            viewMode={viewMode}
-          />
-        )}
+        {/* 内容区（含侧边栏切换按钮） */}
+        <div 
+          className="relative flex-1 min-w-0 flex flex-col"
+          onMouseDown={(e) => {
+            // 防止点击内容区空白处导致编辑器失去焦点
+            // 只有点击input/textarea/button等交互元素时才允许焦点转移
+            const target = e.target as HTMLElement
+            if (!target.closest('input') && !target.closest('textarea') && !target.closest('button')) {
+              e.preventDefault()
+            }
+          }}
+        >
+          <button
+            onClick={() => setSidebarVisible(!sidebarVisible)}
+            className="absolute top-1 left-1 z-10 w-6 h-6 flex items-center justify-center rounded
+              text-[var(--editor-text)] opacity-40 hover:opacity-100 hover:bg-[var(--editor-hover)]
+              transition-opacity duration-150"
+            title={sidebarVisible ? "收起侧边栏" : "展开侧边栏"}
+          >
+            {sidebarVisible ? <PanelLeftClose size={14} /> : <PanelLeft size={14} />}
+          </button>
+
+          {/* 首页 or 编辑器 */}
+          {activeTabId === null ? (
+            <HomePage onOpenFile={handleOpenRecent} />
+          ) : (
+            <Editor 
+              ref={editorRef}
+              content={content} 
+              onChange={updateContent}
+              isSearchOpen={isSearchOpen}
+              onSearchToggle={handleSearchToggle}
+              viewMode={viewMode}
+              onCursorChange={(pos) => setCursorPosition({ line: pos.line, column: pos.column })}
+            />
+          )}
+        </div>
       </div>
       
       <StatusBar 

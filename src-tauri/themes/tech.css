@@ -68,9 +68,9 @@
 .editor-content.theme-tech code {
   font-family: var(--font-mono);
   font-size: 0.9em;
-  background: var(--editor-surface);
+  background: color-mix(in srgb, var(--editor-text) 10%, var(--editor-surface));
   padding: 0.2em 0.4em;
-  border-radius: 4px;
+  border-radius: 5px;
   color: var(--editor-accent);
 }
 .theme-tech pre {

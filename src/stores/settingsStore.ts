@@ -26,6 +26,9 @@ export interface SettingsState {
   userThemeEnabled: boolean
   userThemeName: string
 
+  // 实时模式动画
+  liveAnimationMode: 'blur' | 'flash' | 'glow' | 'ripple'
+
   // 方法
   setField: <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => void
   updateSettings: (partial: Partial<SettingsState>) => void
@@ -55,6 +58,9 @@ export const useSettingsStore = create<SettingsState>()(
       isDark: false,
       userThemeEnabled: false,
       userThemeName: '',
+
+      // 实时模式动画
+      liveAnimationMode: 'blur',
 
       // 方法
       setField: (key, value) => set({ [key]: value }),

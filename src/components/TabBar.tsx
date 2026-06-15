@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Home, Code, Columns2, Eye, Check } from 'lucide-react'
+import { X, Home, Code, Columns2, Eye, Check, Sparkles } from 'lucide-react'
 import { useEditorStore, SaveStatus } from '../stores/editorStore'
 
 interface TabBarProps {
   onNew: () => void
 }
 
-export type ViewMode = 'edit' | 'split' | 'preview'
 
 function StatusDot({ status }: { status: SaveStatus }) {
   if (status === 'saved') return null
@@ -128,6 +127,13 @@ export default function TabBar({ onNew }: TabBarProps) {
             title="并排模式"
           >
             <Columns2 size={14} /><span>并排</span>
+          </button>
+          <button
+            onClick={() => useEditorStore.getState().updateViewMode('live')}
+            className={`tab-view-btn ${current?.viewMode === 'live' ? 'tab-view-active' : ''}`}
+            title="实时模式"
+          >
+            <Sparkles size={14} /><span>实时</span>
           </button>
           <button
             onClick={() => useEditorStore.getState().updateViewMode('preview')}

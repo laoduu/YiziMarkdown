@@ -1,3 +1,4 @@
+import { computeOutlineItems } from '../lib/headingId'
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { 
   ChevronRight, 
@@ -135,25 +136,7 @@ export default function Sidebar({ visible, currentFile, currentFolder, content, 
   }, [currentFolder, onFolderChange])
 
   // 大纲
-  const outlineItems = useMemo(() => {
-    const headings: Array<{ level: number; text: string; id: string; line: number }> = []
-    const headingCount: Record<string, number> = {}
-    content.split('\n').forEach((line, index) => {
-      const match = line.match(/^(#{1,6})\s+(.+)$/)
-      if (match) {
-        const base = match[2].trim().toLowerCase().replace(/[^\w\u4e00-\u9fa5]+/g, '-')
-        headingCount[base] = (headingCount[base] || 0) + 1
-        const id = headingCount[base] === 1 ? base : `${base}-${headingCount[base]}`
-        headings.push({
-          level: match[1].length,
-          text: match[2].trim(),
-          id,
-          line: index + 1,
-        })
-      }
-    })
-    return headings
-  }, [content])
+  const outlineItems = useMemo(() => computeOutlineItems(content), [content])
 
   if (!visible) return null
 

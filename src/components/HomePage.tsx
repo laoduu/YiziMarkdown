@@ -1,19 +1,7 @@
+import { invokeTauri } from '../lib/tauri'
 import { useEffect, useState } from 'react'
 import { FileText, Clock, Trash2, FolderOpen } from 'lucide-react'
 import { useEditorStore } from '../stores/editorStore'
-
-const invokeTauri = async <T,>(cmd: string, args?: Record<string, unknown>): Promise<T | null> => {
-  try {
-    const tauri = (window as any).__TAURI_INTERNALS__
-    if (tauri && typeof tauri.invoke === 'function') {
-      return await tauri.invoke(cmd, args)
-    }
-    return null
-  } catch (error) {
-    console.warn(`Tauri command failed: ${cmd}`, error)
-    return null
-  }
-}
 
 export default function HomePage({ onOpenFile }: { onOpenFile: (filePath: string) => void }) {
   const { recentFiles, removeRecentFile } = useEditorStore()

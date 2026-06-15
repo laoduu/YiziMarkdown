@@ -1,18 +1,20 @@
 import { useState, useEffect, useRef, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react'
-import { EditorView, keymap, lineNumbers, drawSelection, highlightActiveLine } from '@codemirror/view'
-import { EditorState, Compartment, Extension } from '@codemirror/state'
+import { EditorView, keymap, lineNumbers } from '@codemirror/view'
+import { EditorState, Compartment } from '@codemirror/state'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
-import { defaultHighlightStyle, syntaxHighlighting, indentOnInput, bracketMatching } from '@codemirror/language'
-import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo } from '@codemirror/commands'
-import { search, searchKeymap, highlightSelectionMatches } from '@codemirror/search'
-import { autocompletion, completionKeymap } from '@codemirror/autocomplete'
+// import { syntaxHighlighting } from '@codemirror/language'
+import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
+// import { searchKeymap, highlightSelectionMatches } from '@codemirror/search'
+// import { autocompletion, completionKeymap } from '@codemirror/autocomplete'
+// import { lintKeymap } from '@codemirror/lint'
+// import { HighlightStyle } from '@codemirror/language'
+// import { tags } from '@lezer/highlight'
 import { Search, X, Replace as ReplaceIcon, ChevronUp, ChevronDown } from 'lucide-react'
 import { languages } from '@codemirror/language-data'
 import { useSettingsStore } from '../stores/settingsStore'
-import { useEditorStore, type ViewMode } from '../stores/editorStore'
+import { useEditorStore } from '../stores/editorStore'
 import { findOutlineByLine, computeOutlineItems } from '../lib/headingId'
 import { renderMarkdown } from '../lib/markdownRenderer'
-import { liveEditExtension } from '../lib/cm-live-render'
 
 // const markdownHighlight = HighlightStyle.define([
 //   // 标题
@@ -75,13 +77,13 @@ import { liveEditExtension } from '../lib/cm-live-render'
 //   { tag: tags.invalid, color: '#ff0000' },
 // ])
 
+export type ViewMode = 'edit' | 'split' | 'preview'
+
 export interface EditorRef {
   insertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'link') => void
   toggleSearch: () => void
   navigateToLine: (target: { id: string; line: number }) => void
   getScrollDoms: () => { editor: HTMLElement | null; preview: HTMLElement | null }
-  undo: () => void
-  redo: () => void
 }
 
 interface EditorProps {
@@ -90,7 +92,6 @@ interface EditorProps {
   onSearchToggle?: () => void
   isSearchOpen?: boolean
   viewMode?: ViewMode
-  onCursorChange?: (pos: { line: number; column: number }) => void
 }
 
 interface PreviewPaneProps {
@@ -185,80 +186,7 @@ function PreviewPane({ content, currentTheme, onContentChange }: PreviewPaneProp
   )
 }
 
-
-function buildEditorTheme(isDark: boolean, fontFamily: string, fontSize: string, lineHeight: string): Extension {
-  return EditorView.theme({
-    '&.cm-editor': {
-      height: '100%',
-    },
-    '.cm-scroller': {
-      overflow: 'auto',
-    },
-    '&': {
-      fontSize: `var(--font-size-base, ${fontSize})`,
-      fontFamily: `var(--font-mono, ${fontFamily})`,
-      lineHeight: `var(--line-height, ${lineHeight})`,
-    },
-    '.cm-content': {
-      padding: '40px 60px',
-      maxWidth: '900px',
-      margin: '0 auto',
-      caretColor: 'var(--editor-cursor)',
-      color: 'var(--editor-text)',
-      fontFamily: `var(--font-mono, ${fontFamily})`,
-    },
-    '.cm-line': {
-      padding: '2px 0',
-      lineHeight: 'var(--line-height, 1.8)',
-    },
-    '&.cm-focused': {
-      outline: 'none',
-    },
-    '.cm-selectionBackground': {
-      backgroundColor: `${isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)'} !important`,
-    },
-    '.cm-activeLine': {
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-    },
-    '.cm-gutters': {
-      backgroundColor: 'var(--editor-bg)',
-      color: 'var(--editor-border)',
-      border: 'none',
-      borderRight: '1px solid var(--editor-border)',
-    },
-    '.cm-activeLineGutter': {
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-    },
-    '.cm-foldPlaceholder': {
-      backgroundColor: 'var(--editor-hover)',
-      color: 'var(--editor-text)',
-      border: '1px solid var(--editor-border)',
-    },
-    '.cm-searchMatch': {
-      backgroundColor: 'rgba(255, 213, 0, 0.3)',
-      outline: '1px solid rgba(255, 213, 0, 0.6)',
-    },
-    '.cm-searchMatch.cm-searchMatch-selected': {
-      backgroundColor: 'rgba(255, 150, 0, 0.4)',
-    },
-    '.cm-tooltip': {
-      backgroundColor: 'var(--editor-surface)',
-      border: '1px solid var(--editor-border)',
-      color: 'var(--editor-text)',
-    },
-    '.cm-tooltip-autocomplete': {
-      '& > ul > li': {
-        padding: '4px 8px',
-      },
-      '& > ul > li[aria-selected]': {
-        backgroundColor: 'var(--editor-hover)',
-        color: 'var(--editor-text)',
-      },
-    },
-  })
-}
-
-const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearchToggle, isSearchOpen: externalSearchOpen, viewMode: externalViewMode, onCursorChange }, ref) => {
+const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearchToggle: _onSearchToggle, isSearchOpen: externalSearchOpen, viewMode: externalViewMode }, ref) => {
   const editorRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const [internalSearchOpen, setInternalSearchOpen] = useState(false)
@@ -269,23 +197,15 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [searchMatches, setSearchMatches] = useState<number>(0)
   const [searchIndex, setSearchIndex] = useState<number>(-1)
-  const { fontFamily, fontSize, lineHeight, currentTheme, isDark, showLineNumbers, wordWrap, spellCheck, liveAnimationMode } = useSettingsStore()
+  const { fontFamily, fontSize, lineHeight, currentTheme, isDark, showLineNumbers } = useSettingsStore()
   const viewMode = externalViewMode ?? 'preview'
   const lineNumbersCompartment = useRef(new Compartment()).current
-  const richCompartment = useRef(new Compartment()).current
-  const lineWrappingCompartment = useRef(new Compartment()).current
-  const themeCompartment = useRef(new Compartment()).current
-  const spellCheckCompartment = useRef(new Compartment()).current
+  const activeHeadingId = useEditorStore(state => state.activeHeadingId)
   const previewScrollRef = useRef<HTMLDivElement>(null)
+  const isSyncingRef = useRef(false)
+  const lastSyncSourceRef = useRef<'editor' | 'preview'>('editor')
   const viewReadyRef = useRef(false)
-  // 同步滚动：driver lock + guard
-  const syncGuardRef = useRef(false)
-  const activeScrollPaneRef = useRef<'editor' | 'preview' | null>(null)
-  const activeScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // 同步滚动 cleanup holders
-  const scrollCleanupRef = useRef<(() => void) | null>(null)
   const lastSyncedFromEditorRef = useRef('')
-  const syncingFromExternalRef = useRef(false)
   // 缓存大纲 items，仅在 content 变化时重算
   const outlineCacheRef = useRef<{ content: string; items: ReturnType<typeof computeOutlineItems> }>({ content: '', items: [] })
   const getOutlineItems = (text: string) => {
@@ -297,238 +217,139 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     return cache.items
   }
 
-  // ---- 同步滚动辅助 ----
-  /** 获取预览面板中所有带 data-source-line 的元素，按行号排序 */
-  const getPreviewLines = useCallback((container: HTMLElement) => {
-    const nodes = container.querySelectorAll<HTMLElement>('[data-source-line]')
-    const list: Array<{ line: number; el: HTMLElement }> = []
-    for (const el of Array.from(nodes)) {
-      const n = Number(el.getAttribute('data-source-line') || '0')
-      if (n > 0) list.push({ line: n, el })
-    }
-    list.sort((a, b) => a.line - b.line)
-    return list
-  }, [])
-
-  /** 二分查找：找到 list 中 line <= target 的最大项 */
-  const findNearestLine = useCallback((list: Array<{ line: number; el?: HTMLElement }>, target: number) => {
-    if (!list.length) return null
-    let lo = 0, hi = list.length - 1, best = list[0]
-    while (lo <= hi) {
-      const mid = (lo + hi) >> 1
-      if (list[mid].line <= target) { best = list[mid]; lo = mid + 1 }
-      else hi = mid - 1
-    }
-    return best
-  }, [])
-
-  // ---- 统一同步滚动（借鉴 SoloMD driver-lock + data-source-line 方案） ----
-  // 绑定/解绑 scroll 事件，仅在 split 模式下激活
+  // 源代码 scroll spy：滚动时更新大纲高亮（同步由下方 useEffect 统一处理）
   useEffect(() => {
-    // 先清理旧的
-    scrollCleanupRef.current?.()
-
-    if (viewMode !== 'split') {
-      scrollCleanupRef.current = null
-      return
-    }
-
+    if (!viewReadyRef.current) return
     const view = viewRef.current
-    const editor = view?.scrollDOM ?? null
-    const preview = previewScrollRef.current
-    if (!editor || !preview) { scrollCleanupRef.current = null; return }
+    if (!view) return
+    const scroller = view.scrollDOM
 
-    // ---- Driver lock：区分用户主动滚动 vs 程序同步 ----
-    const intentEvents = ['wheel', 'pointerdown', 'touchstart', 'keydown'] as const
-    const markActive = (which: 'editor' | 'preview') => {
-      activeScrollPaneRef.current = which
-      if (activeScrollTimerRef.current) clearTimeout(activeScrollTimerRef.current)
-      activeScrollTimerRef.current = setTimeout(() => { activeScrollPaneRef.current = null }, 250)
-    }
-    const onEditorIntent = () => markActive('editor')
-    const onPreviewIntent = () => markActive('preview')
-    for (const ev of intentEvents) {
-      editor.addEventListener(ev, onEditorIntent, { passive: true })
-      preview.addEventListener(ev, onPreviewIntent, { passive: true })
-    }
-
-    // ---- 编辑器 → 预览 ----
-    const onEditorScroll = () => {
-      if (syncGuardRef.current || activeScrollPaneRef.current === 'preview') return
-      const v = viewRef.current
-      if (!v) return
-      // 获取编辑器视口顶部 1/3 处的行号
-      const top = v.scrollDOM.scrollTop + v.scrollDOM.clientHeight / 3
-      const block = v.lineBlockAtHeight(top)
-      const currentLine = v.state.doc.lineAt(block.from).number
-      // 更新大纲高亮
-      const items = getOutlineItems(v.state.doc.toString())
-      const item = findOutlineByLine(items, currentLine)
+    const onScroll = () => {
+      if (isSyncingRef.current) return
+      lastSyncSourceRef.current = 'editor'
+      const { state } = view
+      const top = scroller.scrollTop + scroller.clientHeight / 3
+      const lineObj = view.lineBlockAtHeight(top)
+      const line = state.doc.lineAt(lineObj.from).number
+      const items = getOutlineItems(state.doc.toString())
+      const item = findOutlineByLine(items, line)
       useEditorStore.getState().setActiveHeadingId(item?.id ?? null)
-      // 同步预览
-      const previewLines = getPreviewLines(preview)
-      const entry = findNearestLine(previewLines, currentLine)
-      if (!entry) return
-      const elRect = entry.el!.getBoundingClientRect()
-      const wrapRect = preview.getBoundingClientRect()
-      syncGuardRef.current = true
-      preview.scrollTop += elRect.top - wrapRect.top - preview.clientHeight / 3
-      requestAnimationFrame(() => { syncGuardRef.current = false })
     }
 
-    // ---- 预览 → 编辑器 ----
-    const onPreviewScroll = () => {
-      if (syncGuardRef.current || activeScrollPaneRef.current === 'editor') return
-      const v = viewRef.current
-      if (!v) return
-      const wrapTop = preview.getBoundingClientRect().top
-      const threshold = wrapTop + preview.clientHeight / 3
-      // 找到预览视口 1/3 处对应的 source line
-      const previewLines = getPreviewLines(preview)
-      let targetLine: number | null = null
-      for (const { line, el } of previewLines) {
-        if (el.getBoundingClientRect().bottom >= threshold) { targetLine = line; break }
-      }
-      if (targetLine == null) return
-      // 更新大纲高亮
-      const items = getOutlineItems(v.state.doc.toString())
-      const item = findOutlineByLine(items, targetLine)
-      useEditorStore.getState().setActiveHeadingId(item?.id ?? null)
-      // 同步编辑器
-      const safe = Math.max(1, Math.min(targetLine, v.state.doc.lines))
-      const lineObj = v.state.doc.line(safe)
-      syncGuardRef.current = true
-      v.dispatch({
-        effects: EditorView.scrollIntoView(lineObj.from, { y: 'start', yMargin: v.scrollDOM.clientHeight / 3 }),
-      })
-      requestAnimationFrame(() => { syncGuardRef.current = false })
-    }
+    scroller.addEventListener('scroll', onScroll, { passive: true })
+    return () => scroller.removeEventListener('scroll', onScroll)
+  }, [viewReadyRef.current])
 
-    editor.addEventListener('scroll', onEditorScroll, { passive: true })
-    preview.addEventListener('scroll', onPreviewScroll, { passive: true })
-
-    // cleanup
-    scrollCleanupRef.current = () => {
-      editor.removeEventListener('scroll', onEditorScroll)
-      preview.removeEventListener('scroll', onPreviewScroll)
-      for (const ev of intentEvents) {
-        editor.removeEventListener(ev, onEditorIntent)
-        preview.removeEventListener(ev, onPreviewIntent)
-      }
-      if (activeScrollTimerRef.current) clearTimeout(activeScrollTimerRef.current)
-    }
-  }, [viewMode, viewReadyRef.current, getPreviewLines, findNearestLine, getOutlineItems])
-
-  // ---- 单面板模式下的 scroll spy（大纲高亮） ----
+  // 预览面板 scroll spy：滚动时更新大纲高亮（同步由下方 useEffect 统一处理）
   useEffect(() => {
-    if (viewMode === 'split') return
-    // edit/live 模式：监听编辑器滚动
-    if (viewMode === 'edit' || viewMode === 'live') {
-      const view = viewRef.current
-      if (!view) return
-      const scroller = view.scrollDOM
-      const onScroll = () => {
-        if (syncGuardRef.current) return
-        const top = scroller.scrollTop + scroller.clientHeight / 3
-        const lineObj = view.lineBlockAtHeight(top)
-        const line = view.state.doc.lineAt(lineObj.from).number
-        const items = getOutlineItems(view.state.doc.toString())
-        const item = findOutlineByLine(items, line)
-        useEditorStore.getState().setActiveHeadingId(item?.id ?? null)
-      }
-      scroller.addEventListener('scroll', onScroll, { passive: true })
-      return () => scroller.removeEventListener('scroll', onScroll)
-    }
-    // preview 模式：监听预览滚动
-    if (viewMode === 'preview') {
-      const container = previewScrollRef.current
-      if (!container) return
-      const onScroll = () => {
-        if (syncGuardRef.current) return
-        const wrapTop = container.getBoundingClientRect().top
-        const threshold = wrapTop + container.clientHeight / 3
-        const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6')
-        let activeId: string | null = null
-        for (const el of headings) {
-          if (el.getBoundingClientRect().top <= threshold) { activeId = el.id } else break
+    const container = previewScrollRef.current
+    if (!container) return
+
+    const onScroll = () => {
+      if (isSyncingRef.current) return
+      lastSyncSourceRef.current = 'preview'
+      const containerRect = container.getBoundingClientRect()
+      const threshold = containerRect.top + containerRect.height / 3
+      const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6')
+      let activeId: string | null = null
+      for (const el of headings) {
+        if (el.getBoundingClientRect().top <= threshold) {
+          activeId = el.id
+        } else {
+          break
         }
-        useEditorStore.getState().setActiveHeadingId(activeId)
       }
-      container.addEventListener('scroll', onScroll, { passive: true })
-      return () => container.removeEventListener('scroll', onScroll)
+      useEditorStore.getState().setActiveHeadingId(activeId)
     }
-  }, [viewMode, getOutlineItems])
 
-  // ---- Live 模式：reconfigure richCompartment ----
+    container.addEventListener('scroll', onScroll, { passive: true })
+    return () => container.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // 统一并排联动：activeHeadingId 变化时只同步对侧面板
   useEffect(() => {
+    if (viewMode !== 'split') return
+    const id = activeHeadingId
+    if (!id) return
     const view = viewRef.current
-    if (!view || !viewReadyRef.current) return
-    view.dispatch({ effects: richCompartment.reconfigure(viewMode === 'live' ? liveEditExtension() : []) })
-  }, [viewMode])
+    const pvDom = previewScrollRef.current
+    if (!view || !pvDom) return
 
-  // ---- 跨模式切换定位（借鉴 SoloMD：保存 top line，恢复到同一行） ----
+    const source = lastSyncSourceRef.current
+    const items = getOutlineItems(view.state.doc.toString())
+    const item = items.find(i => i.id === id)
+    if (!item) return
+
+    isSyncingRef.current = true
+
+    if (source === 'editor') {
+      // 源代码触发的 → 只同步预览面板
+      const el = document.getElementById(id)
+      if (el) {
+        const pvRect = pvDom.getBoundingClientRect()
+        const elRect = el.getBoundingClientRect()
+        const offset = elRect.top - pvRect.top + pvDom.scrollTop - pvDom.clientHeight / 2
+        pvDom.scrollTo({ top: Math.max(0, offset) })
+      }
+    } else {
+      // 预览触发的 → 只同步源代码面板
+      const lineObj = view.state.doc.line(item.line)
+      view.dispatch({
+        effects: EditorView.scrollIntoView(lineObj.from, { y: 'center' }),
+      })
+    }
+
+    const timer = setTimeout(() => { isSyncingRef.current = false }, 150)
+    return () => clearTimeout(timer)
+  }, [viewMode, activeHeadingId])
+
+  // 模式切换时自动定位到当前大纲位置
   const prevViewModeRef = useRef(viewMode)
   useEffect(() => {
     const prev = prevViewModeRef.current
     prevViewModeRef.current = viewMode
+    // 只在模式真正切换时触发，首次挂载跳过
     if (prev === viewMode) return
 
+    const id = activeHeadingId
+    if (!id) return
     const view = viewRef.current
     const pvDom = previewScrollRef.current
     if (!view) return
 
-    // 1. 从旧模式快照当前 top line
-    let savedLine: number | null = null
-    if (prev === 'preview') {
-      // 从预览快照：找视口顶部 1/3 处的 source-line
-      if (pvDom) {
-        const wrapTop = pvDom.getBoundingClientRect().top
-        const threshold = wrapTop + pvDom.clientHeight / 3
-        const list = getPreviewLines(pvDom)
-        for (const { line, el } of list) {
-          if (el.getBoundingClientRect().bottom >= threshold) { savedLine = line; break }
-        }
-      }
-    } else {
-      // 从编辑器快照：视口顶部 1/3 处的行号
-      const top = view.scrollDOM.scrollTop + view.scrollDOM.clientHeight / 3
-      const block = view.lineBlockAtHeight(top)
-      savedLine = view.state.doc.lineAt(block.from).number
-    }
-    if (savedLine == null) return
+    const items = getOutlineItems(view.state.doc.toString())
+    const item = items.find(i => i.id === id)
+    if (!item) return
 
-    // 2. 等 DOM 更新后恢复到目标行
-    setTimeout(() => {
-      const v = viewRef.current
-      const pv = previewScrollRef.current
-      if (!v) return
+    isSyncingRef.current = true
 
-      syncGuardRef.current = true
-
-      // 恢复到编辑器
-      if (viewMode === 'edit' || viewMode === 'live' || viewMode === 'split') {
-        const safe = Math.max(1, Math.min(savedLine, v.state.doc.lines))
-        const lineObj = v.state.doc.line(safe)
-        v.dispatch({
-          effects: EditorView.scrollIntoView(lineObj.from, { y: 'start', yMargin: v.scrollDOM.clientHeight / 3 }),
-        })
-      }
-      // 恢复到预览
-      if (viewMode === 'preview' || viewMode === 'split') {
-        if (pv) {
-          const list = getPreviewLines(pv)
-          const entry = findNearestLine(list, savedLine)
-          if (entry) {
-            const elRect = entry.el!.getBoundingClientRect()
-            const wrapRect = pv.getBoundingClientRect()
-            pv.scrollTop += elRect.top - wrapRect.top - pv.clientHeight / 3
+    // 源代码→预览/并排：等 DOM 渲染后滚动预览
+    if ((prev === 'edit') && (viewMode === 'preview' || viewMode === 'split')) {
+      requestAnimationFrame(() => {
+        if (pvDom) {
+          const el = document.getElementById(id)
+          if (el) {
+            const pvRect = pvDom.getBoundingClientRect()
+            const elRect = el.getBoundingClientRect()
+            const offset = elRect.top - pvRect.top + pvDom.scrollTop - pvDom.clientHeight / 2
+            pvDom.scrollTo({ top: Math.max(0, offset), behavior: 'smooth' })
           }
         }
-      }
+      })
+    }
+    // 预览/并排→源代码：滚动编辑器
+    if ((prev === 'preview' || prev === 'split') && viewMode === 'edit') {
+      requestAnimationFrame(() => {
+        const lineObj = view.state.doc.line(item.line)
+        view.dispatch({
+          effects: EditorView.scrollIntoView(lineObj.from, { y: 'center' }),
+        })
+      })
+    }
 
-      requestAnimationFrame(() => { syncGuardRef.current = false })
-    }, 100)
-  }, [viewMode, getPreviewLines, findNearestLine])
+    const timer = setTimeout(() => { isSyncingRef.current = false }, 300)
+    return () => clearTimeout(timer)
+  }, [viewMode])
 
   useImperativeHandle(ref, () => ({
     insertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'link') => {
@@ -591,7 +412,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     },
     navigateToLine: ({ id, line }: { id: string; line: number }) => {
       const view = viewRef.current
-      if (viewMode === 'edit' || viewMode === 'live') {
+      if (viewMode === 'edit') {
         // 源代码模式：按行号跳转
         if (!view) return
         const doc = view.state.doc
@@ -612,31 +433,8 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
           const offset = elRect.top - pvRect.top + pvDom.scrollTop - pvDom.clientHeight / 2 + elRect.height / 2
           pvDom.scrollTo({ top: Math.max(0, offset) })
         }
-      } else if (viewMode === 'split') {
-        // 并排模式：同时滚动编辑器和预览
-        syncGuardRef.current = true
-        // 编辑器跳转到对应行
-        if (view) {
-          const doc = view.state.doc
-          const lineNum = Math.max(1, Math.min(line, doc.lines))
-          const lineObj = doc.line(lineNum)
-          view.dispatch({
-            selection: { anchor: lineObj.from },
-            effects: EditorView.scrollIntoView(lineObj.from, { y: 'center' }),
-          })
-        }
-        // 预览跳转到对应标题
-        const el = document.getElementById(id)
-        const pvDom = previewScrollRef.current
-        if (el && pvDom) {
-          const pvRect = pvDom.getBoundingClientRect()
-          const elRect = el.getBoundingClientRect()
-          const offset = elRect.top - pvRect.top + pvDom.scrollTop - pvDom.clientHeight / 2 + elRect.height / 2
-          pvDom.scrollTo({ top: Math.max(0, offset) })
-        }
-        requestAnimationFrame(() => { syncGuardRef.current = false })
       }
-      // 更新大纲高亮
+      // 更新大纲高亮（并排模式由 useEffect 统一联动）
       useEditorStore.getState().setActiveHeadingId(id)
     },
     getScrollDoms: () => {
@@ -644,20 +442,6 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       return {
         editor: view?.scrollDOM ?? null,
         preview: previewScrollRef.current ?? null,
-      }
-    },
-    undo: () => {
-      const view = viewRef.current
-      if (view) {
-        undo({ state: view.state, dispatch: view.dispatch })
-        view.focus()
-      }
-    },
-    redo: () => {
-      const view = viewRef.current
-      if (view) {
-        redo({ state: view.state, dispatch: view.dispatch })
-        view.focus()
       }
     }
   }))
@@ -686,37 +470,119 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   useEffect(() => {
     if (!editorRef.current) return
 
+    const editorTheme = EditorView.theme({
+      '&.cm-editor': {
+        height: '100%',
+      },
+      '.cm-scroller': {
+        overflow: 'auto',
+      },
+      '&': {
+        fontSize: `var(--font-size-base, ${fontSize})`,
+        fontFamily: `var(--font-mono, ${fontFamily})`,
+        lineHeight: `var(--line-height, ${lineHeight})`,
+      },
+      '.cm-content': {
+        padding: '40px 60px',
+        maxWidth: '900px',
+        margin: '0 auto',
+        caretColor: 'var(--editor-cursor)',
+        color: 'var(--editor-text)',
+        fontFamily: `var(--font-mono, ${fontFamily})`,
+      },
+      '.cm-line': {
+        padding: '2px 0',
+        lineHeight: 'var(--line-height, 1.8)',
+      },
+      '&.cm-focused': {
+        outline: 'none',
+      },
+      '.cm-selectionBackground': {
+        backgroundColor: `${isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)'} !important`,
+      },
+      '.cm-activeLine': {
+        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+      },
+      '.cm-gutters': {
+        backgroundColor: 'var(--editor-bg)',
+        color: 'var(--editor-border)',
+        border: 'none',
+        borderRight: '1px solid var(--editor-border)',
+      },
+      '.cm-activeLineGutter': {
+        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+      },
+      '.cm-foldPlaceholder': {
+        backgroundColor: 'var(--editor-hover)',
+        color: 'var(--editor-text)',
+        border: '1px solid var(--editor-border)',
+      },
+      '.cm-searchMatch': {
+        backgroundColor: 'rgba(255, 213, 0, 0.3)',
+        outline: '1px solid rgba(255, 213, 0, 0.6)',
+      },
+      '.cm-searchMatch.cm-searchMatch-selected': {
+        backgroundColor: 'rgba(255, 150, 0, 0.4)',
+      },
+      '.cm-tooltip': {
+        backgroundColor: 'var(--editor-surface)',
+        border: '1px solid var(--editor-border)',
+        color: 'var(--editor-text)',
+      },
+      '.cm-tooltip-autocomplete': {
+        '& > ul > li': {
+          padding: '4px 8px',
+        },
+        '& > ul > li[aria-selected]': {
+          backgroundColor: 'var(--editor-hover)',
+          color: 'var(--editor-text)',
+        },
+      },
+    })
+
     const state = EditorState.create({
       doc: content,
       extensions: [
+        // === 最小化配置：排查IME问题 ===
         lineNumbersCompartment.of([]),
-        richCompartment.of(viewMode === 'live' ? liveEditExtension() : []),
         history(),
-        lineWrappingCompartment.of(wordWrap ? EditorView.lineWrapping : []),
-        themeCompartment.of(buildEditorTheme(isDark, fontFamily, String(fontSize), String(lineHeight))),
-        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
-        drawSelection(),
-        indentOnInput(),
-        bracketMatching(),
-        autocompletion(),
-        spellCheckCompartment.of(EditorView.contentAttributes.of({ spellcheck: spellCheck ? 'true' : 'false' })),
-        highlightActiveLine(),
-        highlightSelectionMatches(),
-        search(),
+        EditorView.lineWrapping,
+        editorTheme,
+        // syntaxHighlighting(markdownHighlight), // 临时禁用：排查IME问题
+        keymap.of([...defaultKeymap, ...historyKeymap]),
         markdown({ base: markdownLanguage, codeLanguages: languages }),
-        keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, ...completionKeymap, indentWithTab]),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
-            // 外部同步（切换Tab/打开文件）触发的dispatch，跳过onChange避免误标为未保存
-            if (syncingFromExternalRef.current) return
             const newContent = update.state.doc.toString()
             lastSyncedFromEditorRef.current = newContent
-            onChange(newContent)
+            if (viewRef.current?.composing) {
+              // IME composition期间不调用onChange，避免React重渲染触发
+              // content同步useEffect向编辑器dispatch变更，打断IME上下文
+            } else {
+              onChange(newContent)
+            }
           }
-          if (update.selectionSet && onCursorChange) {
-            const pos = update.state.selection.main.head
-            const line = update.state.doc.lineAt(pos)
-            onCursorChange({ line: line.number, column: pos - line.from + 1 })
+        }),
+        // === 以下全部临时禁用 ===
+        // highlightActiveLineGutter(), highlightSpecialChars(), foldGutter(),
+        // drawSelection(), dropCursor(), EditorState.allowMultipleSelections.of(true),
+        // indentOnInput(), syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+        // bracketMatching(), autocompletion(), rectangularSelection(), crosshairCursor(),
+        // highlightActiveLine(), highlightSelectionMatches(),
+        // ...closeBracketsKeymap, ...searchKeymap, ...foldKeymap, ...completionKeymap, ...lintKeymap, indentWithTab,
+        // composition结束时，确保最后的内容同步到store
+        EditorView.domEventHandlers({
+          compositionend: () => {
+            // 延迟一帧，等CodeMirror处理完compositionend
+            requestAnimationFrame(() => {
+              if (viewRef.current && !viewRef.current.composing) {
+                const currentContent = viewRef.current.state.doc.toString()
+                if (currentContent !== lastSyncedFromEditorRef.current) {
+                  lastSyncedFromEditorRef.current = currentContent
+                  onChange(currentContent)
+                }
+              }
+            })
           }
         }),
       ],
@@ -729,32 +595,63 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
 
     viewRef.current = view
     viewReadyRef.current = true
-    lastSyncedFromEditorRef.current = content
+
+    // Chromium 149+ IME Bug workaround
+    // 在.cm-content元素上用capturing模式监听，比CodeMirror的bubble监听更早执行。
+    // composition期间拦截input事件，阻止CodeMirror处理，让浏览器原生IME接管。
+    // compositionend时手动从DOM同步最终文本到CodeMirror文档。
+    const cmContent = view.dom.querySelector('.cm-content') as HTMLElement
+    let isComposing = false
+
+    const capturingHandler = (e: Event) => {
+      if (e.type === 'compositionstart') {
+        isComposing = true
+        return
+      }
+      if (e.type === 'compositionend') {
+        isComposing = false
+        requestAnimationFrame(() => {
+          const v = viewRef.current
+          if (!v) return
+          const el = v.dom.querySelector('.cm-content')
+          if (!el) return
+          // 逐行读取文本（保留换行）
+          const lines = Array.from(el.querySelectorAll('.cm-line')).map(l => l.textContent || '')
+          const newText = lines.join('\n')
+          const currentDoc = v.state.doc.toString()
+          if (newText !== currentDoc) {
+            lastSyncedFromEditorRef.current = newText
+            v.dispatch({
+              changes: { from: 0, to: currentDoc.length, insert: newText },
+            })
+            onChange(newText)
+          }
+        })
+        return
+      }
+      if (isComposing && e.type === 'input') {
+        e.stopImmediatePropagation()
+        e.stopPropagation()
+      }
+    }
+
+    if (cmContent) {
+      cmContent.addEventListener('compositionstart', capturingHandler, true)
+      cmContent.addEventListener('compositionend', capturingHandler, true)
+      cmContent.addEventListener('input', capturingHandler, true)
+    }
 
     return () => {
+      if (cmContent) {
+        cmContent.removeEventListener('compositionstart', capturingHandler, true)
+        cmContent.removeEventListener('compositionend', capturingHandler, true)
+        cmContent.removeEventListener('input', capturingHandler, true)
+      }
       view.destroy()
       viewReadyRef.current = false
       viewRef.current = null
     }
-  }, [])
-
-  // 主题设置变更时动态 reconfigure（不重建编辑器）
-  useEffect(() => {
-    const view = viewRef.current
-    if (!view) return
-    view.dispatch({
-      effects: themeCompartment.reconfigure(buildEditorTheme(isDark, fontFamily, String(fontSize), String(lineHeight)))
-    })
-  }, [isDark, fontFamily, fontSize, lineHeight, themeCompartment])
-
-  // spellCheck 设置变更时动态 reconfigure
-  useEffect(() => {
-    const view = viewRef.current
-    if (!view) return
-    view.dispatch({
-      effects: spellCheckCompartment.reconfigure(EditorView.contentAttributes.of({ spellcheck: spellCheck ? 'true' : 'false' }))
-    })
-  }, [spellCheck, spellCheckCompartment])
+  }, [isDark, fontFamily, fontSize, lineHeight])
 
   // Toggle line numbers based on settings
   useEffect(() => {
@@ -788,11 +685,9 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     lastSyncedFromEditorRef.current = content
     const currentContent = view.state.doc.toString()
     if (currentContent !== content) {
-      syncingFromExternalRef.current = true
       view.dispatch({
         changes: { from: 0, to: currentContent.length, insert: content },
       })
-      syncingFromExternalRef.current = false
     }
   }, [content])
 
@@ -887,11 +782,11 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     <div className="editor-container h-full flex flex-col">
       <div className="flex-1 overflow-hidden flex">
         {/* 编辑器面板：永远挂载，用flex比例控制显隐 */}
-        <div ref={editorRef} data-animation={liveAnimationMode} className="cm-editor-container" style={{ flex: viewMode === 'split' ? '1 1 0%' : (viewMode === 'edit' || viewMode === 'live') ? '1 1 100%' : '0 0 0%', minHeight: 0, overflow: viewMode === 'preview' ? 'hidden' : 'visible', width: viewMode === 'preview' ? 0 : undefined, pointerEvents: viewMode === 'preview' ? 'none' : 'auto' }} />
+        <div ref={editorRef} className="cm-editor-container" style={{ flex: viewMode === 'split' ? '1 1 0%' : viewMode === 'edit' ? '1 1 100%' : '0 0 0%', minHeight: 0, overflow: viewMode === 'preview' ? 'hidden' : 'visible', width: viewMode === 'preview' ? 0 : undefined, pointerEvents: viewMode === 'preview' ? 'none' : 'auto' }} />
         {/* 分割线 */}
         {viewMode === 'split' && <div style={{ width: 1, flexShrink: 0, background: 'var(--editor-border)' }} />}
         {/* 预览面板：永远挂载 */}
-        <div ref={previewScrollRef} style={{ flex: viewMode === 'split' ? '1 1 0%' : viewMode === 'preview' ? '1 1 100%' : '0 0 0%', minHeight: 0, overflow: 'auto', pointerEvents: (viewMode === 'edit' || viewMode === 'live') ? 'none' : 'auto' }}>
+        <div ref={previewScrollRef} style={{ flex: viewMode === 'split' ? '1 1 0%' : viewMode === 'preview' ? '1 1 100%' : '0 0 0%', minHeight: 0, overflow: 'auto', pointerEvents: viewMode === 'edit' ? 'none' : 'auto' }}>
           <PreviewPane content={content} currentTheme={currentTheme} onContentChange={onChange} />
         </div>
       </div>
@@ -909,7 +804,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSearch()
                 if (e.key === 'Escape') {
-                  onSearchToggle?.()
+                  setInternalSearchOpen(false)
                   setSearchTerm('')
                   setReplaceTerm('')
                 }
@@ -938,7 +833,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
           
           <button
             onClick={() => {
-              onSearchToggle?.()
+              setInternalSearchOpen(false)
               setSearchTerm('')
               setReplaceTerm('')
             }}

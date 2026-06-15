@@ -1,18 +1,6 @@
+import { invokeTauri } from '../lib/tauri'
 import { useState, useEffect } from 'react'
 import { FileText, Clock, Check, FolderOpen, Save, PanelLeftClose, Eye, Code } from 'lucide-react'
-
-const invokeTauri = async <T,>(cmd: string, args?: Record<string, unknown>): Promise<T | null> => {
-  try {
-    const tauri = (window as any).__TAURI_INTERNALS__
-    if (tauri && typeof tauri.invoke === 'function') {
-      return await tauri.invoke(cmd, args)
-    }
-    return null
-  } catch (error) {
-    console.warn(`Tauri command failed: ${cmd}`, error)
-    return null
-  }
-}
 
 interface StatusBarProps {
   wordCount: number

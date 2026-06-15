@@ -19,6 +19,23 @@ md.use(taskLists, {
   labelAfter: true,
 })
 
+// Core ruler：给块级元素注入 data-source-line 属性（1-indexed）
+// 用于编辑器和预览之间的精确行级同步
+const BLOCK_OPEN_TYPES = new Set([
+  'paragraph_open', 'heading_open', 'blockquote_open',
+  'list_item_open', 'bullet_list_open', 'ordered_list_open',
+  'table_open', 'fence', 'code_block', 'hr', 'html_block',
+])
+
+md.core.ruler.push('source_line_map', (state) => {
+  for (const tok of state.tokens) {
+    if (!BLOCK_OPEN_TYPES.has(tok.type)) continue
+    if (!tok.map || tok.map.length < 1) continue
+    const line = tok.map[0] + 1 // markdown-it 行号从 0 开始，转为 1-indexed
+    tok.attrJoin('data-source-line', String(line))
+  }
+})
+
 // 自定义渲染规则：标题加唯一 ID（用于大纲跳转和同名标题去重）
 const headingCount: Record<string, number> = {}
 

@@ -1,6 +1,6 @@
 {
   "name": "yizimarkdown",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "description": "YiziMarkdown - A sleek Markdown editor",
   "type": "module",
   "scripts": {
@@ -26,11 +26,9 @@
     "@tauri-apps/api": "^2.11.0",
     "@types/markdown-it": "^14.1.2",
     "codemirror": "^6.0.2",
-    "html-to-text": "^10.0.0",
     "lucide-react": "^0.408.0",
     "markdown-it": "^14.2.0",
     "markdown-it-task-lists": "^2.1.1",
-    "marked": "^18.0.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zustand": "^4.5.4"

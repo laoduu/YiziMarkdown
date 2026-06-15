@@ -45,7 +45,8 @@
 .editor-content.theme-minimal h3 { font-size: 1.25em; font-weight: 500; margin: 1.2em 0 0.3em; }
 .editor-content.theme-minimal p { margin: 0 0 var(--paragraph-spacing); }
 .editor-content.theme-minimal blockquote { border-left: 3px solid var(--editor-accent); padding-left: 1em; margin: 1em 0; color: var(--sidebar-text); }
-.editor-content.theme-minimal code { font-family: var(--font-mono); font-size: 0.9em; background: var(--editor-surface); padding: 0.2em 0.4em; border-radius: 3px; }
+.editor-content.theme-minimal code { font-family: var(--font-mono); font-size: 0.9em; background: color-mix(in srgb, var(--editor-text) 10%, var(--editor-surface));
+  color: var(--editor-accent); padding: 0.2em 0.4em; border-radius: 5px; }
 .theme-minimal pre { background: var(--editor-surface); padding: 1em; border-radius: var(--border-radius); margin: 1em 0; overflow-x: auto; }
 .editor-content.theme-minimal pre code { background: none; padding: 0; }
 .editor-content.theme-minimal a { color: var(--editor-accent); text-decoration: none; border-bottom: 1px solid transparent; }

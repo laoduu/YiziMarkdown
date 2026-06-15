@@ -19,5 +19,36 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, './dist'),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'codemirror': [
+            '@codemirror/view',
+            '@codemirror/state',
+            '@codemirror/language',
+            '@codemirror/commands',
+            '@codemirror/search',
+            '@codemirror/autocomplete',
+            '@codemirror/lang-markdown',
+            '@codemirror/lang-javascript',
+            '@codemirror/lang-python',
+            '@codemirror/lang-html',
+            '@codemirror/lang-css',
+            '@codemirror/lang-json',
+            '@codemirror/lang-xml',
+            '@codemirror/lang-java',
+            '@codemirror/lang-cpp',
+            '@codemirror/lang-rust',
+            '@codemirror/lang-go',
+            '@codemirror/lang-php',
+            '@codemirror/lang-sql',
+            '@codemirror/lang-yaml',
+            '@codemirror/lang-angular',
+            '@codemirror/language-data',
+          ],
+          'lucide': ['lucide-react'],
+        },
+      },
+    },
   },
 })

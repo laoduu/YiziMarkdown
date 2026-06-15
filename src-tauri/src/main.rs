@@ -39,14 +39,23 @@ fn save_file(path: String, content: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn save_file_dialog(app: tauri::AppHandle) -> Result<Option<String>, String> {
+fn save_file_dialog(app: tauri::AppHandle, file_name: Option<String>, extensions: Option<Vec<String>>) -> Result<Option<String>, String> {
     use tauri_plugin_dialog::DialogExt;
-    match app.dialog()
-        .file()
-        .set_file_name("untitled.md")
-        .add_filter("Markdown", &["md", "markdown"])
-        .add_filter("Text", &["txt"])
-        .blocking_save_file()
+    let dialog = app.dialog().file();
+    let dialog = dialog.set_file_name(file_name.unwrap_or_else(|| "untitled.md".to_string()));
+    let dialog = if let Some(exts) = extensions {
+        if exts.is_empty() {
+            dialog
+        } else {
+            let ext_list: Vec<&str> = exts.iter().map(|s| s.as_str()).collect();
+            dialog.add_filter("指定格式", &ext_list)
+        }
+    } else {
+        dialog
+            .add_filter("Markdown", &["md", "markdown"])
+            .add_filter("Text", &["txt"])
+    };
+    match dialog.blocking_save_file()
     {
         Some(path) => Ok(Some(path.into_path().map_err(|e| e.to_string())?.to_string_lossy().to_string())),
         None => Ok(None),

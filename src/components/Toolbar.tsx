@@ -1,13 +1,13 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { 
   FileText,
   SaveAll, 
   FolderOpen, 
-  Save, 
+  Save,
+  FileUp, 
   Sun, 
   Moon, 
   PanelLeftClose,
-  Download,
   Search,
   Settings,
   Undo2,
@@ -48,6 +48,8 @@ interface ToolbarProps {
   onSearch: () => void
   onSettings: () => void
   isDark: boolean
+  onUndo?: () => void
+  onRedo?: () => void
 }
 
 type WindowCtrl = {
@@ -73,11 +75,13 @@ const themeNames: Record<string, string> = {
 }
 
 export default function Toolbar({ 
-  onNew, onOpen, onSave, onSaveAs, onToggleSidebar, onToggleDark,
+  onNew, onOpen, onSave, onSaveAs, onToggleSidebar, onToggleDark, onUndo, onRedo,
   onInsertMarkdown, onExport, onSearch, onSettings,
   isDark,
 }: ToolbarProps) {
   const [showExportMenu, setShowExportMenu] = useState(false)
+  const [exportMenuPos, setExportMenuPos] = useState<{top: number; left: number}>({top: 0, left: 0})
+  const exportBtnRef = useRef<HTMLDivElement>(null)
   const [showThemeMenu, setShowThemeMenu] = useState(false)
   const { currentTheme, setField } = useSettingsStore()
   const [themeFiles, setThemeFiles] = useState<string[]>([])
@@ -118,44 +122,22 @@ export default function Toolbar({
       {/* 左侧：品牌 + 格式按钮，允许溢出裁剪 */}
       <div className="flex items-center gap-0.5 overflow-hidden min-w-0 flex-1">
         <span className="text-[15px] font-extrabold tracking-tight text-[var(--editor-accent)] select-none mr-3 shrink-0">YiziMarkdown</span>
-        <ToolbarButton icon={<FileText size={16} />} tooltip="新建 (Ctrl+N)" onClick={onNew} />
-        <ToolbarButton icon={<FolderOpen size={16} />} tooltip="打开 (Ctrl+O)" onClick={onOpen} />
-        <ToolbarButton icon={<Save size={16} />} tooltip="保存 (Ctrl+S)" onClick={onSave} />
-        <ToolbarButton icon={<SaveAll size={16} />} tooltip="另存为" onClick={onSaveAs} />
-        <ToolbarDivider />
-        <ToolbarButton icon={<Undo2 size={16} />} tooltip="撤销 (Ctrl+Z)" onClick={() => {}} />
-        <ToolbarButton icon={<Redo2 size={16} />} tooltip="重做 (Ctrl+Y)" onClick={() => {}} />
-        <ToolbarDivider />
-        <ToolbarButton icon={<Bold size={16} />} tooltip="粗体 (Ctrl+B)" onClick={() => onInsertMarkdown('**', 'wrap')} />
-        <ToolbarButton icon={<Italic size={16} />} tooltip="斜体 (Ctrl+I)" onClick={() => onInsertMarkdown('*', 'wrap')} />
-        <ToolbarButton icon={<Strikethrough size={16} />} tooltip="删除线" onClick={() => onInsertMarkdown('~~', 'wrap')} />
-        <ToolbarButton icon={<Code size={16} />} tooltip="行内代码" onClick={() => onInsertMarkdown('\`', 'wrap')} />
-        <ToolbarDivider />
-        <ToolbarButton icon={<Heading1 size={16} />} tooltip="标题 1" onClick={() => onInsertMarkdown('# ')} />
-        <ToolbarButton icon={<Heading2 size={16} />} tooltip="标题 2" onClick={() => onInsertMarkdown('## ')} />
-        <ToolbarButton icon={<Heading3 size={16} />} tooltip="标题 3" onClick={() => onInsertMarkdown('### ')} />
-        <ToolbarDivider />
-        <ToolbarButton icon={<List size={16} />} tooltip="无序列表" onClick={() => onInsertMarkdown('- ')} />
-        <ToolbarButton icon={<ListOrdered size={16} />} tooltip="有序列表" onClick={() => onInsertMarkdown('1. ')} />
-        <ToolbarButton icon={<CheckSquare size={16} />} tooltip="任务列表" onClick={() => onInsertMarkdown('- [ ] ')} />
-        <ToolbarButton icon={<Quote size={16} />} tooltip="引用" onClick={() => onInsertMarkdown('> ')} />
-        <ToolbarDivider />
-        <ToolbarButton icon={<Link size={16} />} tooltip="链接" onClick={() => onInsertMarkdown('[链接](url)')} />
-        <ToolbarButton icon={<Image size={16} />} tooltip="图片" onClick={() => onInsertMarkdown('![alt](url)')} />
-        <ToolbarButton icon={<Table size={16} />} tooltip="表格" onClick={() => onInsertMarkdown('\n| 列1 | 列2 |\n|------|------|\n| 内容 | 内容 |\n')} />
-        <ToolbarButton icon={<Minus size={16} />} tooltip="分割线" onClick={() => onInsertMarkdown('\n---\n')} />
-      </div>
-
-      {/* 右侧工具组：永远不被压缩 */}
-      <div className="flex items-center gap-0.5 shrink-0">
-        <ToolbarButton icon={<Search size={16} />} tooltip="搜索 (Ctrl+F)" onClick={onSearch} />
-        
-        {/* 导出按钮 */}
-        <div className="relative">
+        <ToolbarButton icon={<FileText size={16} />} tooltip="新建 (Ctrl+N)" onClick={onNew} accent />
+        <ToolbarButton icon={<FolderOpen size={16} />} tooltip="打开 (Ctrl+O)" onClick={onOpen} accent />
+        <ToolbarButton icon={<Save size={16} />} tooltip="保存 (Ctrl+S)" onClick={onSave} accent />
+        <ToolbarButton icon={<SaveAll size={16} />} tooltip="另存为" onClick={onSaveAs} accent />
+        <div className="relative" ref={exportBtnRef}>
           <ToolbarButton 
-            icon={<Download size={16} />} 
+            icon={<FileUp size={16} />} 
             tooltip="导出" 
-            onClick={() => setShowExportMenu(!showExportMenu)} 
+            onClick={() => {
+              if (exportBtnRef.current) {
+                const rect = exportBtnRef.current.getBoundingClientRect()
+                setExportMenuPos({ top: rect.bottom + 4, left: rect.left })
+              }
+              setShowExportMenu(!showExportMenu)
+            }} 
+            accent
           />
           {showExportMenu && (
             <>
@@ -164,7 +146,10 @@ export default function Toolbar({
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => setShowExportMenu(false)}
               />
-              <div className="absolute top-full right-0 mt-1 py-1 w-52 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50">
+              <div 
+                className="fixed py-1 w-52 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50"
+                style={{ top: exportMenuPos.top, left: exportMenuPos.left }}
+              >
                 <ExportMenuItem 
                   icon={<FileCode size={14} />} 
                   label="导出为 HTML" 
@@ -184,15 +169,40 @@ export default function Toolbar({
             </>
           )}
         </div>
-
         <ToolbarDivider />
+        <ToolbarButton icon={<Undo2 size={16} />} tooltip="撤销 (Ctrl+Z)" onClick={() => onUndo?.()} accent />
+        <ToolbarButton icon={<Redo2 size={16} />} tooltip="重做 (Ctrl+Y)" onClick={() => onRedo?.()} accent />
+        <ToolbarButton icon={<Search size={16} />} tooltip="搜索 (Ctrl+F)" onClick={onSearch} accent />
+        <ToolbarDivider />
+        <ToolbarButton icon={<Bold size={16} />} tooltip="粗体 (Ctrl+B)" onClick={() => onInsertMarkdown('**', 'wrap')} />
+        <ToolbarButton icon={<Italic size={16} />} tooltip="斜体 (Ctrl+I)" onClick={() => onInsertMarkdown('*', 'wrap')} />
+        <ToolbarButton icon={<Strikethrough size={16} />} tooltip="删除线" onClick={() => onInsertMarkdown('~~', 'wrap')} />
+        <ToolbarButton icon={<Code size={16} />} tooltip="行内代码" onClick={() => onInsertMarkdown('\`', 'wrap')} />
+        <ToolbarDivider />
+        <ToolbarButton icon={<Heading1 size={16} />} tooltip="标题 1" onClick={() => onInsertMarkdown('# ', 'prefix')} />
+        <ToolbarButton icon={<Heading2 size={16} />} tooltip="标题 2" onClick={() => onInsertMarkdown('## ', 'prefix')} />
+        <ToolbarButton icon={<Heading3 size={16} />} tooltip="标题 3" onClick={() => onInsertMarkdown('### ', 'prefix')} />
+        <ToolbarDivider />
+        <ToolbarButton icon={<List size={16} />} tooltip="无序列表" onClick={() => onInsertMarkdown('- ', 'prefix')} />
+        <ToolbarButton icon={<ListOrdered size={16} />} tooltip="有序列表" onClick={() => onInsertMarkdown('1. ', 'prefix')} />
+        <ToolbarButton icon={<CheckSquare size={16} />} tooltip="任务列表" onClick={() => onInsertMarkdown('- [ ] ', 'prefix')} />
+        <ToolbarButton icon={<Quote size={16} />} tooltip="引用" onClick={() => onInsertMarkdown('> ', 'prefix')} />
+        <ToolbarDivider />
+        <ToolbarButton icon={<Link size={16} />} tooltip="链接" onClick={() => onInsertMarkdown('[链接](url)', 'link')} />
+        <ToolbarButton icon={<Image size={16} />} tooltip="图片" onClick={() => onInsertMarkdown('![alt](url)', 'link')} />
+        <ToolbarButton icon={<Table size={16} />} tooltip="表格" onClick={() => onInsertMarkdown('\n| 列1 | 列2 |\n|------|------|\n| 内容 | 内容 |\n')} />
+        <ToolbarButton icon={<Minus size={16} />} tooltip="分割线" onClick={() => onInsertMarkdown('\n---\n')} />
+      </div>
 
+      {/* 右侧工具组：永远不被压缩 */}
+      <div className="flex items-center gap-0.5 shrink-0">
         {/* 主题切换 */}
         <div className="relative">
           <ToolbarButton 
             icon={<Palette size={16} />} 
             tooltip={themeNames[currentTheme] || currentTheme}
             onClick={() => setShowThemeMenu(!showThemeMenu)} 
+            accent
           />
           {showThemeMenu && (
             <>
@@ -227,14 +237,16 @@ export default function Toolbar({
           icon={isDark ? <Sun size={16} /> : <Moon size={16} />} 
           tooltip={isDark ? "亮色模式" : "暗色模式"} 
           onClick={onToggleDark} 
+          accent
         />
 
         <ToolbarButton 
           icon={<PanelLeftClose size={16} />} 
           tooltip="切换侧边栏" 
           onClick={onToggleSidebar} 
+          accent
         />
-        <ToolbarButton icon={<Settings size={16} />} tooltip="设置" onClick={onSettings} />
+        <ToolbarButton icon={<Settings size={16} />} tooltip="设置" onClick={onSettings} accent />
         
         {/* 窗口控制按钮 */}
         <ToolbarDivider />
@@ -249,9 +261,10 @@ interface ToolbarButtonProps {
   tooltip: string
   onClick: () => void
   active?: boolean
+  accent?: boolean
 }
 
-function ToolbarButton({ icon, tooltip, onClick, active }: ToolbarButtonProps) {
+function ToolbarButton({ icon, tooltip, onClick, active, accent }: ToolbarButtonProps) {
   return (
     <button
       onMouseDown={(e) => e.stopPropagation()}
@@ -262,7 +275,9 @@ function ToolbarButton({ icon, tooltip, onClick, active }: ToolbarButtonProps) {
         transition-colors duration-150
         ${active 
           ? 'bg-[var(--editor-accent)] text-white' 
-          : 'hover:bg-[var(--editor-hover)] text-[var(--editor-text)] opacity-80 hover:opacity-100'
+          : accent
+            ? 'hover:bg-[var(--editor-hover)] text-[var(--editor-accent)] opacity-80 hover:opacity-100'
+            : 'hover:bg-[var(--editor-hover)] text-[var(--editor-text)] opacity-80 hover:opacity-100'
         }
       `}
     >
