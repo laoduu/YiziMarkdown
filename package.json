@@ -1,6 +1,6 @@
 {
   "name": "yizimarkdown",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "YiziMarkdown - A sleek Markdown editor",
   "type": "module",
   "scripts": {
@@ -24,11 +24,14 @@
     "@codemirror/view": "^6.43.1",
     "@tailwindcss/typography": "^0.5.20",
     "@tauri-apps/api": "^2.11.0",
+    "@traptitech/markdown-it-katex": "^3.6.0",
     "@types/markdown-it": "^14.1.2",
     "codemirror": "^6.0.2",
+    "katex": "^0.17.0",
     "lucide-react": "^0.408.0",
     "markdown-it": "^14.2.0",
     "markdown-it-task-lists": "^2.1.1",
+    "mermaid": "^11.15.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zustand": "^4.5.4"

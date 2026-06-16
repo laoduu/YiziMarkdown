@@ -259,10 +259,33 @@ const DEFAULT_USER_CSS: &str = r#"/* YiziMarkdown 用户自定义样式 */
 "#;
 
 const DEFAULT_KEYBINDINGS: &str = r#"{
-  "ctrl+s": "save",
   "ctrl+n": "newFile",
   "ctrl+o": "openFile",
+  "ctrl+s": "save",
+  "ctrl+shift+s": "saveAs",
+  "ctrl+w": "closeTab",
+  "ctrl+h": "exportHtml",
+  "ctrl+m": "exportMd",
+  "ctrl+z": "undo",
+  "ctrl+y": "redo",
   "ctrl+f": "search",
+  "ctrl+\\": "toggleSidebar",
+  "ctrl+b": "bold",
+  "ctrl+i": "italic",
+  "ctrl+-": "strikethrough",
+  "ctrl++": "inlineCode",
+  "ctrl+1": "heading1",
+  "ctrl+2": "heading2",
+  "ctrl+3": "heading3",
+  "ctrl+.": "unorderedList",
+  "ctrl+0": "orderedList",
+  "ctrl+'": "blockquote",
+  "ctrl+k": "link",
+  "ctrl+`": "codeBlock",
+  "ctrl+t": "table",
+  "ctrl+l": "horizontalRule",
+  "f1": "toggleTheme",
+  "f2": "viewCycle",
   "f12": "toggleDevtools"
 }"#;
 
@@ -319,6 +342,27 @@ fn read_theme_css(name: String) -> Result<String, String> {
     }
     fs::read_to_string(&path)
         .map_err(|e| format!("Failed to read theme: {}", e))
+}
+
+/// 读取 themes/theme.json（主题元信息）
+#[tauri::command]
+fn read_theme_json() -> Result<String, String> {
+    let root = get_app_root()?;
+    let path = root.join("themes").join("theme.json");
+    if !path.exists() {
+        return Ok("{}".to_string());
+    }
+    fs::read_to_string(&path)
+        .map_err(|e| format!("Failed to read theme.json: {}", e))
+}
+
+/// 写入 themes/theme.json（用户修改主题名称后调用）
+#[tauri::command]
+fn write_theme_json(content: String) -> Result<(), String> {
+    let root = get_app_root()?;
+    let path = root.join("themes").join("theme.json");
+    fs::write(&path, &content)
+        .map_err(|e| format!("Failed to write theme.json: {}", e))
 }
 
 // ===== user.css =====
@@ -649,6 +693,8 @@ fn main() {
             get_config_dir,
             list_themes,
             read_theme_css,
+            read_theme_json,
+            write_theme_json,
             read_user_css,
             write_user_css,
             read_welcome,

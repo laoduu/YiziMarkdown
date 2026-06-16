@@ -42,6 +42,8 @@ interface EditorState {
   cursorPosition: { line: number; column: number }
   setCursorPosition: (position: { line: number; column: number }) => void
   activeHeadingId: string | null
+  /** 运行时状态：插件是否已加载就绪（不持久化） */
+  _pluginsReady: boolean
 }
 
 export const useEditorStore = create<EditorState>()(
@@ -52,6 +54,7 @@ export const useEditorStore = create<EditorState>()(
       recentFiles: [],
       cursorPosition: { line: 1, column: 1 },
       activeHeadingId: null,
+      _pluginsReady: false,
 
       currentTab: () => {
         const { tabs, activeTabId } = get()

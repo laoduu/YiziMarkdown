@@ -8,6 +8,7 @@
  */
 
 import { syntaxTree } from '@codemirror/language'
+import { useSettingsStore } from '../stores/settingsStore'
 import { StateField } from '@codemirror/state'
 import type { EditorState } from '@codemirror/state'
 import type { Range } from '@codemirror/state'
@@ -31,6 +32,128 @@ interface CellData {
 interface TableData {
   cells: CellData[]
   colCount: number
+}
+
+/* ------------------------------------------------------------------ */
+/*  Mermaid Widget (live mode SVG rendering)                          */
+/* ------------------------------------------------------------------ */
+
+class MermaidWidget extends WidgetType {
+  private _code: string
+  constructor(code: string) {
+    super()
+    this._code = code
+  }
+  eq(other: MermaidWidget): boolean { return other._code === this._code }
+  private _timer: ReturnType<typeof setTimeout> | null = null
+  toDOM(): HTMLElement {
+    const wrap = document.createElement('div')
+    wrap.className = 'cm-live-block cm-live-block--mermaid'
+    wrap.textContent = this._code
+    // 防抖渲染 mermaid（300ms内不重复触发）
+    if (this._timer) clearTimeout(this._timer)
+    this._timer = setTimeout(() => this.renderMermaid(wrap), 300)
+    return wrap
+  }
+  private async renderMermaid(el: HTMLElement): Promise<void> {
+    try {
+      const mod = await import('mermaid')
+      const mermaid = mod.default || mod
+      const configs = useSettingsStore.getState().pluginConfigs.mermaid || {}
+      const theme = ((configs.theme as string) || 'default') as any
+      mermaid.initialize({ startOnLoad: false, theme, securityLevel: 'loose' })
+      const id = 'cm-mmd-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+      const { svg } = await mermaid.render(id, this._code)
+      el.innerHTML = svg
+    } catch (e) {
+      el.textContent = this._code
+      el.className += ' cm-live-block--mermaid-error'
+    }
+  }
+  ignoreEvent(): boolean { return true }
+}
+
+
+/* ------------------------------------------------------------------ */
+/*  KaTeX Block Widget (live mode $$...$$ rendering)                 */
+/* ------------------------------------------------------------------ */
+
+class KatexBlockWidget extends WidgetType {
+  private _tex: string
+  constructor(tex: string) {
+    super()
+    this._tex = tex
+  }
+  eq(other: KatexBlockWidget): boolean { return other._tex === this._tex }
+  toDOM(): HTMLElement {
+    const wrap = document.createElement('div')
+    wrap.className = 'cm-live-block cm-live-block--katex'
+    this.renderKatex(wrap)
+    return wrap
+  }
+  private async renderKatex(el: HTMLElement): Promise<void> {
+    try {
+      const katex = await import('katex')
+      const kt = katex.default || katex
+      el.innerHTML = kt.renderToString(this._tex, { displayMode: true, throwOnError: false })
+    } catch (e) {
+      el.textContent = this._tex
+      el.className += ' cm-live-block--katex-error'
+    }
+  }
+  ignoreEvent(): boolean { return true }
+}
+
+/* ------------------------------------------------------------------ */
+/*  KaTeX Inline Line Widget (live mode — renders $...$ within a line) */
+/* ------------------------------------------------------------------ */
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+class KatexInlineLineWidget extends WidgetType {
+  private _lineText: string
+  constructor(lineText: string) {
+    super()
+    this._lineText = lineText
+  }
+  eq(other: KatexInlineLineWidget): boolean { return other._lineText === this._lineText }
+  toDOM(): HTMLElement {
+    const wrap = document.createElement('div')
+    wrap.className = 'cm-live-block cm-live-block--katex-inline-line'
+    this.renderLine(wrap)
+    return wrap
+  }
+  private async renderLine(el: HTMLElement): Promise<void> {
+    try {
+      const katex = await import('katex')
+      const kt = katex.default || katex
+      const inlineRe = /(?<!\$)\$(?!\$)((?:[^$\\]|\\.)+?)(?<!\$)\$(?!\$)/g
+      let result = ''
+      let lastIdx = 0
+      let m: RegExpExecArray | null
+      inlineRe.lastIndex = 0
+      while ((m = inlineRe.exec(this._lineText)) !== null) {
+        // 非公式部分：转义 HTML
+        const before = this._lineText.slice(lastIdx, m.index)
+        result += escapeHtml(before)
+        // 公式部分：KaTeX 渲染
+        try {
+          result += kt.renderToString(m[1], { displayMode: false, throwOnError: false })
+        } catch {
+          result += '<span style="color:var(--editor-accent)">' + escapeHtml(m[1]) + '</span>'
+        }
+        lastIdx = m.index + m[0].length
+      }
+      // 剩余文本
+      result += escapeHtml(this._lineText.slice(lastIdx))
+      el.innerHTML = result
+    } catch (e) {
+      el.textContent = this._lineText
+    }
+  }
+  ignoreEvent(): boolean { return true }
 }
 
 /* ------------------------------------------------------------------ */
@@ -241,6 +364,99 @@ function buildBlockDecorations(state: EditorState): DecorationSet {
   const tree = syntaxTree(state)
   const ranges: Range<Decoration>[] = []
 
+  // --- Mermaid blocks ---
+  const enabledPlugins = useSettingsStore.getState().enabledPlugins
+  const mermaidEnabled = enabledPlugins.includes('mermaid')
+  if (mermaidEnabled) {
+    for (let i = 1; i <= doc.lines; i++) {
+      if (i >= curLineStart && i <= curLineEnd) continue
+      const line = doc.line(i)
+      if (/^\s*```\s*mermaid\s*/.test(line.text)) {
+        // 找到代码块的结束位置
+        let endLine = i
+        for (let j = i + 1; j <= doc.lines; j++) {
+          if (/^\s*```\s*$/.test(doc.line(j).text)) {
+            endLine = j
+            break
+          }
+          endLine = j
+        }
+        if (endLine > i) {
+          const code = doc.sliceString(line.from, doc.line(endLine).to).replace(/^\s*```\s*mermaid\s*\n?/, '').replace(/\n?\s*```\s*$/, '')
+          ranges.push(Decoration.replace({
+            widget: new MermaidWidget(code),
+            block: true,
+          }).range(line.from, doc.line(endLine).to))
+        }
+      }
+    }
+  }
+
+
+  // --- KaTeX block math ($$...$$) ---
+  const katexEnabled = enabledPlugins.includes('katex')
+  if (katexEnabled) {
+    for (let i = 1; i <= doc.lines; i++) {
+      if (i >= curLineStart && i <= curLineEnd) continue
+      const line = doc.line(i)
+      // 跳过代码块内的 $$（代码块由 mermaid/普通 fence 处理）
+      // 单行块级公式: $$formula$$（允许行首有列表标记 -/1. 等）
+      const singleMatch = line.text.match(/^(?:\s*(?:[-*+]|\d+\.\s))?\s*\$\$(.+?)\$\$\s*$/)
+      if (singleMatch) {
+        ranges.push(Decoration.replace({
+          widget: new KatexBlockWidget(singleMatch[1]),
+          block: true,
+        }).range(line.from, line.to))
+        continue
+      }
+      // 多行块级公式: $$\nformula\n$$（允许行首有列表标记）
+      if (/^(?:\s*(?:[-*+]|\d+\.\s))?\s*\$\$\s*$/.test(line.text)) {
+        let endLine = i
+        for (let j = i + 1; j <= doc.lines; j++) {
+          if (/^(?:\s*(?:[-*+]|\d+\.\s))?\s*\$\$\s*$/.test(doc.line(j).text)) {
+            endLine = j
+            break
+          }
+          endLine = j
+        }
+        if (endLine > i) {
+          const tex = doc.sliceString(line.from, doc.line(endLine).to)
+            .replace(/^\s*\$\$\s*\n?/, '')
+            .replace(/\n?\s*\$\$\s*$/, '')
+          ranges.push(Decoration.replace({
+            widget: new KatexBlockWidget(tex),
+            block: true,
+          }).range(line.from, doc.line(endLine).to))
+        }
+      }
+    }
+  }
+
+
+  // --- KaTeX inline math ($...$) ---
+  // 行级渲染：将含 $...$ 的整行替换为渲染后的 HTML
+  // （CM6 的 inline Decoration.replace widget 在 StateField 混合 decoration 场景中不可靠）
+  if (katexEnabled) {
+    const inlineRe = /(?<!\$)\$(?!\$)((?:[^$\\]|\\.)+?)(?<!\$)\$(?!\$)/g
+    for (let i = 1; i <= doc.lines; i++) {
+      if (i >= curLineStart && i <= curLineEnd) continue
+      const line = doc.line(i)
+      const text = line.text
+      // 跳过代码块行
+      if (/^\s*```/.test(text)) continue
+      // 跳过含有 $$ 块级标记的行（由块级公式检测处理）
+      if (/\$\$/.test(text)) continue
+      // 检查是否有行内公式
+      inlineRe.lastIndex = 0
+      if (!inlineRe.test(text)) continue
+      // 用行级渲染
+      ranges.push(Decoration.replace({
+        widget: new KatexInlineLineWidget(text),
+        block: true,
+      }).range(line.from, line.to))
+    }
+  }
+
   // --- Images ---
   for (let i = 1; i <= doc.lines; i++) {
     if (i >= curLineStart && i <= curLineEnd) continue
@@ -325,6 +541,43 @@ const liveBlocksTheme = EditorView.theme({
   '.cm-live-block--table th': {
     background: 'var(--editor-surface)',
     fontWeight: '600',
+  },
+  // Mermaid
+  '.cm-live-block--mermaid': {
+    textAlign: 'center',
+    padding: '0.5em',
+    overflow: 'auto',
+  },
+  '.cm-live-block--mermaid svg': {
+    maxWidth: '100%',
+    height: 'auto',
+  },
+  '.cm-live-block--katex': {
+    padding: '0.8em 1em',
+    textAlign: 'center',
+    overflow: 'visible',
+  },
+  '.cm-live-block--katex-error': {
+    color: 'var(--editor-accent)',
+    fontStyle: 'italic',
+    fontSize: '0.85em',
+  },
+  '.cm-live-block--katex-inline-line': {
+    padding: '0.2em 0',
+    lineHeight: '1.6',
+    overflow: 'visible',
+    '& .katex': {
+      fontSize: '1em',
+    },
+  },
+  '.cm-live-inline-katex': {
+    overflow: 'visible',
+    verticalAlign: 'middle',
+  },
+  '.cm-live-block--mermaid-error': {
+    color: 'var(--editor-accent)',
+    fontStyle: 'italic',
+    fontSize: '0.85em',
   },
   // Active cell highlight while editing
   '.cm-live-cell-editing': {

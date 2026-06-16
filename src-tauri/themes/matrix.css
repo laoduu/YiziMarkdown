@@ -1,0 +1,260 @@
+/* ═══════════════════════════════════════════════════════════════
+   黑客帝国 (Matrix) — YiziMarkdown 主题
+
+   亮色：白底绿字，像终端的白日模式
+   暗色：纯黑底矩阵绿，沉浸式代码雨
+   ═══════════════════════════════════════════════════════════════ */
+
+:root.theme-matrix {
+  --editor-bg: #f5faf5;
+  --editor-text: #1a2a1a;
+  --editor-accent: #008a2e;
+  --editor-border: #c0e0c0;
+  --editor-surface: #e8f5e8;
+  --editor-hover: #d5ecd5;
+  --editor-selection: #008a2e;
+  --editor-selection-bg: rgba(0, 138, 46, 0.15);
+  --editor-cursor: #008a2e;
+  --sidebar-bg: #edf5ed;
+  --sidebar-text: #3a7a3a;
+  --toolbar-bg: #f5faf5;
+  --statusbar-bg: #008a2e;
+  --statusbar-text: #ffffff;
+  --font-sans: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  --font-size-base: 15px;
+  --line-height: 1.9;
+  --paragraph-spacing: 1.2em;
+  --border-radius: 2px;
+}
+
+:root.theme-matrix.dark {
+  --editor-bg: #000000;
+  --editor-text: #00ff41;
+  --editor-accent: #39ff14;
+  --editor-border: #003300;
+  --editor-surface: #001a00;
+  --editor-hover: #002200;
+  --editor-selection: #39ff14;
+  --editor-selection-bg: rgba(57, 255, 20, 0.25);
+  --editor-cursor: #39ff14;
+  --sidebar-bg: #000000;
+  --sidebar-text: #00b33c;
+  --toolbar-bg: #000000;
+  --statusbar-bg: #003300;
+  --statusbar-text: #00ff41;
+}
+
+/* ── 预览排版 ──────────────────────────────────────────────── */
+.editor-content.theme-matrix h1 {
+  font-size: 2em;
+  font-weight: 700;
+  margin: 1.5em 0 0.5em;
+  color: #008a2e;
+  letter-spacing: 0.08em;
+}
+.editor-content.theme-matrix h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin: 1.3em 0 0.4em;
+  color: #0a9a3a;
+  letter-spacing: 0.05em;
+}
+.editor-content.theme-matrix h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin: 1.2em 0 0.3em;
+  color: #2aaa4a;
+}
+.editor-content.theme-matrix p {
+  margin: 0 0 var(--paragraph-spacing);
+  color: #1a2a1a;
+}
+.editor-content.theme-matrix blockquote {
+  border-left: 3px solid #008a2e;
+  padding: 0.8em 1em;
+  margin: 1em 0;
+  color: #3a7a3a;
+  background: rgba(0, 138, 46, 0.04);
+  border-radius: var(--border-radius);
+}
+.editor-content.theme-matrix code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: rgba(0, 138, 46, 0.08);
+  color: #008a2e;
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 138, 46, 0.12);
+}
+.editor-content.theme-matrix pre {
+  background: #e0f0e0;
+  padding: 1em;
+  border-radius: var(--border-radius);
+  margin: 1em 0;
+  overflow-x: auto;
+  border: 1px solid #b0d8b0;
+}
+.editor-content.theme-matrix pre code {
+  background: none;
+  padding: 0;
+  color: #0a6a2a;
+  border: none;
+}
+.editor-content.theme-matrix a {
+  color: #008a2e;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(0, 138, 46, 0.3);
+}
+.editor-content.theme-matrix a:hover {
+  border-bottom-color: #008a2e;
+}
+.editor-content.theme-matrix img {
+  max-width: 100%;
+  border-radius: var(--border-radius);
+  margin: 1em 0;
+}
+.editor-content.theme-matrix table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+.editor-content.theme-matrix th,
+.editor-content.theme-matrix td {
+  padding: 0.6em 1em;
+  border: 1px solid var(--editor-border);
+  text-align: left;
+  color: #1a2a1a;
+}
+.editor-content.theme-matrix th {
+  background: #e0f0e0;
+  font-weight: 600;
+  color: #008a2e;
+}
+.editor-content.theme-matrix hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #008a2e, transparent);
+  margin: 2em 0;
+  opacity: 0.4;
+}
+.editor-content.theme-matrix ul, .editor-content.theme-matrix ol {
+  padding-left: 2em;
+  margin: 0.5em 0;
+}
+.editor-content.theme-matrix li {
+  margin: 0.3em 0;
+  color: #1a2a1a;
+}
+.editor-content.theme-matrix li::marker {
+  color: #008a2e;
+}
+.editor-content.theme-matrix strong {
+  color: #006a20;
+  font-weight: 700;
+}
+.editor-content.theme-matrix em {
+  color: #3a8a4a;
+}
+
+.editor-content.theme-matrix {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2em;
+  color: var(--editor-text);
+}
+
+.dark .theme-matrix h1 {
+  color: #00ff41;
+}
+.dark .theme-matrix h2 {
+  color: #00e639;
+}
+.dark .theme-matrix h3 {
+  color: #00cc33;
+}
+.dark .theme-matrix blockquote {
+  color: #40c060;
+  border-left-color: #00ff41;
+}
+.dark .theme-matrix code {
+  color: #00ff41;
+  background: rgba(0, 255, 65, 0.08);
+  border-color: rgba(0, 255, 65, 0.15);
+}
+.dark .theme-matrix a {
+  color: #00ff41;
+}
+.dark .theme-matrix th {
+  color: #00ff41;
+  background: rgba(0, 255, 65, 0.06);
+}
+.dark .theme-matrix strong {
+  color: #80ff90;
+}
+/* ── 深色模式预览覆盖 ────────────────────────────────────────── */
+.dark .theme-matrix h1 {
+  color: #00ff41;
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.5), 0 0 20px rgba(0, 255, 65, 0.2);
+}
+.dark .theme-matrix h2 {
+  color: #00dd38;
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.3);
+}
+.dark .theme-matrix h3 {
+  color: #00cc33;
+  text-shadow: 0 0 4px rgba(0, 255, 65, 0.2);
+}
+.dark .theme-matrix p {
+  color: #00e03a;
+}
+.dark .theme-matrix blockquote {
+  color: #00b33c;
+  border-left-color: #00ff41;
+  background: rgba(0, 255, 65, 0.03);
+}
+.dark .theme-matrix code {
+  color: #39ff14;
+  background: rgba(0, 255, 65, 0.1);
+  border-color: rgba(0, 255, 65, 0.15);
+}
+.dark .theme-matrix pre {
+  background: #050a05;
+  border-color: #003300;
+}
+.dark .theme-matrix pre code {
+  color: #39ff14;
+  background: none;
+}
+.dark .theme-matrix a {
+  color: #00ff41;
+  border-bottom-color: rgba(0, 255, 65, 0.4);
+}
+.dark .theme-matrix a:hover {
+  border-bottom-color: #00ff41;
+}
+.dark .theme-matrix th {
+  color: #00ff41;
+  background: rgba(0, 255, 65, 0.06);
+}
+.dark .theme-matrix td {
+  color: #00e03a;
+  border-color: #003300;
+}
+.dark .theme-matrix hr {
+  background: linear-gradient(90deg, transparent, #00ff41, transparent);
+}
+.dark .theme-matrix li {
+  color: #00e03a;
+}
+.dark .theme-matrix li::marker {
+  color: #00ff41;
+}
+.dark .theme-matrix strong {
+  color: #80ff90;
+  text-shadow: 0 0 6px rgba(128, 255, 144, 0.4);
+}
+.dark .theme-matrix em {
+  color: #5abb6a;
+  font-style: italic;
+}

@@ -1,0 +1,334 @@
+/* ═══════════════════════════════════════════════════════════════
+   液态玻璃 (Liquid Glass) — YiziMarkdown 默认主题
+
+   设计语言：多层半透明面板堆叠 + backdrop-filter 模糊 +
+   光反射高光边缘 + 柔和漫射阴影，营造玻璃通透的层次感。
+
+   亮色 — 冰晶玻璃，纯白底 + 淡蓝半透面板，明亮清爽
+   深色 — 午夜玻璃，深靛底 + 霓虹蓝微光，深邃安静
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 亮色模式 ────────────────────────────────────────────────── */
+:root.theme-liquidglass {
+  /* 编辑器主背景：冰晶白底，极微弱蓝调 */
+  --editor-bg: #f6f9fe;
+  /* 文字：深墨蓝 */
+  --editor-text: #1a2538;
+  /* 品牌色：明亮冰蓝，用于标题、链接、光标、高亮 */
+  --editor-accent: #2563eb;
+  /* 边框：极淡的蓝灰玻璃边 */
+  --editor-border: rgba(140, 165, 210, 0.25);
+  /* 表面：半透明白色玻璃面板 */
+  --editor-surface: rgba(255, 255, 255, 0.65);
+  /* 悬停：略微加厚的白玻璃 */
+  --editor-hover: rgba(210, 225, 250, 0.35);
+  /* 选中文字色 */
+  --editor-selection: #1d4ed8;
+  /* 选中背景：冰蓝光晕 */
+  --editor-selection-bg: rgba(37, 99, 235, 0.14);
+  /* 光标 */
+  --editor-cursor: #2563eb;
+  /* 侧栏：比编辑区稍厚的半透明面板 */
+  --sidebar-bg: rgba(235, 245, 255, 0.6);
+  /* 侧栏文字 */
+  --sidebar-text: #5578a8;
+  /* 工具栏：近乎不透明的白玻璃，保证图标清晰 */
+  --toolbar-bg: rgba(246, 249, 254, 0.88);
+  /* 状态栏：品牌色，实色不透明 */
+  --statusbar-bg: #2563eb;
+  --statusbar-text: #ffffff;
+  /* 字体 */
+  --font-sans: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --font-size-base: 16px;
+  --line-height: 1.8;
+  --paragraph-spacing: 1.5em;
+  --border-radius: 8px;
+}
+
+/* ── 深色模式 ────────────────────────────────────────────────── */
+:root.theme-liquidglass.dark {
+  --editor-bg: #0c1222;
+  --editor-text: #cdd8ee;
+  --editor-accent: #60a5fa;
+  --editor-border: rgba(96, 165, 250, 0.12);
+  --editor-surface: rgba(96, 165, 250, 0.06);
+  --editor-hover: rgba(96, 165, 250, 0.10);
+  --editor-selection: #60a5fa;
+  --editor-selection-bg: rgba(96, 165, 250, 0.18);
+  --editor-cursor: #60a5fa;
+  --sidebar-bg: rgba(10, 17, 32, 0.92);
+  --sidebar-text: #6b8dc4;
+  --toolbar-bg: rgba(12, 18, 34, 0.92);
+  --statusbar-bg: rgba(30, 50, 90, 0.85);
+  --statusbar-text: #a0bde8;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   组件级玻璃效果覆盖
+   利用主题 class 注入的 <html class="theme-liquidglass">，
+   直接为各 UI 组件添加 backdrop-filter、box-shadow 等，
+   让整个界面都拥有玻璃质感。
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 工具栏：毛玻璃条 ────────────────────────────────────────── */
+.theme-liquidglass .toolbar {
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.06);
+}
+
+/* ── 侧栏：毛玻璃面板 ────────────────────────────────────────── */
+.theme-liquidglass .sidebar {
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  box-shadow: 1px 0 8px rgba(37, 99, 235, 0.04);
+}
+
+/* ── Tab 栏：微玻璃 ──────────────────────────────────────────── */
+.theme-liquidglass .tab-bar {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ── 深色模式组件 ────────────────────────────────────────────── */
+.theme-liquidglass.dark .toolbar {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.theme-liquidglass.dark .sidebar {
+  box-shadow: 1px 0 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   预览模式排版样式
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 一级标题：冰蓝渐变 + 底部光带 ────────────────────────────── */
+.editor-content.theme-liquidglass h1 {
+  font-size: 2em;
+  font-weight: 800;
+  margin: 1.6em 0 0.5em;
+  letter-spacing: -0.025em;
+  background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  padding-bottom: 0.4em;
+  border-bottom: 2px solid rgba(37, 99, 235, 0.12);
+}
+
+/* ── 二级标题：实色冰蓝 ──────────────────────────────────────── */
+.editor-content.theme-liquidglass h2 {
+  font-size: 1.5em;
+  font-weight: 700;
+  margin: 1.4em 0 0.4em;
+  color: #1e40af;
+  letter-spacing: -0.015em;
+  padding-bottom: 0.25em;
+  border-bottom: 1px solid rgba(37, 99, 235, 0.08);
+}
+
+/* ── 三级标题 ────────────────────────────────────────────────── */
+.editor-content.theme-liquidglass h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin: 1.2em 0 0.3em;
+  color: #2563eb;
+}
+
+/* ── 深色模式标题 ────────────────────────────────────────────── */
+.dark .editor-content.theme-liquidglass h1 {
+  background: linear-gradient(135deg, #93c5fd 0%, #60a5fa 50%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  border-bottom-color: rgba(96, 165, 250, 0.12);
+}
+.dark .editor-content.theme-liquidglass h2 {
+  color: #93c5fd;
+  border-bottom-color: rgba(96, 165, 250, 0.08);
+}
+.dark .editor-content.theme-liquidglass h3 {
+  color: #60a5fa;
+}
+
+/* ── 段落 ────────────────────────────────────────────────────── */
+.editor-content.theme-liquidglass p {
+  margin: 0 0 var(--paragraph-spacing);
+}
+
+/* ── 引用块：玻璃面板 + 冰蓝光边 ──────────────────────────────── */
+.editor-content.theme-liquidglass blockquote {
+  border-left: none;
+  padding: 0.8em 1.2em;
+  margin: 1em 0;
+  color: var(--sidebar-text);
+  background: var(--editor-surface);
+  border-radius: 0 var(--border-radius) var(--border-radius) 0;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.06);
+}
+/* 左侧渐变光带 */
+.editor-content.theme-liquidglass blockquote::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, #3b82f6 0%, #60a5fa 50%, #93c5fd 100%);
+  border-radius: 2px 0 0 2px;
+}
+
+/* ── 行内代码：玻璃胶囊 ──────────────────────────────────────── */
+.editor-content.theme-liquidglass code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: rgba(37, 99, 235, 0.06);
+  color: #2563eb;
+  padding: 0.2em 0.55em;
+  border-radius: 5px;
+  border: 1px solid rgba(37, 99, 235, 0.10);
+}
+
+.dark .editor-content.theme-liquidglass code {
+  background: rgba(96, 165, 250, 0.08);
+  color: #60a5fa;
+  border-color: rgba(96, 165, 250, 0.12);
+}
+
+/* ── 代码块：磨砂玻璃面板 ────────────────────────────────────── */
+.theme-liquidglass pre {
+  background: rgba(37, 99, 235, 0.03);
+  padding: 1em 1.2em;
+  border-radius: var(--border-radius);
+  margin: 1em 0;
+  overflow-x: auto;
+  border: 1px solid rgba(37, 99, 235, 0.10);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.04);
+}
+
+.dark .theme-liquidglass pre {
+  background: rgba(96, 165, 250, 0.04);
+  border-color: rgba(96, 165, 250, 0.10);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.editor-content.theme-liquidglass pre code {
+  background: none;
+  padding: 0;
+  border: none;
+  color: inherit;
+}
+
+/* ── 链接 ────────────────────────────────────────────────────── */
+.editor-content.theme-liquidglass a {
+  color: #2563eb;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(37, 99, 235, 0.25);
+  text-underline-offset: 3px;
+  transition: border-color 0.2s, color 0.2s;
+}
+.editor-content.theme-liquidglass a:hover {
+  color: #1e40af;
+  border-bottom-color: #2563eb;
+}
+.dark .editor-content.theme-liquidglass a {
+  color: #60a5fa;
+  border-bottom-color: rgba(96, 165, 250, 0.25);
+}
+.dark .editor-content.theme-liquidglass a:hover {
+  color: #93c5fd;
+  border-bottom-color: #60a5fa;
+}
+
+/* ── 图片 ────────────────────────────────────────────────────── */
+.editor-content.theme-liquidglass img {
+  max-width: 100%;
+  border-radius: var(--border-radius);
+  margin: 1em 0;
+  box-shadow: 0 2px 12px rgba(37, 99, 235, 0.08);
+}
+
+.dark .editor-content.theme-liquidglass img {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+}
+
+/* ── 表格：圆角玻璃卡片 ──────────────────────────────────────── */
+.editor-content.theme-liquidglass table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 1em 0;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  border: 1px solid var(--editor-border);
+  box-shadow: 0 1px 6px rgba(37, 99, 235, 0.05);
+}
+.editor-content.theme-liquidglass th,
+.editor-content.theme-liquidglass td {
+  padding: 0.65em 1em;
+  border-bottom: 1px solid var(--editor-border);
+  text-align: left;
+}
+.editor-content.theme-liquidglass th {
+  background: rgba(37, 99, 235, 0.05);
+  font-weight: 600;
+  color: #1e40af;
+}
+.editor-content.theme-liquidglass tr:last-child td {
+  border-bottom: none;
+}
+.editor-content.theme-liquidglass tr:hover td {
+  background: var(--editor-hover);
+}
+
+.dark .editor-content.theme-liquidglass th {
+  background: rgba(96, 165, 250, 0.06);
+  color: #93c5fd;
+}
+
+/* ── 分隔线：光线折射 ────────────────────────────────────────── */
+.editor-content.theme-liquidglass hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(37, 99, 235, 0.08) 15%,
+    rgba(37, 99, 235, 0.20) 50%,
+    rgba(37, 99, 235, 0.08) 85%,
+    transparent 100%
+  );
+  margin: 2.5em 0;
+}
+
+/* ── 列表 ────────────────────────────────────────────────────── */
+.editor-content.theme-liquidglass ul,
+.editor-content.theme-liquidglass ol {
+  padding-left: 2em;
+  margin: 0.5em 0;
+}
+.editor-content.theme-liquidglass li {
+  margin: 0.35em 0;
+}
+
+/* ── 粗体文字微调 ────────────────────────────────────────────── */
+.editor-content.theme-liquidglass strong {
+  color: #1e3a7a;
+  font-weight: 700;
+}
+.dark .editor-content.theme-liquidglass strong {
+  color: #c5d8f8;
+}
+
+/* ── 任务列表 checkbox 微调 ───────────────────────────────────── */
+.editor-content.theme-liquidglass input[type="checkbox"] {
+  accent-color: #2563eb;
+}
+
+/* ── 预览容器 ────────────────────────────────────────────────── */
+.editor-content.theme-liquidglass {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2em;
+  color: var(--editor-text);
+}

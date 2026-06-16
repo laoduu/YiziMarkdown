@@ -1,0 +1,114 @@
+{
+  "vibrant": {
+    "name": "活力橙",
+    "swatch": [
+      "#fff8f0",
+      "#f5d4a0"
+    ],
+    "desc": "暖橙基调，鲜明醒目"
+  },
+  "tech": {
+    "name": "科技感",
+    "swatch": [
+      "#0a0e27",
+      "#1a2340"
+    ],
+    "desc": "冷蓝灰，亮暗双面"
+  },
+  "minimal": {
+    "name": "极简风",
+    "swatch": [
+      "#ffffff",
+      "#f0f0f0"
+    ],
+    "desc": "清爽干净的原始风格"
+  },
+  "magazine": {
+    "name": "杂志感",
+    "swatch": [
+      "#fdf6ec",
+      "#f5e6d0"
+    ],
+    "desc": "温暖优雅的阅读体验"
+  },
+  "nature": {
+    "name": "自然风",
+    "swatch": [
+      "#f0f7f0",
+      "#d4e8d4"
+    ],
+    "desc": "柔和舒适的森林绿调"
+  },
+  "liquidglass": {
+    "name": "液态玻璃",
+    "swatch": [
+      "#f4f8ff",
+      "#d0e0f4"
+    ],
+    "desc": "冰蓝通透，磨砂玻璃质感"
+  },
+  "lychee": {
+    "name": "荔枝红",
+    "swatch": [
+      "#fff5f5",
+      "#E63946"
+    ],
+    "desc": "热情红调，温暖鲜明"
+  },
+  "violet": {
+    "name": "紫罗兰",
+    "swatch": [
+      "#faf5fe",
+      "#7209B7"
+    ],
+    "desc": "雅致文艺，小众高级"
+  },
+  "cyberpunk": {
+    "name": "赛博朋克",
+    "swatch": [
+      "#f0f4f8",
+      "#0077b6"
+    ],
+    "desc": "冷白底霓虹青粉，干净利落的未来感"
+  },
+  "facebook": {
+    "name": "Facebook",
+    "swatch": [
+      "#f0f2f5",
+      "#1877F2"
+    ],
+    "desc": "经典蓝白，简洁社交风"
+  },
+  "matrix": {
+    "name": "黑客帝国",
+    "swatch": [
+      "#f5faf5",
+      "#008a2e"
+    ],
+    "desc": "白底绿字终端风，暗色经典黑客帝国"
+  },
+  "mint": {
+    "name": "薄荷冰沙",
+    "swatch": [
+      "#f5fbf8",
+      "#10b981"
+    ],
+    "desc": "清透薄荷绿，清凉舒适"
+  },
+  "sunset": {
+    "name": "落日熔金",
+    "swatch": [
+      "#fef8f0",
+      "#b45309"
+    ],
+    "desc": "暖白底琥珀色，暗色金红落日熔金"
+  },
+  "typewriter": {
+    "name": "复古打字机",
+    "swatch": [
+      "#f5f0e8",
+      "#8b6914"
+    ],
+    "desc": "老纸底深褐墨色，暗色复古打字机"
+  }
+}

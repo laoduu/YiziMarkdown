@@ -1,0 +1,270 @@
+/* ═══════════════════════════════════════════════════════════════
+   复古打字机 (Typewriter) — YiziMarkdown 主题
+
+   亮色：老纸底色 + 深褐墨色，像在午后的书房敲打字机
+   暗色：深灰底 + 暖金字，暗室中的老式终端
+   ═══════════════════════════════════════════════════════════════ */
+
+:root.theme-typewriter {
+  --editor-bg: #f5f0e8;
+  --editor-text: #2a2520;
+  --editor-accent: #8b6914;
+  --editor-border: #d0c8b8;
+  --editor-surface: #ede6d8;
+  --editor-hover: #e0d8c8;
+  --editor-selection: #8b6914;
+  --editor-selection-bg: rgba(139, 105, 20, 0.15);
+  --editor-cursor: #8b6914;
+  --sidebar-bg: #f0ebe0;
+  --sidebar-text: #7a6a50;
+  --toolbar-bg: #f5f0e8;
+  --statusbar-bg: #8b6914;
+  --statusbar-text: #f5f0e8;
+  --font-sans: 'Courier New', 'SimSun', monospace;
+  --font-mono: 'Courier New', 'SimSun', monospace;
+  --font-size-base: 15px;
+  --line-height: 1.7;
+  --paragraph-spacing: 1em;
+  --border-radius: 0px;
+}
+
+:root.theme-typewriter.dark {
+  --editor-bg: #1a1a18;
+  --editor-text: #b0a898;
+  --editor-accent: #c49843;
+  --editor-border: #333330;
+  --editor-surface: #222220;
+  --editor-hover: #2a2a28;
+  --editor-selection: #c49843;
+  --editor-selection-bg: rgba(196, 152, 67, 0.2);
+  --editor-cursor: #c49843;
+  --sidebar-bg: #151513;
+  --sidebar-text: #706858;
+  --toolbar-bg: #1a1a18;
+  --statusbar-bg: #706020;
+  --statusbar-text: #b0a898;
+}
+
+.editor-content.theme-typewriter h1 {
+  font-size: 1.6em;
+  font-weight: 700;
+  margin: 1.2em 0 0.3em;
+  color: #5a4a20;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.editor-content.theme-typewriter h1::after {
+  content: '';
+  display: block;
+  margin-top: 0.3em;
+  border-bottom: 1px dashed #8b6914;
+}
+.editor-content.theme-typewriter h2 {
+  font-size: 1.3em;
+  font-weight: 700;
+  margin: 1em 0 0.25em;
+  color: #6a5a30;
+  text-transform: uppercase;
+}
+.editor-content.theme-typewriter h3 {
+  font-size: 1.1em;
+  font-weight: 700;
+  margin: 0.8em 0 0.2em;
+  color: #7a6a40;
+}
+.editor-content.theme-typewriter p {
+  margin: 0 0 var(--paragraph-spacing);
+  color: #2a2520;
+  text-indent: 2em;
+}
+.editor-content.theme-typewriter p:first-child,
+.editor-content.theme-typewriter li > p {
+  text-indent: 0;
+}
+.editor-content.theme-typewriter blockquote {
+  border-left: 2px solid #8b6914;
+  padding: 0.6em 1em;
+  margin: 1em 0;
+  color: #7a6a50;
+  font-style: italic;
+  background: rgba(139, 105, 20, 0.04);
+}
+.editor-content.theme-typewriter code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: rgba(139, 105, 20, 0.08);
+  color: #8b6914;
+  padding: 0.1em 0.3em;
+  border-radius: 0;
+  border-bottom: 1px solid #8b6914;
+}
+.editor-content.theme-typewriter pre {
+  background: #e8e0d0;
+  padding: 1em;
+  border-radius: 0;
+  margin: 1em 0;
+  overflow-x: auto;
+  border-left: 2px solid #8b6914;
+}
+.editor-content.theme-typewriter pre code {
+  background: none;
+  padding: 0;
+  color: #4a3a1a;
+  border-bottom: none;
+}
+.editor-content.theme-typewriter a {
+  color: #8b6914;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(139, 105, 20, 0.4);
+}
+.editor-content.theme-typewriter a:hover {
+  border-bottom-color: #8b6914;
+}
+.editor-content.theme-typewriter img {
+  max-width: 100%;
+  border-radius: 0;
+  margin: 1em 0;
+}
+.editor-content.theme-typewriter table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+.editor-content.theme-typewriter th,
+.editor-content.theme-typewriter td {
+  padding: 0.5em 0.8em;
+  border: 1px solid var(--editor-border);
+  text-align: left;
+  color: #2a2520;
+}
+.editor-content.theme-typewriter th {
+  background: #e8e0d0;
+  font-weight: 600;
+  color: #5a4a20;
+}
+.editor-content.theme-typewriter hr {
+  border: none;
+  height: 1px;
+  background: #c0b8a0;
+  margin: 2em 0;
+}
+.editor-content.theme-typewriter ul, .editor-content.theme-typewriter ol {
+  padding-left: 2em;
+  margin: 0.5em 0;
+}
+.editor-content.theme-typewriter li {
+  margin: 0.3em 0;
+  color: #2a2520;
+}
+.editor-content.theme-typewriter li::marker {
+  color: #8b6914;
+}
+.editor-content.theme-typewriter strong {
+  color: #3a2a10;
+  font-weight: 700;
+}
+.editor-content.theme-typewriter em {
+  color: #6a5a3a;
+}
+
+.editor-content.theme-typewriter {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2em;
+  color: var(--editor-text);
+}
+
+.dark .theme-typewriter h1 {
+  color: #f0d080;
+}
+.dark .theme-typewriter h2 {
+  color: #e8c070;
+}
+.dark .theme-typewriter h3 {
+  color: #d4a853;
+}
+.dark .theme-typewriter blockquote {
+  color: #a09080;
+  border-left-color: #d4a853;
+}
+.dark .theme-typewriter code {
+  color: #f0d080;
+  background: rgba(240, 208, 128, 0.08);
+  border-color: rgba(240, 208, 128, 0.15);
+}
+.dark .theme-typewriter a {
+  color: #f0d080;
+}
+.dark .theme-typewriter th {
+  color: #b0a898;
+  background: rgba(240, 208, 128, 0.06);
+}
+.dark .theme-typewriter strong {
+  color: #e0d8c0;
+}
+/* ── 深色模式预览覆盖 ────────────────────────────────────────── */
+.dark .theme-typewriter h1 {
+  color: #d4a853;
+  text-shadow: 0 0 8px rgba(212, 168, 83, 0.3);
+}
+.dark .theme-typewriter h1::after {
+  border-bottom-color: #d4a853;
+}
+.dark .theme-typewriter h2 {
+  color: #c8b870;
+}
+.dark .theme-typewriter h3 {
+  color: #b0a060;
+}
+.dark .theme-typewriter p {
+  color: #c8c0b0;
+}
+.dark .theme-typewriter blockquote {
+  color: #8a8070;
+  border-left-color: #8a8070;
+  background: rgba(212, 168, 83, 0.03);
+}
+.dark .theme-typewriter code {
+  color: #d4a853;
+  background: rgba(212, 168, 83, 0.08);
+  border-bottom-color: #d4a853;
+}
+.dark .theme-typewriter pre {
+  background: #242420;
+  border-left-color: #d4a853;
+  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.3);
+}
+.dark .theme-typewriter pre code {
+  color: #d4a853;
+  background: none;
+}
+.dark .theme-typewriter a {
+  color: #d4a853;
+  border-bottom-color: rgba(212, 168, 83, 0.4);
+}
+.dark .theme-typewriter a:hover {
+  border-bottom-color: #d4a853;
+}
+.dark .theme-typewriter th {
+  color: #d4a853;
+  background: rgba(212, 168, 83, 0.06);
+}
+.dark .theme-typewriter td {
+  color: #c8c0b0;
+  border-color: #444440;
+}
+.dark .theme-typewriter hr {
+  background: #555550;
+}
+.dark .theme-typewriter li {
+  color: #c8c0b0;
+}
+.dark .theme-typewriter li::marker {
+  color: #d4a853;
+}
+.dark .theme-typewriter strong {
+  color: #e8d0a0;
+}
+.dark .theme-typewriter em {
+  color: #a09080;
+}

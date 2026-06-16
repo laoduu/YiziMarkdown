@@ -1,0 +1,157 @@
+/* ═══════════════════════════════════════════════════════════════
+   Facebook (Meta) — YiziMarkdown 实验主题
+
+   设计理念：还原 Facebook 的社交平台视觉——灰白底+白卡片、
+   #1877F2 品牌蓝、卡片式容器、圆角+阴影，像在写一篇长帖子。
+   ═══════════════════════════════════════ */
+
+:root.theme-facebook {
+  --editor-bg: #f0f2f5;
+  --editor-text: #050505;
+  --editor-accent: #1877F2;
+  --editor-border: #e4e6eb;
+  --editor-surface: #ffffff;
+  --editor-hover: #e4e6eb;
+  --editor-selection: #1877F2;
+  --editor-selection-bg: rgba(24, 119, 242, 0.15);
+  --editor-cursor: #1877F2;
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #65676b;
+  --toolbar-bg: #ffffff;
+  --statusbar-bg: #1877F2;
+  --statusbar-text: #ffffff;
+  --font-sans: 'MiSans', 'Mi Sans', system-ui, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --font-size-base: 15px;
+  --line-height: 1.6;
+  --paragraph-spacing: 0.8em;
+  --border-radius: 8px;
+}
+
+:root.theme-facebook.dark {
+  --editor-bg: #18191a;
+  --editor-text: #e4e6eb;
+  --editor-accent: #2d88ff;
+  --editor-border: #3e4042;
+  --editor-surface: #242526;
+  --editor-hover: #3a3b3c;
+  --editor-selection: #2d88ff;
+  --editor-selection-bg: rgba(45, 136, 255, 0.2);
+  --editor-cursor: #2d88ff;
+  --sidebar-bg: #242526;
+  --sidebar-text: #a8a8a8;
+  --toolbar-bg: #242526;
+  --statusbar-bg: #2d88ff;
+  --statusbar-text: #ffffff;
+}
+
+.editor-content.theme-facebook h1 {
+  font-size: 1.6em; font-weight: 700; margin: 1.2em 0 0.4em;
+  color: #1877F2; letter-spacing: -0.01em;
+}
+.editor-content.theme-facebook h2 {
+  font-size: 1.3em; font-weight: 700; margin: 1em 0 0.3em; color: #1665d8;
+}
+.editor-content.theme-facebook h3 {
+  font-size: 1.1em; font-weight: 600; margin: 0.9em 0 0.25em; color: #3a5a8a;
+}
+.editor-content.theme-facebook p {
+  margin: 0 0 var(--paragraph-spacing); color: #1c1e21;
+}
+.editor-content.theme-facebook blockquote {
+  border-left: 3px solid #1877F2; padding: 0.8em 1em; margin: 1em 0;
+  color: #4a6a8a; background: rgba(24, 119, 242, 0.04);
+  border-radius: 0 var(--border-radius) var(--border-radius) 0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.editor-content.theme-facebook code {
+  font-family: var(--font-mono); font-size: 0.88em; background: rgba(24, 119, 242, 0.08);
+  color: #1877F2; padding: 0.15em 0.35em; border-radius: 4px;
+}
+.editor-content.theme-facebook pre {
+  background: #1c1e21; padding: 1em; border-radius: var(--border-radius);
+  margin: 1em 0; overflow-x: auto; border: none;
+}
+.editor-content.theme-facebook pre code { background: none; padding: 0; color: #e4e6eb; border-radius: 0; }
+.editor-content.theme-facebook a { color: #1877F2; text-decoration: none; }
+.editor-content.theme-facebook a:hover { text-decoration: underline; }
+.editor-content.theme-facebook img {
+  max-width: 100%; border-radius: var(--border-radius); margin: 1em 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.editor-content.theme-facebook table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+.editor-content.theme-facebook th, .editor-content.theme-facebook td {
+  padding: 0.55em 0.9em; border: 1px solid #e4e6eb; text-align: left; color: #1c1e21;
+}
+.editor-content.theme-facebook th { background: #f0f2f5; font-weight: 600; color: #050505; }
+.editor-content.theme-facebook hr { border: none; height: 1px; margin: 1.5em 0; background: #e4e6eb; }
+.editor-content.theme-facebook ul, .editor-content.theme-facebook ol { padding-left: 1.8em; margin: 0.5em 0; }
+.editor-content.theme-facebook li { margin: 0.25em 0; color: #1c1e21; }
+.editor-content.theme-facebook li::marker { color: #1877F2; }
+.editor-content.theme-facebook strong { color: #1a3050; font-weight: 700; }
+.editor-content.theme-facebook em { color: #65676b; }
+
+.editor-content.theme-facebook {
+  max-width: 700px; margin: 1em auto; padding: 1.5em;
+  color: var(--editor-text); background: var(--editor-surface);
+  border-radius: var(--border-radius);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1), 0 0 1px rgba(0,0,0,0.1);
+}
+
+/* ── 深色模式完整覆盖 ────────────────────────────────────────── */
+.dark .theme-facebook h1 {
+  color: #4da3ff;
+}
+.dark .theme-facebook h2 {
+  color: #6bb3ff;
+}
+.dark .theme-facebook h3 {
+  color: #8ec3ff;
+}
+.dark .theme-facebook p {
+  color: #e4e6eb;
+}
+.dark .theme-facebook li {
+  color: #e4e6eb;
+}
+.dark .theme-facebook em {
+  color: #a8a8a8;
+}
+.dark .theme-facebook strong {
+  color: #d0e0f8;
+}
+.dark .theme-facebook blockquote {
+  color: #a8a8a8;
+  border-left-color: #2d88ff;
+  box-shadow: none;
+}
+.dark .theme-facebook code {
+  color: #2d88ff;
+  background: rgba(45, 136, 255, 0.1);
+}
+.dark .theme-facebook pre {
+  background: #1c1d1e;
+  border-color: #3e4042;
+  box-shadow: none;
+}
+.dark .theme-facebook pre code {
+  color: #e4e6eb;
+  background: none;
+}
+.dark .theme-facebook a {
+  color: #2d88ff;
+}
+.dark .theme-facebook img {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+.dark .theme-facebook th {
+  color: #e4e6eb;
+  background: rgba(45, 136, 255, 0.08);
+}
+.dark .theme-facebook td {
+  color: #e4e6eb;
+  border-color: #3e4042;
+}
+.dark .theme-facebook hr {
+  border-top-color: #3e4042;
+}

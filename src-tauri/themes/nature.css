@@ -101,3 +101,32 @@
 .editor-content.theme-nature ul, .editor-content.theme-nature ol { padding-left: 1.5em; margin: 1em 0; }
 .editor-content.theme-nature li { margin: 0.3em 0; }
 .editor-content.theme-nature li::marker { color: var(--editor-accent); }
+/* ── 深色模式标题/元素覆盖 ────────────────────────────────────── */
+.dark .theme-nature h1 {
+  color: #86efac;
+}
+.dark .theme-nature h2 {
+  color: #6ee7b7;
+}
+.dark .theme-nature h3 {
+  color: #5ad4a6;
+}
+.dark .theme-nature blockquote {
+  color: #80b890;
+  border-left-color: #34d399;
+}
+.dark .theme-nature code {
+  color: #6ee7b7;
+  background: rgba(110, 231, 183, 0.08);
+  border-color: rgba(110, 231, 183, 0.15);
+}
+.dark .theme-nature a {
+  color: #6ee7b7;
+}
+.dark .theme-nature th {
+  color: #c8d4c5;
+  background: rgba(110, 231, 183, 0.06);
+}
+.dark .theme-nature strong {
+  color: #d0e8d0;
+}

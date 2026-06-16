@@ -11,8 +11,9 @@ import { languages } from '@codemirror/language-data'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useEditorStore, type ViewMode } from '../stores/editorStore'
 import { findOutlineByLine, computeOutlineItems } from '../lib/headingId'
-import { renderMarkdown } from '../lib/markdownRenderer'
 import { liveEditExtension } from '../lib/cm-live-render'
+import { renderMarkdown } from '../lib/markdownRenderer'
+import { extendMarkdownIt, postRender as pluginPostRender } from '../plugins/registry'
 
 // const markdownHighlight = HighlightStyle.define([
 //   // 标题
@@ -97,9 +98,14 @@ interface PreviewPaneProps {
   content: string
   currentTheme: string
   onContentChange?: (content: string) => void
+  enabledPlugins?: string[]
+  pluginConfigs?: Record<string, Record<string, unknown>>
 }
 
-function PreviewPane({ content, currentTheme, onContentChange }: PreviewPaneProps) {
+function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = [], pluginConfigs = {} }: PreviewPaneProps) {
+  // 插件就绪状态：变化时触发 markdown 重新渲染
+  const pluginsReady = useEditorStore((s: any) => s._pluginsReady)
+
   // 防抖渲染：150ms 内不重复触发 markdown-it
   const [debouncedContent, setDebouncedContent] = useState(content)
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -114,8 +120,26 @@ function PreviewPane({ content, currentTheme, onContentChange }: PreviewPaneProp
     isFirstRender.current = false
     if (debouncedContent !== content) setDebouncedContent(content)
   }
-  const renderedHtml = useMemo(() => renderMarkdown(debouncedContent), [debouncedContent])
+  const pluginExtenders = useMemo(() => {
+    const exts: Array<(md: any) => void> = []
+    for (const _id of enabledPlugins) {
+      exts.push((md: any) => extendMarkdownIt(md, enabledPlugins, pluginConfigs || {}))
+    }
+    return exts
+  }, [enabledPlugins, pluginConfigs])
+  // 插件未就绪时跳过渲染（避免用空 loadedPlugins 生成无公式/图表的 HTML）
+  const renderedHtml = useMemo(() => {
+    if (enabledPlugins.length > 0 && !pluginsReady) return ''
+    return renderMarkdown(debouncedContent, pluginExtenders)
+  }, [debouncedContent, pluginExtenders, pluginsReady, enabledPlugins.length])
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // 插件后处理：公式渲染、图表渲染等
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container || enabledPlugins.length === 0) return
+    pluginPostRender(container, enabledPlugins, pluginConfigs || {})
+  }, [renderedHtml, enabledPlugins, pluginConfigs, pluginsReady])
 
   // 监听任务列表 checkbox 点击，同步回源码
   useEffect(() => {
@@ -259,6 +283,7 @@ function buildEditorTheme(isDark: boolean, fontFamily: string, fontSize: string,
 }
 
 const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearchToggle, isSearchOpen: externalSearchOpen, viewMode: externalViewMode, onCursorChange }, ref) => {
+
   const editorRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const [internalSearchOpen, setInternalSearchOpen] = useState(false)
@@ -269,7 +294,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [searchMatches, setSearchMatches] = useState<number>(0)
   const [searchIndex, setSearchIndex] = useState<number>(-1)
-  const { fontFamily, fontSize, lineHeight, currentTheme, isDark, showLineNumbers, wordWrap, spellCheck, liveAnimationMode } = useSettingsStore()
+  const { fontFamily, fontSize, lineHeight, currentTheme, isDark, showLineNumbers, wordWrap, spellCheck, liveAnimationMode, enabledPlugins, pluginConfigs } = useSettingsStore()
   const viewMode = externalViewMode ?? 'preview'
   const lineNumbersCompartment = useRef(new Compartment()).current
   const richCompartment = useRef(new Compartment()).current
@@ -704,7 +729,10 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         highlightSelectionMatches(),
         search(),
         markdown({ base: markdownLanguage, codeLanguages: languages }),
-        keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, ...completionKeymap, indentWithTab]),
+        keymap.of([
+        ...defaultKeymap, ...historyKeymap, ...searchKeymap, ...completionKeymap, indentWithTab,
+        
+      ]),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             // 外部同步（切换Tab/打开文件）触发的dispatch，跳过onChange避免误标为未保存
@@ -892,7 +920,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         {viewMode === 'split' && <div style={{ width: 1, flexShrink: 0, background: 'var(--editor-border)' }} />}
         {/* 预览面板：永远挂载 */}
         <div ref={previewScrollRef} style={{ flex: viewMode === 'split' ? '1 1 0%' : viewMode === 'preview' ? '1 1 100%' : '0 0 0%', minHeight: 0, overflow: 'auto', pointerEvents: (viewMode === 'edit' || viewMode === 'live') ? 'none' : 'auto' }}>
-          <PreviewPane content={content} currentTheme={currentTheme} onContentChange={onChange} />
+          <PreviewPane content={content} currentTheme={currentTheme} onContentChange={onChange} enabledPlugins={enabledPlugins} pluginConfigs={pluginConfigs} />
         </div>
       </div>
 

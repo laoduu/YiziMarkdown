@@ -9,7 +9,9 @@ import HomePage from './components/HomePage'
 import { PanelLeftClose, PanelLeft } from 'lucide-react'
 import { invokeTauri } from './lib/tauri'
 import { useSettingsStore } from './stores/settingsStore'
+import { loadKeybindings, resolveAction } from './lib/keybindings'
 import { useEditorStore } from './stores/editorStore'
+import { loadPlugin, unloadPlugin } from './plugins/registry'
 
 // 打开文件对话框 - Tauri 环境用 Rust 命令，浏览器降级用 HTML input
 const openFileDialog = async (): Promise<{ name: string; content: string; filePath?: string } | null> => {
@@ -77,6 +79,8 @@ function App() {
   const editorRef = useRef<EditorRef>(null)
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const startupDone = useRef(false)
+  const prevPluginsRef = useRef<string[]>([])
+  const pluginsReadyRef = useRef(false)
 
   // 动态加载主题 CSS + user.css（串行，确保顺序和特异性正确）
   useEffect(() => {
@@ -154,48 +158,114 @@ function App() {
     }
   }, [activeTab?.content, activeTab?.filePath, activeTab?.isSaved])
 
-  // 打开开发者工具
+  const shortcutsReadyRef = useRef(false)
+
+  // 启动时加载快捷键配置
+  useEffect(() => {
+    loadKeybindings().then(() => shortcutsReadyRef.current = true)
+  }, [])
+
+  // 全局快捷键（通过 keybindings 模块统一管理）
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
-        e.preventDefault()
-        const tauri = (window as any).__TAURI_INTERNALS__
-        if (tauri && tauri.invoke) {
-          tauri.invoke('plugin:window|toggle_devtools', { label: 'main' }).catch(() => {})
-        }
-      }
-      // Ctrl+N: 新建
-      if (e.ctrlKey && e.key === 'n') {
-        e.preventDefault()
-        handleNewFile()
-      }
-      // Ctrl+S: 保存（有路径直接保存，无路径另存为）
-      if (e.ctrlKey && e.key === 's') {
-        e.preventDefault()
-        handleSaveFile()
-      }
-      // Ctrl+O: 打开
-      if (e.ctrlKey && e.key === 'o') {
-        e.preventDefault()
-        handleOpenFile()
-      }
-      // Ctrl+W: 关闭当前Tab（未保存时由 TabBar 弹窗确认）
-      if (e.ctrlKey && e.key === 'w') {
-        e.preventDefault()
-        if (activeTabId) {
-          const tab = useEditorStore.getState().currentTab()
-          if (tab && !tab.isSaved) {
-            // 触发 TabBar 的关闭确认 — 通过 dispatch 自定义事件
-            window.dispatchEvent(new CustomEvent('tab-close-request', { detail: activeTabId }))
-          } else {
-            closeTab(activeTabId)
+      if (!shortcutsReadyRef.current) return
+      const actionId = resolveAction(e)
+      if (!actionId) return
+
+      // 编辑器级 action（undo/redo/search）交给 CodeMirror keymap 处理
+      if (['undo', 'redo', 'search'].includes(actionId)) return
+
+      e.preventDefault()
+
+      switch (actionId) {
+        case 'newFile': handleNewFile(); break
+        case 'openFile': handleOpenFile(); break
+        case 'save': handleSaveFile(); break
+        case 'saveAs': handleSaveAs(); break
+        case 'closeTab':
+          if (activeTabId) {
+            const tab = useEditorStore.getState().currentTab()
+            if (tab && !tab.isSaved) {
+              window.dispatchEvent(new CustomEvent('tab-close-request', { detail: activeTabId }))
+            } else {
+              closeTab(activeTabId)
+            }
           }
+          break
+        case 'toggleSidebar': setSidebarVisible(v => !v); break
+        case 'toggleTheme': setField('isDark', !useSettingsStore.getState().isDark); break
+        case 'toggleDevtools': {
+          const tauri = (window as any).__TAURI_INTERNALS__
+          if (tauri && tauri.invoke) {
+            tauri.invoke('plugin:window|toggle_devtools', { label: 'main' }).catch(() => {})
+          }
+          break
         }
+        // 格式化 action：通过 insertMarkdown 注入
+        case 'bold': editorRef.current?.insertMarkdown('**', 'wrap'); break
+        case 'italic': editorRef.current?.insertMarkdown('*', 'wrap'); break
+        case 'strikethrough': editorRef.current?.insertMarkdown('~~', 'wrap'); break
+        case 'inlineCode': editorRef.current?.insertMarkdown('`', 'wrap'); break
+        case 'heading1': editorRef.current?.insertMarkdown('# ', 'prefix'); break
+        case 'heading2': editorRef.current?.insertMarkdown('## ', 'prefix'); break
+        case 'heading3': editorRef.current?.insertMarkdown('### ', 'prefix'); break
+        case 'unorderedList': editorRef.current?.insertMarkdown('- ', 'prefix'); break
+        case 'orderedList': editorRef.current?.insertMarkdown('1. ', 'prefix'); break
+        case 'blockquote': editorRef.current?.insertMarkdown('> ', 'prefix'); break
+        case 'link': editorRef.current?.insertMarkdown('[', 'link'); break
+        case 'image': editorRef.current?.insertMarkdown('![', 'link'); break
+        case 'codeBlock': editorRef.current?.insertMarkdown('```\n\n```\n'); break
+        case 'table': editorRef.current?.insertMarkdown('| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n|  |  |  |\n'); break
+        case 'horizontalRule': editorRef.current?.insertMarkdown('\n---\n', 'prefix'); break
+        // 视图循环切换：源代码 → 并排 → 实时 → 预览 → 源代码
+        case 'viewCycle': {
+          const order = ['edit', 'split', 'live', 'preview'] as const
+          const tab = useEditorStore.getState().currentTab()
+          const cur = tab?.viewMode || 'edit'
+          const idx = order.indexOf(cur)
+          useEditorStore.getState().updateViewMode(order[(idx + 1) % order.length])
+          break
+        }
+        // 导出
+        case 'exportHtml': handleExport('html'); break
+        case 'exportMd': handleExport('md'); break
+        case 'exportTxt': handleExport('txt'); break
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, []) // eslint-disable-line
+
+  // ===== 启动时加载已启用插件 =====
+  useEffect(() => {
+    const { enabledPlugins } = useSettingsStore.getState()
+    prevPluginsRef.current = [...enabledPlugins]
+
+    // 启动时等待所有插件加载完成
+    Promise.all(enabledPlugins.map(id => loadPlugin(id))).then(() => {
+      pluginsReadyRef.current = true
+      useEditorStore.setState({ _pluginsReady: true })
+    })
+
+    // 监听enabledPlugins变化，动态加载/卸载
+    const unsub = useSettingsStore.subscribe((state) => {
+      const cur = state.enabledPlugins
+      const prev = prevPluginsRef.current
+      const newIds = cur.filter(id => !prev.includes(id))
+      if (newIds.length > 0) {
+        Promise.all(newIds.map(id => loadPlugin(id))).then(() => {
+          useEditorStore.setState({ _pluginsReady: false })
+          requestAnimationFrame(() => useEditorStore.setState({ _pluginsReady: true }))
+        })
+      }
+      for (const id of prev) {
+        if (!cur.includes(id)) unloadPlugin(id).catch(() => {})
+      }
+      prevPluginsRef.current = [...cur]
+    })
+
+    return () => unsub()
+  }, [])
 
   // ===== 启动逻辑 =====
   useEffect(() => {
@@ -203,6 +273,17 @@ function App() {
     startupDone.current = true
 
     const loadStartup = async () => {
+      // 等待插件加载完成，确保渲染时插件已就绪
+      // 最多等3秒，避免阻塞启动
+      const waitPlugins = () => new Promise<void>(resolve => {
+        if (pluginsReadyRef.current) { resolve(); return }
+        const unsub = useEditorStore.subscribe((s: any) => {
+          if (s._pluginsReady) { unsub(); resolve() }
+        })
+        setTimeout(() => { unsub(); resolve() }, 3000)
+      })
+      await waitPlugins()
+
       const cliFile = await invokeTauri<string | null>('get_cli_open_file')
 
       if (cliFile) {
@@ -459,11 +540,12 @@ function App() {
         <div 
           className="relative flex-1 min-w-0 flex flex-col"
           onMouseDown={(e) => {
-            // 防止点击内容区空白处导致编辑器失去焦点
-            // 只有点击input/textarea/button等交互元素时才允许焦点转移
+            // 阻止事件冒泡到外层，防止焦点跑到非编辑元素上
+            // 但不阻止默认行为，保留浏览器原生的焦点分配机制
+            // （语音输入法依赖 mousedown → focus 事件链来定位输入目标）
             const target = e.target as HTMLElement
             if (!target.closest('input') && !target.closest('textarea') && !target.closest('button')) {
-              e.preventDefault()
+              e.stopPropagation()
             }
           }}
         >

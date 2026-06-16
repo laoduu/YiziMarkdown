@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>CM6 Inline Widget Test</title>
+<style>
+  body { font-family: sans-serif; padding: 20px; }
+  .editor-wrap { border: 1px solid #ccc; border-radius: 4px; }
+  .inline-katex { color: #e74c3c; font-weight: bold; background: #fff3cd; padding: 0 2px; }
+</style>
+</head>
+<body>
+<h2>CM6 Inline Widget Test</h2>
+<p>Type something with $formula$ to test.</p>
+<div class="editor-wrap" id="editor"></div>
+
+<script type="module">
+import { EditorState } from "https://esm.sh/@codemirror/state@6";
+import { EditorView, Decoration, DecorationSet, WidgetType } from "https://esm.sh/@codemirror/view@6";
+import { basicSetup } from "https://esm.sh/codemirror@6";
+
+class InlineWidget extends WidgetType {
+  constructor(text) { super(); this.text = text; }
+  eq(other) { return other.text === this.text; }
+  toDOM() {
+    const span = document.createElement("span");
+    span.className = "inline-katex";
+    span.textContent = "[RENDERED: " + this.text + "]";
+    return span;
+  }
+  ignoreEvent() { return true; }
+}
+
+const inlineRe = /(?<!\$)\$(?!\$)((?:[^$\\]|\\.)+?)(?<!\$)\$(?!\$)/g;
+
+function buildDecorations(state) {
+  const doc = state.doc;
+  const sel = state.selection.main;
+  const curLine = doc.lineAt(sel.from).number;
+  const ranges = [];
+  
+  for (let i = 1; i <= doc.lines; i++) {
+    if (i === curLine) continue;
+    const line = doc.line(i);
+    const text = line.text;
+    if (/\$\$/.test(text)) continue;
+    inlineRe.lastIndex = 0;
+    let m;
+    while ((m = inlineRe.exec(text)) !== null) {
+      console.log("Match:", m[0], "tex:", m[1], "line:", i);
+      const from = line.from + m.index;
+      const to = from + m[0].length;
+      ranges.push(Decoration.replace({
+        widget: new InlineWidget(m[1]),
+        inclusive: false,
+        block: false,
+      }).range(from, to));
+    }
+  }
+  
+  ranges.sort((a, b) => a.from - b.from || a.value.startSide - b.value.startSide);
+  console.log("Total decorations:", ranges.length);
+  return Decoration.set(ranges);
+}
+
+const decoField = EditorState.field({
+  create(state) { return buildDecorations(state); },
+  update(deco, tr) {
+    if (tr.docChanged || tr.selection) return buildDecorations(tr.state);
+    return deco.map(tr.changes);
+  },
+  provide: f => EditorView.decorations.from(f),
+});
+
+const initialDoc = `Line 1: Hello $x^2$ world
+Line 2: Another $a+b$ test
+Line 3: Normal text
+Line 4: Complex $K_{ij} = \\sigma_f^2 \\exp(1)$ here
+Line 5: $$block formula$$`;
+
+const view = new EditorView({
+  state: EditorState.create({
+    doc: initialDoc,
+    extensions: [basicSetup, decoField],
+  }),
+  parent: document.getElementById("editor"),
+});
+
+console.log("Editor created with", initialDoc.split("\\n").length, "lines");
+</script>
+</body>
+</html>

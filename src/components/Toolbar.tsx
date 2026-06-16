@@ -26,6 +26,10 @@ import {
   Heading3,
   Minus,
   Table,
+  Sigma,
+  Workflow,
+  Pi,
+  FunctionSquare,
   CheckSquare,
   FileDown,
   FileText as FileTextIcon,
@@ -70,10 +74,6 @@ const getTauriWindow = (): WindowCtrl => {
   } catch { return null }
 }
 
-const themeNames: Record<string, string> = {
-  academic: '学术蓝', vibrant: '活力橙', minimal: '极简风', magazine: '杂志感', tech: '科技感', nature: '自然风',
-}
-
 export default function Toolbar({ 
   onNew, onOpen, onSave, onSaveAs, onToggleSidebar, onToggleDark, onUndo, onRedo,
   onInsertMarkdown, onExport, onSearch, onSettings,
@@ -82,18 +82,30 @@ export default function Toolbar({
   const [showExportMenu, setShowExportMenu] = useState(false)
   const [exportMenuPos, setExportMenuPos] = useState<{top: number; left: number}>({top: 0, left: 0})
   const exportBtnRef = useRef<HTMLDivElement>(null)
+  const [showTablePicker, setShowTablePicker] = useState(false)
+  const [tablePickerPos, setTablePickerPos] = useState({top: 0, left: 0})
+  const [tablePickerSize, setTablePickerSize] = useState({rows: 0, cols: 0})
+  const tableBtnRef = useRef<HTMLDivElement>(null)
+  const [showMathMenu, setShowMathMenu] = useState(false)
+  const [mathMenuPos, setMathMenuPos] = useState({top: 0, left: 0})
+  const mathBtnRef = useRef<HTMLDivElement>(null)
   const [showThemeMenu, setShowThemeMenu] = useState(false)
   const { currentTheme, setField } = useSettingsStore()
   const [themeFiles, setThemeFiles] = useState<string[]>([])
+  const [themeMeta, setThemeMeta] = useState<Record<string, { name: string }>>({})
 
-  // 动态加载主题列表（从 themes/ 目录读取）
+  // 动态加载主题列表和元信息
   useEffect(() => {
     const load = async () => {
       try {
         const tauri = (window as any).__TAURI_INTERNALS__
         if (tauri && typeof tauri.invoke === 'function') {
-          const files = await tauri.invoke('list_themes') as string[]
+          const [files, json] = await Promise.all([
+            tauri.invoke('list_themes') as Promise<string[]>,
+            tauri.invoke('read_theme_json') as Promise<string>,
+          ])
           if (files) setThemeFiles(files)
+          try { setThemeMeta(JSON.parse(json || '{}')) } catch {}
         }
       } catch {}
     }
@@ -120,8 +132,8 @@ export default function Toolbar({
       }}
     >
       {/* 左侧：品牌 + 格式按钮，允许溢出裁剪 */}
-      <div className="flex items-center gap-0.5 overflow-hidden min-w-0 flex-1">
-        <span className="text-[15px] font-extrabold tracking-tight text-[var(--editor-accent)] select-none mr-3 shrink-0">YiziMarkdown</span>
+      <div className="flex items-center gap-px overflow-hidden min-w-0 flex-1">
+        <span className="text-[15px] font-extrabold tracking-tight text-[var(--editor-accent)] select-none mr-1.5 shrink-0">YiziMarkdown</span>
         <ToolbarButton icon={<FileText size={16} />} tooltip="新建 (Ctrl+N)" onClick={onNew} accent />
         <ToolbarButton icon={<FolderOpen size={16} />} tooltip="打开 (Ctrl+O)" onClick={onOpen} accent />
         <ToolbarButton icon={<Save size={16} />} tooltip="保存 (Ctrl+S)" onClick={onSave} accent />
@@ -190,17 +202,116 @@ export default function Toolbar({
         <ToolbarDivider />
         <ToolbarButton icon={<Link size={16} />} tooltip="链接" onClick={() => onInsertMarkdown('[链接](url)', 'link')} />
         <ToolbarButton icon={<Image size={16} />} tooltip="图片" onClick={() => onInsertMarkdown('![alt](url)', 'link')} />
-        <ToolbarButton icon={<Table size={16} />} tooltip="表格" onClick={() => onInsertMarkdown('\n| 列1 | 列2 |\n|------|------|\n| 内容 | 内容 |\n')} />
+        <div className="relative" ref={tableBtnRef}>
+          <ToolbarButton 
+            icon={<Table size={16} />} 
+            tooltip="表格" 
+            onClick={() => {
+              if (tableBtnRef.current) {
+                const rect = tableBtnRef.current.getBoundingClientRect()
+                setTablePickerPos({ top: rect.bottom + 4, left: rect.left })
+              }
+              setTablePickerSize({rows: 0, cols: 0})
+              setShowTablePicker(!showTablePicker)
+            }}
+            accent
+          />
+          {showTablePicker && (
+            <>
+              <div 
+                className="fixed inset-0 z-40" 
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => setShowTablePicker(false)}
+              />
+              <div 
+                className="fixed bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50 p-3"
+                style={{ top: tablePickerPos.top, left: tablePickerPos.left }}
+              >
+                <div className="text-xs text-[var(--editor-text-muted)] mb-2 h-4">
+                  {tablePickerSize.rows > 0 ? `${tablePickerSize.rows} × ${tablePickerSize.cols}` : '选择大小'}
+                </div>
+                <div 
+                  className="grid gap-px"
+                  style={{ gridTemplateColumns: `repeat(8, 18px)` }}
+                  onMouseLeave={() => setTablePickerSize({rows: 0, cols: 0})}
+                >
+                  {Array.from({length: 64}, (_, i) => {
+                    const row = Math.floor(i / 8) + 1
+                    const col = (i % 8) + 1
+                    const isHighlight = row <= tablePickerSize.rows && col <= tablePickerSize.cols
+                    return (
+                      <div
+                        key={i}
+                        className={`w-[18px] h-[18px] rounded-sm border transition-colors duration-75 cursor-pointer ${
+                          isHighlight 
+                            ? 'bg-[var(--editor-accent)] border-[var(--editor-accent)]' 
+                            : 'bg-transparent border-[var(--editor-border)]'
+                        }`}
+                        onMouseEnter={() => setTablePickerSize({rows: row, cols: col})}
+                        onClick={() => {
+                          if (row > 0 && col > 0) {
+                            const md = generateTableMd(row, col)
+                            onInsertMarkdown(md)
+                            setShowTablePicker(false)
+                          }
+                        }}
+                      />
+                    )
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+        <div className="relative" ref={mathBtnRef}>
+          <ToolbarButton 
+            icon={<Sigma size={16} />} 
+            tooltip="公式" 
+            onClick={() => {
+              if (mathBtnRef.current) {
+                const rect = mathBtnRef.current.getBoundingClientRect()
+                setMathMenuPos({ top: rect.bottom + 4, left: rect.left })
+              }
+              setShowMathMenu(!showMathMenu)
+            }} 
+            accent
+          />
+          {showMathMenu && (
+            <>
+              <div 
+                className="fixed inset-0 z-40" 
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => setShowMathMenu(false)}
+              />
+              <div 
+                className="fixed py-1 w-40 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50"
+                style={{ top: mathMenuPos.top, left: mathMenuPos.left }}
+              >
+                <ExportMenuItem 
+                  icon={<Pi size={14} />} 
+                  label="行内公式 ($...$)" 
+                  onClick={() => { onInsertMarkdown('$', 'wrap'); setShowMathMenu(false) }} 
+                />
+                <ExportMenuItem 
+                  icon={<FunctionSquare size={14} />} 
+                  label="块级公式 ($$...$$)" 
+                  onClick={() => { onInsertMarkdown('\n$$\n公式\n$$\n'); setShowMathMenu(false) }} 
+                />
+              </div>
+            </>
+          )}
+        </div>
+        <ToolbarButton icon={<Workflow size={16} />} tooltip="Mermaid 图表" onClick={() => onInsertMarkdown('\n```mermaid\ngraph LR\n  A[开始] --> B[结束]\n```\n')} />
         <ToolbarButton icon={<Minus size={16} />} tooltip="分割线" onClick={() => onInsertMarkdown('\n---\n')} />
       </div>
 
       {/* 右侧工具组：永远不被压缩 */}
-      <div className="flex items-center gap-0.5 shrink-0">
+      <div className="flex items-center gap-px shrink-0">
         {/* 主题切换 */}
         <div className="relative">
           <ToolbarButton 
             icon={<Palette size={16} />} 
-            tooltip={themeNames[currentTheme] || currentTheme}
+            tooltip={themeMeta[currentTheme]?.name || (currentTheme === 'academic' ? '学术蓝' : currentTheme)}
             onClick={() => setShowThemeMenu(!showThemeMenu)} 
             accent
           />
@@ -214,7 +325,7 @@ export default function Toolbar({
               <div className="absolute top-full right-0 mt-1 py-1 w-48 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50">
                 {themeFiles.map((file) => {
                   const id = file.replace(/\.css$/, '')
-                  const name = themeNames[id] || id
+                  const name = themeMeta[id]?.name || (id === 'academic' ? '学术蓝' : id)
                   return (
                   <button
                     key={file}
@@ -271,7 +382,7 @@ function ToolbarButton({ icon, tooltip, onClick, active, accent }: ToolbarButton
       onClick={onClick}
       title={tooltip}
       className={`
-        w-8 h-8 flex items-center justify-center rounded-md
+        w-7 h-7 flex items-center justify-center rounded-md
         transition-colors duration-150
         ${active 
           ? 'bg-[var(--editor-accent)] text-white' 
@@ -287,7 +398,16 @@ function ToolbarButton({ icon, tooltip, onClick, active, accent }: ToolbarButton
 }
 
 function ToolbarDivider() {
-  return <div className="w-px h-5 bg-[var(--editor-border)] mx-0.5 shrink-0" />
+  return <div className="w-px h-5 bg-[var(--editor-border)] mx-px shrink-0" />
+}
+
+function generateTableMd(rows: number, cols: number): string {
+  const header = '| ' + Array.from({length: cols}, (_, i) => `列${i + 1}`).join(' | ') + ' |'
+  const sep = '| ' + Array.from({length: cols}, () => '------').join(' | ') + ' |'
+  const bodyRows = Array.from({length: rows - 1}, () => 
+    '| ' + Array.from({length: cols}, () => '内容').join(' | ') + ' |'
+  ).join('\n')
+  return '\n' + header + '\n' + sep + '\n' + bodyRows + '\n'
 }
 
 function ExportMenuItem({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {

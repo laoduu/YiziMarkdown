@@ -14,7 +14,7 @@
   --toolbar-bg: #FFF8F2;
   --statusbar-bg: #F3641E;
   --statusbar-text: #ffffff;
-  --font-sans: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+  --font-sans: 'MiSans', 'Mi Sans', system-ui, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
   --font-size-base: 16px;
   --line-height: 1.8;
@@ -100,4 +100,33 @@
   margin: 0 auto;
   padding: 2em;
   color: var(--editor-text);
+}
+/* ── 深色模式标题/元素覆盖 ────────────────────────────────────── */
+.dark .theme-vibrant h1 {
+  color: #fbbf24;
+}
+.dark .theme-vibrant h2 {
+  color: #f59e0b;
+}
+.dark .theme-vibrant h3 {
+  color: #d97706;
+}
+.dark .theme-vibrant blockquote {
+  color: #c0a080;
+  border-left-color: #f59e0b;
+}
+.dark .theme-vibrant code {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.08);
+  border-color: rgba(251, 191, 36, 0.15);
+}
+.dark .theme-vibrant a {
+  color: #fbbf24;
+}
+.dark .theme-vibrant th {
+  color: #e0d0c0;
+  background: rgba(251, 191, 36, 0.06);
+}
+.dark .theme-vibrant strong {
+  color: #f0e0d0;
 }

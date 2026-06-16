@@ -14,7 +14,7 @@
   --toolbar-bg: #f7fafc;
   --statusbar-bg: #2b6cb0;
   --statusbar-text: #ffffff;
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'MiSans', 'Mi Sans', system-ui, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
   --font-size-base: 15px;
   --line-height: 1.7;
