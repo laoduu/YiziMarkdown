@@ -9,7 +9,7 @@ import HomePage from './components/HomePage'
 import { PanelLeftClose, PanelLeft } from 'lucide-react'
 import { invokeTauri } from './lib/tauri'
 import { useSettingsStore } from './stores/settingsStore'
-import { loadKeybindings, resolveAction } from './lib/keybindings'
+import { loadKeybindings, resolveAction, getKeybindingsMap, formatKey, SHORTCUT_ACTIONS } from './lib/keybindings'
 import { useEditorStore } from './stores/editorStore'
 import { loadPlugin, unloadPlugin } from './plugins/registry'
 
@@ -75,6 +75,7 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [settingsDefaultTab, setSettingsDefaultTab] = useState<string | undefined>(undefined)
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false })
+  const [showShortcutsPanel, setShowShortcutsPanel] = useState(false)
   const [currentFolder, setCurrentFolder] = useState<string | null>(null)
   const editorRef = useRef<EditorRef>(null)
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -173,11 +174,12 @@ function App() {
       if (!actionId) return
 
       // 编辑器级 action（undo/redo/search）交给 CodeMirror keymap 处理
-      if (['undo', 'redo', 'search'].includes(actionId)) return
+      if (['undo', 'redo'].includes(actionId)) return
 
       e.preventDefault()
 
       switch (actionId) {
+        case 'search': handleSearchToggle(); break
         case 'newFile': handleNewFile(); break
         case 'openFile': handleOpenFile(); break
         case 'save': handleSaveFile(); break
@@ -194,6 +196,12 @@ function App() {
           break
         case 'toggleSidebar': setSidebarVisible(v => !v); break
         case 'toggleTheme': setField('isDark', !useSettingsStore.getState().isDark); break
+        case 'showShortcuts': setShowShortcutsPanel(v => !v); break
+        case 'slashMenu': {
+          const ev = new CustomEvent('slash-menu-keyboard-trigger')
+          window.dispatchEvent(ev)
+          break
+        }
         case 'toggleDevtools': {
           const tauri = (window as any).__TAURI_INTERNALS__
           if (tauri && tauri.invoke) {
@@ -321,6 +329,44 @@ function App() {
       }
     }
     loadStartup()
+  }, []) // eslint-disable-line
+
+  // ===== 单实例：注册全局函数供 Rust eval 调用 =====
+  useEffect(() => {
+    ;(window as any).__singleInstanceOpenFile = async (filePath: string) => {
+      if (!filePath) return
+
+      // 路径归一化：统一反斜杠为正斜杠，再做比较
+      const normalized = filePath.replace(/\\/g, '/').toLowerCase()
+
+      // 先检查是否已在标签中打开
+      const store = useEditorStore.getState()
+      const existing = store.tabs.find(
+        (t: any) => t.filePath && t.filePath.replace(/\\/g, '/').toLowerCase() === normalized
+      )
+
+      if (existing) {
+        // 已打开：直接切换到该标签并高亮提醒
+        useEditorStore.setState({ activeTabId: existing.id })
+        useEditorStore.getState().addRecentFile(filePath)
+        return
+      }
+
+      // 未打开：读取文件后新建标签
+      try {
+        const result = await invokeTauri<{ content: string; path: string }>('read_file', { path: filePath })
+        if (result && result.content) {
+          const tabId = openFile(filePath, result.content)
+          useEditorStore.getState().setViewMode(tabId, 'preview')
+        }
+      } catch (err) {
+        console.error('Failed to open file from second instance:', err)
+      }
+    }
+
+    return () => {
+      delete (window as any).__singleInstanceOpenFile
+    }
   }, []) // eslint-disable-line
 
   // 切换activeTab时更新currentFolder
@@ -504,6 +550,16 @@ function App() {
   const wordCount = content.length
   const readingTime = Math.max(1, Math.ceil(wordCount / 300))
 
+  // Esc 关闭快捷键大全面板
+  useEffect(() => {
+    if (!showShortcutsPanel) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowShortcutsPanel(false)
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [showShortcutsPanel])
+
   return (
     <div className="app-container theme-transition">
       <Toolbar 
@@ -595,11 +651,89 @@ function App() {
         defaultTab={settingsDefaultTab as any}
       />
       
+
+      
+      {/* 快捷键大全面板 */}
+      {showShortcutsPanel && (
+        <>
+          <div className="fixed inset-0 z-[9000]" onClick={() => setShowShortcutsPanel(false)} />
+          <div 
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9001]
+              w-[720px] max-h-[80vh] overflow-y-auto rounded-2xl shadow-2xl border border-[var(--editor-border)]
+              bg-[var(--editor-bg)] text-[var(--editor-text)] px-8 py-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h2 className="text-lg font-bold tracking-tight" style={{ color: 'var(--editor-text)' }}>快捷键速查</h2>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--sidebar-text)' }}>按 F1 随时唤出，再次点击关闭</p>
+              </div>
+              <button 
+                onClick={() => setShowShortcutsPanel(false)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
+                style={{ color: 'var(--sidebar-text)', background: 'transparent' }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--editor-hover)' }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                title="关闭 (F1)"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M3 3l8 8M11 3l-8 8"/>
+                </svg>
+              </button>
+            </div>
+            <ShortcutsPanel />
+          </div>
+        </>
+      )}
       {toast.visible && (
         <div className="fixed bottom-12 left-1/2 -translate-x-1/2 px-4 py-2 bg-[var(--editor-text)] text-[var(--editor-bg)] text-sm rounded-lg shadow-lg z-[9999] pointer-events-none transition-opacity duration-300">
           {toast.message}
         </div>
       )}
+    </div>
+  )
+}
+
+
+// 快捷键大全面板内容组件（读取实时配置，非写死）
+function ShortcutsPanel() {
+  const map = getKeybindingsMap()
+  const categories = [...new Set(SHORTCUT_ACTIONS.map(a => a.category))]
+  return (
+    <div className="mt-4 space-y-5">
+      {categories.map(cat => (
+        <div key={cat}>
+          <h3 className="text-[11px] font-semibold uppercase tracking-widest mb-2.5" style={{ color: 'var(--editor-accent)' }}>{cat}</h3>
+          <div className="grid grid-cols-3 gap-2">
+            {SHORTCUT_ACTIONS.filter(a => a.category === cat && a.defaultKey).map(action => {
+              const key = formatKey(map[action.id] || action.defaultKey)
+              return (
+                <div
+                  key={action.id}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-default select-none"
+                  style={{
+                    borderColor: 'var(--editor-border)',
+                    background: 'var(--editor-surface)',
+                    transition: 'background 0.15s'
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--editor-hover)' }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--editor-surface)' }}
+                >
+                  <kbd
+                    className="text-[11px] font-mono font-medium px-2 py-0.5 rounded shrink-0"
+                    style={{
+                      color: 'var(--editor-text)',
+                      background: 'var(--editor-bg)',
+                      border: '1px solid var(--editor-border)'
+                    }}
+                  >{key}</kbd>
+                  <span className="text-[13px] truncate" style={{ color: 'var(--editor-text)' }}>{action.label}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

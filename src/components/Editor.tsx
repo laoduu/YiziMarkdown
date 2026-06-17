@@ -4,7 +4,7 @@ import { EditorState, Compartment, Extension } from '@codemirror/state'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { defaultHighlightStyle, syntaxHighlighting, indentOnInput, bracketMatching } from '@codemirror/language'
 import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo } from '@codemirror/commands'
-import { search, searchKeymap, highlightSelectionMatches } from '@codemirror/search'
+import { search, searchKeymap, highlightSelectionMatches, closeSearchPanel } from '@codemirror/search'
 import { autocompletion, completionKeymap } from '@codemirror/autocomplete'
 import { Search, X, Replace as ReplaceIcon, ChevronUp, ChevronDown } from 'lucide-react'
 import { languages } from '@codemirror/language-data'
@@ -12,6 +12,8 @@ import { useSettingsStore } from '../stores/settingsStore'
 import { useEditorStore, type ViewMode } from '../stores/editorStore'
 import { findOutlineByLine, computeOutlineItems } from '../lib/headingId'
 import { liveEditExtension } from '../lib/cm-live-render'
+import { slashMenuExtension, slashMenuState, showSlashMenu, hideSlashMenu, slashMenuAction } from '../lib/cm-slash-menu'
+import SlashMenu from './SlashMenu'
 import { renderMarkdown } from '../lib/markdownRenderer'
 import { extendMarkdownIt, postRender as pluginPostRender } from '../plugins/registry'
 
@@ -296,6 +298,9 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   const [searchIndex, setSearchIndex] = useState<number>(-1)
   const { fontFamily, fontSize, lineHeight, currentTheme, isDark, showLineNumbers, wordWrap, spellCheck, liveAnimationMode, enabledPlugins, pluginConfigs } = useSettingsStore()
   const viewMode = externalViewMode ?? 'preview'
+  const [slashMenuVisible, setSlashMenuVisible] = useState(false)
+  const [slashMenuCoords, setSlashMenuCoords] = useState({ left: 0, bottom: 0 })
+  const [slashMenuQuery, setSlashMenuQuery] = useState('')
   const lineNumbersCompartment = useRef(new Compartment()).current
   const richCompartment = useRef(new Compartment()).current
   const lineWrappingCompartment = useRef(new Compartment()).current
@@ -728,9 +733,25 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         highlightActiveLine(),
         highlightSelectionMatches(),
         search(),
+        slashMenuExtension(),
+        EditorView.updateListener.of((update) => {
+          if (!update.docChanged && !update.selectionSet && update.transactions.length === 0) return
+          for (const tr of update.transactions) {
+            for (const effect of tr.effects) {
+              if (effect.is(showSlashMenu)) {
+                setSlashMenuVisible(true)
+                setSlashMenuCoords(effect.value.coords)
+                setSlashMenuQuery('')
+              }
+              if (effect.is(hideSlashMenu) || effect.is(slashMenuAction)) {
+                setSlashMenuVisible(false)
+              }
+            }
+          }
+        }),
         markdown({ base: markdownLanguage, codeLanguages: languages }),
         keymap.of([
-        ...defaultKeymap, ...historyKeymap, ...searchKeymap, ...completionKeymap, indentWithTab,
+        ...defaultKeymap, ...historyKeymap, ...searchKeymap.filter(k => !(k.key === 'Mod-f' && 'run' in k)), ...completionKeymap, indentWithTab,
         
       ]),
         EditorView.updateListener.of((update) => {
@@ -759,7 +780,26 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     viewReadyRef.current = true
     lastSyncedFromEditorRef.current = content
 
+    // StateField 自动关闭菜单 → 同步 React state
+    const onSlashMenuClose = () => {
+      setSlashMenuVisible(false)
+    }
+    // 监听 slash-menu-update 事件（坐标更新）
+    const onSlashMenuUpdate = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      const smState = view.state.field(slashMenuState, false)
+      if (smState && !smState.active) {
+        setSlashMenuVisible(false)
+        return
+      }
+      if (detail.coords) setSlashMenuCoords(detail.coords)
+    }
+    editorRef.current!.addEventListener('slash-menu-update', onSlashMenuUpdate)
+    editorRef.current!.addEventListener('slash-menu-close', onSlashMenuClose)
+
     return () => {
+      editorRef.current?.removeEventListener('slash-menu-update', onSlashMenuUpdate)
+      editorRef.current?.removeEventListener('slash-menu-close', onSlashMenuClose)
       view.destroy()
       viewReadyRef.current = false
       viewRef.current = null
@@ -850,6 +890,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     const nextIdx = (searchIndex + 1) % matches.length
     setSearchIndex(nextIdx)
     const pos = matches[nextIdx]
+    closeSearchPanel(view)
     view.dispatch({
       selection: { anchor: pos, head: pos + searchTerm.length },
       effects: EditorView.scrollIntoView(pos),
@@ -859,6 +900,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   const handleSearchPrev = useCallback(() => {
     const view = viewRef.current
     if (!view || !searchTerm) return
+    closeSearchPanel(view)
     const text = view.state.doc.toString()
     const matches = findAllMatches(text, searchTerm)
     setSearchMatches(matches.length)
@@ -911,6 +953,74 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     })
   }, [searchTerm, replaceTerm])
 
+  // ---- 斜杠菜单处理 ----
+  const handleSlashMenuSelect = useCallback((id: string) => {
+    const view = viewRef.current
+    if (!view) return
+    const state = view.state.field(slashMenuState)
+
+    // 计算要删除的范围（触发字符 + 搜索词）
+    const cursor = view.state.selection.main.head
+    const deleteFrom = state.from
+    const deleteTo = cursor > state.from ? cursor : state.from
+
+    // 执行删除触发字符+搜索词
+    view.dispatch({
+      changes: { from: deleteFrom, to: deleteTo, insert: '' },
+      effects: slashMenuAction.of({ id, from: deleteFrom, to: deleteTo }),
+    })
+
+    setSlashMenuVisible(false)
+
+    // 执行格式操作
+    const { from: newFrom, to: newTo } = view.state.selection.main
+    const selectedText = view.state.sliceDoc(newFrom, newTo)
+
+    switch (id) {
+      case 'bold': {
+        const txt = selectedText || ''
+        const insert = `**${txt}**`
+        view.dispatch({ changes: { from: newFrom, to: newTo, insert }, selection: { anchor: newFrom + 2, head: newFrom + 2 + txt.length } }); break
+      }
+      case 'italic': {
+        const txt = selectedText || ''
+        const insert = `*${txt}*`
+        view.dispatch({ changes: { from: newFrom, to: newTo, insert }, selection: { anchor: newFrom + 1, head: newFrom + 1 + txt.length } }); break
+      }
+      case 'strikethrough': {
+        const txt = selectedText || ''
+        const insert = `~~${txt}~~`
+        view.dispatch({ changes: { from: newFrom, to: newTo, insert }, selection: { anchor: newFrom + 2, head: newFrom + 2 + txt.length } }); break
+      }
+      case 'inlineCode': {
+        const txt = selectedText || ''
+        const insert = `\`${txt}\``
+        view.dispatch({ changes: { from: newFrom, to: newTo, insert }, selection: { anchor: newFrom + 1, head: newFrom + 1 + txt.length } }); break
+      }
+      case 'blockquote': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '> ' }, selection: { anchor: newFrom + 2, head: newFrom + 2 } }); break
+      case 'orderedList': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '1. ' }, selection: { anchor: newFrom + 3, head: newFrom + 3 } }); break
+      case 'unorderedList': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '- ' }, selection: { anchor: newFrom + 2, head: newFrom + 2 } }); break
+      case 'taskList': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '- [ ] ' }, selection: { anchor: newFrom + 6, head: newFrom + 6 } }); break
+      case 'heading1': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '# ' }, selection: { anchor: newFrom + 2, head: newFrom + 2 } }); break
+      case 'heading2': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '## ' }, selection: { anchor: newFrom + 3, head: newFrom + 3 } }); break
+      case 'heading3': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '### ' }, selection: { anchor: newFrom + 4, head: newFrom + 4 } }); break
+      case 'table': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n|  |  |  |\n' }, selection: { anchor: newFrom + 2, head: newFrom + 2 } }); break
+      case 'link': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '[]()' }, selection: { anchor: newFrom + 1, head: newFrom + 1 } }); break
+      case 'image': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '![]()' }, selection: { anchor: newFrom + 2, head: newFrom + 2 } }); break
+      case 'horizontalRule': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '\n---\n' }, selection: { anchor: newFrom + 5, head: newFrom + 5 } }); break
+    }
+
+    view.focus()
+  }, [])
+
+  const handleSlashMenuClose = useCallback(() => {
+    const view = viewRef.current
+    if (view) {
+      view.dispatch({ effects: hideSlashMenu.of(undefined) })
+    }
+    setSlashMenuVisible(false)
+  }, [])
+
   return (
     <div className="editor-container h-full flex flex-col">
       <div className="flex-1 overflow-hidden flex">
@@ -918,6 +1028,17 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         <div ref={editorRef} data-animation={liveAnimationMode} className="cm-editor-container" style={{ flex: viewMode === 'split' ? '1 1 0%' : (viewMode === 'edit' || viewMode === 'live') ? '1 1 100%' : '0 0 0%', minHeight: 0, overflow: viewMode === 'preview' ? 'hidden' : 'visible', width: viewMode === 'preview' ? 0 : undefined, pointerEvents: viewMode === 'preview' ? 'none' : 'auto' }} />
         {/* 分割线 */}
         {viewMode === 'split' && <div style={{ width: 1, flexShrink: 0, background: 'var(--editor-border)' }} />}
+        {/* 斜杠菜单 */}
+        {slashMenuVisible && (
+          <SlashMenu
+            visible={slashMenuVisible}
+            coords={slashMenuCoords}
+            query={slashMenuQuery}
+            onSelect={handleSlashMenuSelect}
+            onClose={handleSlashMenuClose}
+          />
+        )}
+
         {/* 预览面板：永远挂载 */}
         <div ref={previewScrollRef} style={{ flex: viewMode === 'split' ? '1 1 0%' : viewMode === 'preview' ? '1 1 100%' : '0 0 0%', minHeight: 0, overflow: 'auto', pointerEvents: (viewMode === 'edit' || viewMode === 'live') ? 'none' : 'auto' }}>
           <PreviewPane content={content} currentTheme={currentTheme} onContentChange={onChange} enabledPlugins={enabledPlugins} pluginConfigs={pluginConfigs} />

@@ -1,11 +1,11 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicedoc/tauri/dev/.schema/config.schema.json",
   "productName": "YiziMarkdown",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "identifier": "com.yizimarkdown.editor",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "",
+    "beforeBuildCommand": "npm run build",
     "devUrl": "http://localhost:1420",
     "frontendDist": "../dist"
   },

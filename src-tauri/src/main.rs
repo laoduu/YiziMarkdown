@@ -712,7 +712,31 @@ fn main() {
             is_md_associated,
             get_cli_open_file, get_file_meta, read_image_base64,
         ])
-        .setup(|app| {
+                .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            // 从命令行参数中提取文件路径，通过 eval 直接调用前端全局函数
+            let file_path = args.iter().skip(1).find(|a| {
+                let lower = a.to_lowercase();
+                lower.ends_with(".md") || lower.ends_with(".markdown") || lower.ends_with(".txt")
+            }).cloned();
+
+            if let Some(path) = file_path {
+                // JSON 序列化路径，自动处理所有特殊字符转义
+                let json_path = serde_json::to_string(&path).unwrap_or_else(|_| format!("\"{}\"", path));
+                let js = format!(
+                    r#"window.__singleInstanceOpenFile && window.__singleInstanceOpenFile({})"#,
+                    json_path
+                );
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.eval(&js);
+                }
+            }
+
+            // 聚焦已有窗口
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_focus();
+                let _ = window.unminimize();
+            }
+        }))        .setup(|app| {
             // 启动时确保目录结构完整
             let root = std::env::current_exe()
                 .ok()

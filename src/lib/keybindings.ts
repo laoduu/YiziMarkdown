@@ -53,8 +53,10 @@ export const SHORTCUT_ACTIONS: ShortcutAction[] = [
   { id: 'table',         label: '表格',         defaultKey: 'ctrl+t',                   category: '格式' },
   { id: 'horizontalRule', label: '分割线',     defaultKey: 'ctrl+l',                   category: '格式' },
   // -- 视图 --
-  { id: 'toggleTheme',   label: '切换深浅模式', defaultKey: 'f1',                   category: '视图' },
-  { id: 'viewCycle',     label: '切换视图',     defaultKey: 'f2',      category: '视图' },
+  { id: 'toggleTheme',   label: '切换深浅模式', defaultKey: 'f2',                   category: '视图' },
+  { id: 'viewCycle',     label: '切换视图',     defaultKey: 'f3',      category: '视图' },
+  { id: 'showShortcuts', label: '快捷键大全',   defaultKey: 'f1',               category: '视图' },
+  { id: 'slashMenu',     label: '斜杠菜单',     defaultKey: 'ins',              category: '视图' },
   { id: 'toggleDevtools', label: '开发者工具',  defaultKey: 'f12',               category: '视图' },
 ]
 

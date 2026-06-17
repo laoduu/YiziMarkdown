@@ -1045,3 +1045,98 @@ body {
 .katex-display > .katex {
   white-space: nowrap;
 }
+
+
+/* ===== 斜杠菜单 ===== */
+.slash-menu {
+  background-color: var(--editor-bg);
+  border: 1px solid var(--editor-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+  padding: 6px 0;
+  min-width: 260px;
+  max-height: 400px;
+  overflow-y: auto;
+  user-select: none;
+  font-family: var(--font-sans);
+  color: var(--editor-text);
+}
+
+/* 图标快捷区 */
+.slash-menu-quick-icons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 6px 8px;
+}
+
+.slash-menu-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--editor-border);
+  background-color: var(--editor-surface);
+  color: var(--editor-text);
+  cursor: pointer;
+  transition: background-color 0.1s, border-color 0.1s;
+  margin: 0 auto;
+}
+
+.slash-menu-icon-btn:hover,
+.slash-menu-icon-btn.slash-menu-active {
+  background-color: var(--editor-hover);
+  border-color: var(--editor-accent);
+  color: var(--editor-accent);
+}
+
+/* 分隔线 */
+.slash-menu-divider {
+  height: 1px;
+  background-color: var(--editor-border);
+  margin: 4px 8px;
+}
+
+/* 文本菜单项 */
+.slash-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 14px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.1s;
+  font-size: 13px;
+  color: var(--editor-text);
+  text-align: left;
+}
+
+.slash-menu-item:hover,
+.slash-menu-item.slash-menu-active {
+  background-color: var(--editor-hover);
+}
+
+.slash-menu-item-label {
+  flex: 1;
+}
+
+.slash-menu-item-shortcut {
+  font-size: 11px;
+  color: var(--sidebar-text);
+  opacity: 0.7;
+  font-family: var(--font-sans);
+  margin-left: 24px;
+  white-space: nowrap;
+}
+
+/* 空状态 */
+.slash-menu-empty {
+  padding: 16px 14px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--sidebar-text);
+}

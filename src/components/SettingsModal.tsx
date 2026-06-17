@@ -311,6 +311,9 @@ function AppearanceSettings() {
               </label>
             </Row>
           </Section>
+          <Section title="自定义 CSS">
+            <UserCssEditor />
+          </Section>
         </div>
       </div>
       <div className="settings-footer-bar">

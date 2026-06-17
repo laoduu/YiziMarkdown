@@ -207,9 +207,9 @@ export const liveEditHighlightStyle = HighlightStyle.define([
   { tag: t.strikethrough, textDecoration: 'line-through', color: 'var(--editor-text)' },
   { tag: t.link, color: 'var(--editor-accent)' },
   { tag: t.url, color: 'var(--editor-accent)' },
-  { tag: t.monospace, fontFamily: 'var(--font-mono)', color: 'var(--editor-accent)' },
+  { tag: t.monospace, fontFamily: 'var(--font-mono)', color: 'var(--editor-accent)', backgroundColor: 'color-mix(in srgb, var(--editor-text) 10%, var(--editor-surface))', padding: '0.2em 0.4em', borderRadius: '5px' },
   { tag: t.quote, color: 'var(--editor-text)', fontStyle: 'italic' },
-  { tag: t.list, color: 'var(--editor-text)' },
+  // t.list: removed color to prevent CSS cascade conflict with .cm-md-code inside lists
   { tag: t.contentSeparator, color: 'var(--editor-border)' },
   { tag: t.processingInstruction, color: 'var(--editor-text)' },
   { tag: t.keyword, color: 'var(--editor-accent)' },
@@ -247,14 +247,21 @@ export const liveEditTheme = EditorView.theme({
   '.cm-md-h6': { color: 'var(--editor-accent)' },
   '.cm-md-strong': { fontWeight: '700', color: 'var(--editor-text)' },
   '.cm-md-em': { fontStyle: 'italic', color: 'var(--editor-text)' },
-  '.cm-md-strike': { textDecoration: 'line-through', opacity: '0.6' },
+  '.cm-md-strike': { textDecoration: 'line-through', color: 'var(--editor-text)' },
   '.cm-md-code': {
     fontFamily: 'var(--font-mono)', color: 'var(--editor-accent)',
-    backgroundColor: 'var(--editor-surface)', padding: '0.1em 0.35em', borderRadius: '4px',
+    backgroundColor: 'color-mix(in srgb, var(--editor-text) 10%, var(--editor-surface))',
+    padding: '0.2em 0.4em', borderRadius: '5px',
   },
   '.cm-md-link': { color: 'var(--editor-accent)', textDecoration: 'underline', textUnderlineOffset: '2px' },
-  '.cm-md-quote-line': { borderLeft: '3px solid var(--editor-border)', paddingLeft: '12px', color: 'var(--editor-text)', fontStyle: 'italic' },
-  '.cm-md-fenced-line': { backgroundColor: 'var(--editor-surface)', fontFamily: 'var(--font-mono)' },
+  '.cm-md-quote-line': {
+    borderLeft: '3px solid var(--editor-accent)', paddingLeft: '12px',
+    color: 'var(--sidebar-text)', fontStyle: 'italic', backgroundColor: 'var(--editor-surface)',
+  },
+  '.cm-md-fenced-line': {
+    backgroundColor: 'color-mix(in srgb, var(--editor-text) 5%, var(--editor-surface))',
+    fontFamily: 'var(--font-mono)',
+  },
   // 无序列表：隐藏标记，显示圆点
   '.cm-md-bullet-item': { paddingLeft: '1.5em', position: 'relative' },
   '.cm-md-bullet-item::before': { content: '"\u2022"', position: 'absolute', left: '0.4em', color: 'var(--editor-text)' },

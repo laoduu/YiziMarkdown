@@ -53,7 +53,7 @@
   --statusbar-text: #ffffff;
 
   /* 预览模式字体栈：英文 Inter → 中文 Noto Sans SC → 系统字体 */
-  --font-sans: 'MiSans', 'Mi Sans', system-ui, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --font-sans: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
 
   /* 源代码模式字体栈：等宽编程字体 */
   --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
