@@ -362,6 +362,7 @@ function App() {
       } catch (err) {
         console.error('Failed to open file from second instance:', err)
       }
+
     }
 
     return () => {

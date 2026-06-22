@@ -17,6 +17,7 @@ import {
   EditorView,
   ViewPlugin,
   type ViewUpdate,
+  WidgetType,
 } from '@codemirror/view'
 import { tags as t } from '@lezer/highlight'
 import { liveBlocksBundle } from './cm-live-blocks'
@@ -38,6 +39,32 @@ const lineClass = (cls: string) => Decoration.line({ class: cls })
 const quoteLine = lineClass('cm-md-quote-line')
 const bulletItemLine = lineClass('cm-md-bullet-item')
 const orderedItemLine = lineClass('cm-md-ordered-item')
+const taskItemLine = lineClass('cm-md-task-item')
+const taskItemLineChecked = lineClass('cm-md-task-item-checked')
+
+/** 创建任务列表 checkbox widget，和预览模式使用同样的 appearance:auto 样式 */
+class TaskCheckboxWidget extends WidgetType {
+  constructor(readonly checked: boolean) { super() }
+  toDOM() {
+    const cb = document.createElement('input')
+    cb.type = 'checkbox'
+    cb.checked = this.checked
+    cb.className = 'cm-md-task-checkbox'
+    cb.style.cssText = 'appearance:auto;width:1em;height:1em;margin:0 0.5em 0 0;cursor:pointer;accent-color:var(--editor-accent);vertical-align:middle;pointer-events:none'
+    return cb
+  }
+  eq(other: TaskCheckboxWidget) { return other.checked === this.checked }
+  ignoreEvent() { return true }
+}
+
+function taskCheckboxWidget(checked: boolean) {
+  return Decoration.widget({
+    widget: new TaskCheckboxWidget(checked),
+    side: -1,
+    block: false,
+  })
+}
+
 const fencedLine = lineClass('cm-md-fenced-line')
 const headingLine = (level: number) => lineClass(`cm-md-heading-line cm-md-heading-line-${level}`)
 
@@ -139,20 +166,34 @@ function buildDecorations(view: EditorView): DecorationSet {
           for (let ln = sL; ln <= eL; ln++) {
             const lo = view.state.doc.line(ln)
             const lineText = lo.text
-            // 匹配无序列表行：- / * / + 后跟空格
-            const bulletMatch = lineText.match(/^(\s*)([-*+])\s/)
-            if (bulletMatch) {
-              const markerStart = lo.from + bulletMatch[1].length
-              const markerEnd = markerStart + bulletMatch[2].length + 1 // marker + space
-              // 隐藏标记，添加bullet样式
+            // 匹配任务列表行：- [ ] / - [x] / * [ ] / + [x]
+            const taskMatch = lineText.match(/^(\s*)([-*+])\s\[[ xX]\]\s/)
+            if (taskMatch) {
+              const markerStart = lo.from
+              const markerEnd = lo.from + taskMatch[0].length // "- [ ] " or "- [x] "
+              const isChecked = /\[[xX]\]/.test(lineText)
               if (!caretTouches) {
+                // 隐藏标记，插入真实 checkbox widget
                 ranges.push(hideDeco.range(markerStart, markerEnd))
+                ranges.push(taskCheckboxWidget(isChecked).range(markerStart))
               }
-              ranges.push(bulletItemLine.range(lo.from))
+              ranges.push(isChecked ? taskItemLineChecked.range(lo.from) : taskItemLine.range(lo.from))
+            } else {
+              // 匹配普通无序列表行：- / * / + 后跟空格
+              const bulletMatch = lineText.match(/^(\s*)([-*+])\s/)
+              if (bulletMatch) {
+                const markerStart = lo.from + bulletMatch[1].length
+                const markerEnd = markerStart + bulletMatch[2].length + 1 // marker + space
+                if (!caretTouches) {
+                  ranges.push(hideDeco.range(markerStart, markerEnd))
+                }
+                ranges.push(bulletItemLine.range(lo.from))
+              }
             }
           }
           return
         }
+
         if (name === 'OrderedList') {
           const sL = view.state.doc.lineAt(nFrom).number
           const eL = view.state.doc.lineAt(Math.min(nTo, view.state.doc.length)).number
@@ -267,6 +308,9 @@ export const liveEditTheme = EditorView.theme({
   '.cm-md-bullet-item::before': { content: '"\u2022"', position: 'absolute', left: '0.4em', color: 'var(--editor-text)' },
   // 有序列表：保留数字标记，只加缩进
   '.cm-md-ordered-item': { paddingLeft: '0.2em' },
+  // 任务列表：隐藏标记，由 widget 插入真实 checkbox
+  '.cm-md-task-item': { paddingLeft: '0' },
+  '.cm-md-task-item-checked': { paddingLeft: '0' },
   // 标记过渡动画：默认隐藏（caret不在行上时）
   '.cm-md-hiding-span': {
     opacity: '0',

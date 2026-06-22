@@ -1,69 +1,55 @@
 /**
  * SlashMenu.tsx — 斜杠菜单组件
  *
- * Typora 风格：顶部图标快捷区 + 底部分类文本列表
+ * Notion 风格：全图标网格布局，视觉统一、操作直觉
  * 继承主题 CSS 变量，支持深浅模式
  * 支持触发字符 / 、 和 Ins 键
  * 支持搜索过滤（隐式，输入即过滤）
- * Tab 键在菜单项间循环切换焦点
+ * Tab / 上下键在菜单项间循环切换焦点
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import {
   Bold, Italic, Strikethrough, Code,
   Quote, ListOrdered, List, CheckSquare,
+  Heading1, Heading2, Heading3, Code2,
+  Table, Link, Image, Minus,
 } from 'lucide-react'
-import { SHORTCUT_ACTIONS } from '../lib/keybindings'
 
 /* ------------------------------------------------------------------ */
 /*  菜单项定义                                                          */
 /* ------------------------------------------------------------------ */
 
-interface QuickIcon {
+interface SlashMenuItem {
   id: string
   label: string
   icon: React.ReactNode
-}
-
-interface MenuItem {
-  id: string
-  label: string
   shortcut?: string
   keywords?: string
 }
 
-/** 顶部图标快捷区：高频行内格式 */
-const QUICK_ICONS: QuickIcon[] = [
-  { id: 'bold',          label: '粗体',     icon: <Bold size={15} /> },
-  { id: 'italic',        label: '斜体',     icon: <Italic size={15} /> },
-  { id: 'strikethrough', label: '删除线',   icon: <Strikethrough size={15} /> },
-  { id: 'inlineCode',    label: '行内代码',  icon: <Code size={15} /> },
-  { id: 'blockquote',    label: '引用',     icon: <Quote size={15} /> },
-  { id: 'orderedList',   label: '有序列表', icon: <ListOrdered size={15} /> },
-  { id: 'unorderedList', label: '无序列表', icon: <List size={15} /> },
-  { id: 'taskList',      label: '任务列表', icon: <CheckSquare size={15} /> },
-]
-
-/** 底部分类文本列表（标题仅保留1-3级，4-6级用户手动输入#即可） */
-const MENU_ITEMS: MenuItem[] = [
-  { id: 'heading1', label: '一级标题',   shortcut: 'Ctrl+1' },
-  { id: 'heading2', label: '二级标题',   shortcut: 'Ctrl+2' },
-  { id: 'heading3', label: '三级标题',   shortcut: 'Ctrl+3' },
-  { id: 'codeBlock',     label: '代码块',   shortcut: 'Ctrl+`' },
-  { id: 'table',         label: '表格',     shortcut: 'Ctrl+T' },
-  { id: 'link',          label: '链接',     shortcut: 'Ctrl+K' },
-  { id: 'image',         label: '图片' },
-  { id: 'horizontalRule',label: '分割线',   shortcut: 'Ctrl+L' },
-]
-
-/** 所有菜单项合集（用于搜索过滤） */
-const ALL_ITEMS: MenuItem[] = [
-  ...QUICK_ICONS.map(q => ({
-    id: q.id, label: q.label,
-    shortcut: SHORTCUT_ACTIONS.find(a => a.id === q.id)?.defaultKey || '',
-    keywords: '',
-  })),
-  ...MENU_ITEMS,
+/** 所有菜单项，统一为图标卡片 */
+const ALL_MENU_ITEMS: SlashMenuItem[] = [
+  // -- 行内格式 --
+  { id: 'bold',          label: '粗体',     icon: <Bold size={18} />,          shortcut: 'Ctrl+B' },
+  { id: 'italic',        label: '斜体',     icon: <Italic size={18} />,        shortcut: 'Ctrl+I' },
+  { id: 'strikethrough', label: '删除线',  icon: <Strikethrough size={18} />, shortcut: 'Ctrl+D' },
+  { id: 'inlineCode',    label: '行内代码', icon: <Code size={18} />,         shortcut: 'Ctrl+E' },
+  // -- 块级元素 --
+  { id: 'blockquote',    label: '引用',     icon: <Quote size={18} />,          keywords: '引用块' },
+  { id: 'orderedList',   label: '有序列表', icon: <ListOrdered size={18} />,     keywords: '数字列表' },
+  { id: 'unorderedList', label: '无序列表', icon: <List size={18} />,           keywords: '符号列表' },
+  { id: 'taskList',      label: '任务列表', icon: <CheckSquare size={18} />,    keywords: '待办事项 checkbox' },
+  // -- 标题 --
+  { id: 'heading1',      label: '一级标题', icon: <Heading1 size={18} />,       shortcut: 'Ctrl+1' },
+  { id: 'heading2',      label: '二级标题', icon: <Heading2 size={18} />,       shortcut: 'Ctrl+2' },
+  { id: 'heading3',      label: '三级标题', icon: <Heading3 size={18} />,       shortcut: 'Ctrl+3' },
+  // -- 插入 --
+  { id: 'codeBlock',     label: '代码块',   icon: <Code2 size={18} />,         shortcut: 'Ctrl+`' },
+  { id: 'table',         label: '表格',     icon: <Table size={18} />,          shortcut: 'Ctrl+T' },
+  { id: 'link',          label: '链接',     icon: <Link size={18} />,           shortcut: 'Ctrl+K' },
+  { id: 'image',         label: '图片',     icon: <Image size={18} />,          keywords: '插图' },
+  { id: 'horizontalRule',label: '分割线',   icon: <Minus size={18} />,          shortcut: 'Ctrl+L' },
 ]
 
 /* ------------------------------------------------------------------ */
@@ -88,7 +74,7 @@ export default function SlashMenu({ visible, coords, query, onSelect, onClose }:
 
   // 过滤菜单项
   const filteredItems = query
-    ? ALL_ITEMS.filter(item => {
+    ? ALL_MENU_ITEMS.filter(item => {
         const q = query.toLowerCase()
         return (
           item.label.toLowerCase().includes(q) ||
@@ -97,11 +83,7 @@ export default function SlashMenu({ visible, coords, query, onSelect, onClose }:
           (item.shortcut || '').toLowerCase().includes(q)
         )
       })
-    : ALL_ITEMS
-
-  // 过滤后的图标项和文本项
-  const filteredQuickIcons = filteredItems.filter(i => QUICK_ICONS.some(q => q.id === i.id))
-  const filteredTextItems = filteredItems.filter(i => !QUICK_ICONS.some(q => q.id === i.id))
+    : ALL_MENU_ITEMS
 
   // 查询变化时重置选中
   useEffect(() => { setActiveIndex(-1) }, [query])
@@ -130,7 +112,6 @@ export default function SlashMenu({ visible, coords, query, onSelect, onClose }:
         setActiveIndex(prev => (prev <= 0 ? total - 1 : prev - 1))
         break
       case 'Tab':
-        // Tab 键在菜单项间循环
         e.preventDefault()
         e.stopPropagation()
         setActiveIndex(prev => (prev + 1) % total)
@@ -148,8 +129,6 @@ export default function SlashMenu({ visible, coords, query, onSelect, onClose }:
         onClose()
         break
       default:
-        // 其他可打印字符：不做任何处理，让事件穿透到编辑器
-        // StateField 检测到 docChanged 会自动关闭菜单
         break
     }
   }, [visible, filteredItems, activeIndex, onSelect, onClose])
@@ -192,55 +171,27 @@ export default function SlashMenu({ visible, coords, query, onSelect, onClose }:
         zIndex: 100,
       }}
     >
-      {/* ===== 图标快捷区 ===== */}
-      {filteredQuickIcons.length > 0 && (
-        <div className="slash-menu-quick-icons">
-          {QUICK_ICONS.map(qi => {
-            const idx = filteredItems.findIndex(i => i.id === qi.id)
+      {/* 图标网格 */}
+      {filteredItems.length > 0 ? (
+        <div className="slash-menu-grid">
+          {filteredItems.map((item, idx) => {
             const isActive = idx === activeIndex
             return (
               <button
-                key={qi.id}
+                key={item.id}
                 data-slash-item={idx}
-                className={`slash-menu-icon-btn ${isActive ? 'slash-menu-active' : ''}`}
-                onClick={() => onSelect(qi.id)}
+                className={`slash-menu-grid-item ${isActive ? 'slash-menu-active' : ''}`}
+                onClick={() => onSelect(item.id)}
                 onMouseEnter={() => setActiveIndex(idx)}
-                title={qi.label}
+                title={item.shortcut ? `${item.label} (${item.shortcut})` : item.label}
               >
-                {qi.icon}
+                <span className="slash-menu-grid-icon">{item.icon}</span>
+                <span className="slash-menu-grid-label">{item.label}</span>
               </button>
             )
           })}
         </div>
-      )}
-
-      {/* ===== 文本列表 ===== */}
-      {filteredTextItems.length > 0 && (
-        <>
-          <div className="slash-menu-divider" />
-          {filteredTextItems.map((item) => {
-            const globalIdx = filteredItems.findIndex(fi => fi.id === item.id)
-            const isActive = globalIdx === activeIndex
-            return (
-              <button
-                key={item.id}
-                data-slash-item={globalIdx}
-                className={`slash-menu-item ${isActive ? 'slash-menu-active' : ''}`}
-                onClick={() => onSelect(item.id)}
-                onMouseEnter={() => setActiveIndex(globalIdx)}
-              >
-                <span className="slash-menu-item-label">{item.label}</span>
-                {item.shortcut && (
-                  <span className="slash-menu-item-shortcut">{item.shortcut}</span>
-                )}
-              </button>
-            )
-          })}
-        </>
-      )}
-
-      {/* 空状态 */}
-      {filteredItems.length === 0 && (
+      ) : (
         <div className="slash-menu-empty">无匹配项</div>
       )}
     </div>

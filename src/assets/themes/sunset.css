@@ -1,0 +1,254 @@
+/* ═══════════════════════════════════════════════════════════════
+   落日熔金 (Sunset Gold) — YiziMarkdown 主题
+
+   亮色：暖白底 + 琥珀色标题，像午后的暖阳
+   暗色：深紫底 + 金色光芒，暮色中的精装书
+   ═══════════════════════════════════════════════════════════════ */
+
+:root.theme-sunset {
+  --editor-bg: #fef8f0;
+  --editor-text: #3a2a1a;
+  --editor-accent: #b45309;
+  --editor-border: #e8d0b0;
+  --editor-surface: #fdf0e0;
+  --editor-hover: #f5e0c5;
+  --editor-selection: #b45309;
+  --editor-selection-bg: rgba(180, 83, 9, 0.15);
+  --editor-cursor: #b45309;
+  --sidebar-bg: #faf0e5;
+  --sidebar-text: #8a6a40;
+  --toolbar-bg: #fef8f0;
+  --statusbar-bg: #b45309;
+  --statusbar-text: #ffffff;
+  --font-sans: 'Georgia', 'Noto Serif SC', 'SimSun', serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --font-size-base: 16px;
+  --line-height: 2.0;
+  --paragraph-spacing: 1.5em;
+  --border-radius: 6px;
+}
+
+:root.theme-sunset.dark {
+  --editor-bg: #0d0812;
+  --editor-text: #e8c8a8;
+  --editor-accent: #fbbf24;
+  --editor-border: #2a1535;
+  --editor-surface: #1a0e28;
+  --editor-hover: #251535;
+  --editor-selection: #fbbf24;
+  --editor-selection-bg: rgba(251, 191, 36, 0.2);
+  --editor-cursor: #fbbf24;
+  --sidebar-bg: #0a0610;
+  --sidebar-text: #a07050;
+  --toolbar-bg: #0d0812;
+  --statusbar-bg: #92400e;
+  --statusbar-text: #fbbf24;
+}
+
+.editor-content.theme-sunset h1 {
+  font-size: 2em;
+  font-weight: 700;
+  margin: 1.5em 0 0.5em;
+  color: #b45309;
+  letter-spacing: 0.02em;
+}
+.editor-content.theme-sunset h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin: 1.3em 0 0.4em;
+  color: #c66a1a;
+}
+.editor-content.theme-sunset h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin: 1.2em 0 0.3em;
+  color: #d88030;
+}
+.editor-content.theme-sunset p {
+  margin: 0 0 var(--paragraph-spacing);
+  color: #3a2a1a;
+}
+.editor-content.theme-sunset blockquote {
+  border-left: 3px solid #b45309;
+  padding: 0.8em 1em;
+  margin: 1em 0;
+  color: #8a6a40;
+  background: linear-gradient(135deg, rgba(180, 83, 9, 0.05), rgba(217, 119, 6, 0.03));
+  border-radius: 0 var(--border-radius) var(--border-radius) 0;
+}
+.editor-content.theme-sunset code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: rgba(180, 83, 9, 0.08);
+  color: #b45309;
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+}
+.editor-content.theme-sunset pre {
+  background: #f5e8d5;
+  padding: 1em;
+  border-radius: var(--border-radius);
+  margin: 1em 0;
+  overflow-x: auto;
+  border: 1px solid #e0c8a0;
+}
+.editor-content.theme-sunset pre code {
+  background: none;
+  padding: 0;
+  color: #7a4a10;
+}
+.editor-content.theme-sunset a {
+  color: #b45309;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(180, 83, 9, 0.3);
+}
+.editor-content.theme-sunset a:hover {
+  border-bottom-color: #b45309;
+}
+.editor-content.theme-sunset img {
+  max-width: 100%;
+  border-radius: var(--border-radius);
+  margin: 1em 0;
+}
+.editor-content.theme-sunset table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+.editor-content.theme-sunset th,
+.editor-content.theme-sunset td {
+  padding: 0.6em 1em;
+  border: 1px solid var(--editor-border);
+  text-align: left;
+  color: #3a2a1a;
+}
+.editor-content.theme-sunset th {
+  background: #f5e8d5;
+  font-weight: 600;
+  color: #b45309;
+}
+.editor-content.theme-sunset hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #b45309, transparent);
+  margin: 2em 0;
+  opacity: 0.4;
+}
+.editor-content.theme-sunset ul, .editor-content.theme-sunset ol {
+  padding-left: 2em;
+  margin: 0.5em 0;
+}
+.editor-content.theme-sunset li {
+  margin: 0.3em 0;
+  color: #3a2a1a;
+}
+.editor-content.theme-sunset li::marker {
+  color: #b45309;
+}
+.editor-content.theme-sunset strong {
+  color: #8a3a08;
+  font-weight: 700;
+}
+.editor-content.theme-sunset em {
+  color: #a07030;
+}
+
+.editor-content.theme-sunset {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2em;
+  color: var(--editor-text);
+}
+
+.dark .theme-sunset h1 {
+  color: #fbbf24;
+}
+.dark .theme-sunset h2 {
+  color: #f59e0b;
+}
+.dark .theme-sunset h3 {
+  color: #d97706;
+}
+.dark .theme-sunset blockquote {
+  color: #c0a080;
+  border-left-color: #f59e0b;
+}
+.dark .theme-sunset code {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.08);
+  border-color: rgba(251, 191, 36, 0.15);
+}
+.dark .theme-sunset a {
+  color: #fbbf24;
+}
+.dark .theme-sunset th {
+  color: #e8c8a8;
+  background: rgba(251, 191, 36, 0.06);
+}
+.dark .theme-sunset strong {
+  color: #f0e0c8;
+}
+/* ── 深色模式预览覆盖 ────────────────────────────────────────── */
+.dark .theme-sunset h1 {
+  color: #fbbf24;
+  text-shadow: 0 0 12px rgba(251, 191, 36, 0.3);
+}
+.dark .theme-sunset h2 {
+  color: #f59e0b;
+}
+.dark .theme-sunset h3 {
+  color: #ea8b2d;
+}
+.dark .theme-sunset p {
+  color: #e8d0b8;
+}
+.dark .theme-sunset blockquote {
+  color: #c9a07a;
+  border-left-color: #d97706;
+  background: linear-gradient(135deg, rgba(217, 119, 6, 0.08), rgba(234, 88, 12, 0.05));
+}
+.dark .theme-sunset code {
+  color: #fcd34d;
+  background: rgba(251, 191, 36, 0.1);
+}
+.dark .theme-sunset pre {
+  background: linear-gradient(180deg, #1e1030, #150a20);
+  border-color: #3d2548;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.3);
+}
+.dark .theme-sunset pre code {
+  color: #fcd34d;
+  background: none;
+}
+.dark .theme-sunset a {
+  color: #fbbf24;
+  border-bottom-color: rgba(251, 191, 36, 0.4);
+}
+.dark .theme-sunset a:hover {
+  color: #fde68a;
+  border-bottom-color: #fbbf24;
+}
+.dark .theme-sunset th {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.06);
+}
+.dark .theme-sunset td {
+  color: #e8d0b8;
+  border-color: #3d2548;
+}
+.dark .theme-sunset hr {
+  background: linear-gradient(90deg, transparent, #d97706, transparent);
+  opacity: 0.6;
+}
+.dark .theme-sunset li {
+  color: #e8d0b8;
+}
+.dark .theme-sunset li::marker {
+  color: #d97706;
+}
+.dark .theme-sunset strong {
+  color: #fbbf24;
+}
+.dark .theme-sunset em {
+  color: #e8a070;
+}

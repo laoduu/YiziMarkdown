@@ -212,6 +212,91 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
 }
 
 
+/**
+ * 将HTML片段转换为Markdown文本。
+ * 用于处理从网页粘贴的内容，尽可能保留格式结构。
+ * 优先使用剪贴板中的纯文本（通常已包含markdown标记），
+ * 仅在纯文本不含markdown标记时，才从HTML还原。
+ */
+function htmlToMarkdown(html: string, plainText: string): string {
+  // 如果纯文本已经包含markdown标记（标题、粗体、链接等），直接使用
+  if (/^#{1,6}\s|^[-*+]\s|^>\s|\*\*[^*]+\*\*|`[^`]+`|\[.+\]\(.+\)/m.test(plainText.trim())) {
+    return plainText
+  }
+
+  const NL = '\n'
+  const NL2 = '\n\n'
+
+  // 否则从HTML还原markdown
+  let md = html
+    // 移除script/style/head
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<head[\s\S]*?<\/head>/gi, '')
+    // 标题 h1-h6
+    .replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, (_, c) => `# ${stripHtml(c).trim()}${NL2}`)
+    .replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, (_, c) => `## ${stripHtml(c).trim()}${NL2}`)
+    .replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, (_, c) => `### ${stripHtml(c).trim()}${NL2}`)
+    .replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, (_, c) => `#### ${stripHtml(c).trim()}${NL2}`)
+    .replace(/<h5[^>]*>([\s\S]*?)<\/h5>/gi, (_, c) => `##### ${stripHtml(c).trim()}${NL2}`)
+    .replace(/<h6[^>]*>([\s\S]*?)<\/h6>/gi, (_, c) => `###### ${stripHtml(c).trim()}${NL2}`)
+    // 粗体
+    .replace(/<(strong|b)[^>]*>([\s\S]*?)<\/\1>/gi, '**$2**')
+    // 斜体
+    .replace(/<(em|i)[^>]*>([\s\S]*?)<\/\1>/gi, '*$2*')
+    // 删除线
+    .replace(/<del[^>]*>([\s\S]*?)<\/del>/gi, '~~$1~~')
+    .replace(/<s[^>]*>([\s\S]*?)<\/s>/gi, '~~$1~~')
+    // 行内代码
+    .replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, '`$1`')
+    // 链接 [text](url)
+    .replace(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, '[$2]($1)')
+    // 图片 ![alt](src)
+    .replace(/<img[^>]*src="([^"]*)"[^>]*alt="([^"]*)"[^>]*\/?>/gi, '![$2]($1)')
+    .replace(/<img[^>]*alt="([^"]*)"[^>]*src="([^"]*)"[^>]*\/?>/gi, '![$1]($2)')
+    // 块引用
+    .replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, (_, c) => {
+      return stripHtml(c).trim().split('\n').map((l: string) => `> ${l}`).join('\n') + NL2
+    })
+    // 无序列表
+    .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '- $1')
+    .replace(/<[uo]l[^>]*>[\s\S]*?<\/[uo]l>/gi, (match) => {
+      return match.replace(/<\/?[uo]l[^>]*>/gi, '') + NL
+    })
+    // 换行
+    .replace(/<br\s*\/?>/gi, NL)
+    // 段落
+    .replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, `$1${NL2}`)
+    // 水平线
+    .replace(/<hr\s*\/?>/gi, `${NL}---${NL2}`)
+    // 预格式化代码块
+    .replace(/<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, (_, c) => `${NL}\`\`\`${NL}${stripHtml(c)}${NL}\`\`\`${NL2}`)
+    .replace(/<pre[^>]*>([\s\S]*?)<\/pre>/gi, (_, c) => `${NL}\`\`\`${NL}${stripHtml(c)}${NL}\`\`\`${NL2}`)
+    // 表格（简化处理：提取单元格文本）
+    .replace(/<tr[^>]*>([\s\S]*?)<\/tr>/gi, (match) => {
+      const cells: string[] = []
+      const cellRegex = /<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi
+      let m
+      while ((m = cellRegex.exec(match)) !== null) {
+        cells.push(stripHtml(m[1]).trim())
+      }
+      return '| ' + cells.join(' | ') + ' |' + NL
+    })
+    // 移除所有剩余HTML标签
+    .replace(/<\/?[^>]+>/g, '')
+    // 清理多余空行
+    .replace(/\n{3,}/g, NL2)
+    .trim()
+
+  return md
+}
+
+/** 移除所有HTML标签，返回纯文本 */
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, '')
+}
+
+
 function buildEditorTheme(isDark: boolean, fontFamily: string, fontSize: string, lineHeight: string): Extension {
   return EditorView.theme({
     '&.cm-editor': {
@@ -780,6 +865,30 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     viewReadyRef.current = true
     lastSyncedFromEditorRef.current = content
 
+    // DOM paste事件：从网页粘贴时，优先使用纯文本（通常含markdown标记），
+    // 如果纯文本不含markdown标记且HTML包含结构标签，则从HTML转换回markdown
+    const onPaste = (e: ClipboardEvent) => {
+      const htmlData = e.clipboardData?.getData('text/html')
+      const textData = e.clipboardData?.getData('text/plain')
+      if (!htmlData || !textData) return
+
+      // 如果纯文本已含markdown标记，浏览器默认粘贴行为就是正确的，不干预
+      if (/^#{1,6}\s|^[-*+]\s|^>\s|\*\*[^*]+\*\*|`[^`]+`|\[.+\]\(.+\)/m.test(textData.trim())) {
+        return
+      }
+
+      // 如果HTML中包含块级标签（说明是从网页复制的渲染内容），转换HTML为markdown
+      if (/<(h[1-6]|p|div|table|blockquote|pre|ul|ol|li|strong|em|a|img|code|br|hr)[\s>]/i.test(htmlData)) {
+        e.preventDefault()
+        e.stopPropagation()
+        const md = htmlToMarkdown(htmlData, textData)
+        if (md) {
+          view.dispatch({ changes: { from: view.state.selection.main.from, to: view.state.selection.main.to, insert: md } })
+        }
+      }
+    }
+    view.dom.addEventListener('paste', onPaste)
+
     // StateField 自动关闭菜单 → 同步 React state
     const onSlashMenuClose = () => {
       setSlashMenuVisible(false)
@@ -798,6 +907,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     editorRef.current!.addEventListener('slash-menu-close', onSlashMenuClose)
 
     return () => {
+      view.dom.removeEventListener('paste', onPaste)
       editorRef.current?.removeEventListener('slash-menu-update', onSlashMenuUpdate)
       editorRef.current?.removeEventListener('slash-menu-close', onSlashMenuClose)
       view.destroy()
@@ -1007,6 +1117,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       case 'table': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n|  |  |  |\n' }, selection: { anchor: newFrom + 2, head: newFrom + 2 } }); break
       case 'link': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '[]()' }, selection: { anchor: newFrom + 1, head: newFrom + 1 } }); break
       case 'image': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '![]()' }, selection: { anchor: newFrom + 2, head: newFrom + 2 } }); break
+      case 'codeBlock': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '\n```\n\n```\n' }, selection: { anchor: newFrom + 4, head: newFrom + 4 } }); break
       case 'horizontalRule': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '\n---\n' }, selection: { anchor: newFrom + 5, head: newFrom + 5 } }); break
     }
 

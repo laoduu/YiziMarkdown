@@ -1,0 +1,237 @@
+/* ═══════════════════════════════════════════════════════════════
+   赛博朋克 (Cyberpunk) — YiziMarkdown 实验主题
+
+   设计理念：
+   - 亮色：冷白底 + 霓虹青粉点缀，干净利落的未来感
+   - 暗色：深黑底 + 霓虹青粉撞色发光，霓虹灯下的终端
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 亮色模式 ────────────────────────────────────────────────── */
+:root.theme-cyberpunk {
+  --editor-bg: #f0f4f8;
+  --editor-text: #1a1a2e;
+  --editor-accent: #0077b6;
+  --editor-border: #c0c8d8;
+  --editor-surface: #ffffff;
+  --editor-hover: #e8eef6;
+  --editor-selection: #0077b6;
+  --editor-selection-bg: rgba(0, 119, 182, 0.15);
+  --editor-cursor: #0077b6;
+  --sidebar-bg: #e8eef6;
+  --sidebar-text: #1a1a2e;
+  --toolbar-bg: #f0f4f8;
+  --statusbar-bg: linear-gradient(90deg, #0077b6, #9b2fa6);
+  --statusbar-text: #ffffff;
+  --font-sans: 'MiSans', 'Mi Sans', system-ui, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --font-size-base: 15px;
+  --line-height: 1.8;
+  --paragraph-spacing: 1.3em;
+  --border-radius: 2px;
+}
+
+/* ── 暗色模式 ────────────────────────────────────────────────── */
+:root.theme-cyberpunk.dark {
+  --editor-bg: #050508;
+  --editor-text: #d0d0e0;
+  --editor-accent: #00d4ff;
+  --editor-border: #151530;
+  --editor-surface: #0a0a20;
+  --editor-hover: #151535;
+  --editor-selection: #ee00ee;
+  --editor-selection-bg: rgba(238, 0, 238, 0.2);
+  --editor-cursor: #00d4ff;
+  --sidebar-bg: #030306;
+  --sidebar-text: #009db0;
+  --toolbar-bg: #050508;
+  --statusbar-bg: linear-gradient(90deg, #00d4ff, #ee00ee);
+  --statusbar-text: #050508;
+}
+
+/* ── 亮色预览样式 ────────────────────────────────────────────── */
+.editor-content.theme-cyberpunk h1 {
+  font-size: 2.2em;
+  font-weight: 900;
+  margin: 1.5em 0 0.5em;
+  color: #0077b6;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  border-bottom: 2px solid #9b2fa6;
+  padding-bottom: 0.3em;
+}
+.editor-content.theme-cyberpunk h2 {
+  font-size: 1.5em;
+  font-weight: 800;
+  margin: 1.3em 0 0.4em;
+  color: #9b2fa6;
+}
+.editor-content.theme-cyberpunk h3 {
+  font-size: 1.25em;
+  font-weight: 700;
+  margin: 1.2em 0 0.3em;
+  color: #0096c7;
+}
+.editor-content.theme-cyberpunk p {
+  margin: 0 0 var(--paragraph-spacing);
+  color: #2a2a3e;
+}
+.editor-content.theme-cyberpunk blockquote {
+  border-left: 3px solid #9b2fa6;
+  padding: 0.8em 1em;
+  margin: 1em 0;
+  color: #4a4a6a;
+  background: rgba(155, 47, 166, 0.05);
+  border-radius: 0 var(--border-radius) var(--border-radius) 0;
+  font-style: italic;
+}
+.editor-content.theme-cyberpunk code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: rgba(0, 119, 182, 0.08);
+  color: #0077b6;
+  padding: 0.2em 0.4em;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 119, 182, 0.15);
+}
+.editor-content.theme-cyberpunk pre {
+  background: #1a1a2e;
+  padding: 1em;
+  border-radius: var(--border-radius);
+  margin: 1em 0;
+  overflow-x: auto;
+  border: 1px solid #2a2a4e;
+}
+.editor-content.theme-cyberpunk pre code {
+  background: none;
+  padding: 0;
+  border: none;
+  color: #00d4ff;
+}
+.editor-content.theme-cyberpunk a {
+  color: #0077b6;
+  text-decoration: none;
+  border-bottom: 1px solid #0077b6;
+  transition: all 0.2s;
+}
+.editor-content.theme-cyberpunk a:hover {
+  color: #9b2fa6;
+  border-bottom-color: #9b2fa6;
+}
+.editor-content.theme-cyberpunk img {
+  max-width: 100%;
+  border-radius: var(--border-radius);
+  margin: 1em 0;
+  border: 2px solid #c0c8d8;
+  transition: all 0.3s;
+}
+.editor-content.theme-cyberpunk img:hover {
+  border-color: #0077b6;
+  box-shadow: 0 0 12px rgba(0, 119, 182, 0.2);
+}
+.editor-content.theme-cyberpunk table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+.editor-content.theme-cyberpunk th, .editor-content.theme-cyberpunk td {
+  padding: 0.6em 1em;
+  border: 1px solid #c0c8d8;
+  text-align: left;
+  color: #2a2a3e;
+}
+.editor-content.theme-cyberpunk th {
+  background: rgba(0, 119, 182, 0.06);
+  font-weight: 700;
+  color: #0077b6;
+  text-transform: uppercase;
+  font-size: 0.8em;
+  letter-spacing: 0.08em;
+}
+.editor-content.theme-cyberpunk hr {
+  border: none;
+  height: 2px;
+  margin: 2em 0;
+  background: linear-gradient(90deg, transparent, #0077b6, #9b2fa6, transparent);
+}
+.editor-content.theme-cyberpunk ul, .editor-content.theme-cyberpunk ol {
+  padding-left: 2em;
+  margin: 0.5em 0;
+}
+.editor-content.theme-cyberpunk li {
+  margin: 0.3em 0;
+  color: #2a2a3e;
+}
+.editor-content.theme-cyberpunk li::marker { color: #9b2fa6; }
+.editor-content.theme-cyberpunk strong { color: #1a1a2e; font-weight: 800; }
+.editor-content.theme-cyberpunk em { color: #6a3a8a; font-style: italic; }
+
+.editor-content.theme-cyberpunk {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2em;
+  color: var(--editor-text);
+}
+
+/* ── 暗色预览覆盖 ────────────────────────────────────────────── */
+.dark .theme-cyberpunk h1 {
+  color: #00f0ff;
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.6), 0 0 30px rgba(0, 240, 255, 0.2);
+  border-bottom-color: #ff00ff;
+}
+.dark .theme-cyberpunk h2 {
+  color: #ff00ff;
+  text-shadow: 0 0 8px rgba(255, 0, 255, 0.4);
+}
+.dark .theme-cyberpunk h3 {
+  color: #00d4ff;
+  text-shadow: 0 0 6px rgba(0, 212, 255, 0.3);
+}
+.dark .theme-cyberpunk p {
+  color: #d0d0e8;
+}
+.dark .theme-cyberpunk blockquote {
+  color: #a0a0c0;
+  border-left-color: #ff00ff;
+  background: rgba(255, 0, 255, 0.05);
+}
+.dark .theme-cyberpunk code {
+  color: #00f0ff;
+  background: rgba(0, 240, 255, 0.08);
+  border-color: rgba(0, 240, 255, 0.15);
+}
+.dark .theme-cyberpunk a {
+  color: #00f0ff;
+  border-bottom-color: #00f0ff;
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.4);
+}
+.dark .theme-cyberpunk a:hover {
+  color: #ff00ff;
+  border-bottom-color: #ff00ff;
+  text-shadow: 0 0 10px rgba(255, 0, 255, 0.6);
+}
+.dark .theme-cyberpunk th {
+  color: #ff00ff;
+  background: rgba(255, 0, 255, 0.08);
+}
+.dark .theme-cyberpunk td {
+  color: #d0d0e8;
+}
+.dark .theme-cyberpunk li {
+  color: #d0d0e8;
+}
+.dark .theme-cyberpunk strong {
+  color: #ffffff;
+}
+.dark .theme-cyberpunk em {
+  color: #cc88ff;
+}
+.dark .theme-cyberpunk img {
+  border-color: #1e1e3a;
+}
+.dark .theme-cyberpunk img:hover {
+  border-color: #00f0ff;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+}
+.dark .theme-cyberpunk hr {
+  background: linear-gradient(90deg, transparent, #00f0ff, #ff00ff, transparent);
+}

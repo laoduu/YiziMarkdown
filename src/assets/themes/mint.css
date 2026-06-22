@@ -1,0 +1,216 @@
+/* ═══════════════════════════════════════════════════════════════
+   薄荷冰沙 (Mint Frappe) — YiziMarkdown 实验主题
+
+   设计理念：清爽薄荷绿为主调，奶白底色，圆润边角，
+   整体像一杯薄荷奶昔——凉而不冷、甜而不腻。
+   代码块用薄荷奶底色，引用块有薄荷糖般的半透明质感。
+   ═══════════════════════════════════════ */
+
+:root.theme-mint {
+  --editor-bg: #f5fbf8;
+  --editor-text: #1a3a2a;
+  --editor-accent: #10b981;
+  --editor-border: #c6eee0;
+  --editor-surface: #e8f8f0;
+  --editor-hover: #d0f0e0;
+  --editor-selection: #10b981;
+  --editor-selection-bg: rgba(16, 185, 129, 0.2);
+  --editor-cursor: #10b981;
+  --sidebar-bg: #e8f8f0;
+  --sidebar-text: #34d399;
+  --toolbar-bg: #f5fbf8;
+  --statusbar-bg: #10b981;
+  --statusbar-text: #ffffff;
+  --font-sans: 'MiSans', 'Mi Sans', system-ui, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --font-size-base: 16px;
+  --line-height: 1.85;
+  --paragraph-spacing: 1.4em;
+  --border-radius: 8px;
+}
+
+:root.theme-mint.dark {
+  --editor-bg: #0a1a14;
+  --editor-text: #b0e0d0;
+  --editor-accent: #34d399;
+  --editor-border: #1a3a2a;
+  --editor-surface: #0f2a1e;
+  --editor-hover: #153a2a;
+  --editor-selection: #34d399;
+  --editor-selection-bg: rgba(52, 211, 153, 0.2);
+  --editor-cursor: #34d399;
+  --sidebar-bg: #081510;
+  --sidebar-text: #10b981;
+  --toolbar-bg: #0a1a14;
+  --statusbar-bg: #0f2a1e;
+  --statusbar-text: #34d399;
+}
+
+.editor-content.theme-mint h1 {
+  font-size: 2em;
+  font-weight: 700;
+  margin: 1.5em 0 0.5em;
+  color: #059669;
+  letter-spacing: -0.01em;
+}
+.editor-content.theme-mint h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin: 1.3em 0 0.4em;
+  color: #10b981;
+}
+.editor-content.theme-mint h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin: 1.2em 0 0.3em;
+  color: #34d399;
+}
+.editor-content.theme-mint p {
+  margin: 0 0 var(--paragraph-spacing);
+  color: #1a3a2a;
+}
+.editor-content.theme-mint blockquote {
+  border-left: 3px solid #10b981;
+  padding: 0.8em 1em;
+  margin: 1em 0;
+  color: #3a6a4a;
+  background: rgba(16, 185, 129, 0.06);
+  border-radius: 0 var(--border-radius) var(--border-radius) 0;
+}
+.editor-content.theme-mint code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: #e8f8f0;
+  color: #059669;
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+}
+.editor-content.theme-mint pre {
+  background: linear-gradient(135deg, #e8f8f0, #f0faf5);
+  padding: 1em;
+  border-radius: var(--border-radius);
+  margin: 1em 0;
+  overflow-x: auto;
+  border: 1px solid #c6eee0;
+}
+.editor-content.theme-mint pre code {
+  background: none;
+  padding: 0;
+  color: #059669;
+}
+.editor-content.theme-mint a {
+  color: #059669;
+  text-decoration: none;
+  border-bottom: 2px solid rgba(16, 185, 129, 0.4);
+  border-radius: 2px;
+  transition: all 0.2s;
+}
+.editor-content.theme-mint a:hover {
+  background: rgba(16, 185, 129, 0.08);
+  border-bottom-color: #10b981;
+}
+.editor-content.theme-mint img {
+  max-width: 100%;
+  border-radius: var(--border-radius);
+  margin: 1em 0;
+  border: 2px solid #c6eee0;
+}
+.editor-content.theme-mint table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+.editor-content.theme-mint th, .editor-content.theme-mint td {
+  padding: 0.6em 1em;
+  border: 1px solid #c6eee0;
+  text-align: left;
+  color: #1a3a2a;
+}
+.editor-content.theme-mint th {
+  background: #e8f8f0;
+  font-weight: 600;
+  color: #059669;
+}
+.editor-content.theme-mint hr {
+  border: none;
+  height: 2px;
+  margin: 2em 0;
+  background: linear-gradient(90deg, transparent, #c6eee0, #10b981, #c6eee0, transparent);
+  border-radius: 1px;
+}
+.editor-content.theme-mint ul, .editor-content.theme-mint ol {
+  padding-left: 2em;
+  margin: 0.5em 0;
+}
+.editor-content.theme-mint li {
+  margin: 0.3em 0;
+  color: #1a3a2a;
+}
+.editor-content.theme-mint li::marker { color: #10b981; }
+.editor-content.theme-mint strong { color: #059669; }
+.editor-content.theme-mint em { color: #34d399; font-style: italic; }
+
+.editor-content.theme-mint {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2em;
+  color: var(--editor-text);
+}
+
+/* ── 深色模式完整覆盖 ────────────────────────────────────────── */
+.dark .theme-mint h1 {
+  color: #6ee7b7;
+}
+.dark .theme-mint h2 {
+  color: #5ad4a6;
+}
+.dark .theme-mint h3 {
+  color: #34d399;
+}
+.dark .theme-mint p {
+  color: #b0e0d0;
+}
+.dark .theme-mint li {
+  color: #b0e0d0;
+}
+.dark .theme-mint em {
+  color: #34d399;
+}
+.dark .theme-mint strong {
+  color: #d0f0e0;
+}
+.dark .theme-mint blockquote {
+  color: #80d4b0;
+  border-left-color: #34d399;
+}
+.dark .theme-mint code {
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.1);
+  border-color: rgba(52, 211, 153, 0.2);
+}
+.dark .theme-mint pre {
+  background: rgba(10, 26, 20, 0.8);
+  border-color: #1a3a2a;
+}
+.dark .theme-mint pre code {
+  color: #6ee7b7;
+  background: none;
+  border: none;
+}
+.dark .theme-mint a {
+  color: #34d399;
+  border-bottom-color: rgba(52, 211, 153, 0.3);
+}
+.dark .theme-mint th {
+  color: #b0e0d0;
+  background: rgba(52, 211, 153, 0.08);
+}
+.dark .theme-mint td {
+  color: #b0e0d0;
+  border-color: #1a3a2a;
+}
+.dark .theme-mint hr {
+  border-top-color: #1a3a2a;
+}

@@ -1051,92 +1051,88 @@ body {
 .slash-menu {
   background-color: var(--editor-bg);
   border: 1px solid var(--editor-border);
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
-  padding: 6px 0;
-  min-width: 260px;
-  max-height: 400px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.04);
+  padding: 10px;
+  width: 320px;
+  max-height: 420px;
   overflow-y: auto;
   user-select: none;
   font-family: var(--font-sans);
   color: var(--editor-text);
 }
 
-/* 图标快捷区 */
-.slash-menu-quick-icons {
+.slash-menu-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-  padding: 6px 8px;
+  gap: 6px;
 }
 
-.slash-menu-icon-btn {
+.slash-menu-grid-item {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  border: 1px solid var(--editor-border);
-  background-color: var(--editor-surface);
+  gap: 5px;
+  padding: 10px 6px 8px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--editor-text);
   cursor: pointer;
-  transition: background-color 0.1s, border-color 0.1s;
-  margin: 0 auto;
+  transition: background-color 0.1s, border-color 0.1s, color 0.1s;
 }
 
-.slash-menu-icon-btn:hover,
-.slash-menu-icon-btn.slash-menu-active {
+.slash-menu-grid-item:hover,
+.slash-menu-grid-item.slash-menu-active {
   background-color: var(--editor-hover);
   border-color: var(--editor-accent);
   color: var(--editor-accent);
 }
 
-/* 分隔线 */
-.slash-menu-divider {
-  height: 1px;
-  background-color: var(--editor-border);
-  margin: 4px 8px;
-}
-
-/* 文本菜单项 */
-.slash-menu-item {
+.slash-menu-grid-icon {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 6px 14px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  transition: background-color 0.1s;
+  justify-content: center;
+}
+
+.slash-menu-grid-label {
   font-size: 13px;
-  color: var(--editor-text);
-  text-align: left;
-}
-
-.slash-menu-item:hover,
-.slash-menu-item.slash-menu-active {
-  background-color: var(--editor-hover);
-}
-
-.slash-menu-item-label {
-  flex: 1;
-}
-
-.slash-menu-item-shortcut {
-  font-size: 11px;
-  color: var(--sidebar-text);
-  opacity: 0.7;
-  font-family: var(--font-sans);
-  margin-left: 24px;
+  line-height: 1.2;
   white-space: nowrap;
+  text-align: center;
 }
 
-/* 空状态 */
 .slash-menu-empty {
   padding: 16px 14px;
   text-align: center;
   font-size: 13px;
   color: var(--sidebar-text);
+}
+
+
+/* ====== 任务列表（markdown-it-task-lists） ====== */
+.editor-content .contains-task-list {
+  list-style: none;
+  padding-left: 0;
+}
+.editor-content .task-list-item {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-left: 0;
+  line-height: var(--line-height, 1.8);
+}
+.editor-content .task-list-item-checkbox {
+  appearance: auto;
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--editor-accent);
+  margin: 0;
+}
+.editor-content .task-list-item-label {
+  cursor: pointer;
 }

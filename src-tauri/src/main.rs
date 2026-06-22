@@ -731,10 +731,17 @@ fn main() {
                 }
             }
 
-            // 聚焦已有窗口
+            // 聚焦已有窗口：用always-on-top技巧强制置顶，再取消
             if let Some(window) = app.get_webview_window("main") {
-                let _ = window.set_focus();
                 let _ = window.unminimize();
+                let _ = window.set_focus();
+                let _ = window.set_always_on_top(true);
+                // 延迟取消always-on-top，确保窗口已置顶
+                let win_clone = window.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(200));
+                    let _ = win_clone.set_always_on_top(false);
+                });
             }
         }))        .setup(|app| {
             // 启动时确保目录结构完整

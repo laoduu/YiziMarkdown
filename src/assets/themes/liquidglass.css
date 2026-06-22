@@ -78,16 +78,9 @@
 
 /* ── 侧栏：毛玻璃面板 ────────────────────────────────────────── */
 .theme-liquidglass .sidebar {
-  backdrop-filter: blur(12px) saturate(1.2);
-  -webkit-backdrop-filter: blur(12px) saturate(1.2);
   box-shadow: 1px 0 8px rgba(37, 99, 235, 0.04);
 }
 
-/* ── Tab 栏：微玻璃 ──────────────────────────────────────────── */
-.theme-liquidglass .tab-bar {
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
 
 /* ── 深色模式组件 ────────────────────────────────────────────── */
 .theme-liquidglass.dark .toolbar {

@@ -93,6 +93,7 @@ export default function TabBar({ onNew }: TabBarProps) {
           <button
             key={tab.id}
             onClick={() => switchTab(tab.id)}
+            onDoubleClick={(e) => handleClose(tab.id, e)}
             className={`tab-item ${activeTabId === tab.id ? 'tab-item-active' : ''}`}
             title={tab.filePath || '未命名新文件'}
           >

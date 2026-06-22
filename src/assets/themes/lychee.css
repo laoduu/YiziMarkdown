@@ -1,0 +1,274 @@
+/* ═══════════════════════════════════════════════════════════════
+   荔枝红 (Lychee Red) — YiziMarkdown 定制主题
+   
+   设计理念：以 #E63946 荔枝红为品牌色，营造鲜活有温度的视觉氛围。
+   亮色模式以淡红白为主背景，深色模式适配暗红系暗色调，保证对比度。
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 亮色模式 ────────────────────────────────────────────────── */
+:root.theme-lychee {
+  /* 编辑器主背景：淡红白，整个编辑区的底层 */
+  --editor-bg: #fff5f5;
+
+  /* 主文字色：近黑色，源代码编辑区默认文字颜色 */
+  --editor-text: #2b2726;
+
+  /* 强调色/品牌色：荔枝红核心色
+     用于：标题、链接、光标、选中高亮、大纲激活项、
+     按钮激活态、状态栏背景、引用块左边框等 */
+  --editor-accent: #E63946;
+
+  /* 边框色：淡红，用于分割线、表格边框、代码块边框、行号分隔线 */
+  --editor-border: #ffd6d8;
+
+  /* 表面色/卡片色：比主背景略深的红白
+     用于：代码块背景、表格表头、侧栏背景、搜索匹配底色 */
+  --editor-surface: #FFEEEE;
+
+  /* 悬停态：工具栏按钮、侧栏文件项、Tab 等元素的 hover 背景 */
+  --editor-hover: #ffe6e8;
+
+  /* 文字选中态：选中文字的颜色（与强调色一致） */
+  --editor-selection: #E63946;
+
+  /* 文字选中背景：半透明红色覆盖层，让选中区域有红色底 */
+  --editor-selection-bg: rgba(230, 57, 70, 0.25);
+
+  /* 光标颜色：输入时竖线的颜色 */
+  --editor-cursor: #E63946;
+
+  /* 侧栏（大纲/文件浏览）背景色 */
+  --sidebar-bg: #FFEEEE;
+
+  /* 侧栏文字色：灰红色，用于大纲标题、文件名、Tab 未激活文字等辅助信息 */
+  --sidebar-text: #d15c66;
+
+  /* 顶部工具栏背景 */
+  --toolbar-bg: #fff5f5;
+
+  /* 底部状态栏背景：荔枝红带，与品牌色统一 */
+  --statusbar-bg: #E63946;
+
+  /* 底部状态栏文字：白色，红底上的高对比文字 */
+  --statusbar-text: #ffffff;
+
+  /* 预览模式字体栈：英文 Inter → 中文 Noto Sans SC → 系统字体 */
+  --font-sans: 'MiSans', 'Mi Sans', system-ui, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+
+  /* 源代码模式字体栈：等宽编程字体 */
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+
+  /* 基础字号 */
+  --font-size-base: 16px;
+
+  /* 行高 */
+  --line-height: 1.8;
+
+  /* 段落间距 */
+  --paragraph-spacing: 1.5em;
+
+  /* 全局圆角半径 */
+  --border-radius: 4px;
+}
+
+/* ── 深色模式 ────────────────────────────────────────────────── */
+:root.theme-lychee.dark {
+  /* 主背景：暗红黑，适配深色模式的低亮度底色 */
+  --editor-bg: #171212;
+
+  /* 主文字：浅灰白，深色背景上的高可读文字 */
+  --editor-text: #f0e6e7;
+
+  /* 强调色：比亮色模式更亮的红，保证深色背景下有足够对比度 */
+  --editor-accent: #ff7a85;
+
+  /* 边框：暗红灰，微妙的分隔线 */
+  --editor-border: #3a2023;
+
+  /* 表面色：比主背景略深，用于代码块、表头等需要区分的区域 */
+  --editor-surface: #241819;
+
+  /* 悬停态：比表面色略亮 */
+  --editor-hover: #2d1e20;
+
+  /* 选中文字色 */
+  --editor-selection: #ff7a85;
+
+  /* 选中背景：半透明红色，深色模式下透明度略高 */
+  --editor-selection-bg: rgba(255, 122, 133, 0.35);
+
+  /* 光标色 */
+  --editor-cursor: #ff7a85;
+
+  /* 侧栏背景：比编辑区略深，形成层次 */
+  --sidebar-bg: #1e1516;
+
+  /* 侧栏文字：灰红色 */
+  --sidebar-text: #d17880;
+
+  /* 工具栏背景：与编辑区同色 */
+  --toolbar-bg: #171212;
+
+  /* 状态栏背景：暗红灰 */
+  --statusbar-bg: #2d1e20;
+
+  /* 状态栏文字：浅红灰 */
+  --statusbar-text: #f0c0c4;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   预览模式排版样式
+   作用于预览区渲染后的 HTML 元素（.theme-lychee 容器内）
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 一级标题：2em，品牌红色，字重 700，紧凑字间距 */
+.theme-lychee h1 {
+  font-size: 2em;
+  font-weight: 700;
+  margin: 1.5em 0 0.5em;
+  color: #E63946;
+  letter-spacing: -0.02em;
+}
+
+/* 二级标题：1.5em，比一级更深的红，字重 600 */
+.theme-lychee h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin: 1.3em 0 0.4em;
+  color: #b72f3b;
+  letter-spacing: -0.01em;
+}
+
+/* 三级标题：1.25em，更深的红 */
+.theme-lychee h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin: 1.2em 0 0.3em;
+  color: #9a323a;
+}
+
+/* 段落间距 */
+.theme-lychee p {
+  margin: 0 0 var(--paragraph-spacing);
+}
+
+/* 引用块：左边框为品牌红色线，文字使用侧栏文字色（灰红），与正文区分 */
+.theme-lychee blockquote {
+  border-left: 3px solid var(--editor-accent);
+  padding-left: 1em;
+  margin: 1em 0;
+  color: var(--sidebar-text);
+}
+
+/* 行内代码：等宽字体，字号略小，表面色背景，轻微圆角 */
+.theme-lychee code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--editor-surface);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+}
+
+/* 代码块：表面色背景，边框包围，内边距，圆角 */
+.theme-lychee pre {
+  background: var(--editor-surface);
+  padding: 1em;
+  border-radius: var(--border-radius);
+  margin: 1em 0;
+  overflow-x: auto;
+  border: 1px solid var(--editor-border);
+}
+
+/* 代码块内的行内代码：去掉重复的背景和内边距 */
+.theme-lychee pre code {
+  background: none;
+  padding: 0;
+}
+
+/* 链接：品牌红色，无下划线，hover 时显示下划线 */
+.theme-lychee a {
+  color: var(--editor-accent);
+  text-decoration: none;
+}
+.theme-lychee a:hover {
+  text-decoration: underline;
+}
+
+/* 图片：自适应宽度，轻微圆角 */
+.theme-lychee img {
+  max-width: 100%;
+  border-radius: var(--border-radius);
+  margin: 1em 0;
+}
+
+/* 表格：满宽，边框合并，表头用表面色背景 */
+.theme-lychee table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+.theme-lychee th,
+.theme-lychee td {
+  padding: 0.6em 1em;
+  border: 1px solid var(--editor-border);
+  text-align: left;
+}
+.theme-lychee th {
+  background: var(--editor-surface);
+  font-weight: 600;
+}
+
+/* 分隔线：无默认边框，用顶部细线替代 */
+.theme-lychee hr {
+  border: none;
+  border-top: 1px solid var(--editor-border);
+  margin: 2em 0;
+}
+
+/* 列表：缩进 2em，列表项间距 */
+.theme-lychee ul,
+.theme-lychee ol {
+  padding-left: 2em;
+  margin: 0.5em 0;
+}
+.theme-lychee li {
+  margin: 0.3em 0;
+}
+
+/* ── 预览模式容器 ────────────────────────────────────────────── */
+.editor-content.theme-lychee {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2em;
+  color: var(--editor-text);
+}
+/* ── 深色模式标题/元素覆盖 ────────────────────────────────────── */
+.dark .theme-lychee h1 {
+  color: #f87171;
+}
+.dark .theme-lychee h2 {
+  color: #ef4444;
+}
+.dark .theme-lychee h3 {
+  color: #dc2626;
+}
+.dark .theme-lychee blockquote {
+  color: #c09090;
+  border-left-color: #ef4444;
+}
+.dark .theme-lychee code {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.08);
+  border-color: rgba(248, 113, 113, 0.15);
+}
+.dark .theme-lychee a {
+  color: #f87171;
+}
+.dark .theme-lychee th {
+  color: #f0e6e7;
+  background: rgba(248, 113, 113, 0.06);
+}
+.dark .theme-lychee strong {
+  color: #f0d0d0;
+}
