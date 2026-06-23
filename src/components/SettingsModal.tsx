@@ -13,6 +13,16 @@ const fallbackFonts = [
   'Noto Sans SC', 'Microsoft YaHei', 'SimSun', 'KaiTi',
 ]
 
+/** 推荐互联网字体（精选适合 Markdown 编辑的中英文字体） */
+const webFonts = [
+  { name: 'LXGW WenKai', label: '霞鹜文楷', desc: '开源手写楷体，适合文学写作', importUrl: "https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css", family: "'LXGW WenKai', cursive" },
+  { name: 'Noto Serif SC', label: '思源宋体', desc: 'Google开源宋体，排版优雅', importUrl: "https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap", family: "'Noto Serif SC', serif" },
+  { name: 'Noto Sans SC', label: '思源黑体', desc: 'Google开源黑体，清晰现代', importUrl: "https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap", family: "'Noto Sans SC', sans-serif" },
+  { name: 'Lora', label: 'Lora', desc: '优雅衬线体，适合英文长文', importUrl: "https://fonts.googleapis.com/css2?family=Lora:wght@400;700&display=swap", family: "'Lora', serif" },
+  { name: 'Source Han Serif SC', label: 'Source Han Serif SC', desc: 'Adobe思源宋体，学术风范', importUrl: "https://fonts.googleapis.com/css2?family=Source+Han+Serif+SC:wght@400;700&display=swap", family: "'Source Han Serif SC', serif" },
+  { name: 'MiSans', label: 'MiSans 小米字体', desc: '小米开源无衬线体，现代简洁', importUrl: "https://cdn.jsdelivr.net/npm/misans@4.0/lib/Normal/MiSans-Regular.min.css", family: "'MiSans', 'Mi Sans', sans-serif" },
+]
+
 /** 各面板的默认值（恢复默认时使用） */
 const DEFAULTS_GENERAL = { autoSave: true, autoSaveInterval: 3000, defaultTemplate: '' }
 const DEFAULTS_APPEARANCE = { currentTheme: 'academic', isDark: false }
@@ -526,7 +536,33 @@ function EditorSettings() {
                 </button>
               ))}
             </div>
-            <input type="text" value={fontFilter} onChange={(e) => setFontFilter(e.target.value)} placeholder="搜索字体..." className="settings-input mb-1.5" />
+            {/* 推荐互联网字体 */}
+            <div className="grid grid-cols-2 gap-1.5 mb-2">
+              {webFonts.map((wf) => {
+                const isActive = cur.includes(wf.name)
+                return (
+                  <button key={wf.name} onClick={() => {
+                    // 动态加载字体
+                    if (!document.querySelector(`link[href="${wf.importUrl}"]`)) {
+                      const link = document.createElement('link')
+                      link.rel = 'stylesheet'
+                      link.href = wf.importUrl
+                      document.head.appendChild(link)
+                    }
+                    setFont(`${wf.family}`)
+                  }}
+                    className={`px-2.5 py-1.5 text-left rounded-lg border transition-all ${
+                      isActive
+                        ? 'bg-[var(--editor-accent)] border-[var(--editor-accent)] text-white'
+                        : 'bg-[var(--editor-surface)] border-[var(--editor-border)] text-[var(--editor-text)] hover:border-[var(--editor-accent)]'
+                    }`}>
+                    <span className="text-[11px] font-medium block" style={{ fontFamily: wf.family }}>{wf.label}</span>
+                    <span className={`text-[9px] ${isActive ? 'text-white/70' : 'text-[var(--sidebar-text)]'}`}>{wf.desc}</span>
+                  </button>
+                )
+              })}
+            </div>
+            <input type="text" value={fontFilter} onChange={(e) => setFontFilter(e.target.value)} placeholder="搜索本地字体..." className="settings-input mb-1.5" />
             <div className="border border-[var(--editor-border)] rounded-lg overflow-hidden bg-[var(--editor-surface)]" style={{ maxHeight: '150px', overflowY: 'auto' }}>
               {!fontsLoaded && <div className="flex items-center justify-center gap-2 py-3 text-xs text-[var(--sidebar-text)]"><Loader2 size={12} className="animate-spin" /> 加载中...</div>}
               {filtered.map((f) => (

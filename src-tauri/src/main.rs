@@ -112,7 +112,8 @@ fn get_system_fonts() -> Result<Vec<String>, String> {
         "-NoProfile",
         "-NonInteractive",
         "-Command",
-        "[System.Reflection.Assembly]::LoadWithPartialName('System.Drawing') | Out-Null; \
+        "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; \
+         [System.Reflection.Assembly]::LoadWithPartialName('System.Drawing') | Out-Null; \
          (New-Object System.Drawing.Text.InstalledFontCollection).Families | \
          ForEach-Object { $_.Name } | Sort-Object"
     ]);
