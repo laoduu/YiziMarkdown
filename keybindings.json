@@ -1,0 +1,11 @@
+{
+  "ctrl+s": "save",
+  "ctrl+n": "newFile",
+  "ctrl+o": "openFile",
+  "ctrl+f": "search",
+  "f1": "showShortcuts",
+  "f2": "toggleTheme",
+  "f3": "viewCycle",
+  "ins": "slashMenu",
+  "f12": "toggleDevtools"
+}
