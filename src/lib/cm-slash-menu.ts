@@ -106,43 +106,57 @@ const slashMenuPlugin = ViewPlugin.fromClass(class {
         tr.effects.some(e => e.is(hideSlashMenu) || e.is(slashMenuAction) || e.is(showSlashMenu))
       )
       if (!hasExplicitEffect) {
-        this.view.dom.dispatchEvent(new CustomEvent('slash-menu-close'))
+        this.view.dom.dispatchEvent(new CustomEvent('slash-menu-close', { bubbles: true }))
       }
       return // 菜单刚关闭，不再检测新触发
     }
 
-    // ---- 菜单激活中：发射坐标更新 ----
+    // ---- 菜单激活中：延迟发射坐标更新 ----
     if (newState.active) {
       if (update.docChanged || update.selectionSet) {
-        this.emitCoords(newState.from, update.state)
+        this.measureMenu(newState.from)
       }
       return
     }
 
     // ---- 检测新触发 ----
     if (!update.docChanged) return
-    if (this.view.composing) return  // IME composition 中不触发
 
-    // 核心检测逻辑：比较新旧文档中光标前一个字符
     const cursor = update.state.selection.main.head
     if (cursor === 0) return
-    const charBefore = update.state.doc.sliceString(cursor - 1, cursor)
-    if (!TRIGGERS.has(charBefore)) return
 
-    // 确认是新插入的（不是之前就存在的）
-    const oldDoc = update.startState.doc
-    const oldChar = (cursor <= oldDoc.length)
-      ? oldDoc.sliceString(cursor - 1, cursor)
-      : ''
-    if (oldChar === charBefore) return  // 字符之前就在，不是新输入
+    // 取出本次交易中结束于光标处（紧贴光标）的插入文本。
+    // 用实际插入文本检测，而非比较新旧文档 + composing 守卫，
+    // 这样 IME 组合提交的 /（Windows 中文输入法英文模式也会走组合）也能触发。
+    let inserted = ''
+    update.changes.iterChanges((_fA, _tA, _fromB, toB, ins) => {
+      if (toB === cursor) inserted = ins.toString()
+    })
+    if (!inserted) return
 
-    this.view.dispatch({
-      effects: showSlashMenu.of({
-        trigger: charBefore,
-        from: cursor - 1,
-        cursorLine: update.state.doc.lineAt(cursor - 1).number,
-        coords: this.getCoords(cursor),
-      }),
+    const trigger = inserted[inserted.length - 1]
+    if (!TRIGGERS.has(trigger)) return
+
+    // CodeMirror 禁止在 update 期间调用 view.dispatch（会抛
+    // "Calls to EditorView.update are not allowed while an update is in progress"），
+    // 因此把派发延迟到微任务，待本次 update 结束后再执行；并重新校验状态，避免误触发。
+    queueMicrotask(() => {
+      const sm = this.view.state.field(slashMenuState, false)
+      if (!sm || sm.active) return            // 已被占用或已关闭
+      const head = this.view.state.selection.main.head
+      if (head === 0) return
+      const ch = this.view.state.doc.sliceString(head - 1, head)
+      if (!TRIGGERS.has(ch)) return          // 触发字符已被后续输入覆盖
+      const f = head - 1
+      this.view.dispatch({
+        effects: showSlashMenu.of({
+          trigger: ch,
+          from: f,
+          cursorLine: this.view.state.doc.lineAt(f).number,
+          coords: { left: 0, bottom: 0 },
+        }),
+      })
+      this.measureMenu(f)
     })
   }
 
@@ -156,13 +170,18 @@ const slashMenuPlugin = ViewPlugin.fromClass(class {
     }
   }
 
-  /** 通过 DOM 自定义事件通知 React 组件更新坐标 */
-  private emitCoords(from: number, st: any) {
-    const cursor = st.selection.main.head
-    const coords = this.getCoords(cursor)
-    this.view.dom.dispatchEvent(new CustomEvent('slash-menu-update', {
-      detail: { from, coords },
-    }))
+  /** 延迟到 update 之外测量坐标并通知 React（update 期间禁止读布局） */
+  private measureMenu(from: number) {
+    requestAnimationFrame(() => {
+      const sm = this.view.state.field(slashMenuState, false)
+      if (!sm || !sm.active) return
+      const cursor = this.view.state.selection.main.head
+      const coords = this.getCoords(cursor)
+      this.view.dom.dispatchEvent(new CustomEvent('slash-menu-update', {
+        detail: { from, coords },
+        bubbles: true,
+      }))
+    })
   }
 })
 

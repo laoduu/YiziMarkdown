@@ -184,6 +184,22 @@ class ImageWidget extends WidgetType {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Raw HTML Block Widget                                              */
+/* ------------------------------------------------------------------ */
+
+class HtmlBlockWidget extends WidgetType {
+  constructor(private readonly html: string) { super() }
+  eq(other: HtmlBlockWidget): boolean { return other.html === this.html }
+  toDOM(): HTMLElement {
+    const wrap = document.createElement('div')
+    wrap.className = 'cm-live-block cm-live-block--html'
+    wrap.innerHTML = this.html
+    return wrap
+  }
+  ignoreEvent(): boolean { return true }
+}
+
+/* ------------------------------------------------------------------ */
 /*  Editable Table Widget (Shadow DOM isolated)                        */
 /* ------------------------------------------------------------------ */
 
@@ -364,12 +380,25 @@ function buildBlockDecorations(state: EditorState): DecorationSet {
   const tree = syntaxTree(state)
   const ranges: Range<Decoration>[] = []
 
+  // 收集 HTMLBlock 覆盖的行号，供下方 mermaid/公式/图片行扫描跳过，
+  // 避免块内文本（如表格单元格里的 ```mermaid）被误判并导致装饰重叠。
+  const htmlBlockLines = new Set<number>()
+  tree.iterate({
+    enter(node) {
+      if (node.name !== 'HTMLBlock') return
+      const sL = doc.lineAt(node.from).number
+      const eL = doc.lineAt(Math.min(node.to, doc.length)).number
+      for (let ln = sL; ln <= eL; ln++) htmlBlockLines.add(ln)
+    },
+  })
+
   // --- Mermaid blocks ---
   const enabledPlugins = useSettingsStore.getState().enabledPlugins
   const mermaidEnabled = enabledPlugins.includes('mermaid')
   if (mermaidEnabled) {
     for (let i = 1; i <= doc.lines; i++) {
       if (i >= curLineStart && i <= curLineEnd) continue
+      if (htmlBlockLines.has(i)) continue
       const line = doc.line(i)
       if (/^\s*```\s*mermaid\s*/.test(line.text)) {
         // 找到代码块的结束位置
@@ -398,6 +427,7 @@ function buildBlockDecorations(state: EditorState): DecorationSet {
   if (katexEnabled) {
     for (let i = 1; i <= doc.lines; i++) {
       if (i >= curLineStart && i <= curLineEnd) continue
+      if (htmlBlockLines.has(i)) continue
       const line = doc.line(i)
       // 跳过代码块内的 $$（代码块由 mermaid/普通 fence 处理）
       // 单行块级公式: $$formula$$（允许行首有列表标记 -/1. 等）
@@ -440,6 +470,7 @@ function buildBlockDecorations(state: EditorState): DecorationSet {
     const inlineRe = /(?<!\$)\$(?!\$)((?:[^$\\]|\\.)+?)(?<!\$)\$(?!\$)/g
     for (let i = 1; i <= doc.lines; i++) {
       if (i >= curLineStart && i <= curLineEnd) continue
+      if (htmlBlockLines.has(i)) continue
       const line = doc.line(i)
       const text = line.text
       // 跳过代码块行
@@ -468,6 +499,38 @@ function buildBlockDecorations(state: EditorState): DecorationSet {
         block: true,
       }).range(line.from, line.to))
     }
+  }
+
+  // --- Raw HTML blocks (block-level HTML such as <table>) ---
+  tree.iterate({
+    enter(node) {
+      if (node.name !== 'HTMLBlock') return
+      const startLine = doc.lineAt(node.from).number
+      const endLine = doc.lineAt(Math.min(node.to, doc.length)).number
+      if (curLineStart >= startLine && curLineStart <= endLine) return
+      const html = doc.sliceString(node.from, node.to)
+      if (!html.trim()) return
+      ranges.push(Decoration.replace({
+        widget: new HtmlBlockWidget(html),
+        block: true,
+      }).range(node.from, node.to))
+    },
+  })
+
+  // --- Standalone inline HTML lines (single element on its own line, e.g. <span>…) ---
+  for (let i = 1; i <= doc.lines; i++) {
+    if (i >= curLineStart && i <= curLineEnd) continue
+    if (htmlBlockLines.has(i)) continue
+    const line = doc.line(i)
+    const t = line.text.trim()
+    if (!t) continue
+    // 整行是一个完整的成对元素：<tag …>…</tag>
+    const m = t.match(/^<([a-zA-Z][a-zA-Z0-9-]*)(?:\s[^>]*)?>[\s\S]*<\/\1>\s*$/)
+    if (!m) continue
+    ranges.push(Decoration.replace({
+      widget: new HtmlBlockWidget(t),
+      block: true,
+    }).range(line.from, line.to))
   }
 
   // --- Tables ---
@@ -526,6 +589,25 @@ const liveBlocksTheme = EditorView.theme({
     opacity: '0.5',
     fontStyle: 'italic',
     fontSize: '0.9em',
+  },
+  // Raw HTML blocks (table 等) — matches preview mode styles
+  '.cm-live-block--html': {
+    overflow: 'auto',
+  },
+  '.cm-live-block--html table': {
+    borderCollapse: 'collapse',
+    width: '100%',
+    margin: '0',
+  },
+  '.cm-live-block--html th, .cm-live-block--html td': {
+    padding: '0.6em 1em',
+    border: '1px solid var(--editor-border)',
+    textAlign: 'left',
+    verticalAlign: 'top',
+  },
+  '.cm-live-block--html th': {
+    background: 'var(--editor-surface)',
+    fontWeight: '600',
   },
   // Table — matches preview mode styles
   '.cm-live-block--table table': {

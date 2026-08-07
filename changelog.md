@@ -1,5 +1,72 @@
 # YiziMarkdown 开发日志
 
+## v0.1.8
+
+**斜杠菜单输入触发**
+
+- 新增输入 `/` 或 `、` 自动唤起斜杠菜单（此前仅支持 Ins 键唤起）
+- 修复触发链路三处根因：
+  - **IME 组合态下检测失效**：原 `view.composing` 守卫会在中文输入法（含英文模式）下跳过触发检测，导致中英文输入 `/` 均无反应。改为读取本次交易实际插入文本判断触发字符，中英文均可触发
+  - **update 期间派发/读布局崩溃**：CodeMirror 禁止在更新期间调用 `view.dispatch` 与 `coordsAtPos`，原逻辑一触发即抛异常使插件失效。改为 `queueMicrotask` 延迟派发 `showSlashMenu`，坐标用 `requestAnimationFrame` 延迟测量
+  - **关闭/定位事件不冒泡**：插件在子节点派发 `CustomEvent` 而 React 在父节点监听，默认不冒泡导致继续输入不关闭、菜单位置停在左上角。为 `slash-menu-close`、`slash-menu-update` 加 `bubbles: true`
+- 交互行为：菜单在光标位置弹出；继续输入任意字符（如"我/你"）自动关闭，符合直接输入斜杠文本的使用场景
+
+**HTML 渲染支持（预览模式）**
+
+- 修复文档含大量 HTML 时预览/并排预览仍显示源码的问题：markdown-it 默认 `html: false` 会把 HTML 转义成源码。改为 `html: true`，让预览透传并渲染原始 HTML（表格、行内样式等）
+
+**实时模式 HTML 渲染（所见即所得）**
+
+- 块级 HTML（`<table>`、`<div>` 等，语法树 `HTMLBlock` 节点）在实时模式渲染为真实内容，光标落到块上自动还原源码可编辑
+- 单独成行的行内 HTML 元素（如 `<span>…</span>`）同样按块级渲染
+- 新增 `htmlBlockLines` 行集合，让 mermaid/公式/图片行扫描跳过块内内容，避免把表格单元格里的文本误判为独立块导致装饰重叠崩溃
+- 为 HTML 块内的表格补充与预览一致的边框样式
+
+**超链接外部打开**
+
+- 修复预览中点击超链接在应用内导航（变成"无头浏览器"、用户无法返回）的问题：拦截预览内所有 `<a>` 点击，阻止应用内跳转，统一通过 `open_url` 调用系统默认浏览器打开
+
+## v0.1.7
+
+**实时模式任务列表优化**
+
+- 实时模式任务列表改用 CM6 Widget Decoration，插入真实 `<input type="checkbox">` 替代 `::before` 伪元素，与预览模式视觉效果完全一致
+- TaskCheckboxWidget 继承 WidgetType，实现 toDOM/eq/ignoreEvent 完整接口
+- checkbox 与文字间距调至 0.5em，与预览模式对齐
+
+**斜杠菜单优化（Ins键）**
+
+- 重写 SlashMenu 为 Notion 风格全 icon 网格，16 个选项统一为图标+标签卡片
+- 代码块无作用问题修复，添加 codeBlock case 到 handleSlashMenuSelect
+- 菜单宽度从 220px → 320px，图标和文字尺寸调大，内边距优化
+
+**6款全新主题（17→20款）**
+
+差异化风格，涵盖多种设计语言：
+
+- **Kindle电子墨水**：暖灰纸张底色，衬线字体，段落首行缩进2em，三点星分隔线，模拟电子阅读器排版
+- **莫兰迪**：意大利静物色彩哲学，标题左侧粗竖色条，整面粉藕色块引用，表格交替色行，虚线链接
+- **故宫朱砂**：中式宫廷美学，标题朱砂红双底线，引用块「」装饰，琉璃金链接，金色渐变分隔线
+- **Aurora极光**：标题渐变色流动动画，彩虹光带分隔线横向流动，引用块呼吸光晕脉动
+- **Vaporwave蒸汽波**：深色透视网格滚动，CRT扫描线分隔线闪烁，链接悬停故障glitch，霓虹脉冲标题
+- **Chalkboard黑板粉笔**：深绿黑板底色，粉笔颗粒text-shadow质感，手写体标题，便签纸代码块（旋转+暖黄），波浪线SVG分隔线
+
+**字体设置优化**
+
+- 修复系统字体列表中文乱码：PowerShell 输出添加 UTF-8 编码
+- 新增6款推荐互联网字体（需联网，选中后自动从国内CDN加载）：
+  - 霞鹜文楷 LXGW WenKai（手写楷体）
+  - 思源宋体 Noto Serif SC（Google开源宋体）
+  - 思源黑体 Noto Sans SC（Google开源黑体）
+  - Lora（优雅英文衬线）
+  - Source Han Serif SC（Adobe思源宋体）
+  - MiSans 小米字体（现代无衬线）
+
+**其他**
+
+- Tauri 窗口前置技巧（always-on-top）
+- 双击标签关闭文档
+
 ## v0.1.6
 
 **单实例多标签**

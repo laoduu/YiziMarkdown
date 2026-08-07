@@ -16,6 +16,7 @@ import { slashMenuExtension, slashMenuState, showSlashMenu, hideSlashMenu, slash
 import SlashMenu from './SlashMenu'
 import { renderMarkdown } from '../lib/markdownRenderer'
 import { extendMarkdownIt, postRender as pluginPostRender } from '../plugins/registry'
+import { invokeTauri } from '../lib/tauri'
 
 // const markdownHighlight = HighlightStyle.define([
 //   // 标题
@@ -174,6 +175,24 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
     container.addEventListener('click', handleClick)
     return () => container.removeEventListener('click', handleClick)
   }, [content, onContentChange])
+
+  // 拦截预览中的超链接点击：强制用系统默认浏览器打开，
+  // 避免点击后应用内导航变成"无头浏览器"、用户不知道怎么返回。
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    const handleLinkClick = (e: MouseEvent) => {
+      const anchor = (e.target as HTMLElement).closest('a')
+      if (!anchor) return
+      const href = anchor.getAttribute('href')
+      if (!href || href.startsWith('#')) return
+      e.preventDefault()
+      e.stopPropagation()
+      invokeTauri('open_url', { url: href })
+    }
+    container.addEventListener('click', handleLinkClick)
+    return () => container.removeEventListener('click', handleLinkClick)
+  }, [])
 
   // 解析本地图片路径为 data URL（Tauri 环境下）
   useEffect(() => {

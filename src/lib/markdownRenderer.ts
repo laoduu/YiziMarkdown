@@ -55,7 +55,7 @@ export function createMarkdownIt(
   pluginExtenders?: Array<(md: MarkdownIt) => void>
 ): MarkdownIt {
   const md = new MarkdownIt({
-    html: false,
+    html: true,
     xhtmlOut: false,
     breaks: true,
     langPrefix: 'language-',

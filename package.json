@@ -1,6 +1,6 @@
 {
   "name": "yizimarkdown",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "YiziMarkdown - A sleek Markdown editor",
   "type": "module",
   "scripts": {
