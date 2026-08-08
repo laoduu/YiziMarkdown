@@ -2,6 +2,17 @@
 
 ## v0.1.8
 
+**macOS 支持与跨平台适配**
+
+- **macOS 客户端构建**：修复 Windows 专属依赖 `winreg` 在 macOS 上编译失败的问题，将其移入 `[target.'cfg(windows)'.dependencies]`；用 `iconutil` 从 icon.png 生成 `.icns` 并加入 `tauri.conf.json` 打包配置，打通 Tauri 在 macOS 的编译与打包
+- **通用二进制（Universal Binary）**：新增 `aarch64-apple-darwin` 目标，以 `--target universal-apple-darwin` 构建，一份安装包同时含 x86_64 与 arm64 双架构，Intel 与 Apple Silicon 均原生运行
+- **应用资源目录适配**：macOS `.app` 包中主题/模板等资源位于 `Contents/Resources`，而 exe 位于 `Contents/MacOS`。`get_app_root()` 增加 bundle 识别，正确返回资源目录，修复打包后主题、模板全部缺失的问题
+- **全屏逻辑平台适配**：macOS 上 `toggle_maximize` 仅缩放不进入全屏。新增 `toggle_window_size` 命令，macOS 切换原生全屏、其他平台保持最大化；前端按平台轮询 `is_fullscreen`/`is_maximized` 状态
+- **默认编辑器平台适配**：macOS 通过 LaunchServices（`LSSetDefaultRoleHandlerForContentType` / `LSCopyDefaultRoleHandlerForContentType`）设置/取消/检查 `.md` 默认处理器，Windows 保留注册表实现
+- **系统字体获取跨平台**：`get_system_fonts` 由仅 Windows 的 PowerShell 调用改为分平台实现（Windows PowerShell / macOS system_profiler / Linux fc-list）
+- **修复 macOS 启动白屏**：KaTeX 行内公式正则使用 lookbehind 断言 `(?<!\$)`，旧版 WebKit（macOS < 13.3）不支持导致 React 渲染崩溃。经排查该断言在行内渲染路径中冗余（含 `$$` 的行已被跳过），直接移除，行为不变且兼容旧引擎
+- **修复 macOS 12 Mermaid 图表渲染失败**：mermaid 依赖 Constructable Stylesheets API（`new CSSStyleSheet()`，需 Safari 16.4+），旧 WebKit 抛 `Illegal constructor`。引入 `construct-style-sheets-polyfill`，仅在原生不支持时生效，不影响的 Windows/新版 macOS 的原生路径
+
 **斜杠菜单输入触发**
 
 - 新增输入 `/` 或 `、` 自动唤起斜杠菜单（此前仅支持 Ins 键唤起）

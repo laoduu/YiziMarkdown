@@ -23,3 +23,7 @@ _build_log.txt
 _diag_build.bat
 .solomd/
 .web_builder/
+
+# 分发产物
+*.zip
+*.dmg

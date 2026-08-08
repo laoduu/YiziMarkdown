@@ -129,7 +129,7 @@ class KatexInlineLineWidget extends WidgetType {
     try {
       const katex = await import('katex')
       const kt = katex.default || katex
-      const inlineRe = /(?<!\$)\$(?!\$)((?:[^$\\]|\\.)+?)(?<!\$)\$(?!\$)/g
+      const inlineRe = /\$(?!\$)((?:[^$\\]|\\.)+?)\$(?!\$)/g
       let result = ''
       let lastIdx = 0
       let m: RegExpExecArray | null
@@ -467,7 +467,7 @@ function buildBlockDecorations(state: EditorState): DecorationSet {
   // 行级渲染：将含 $...$ 的整行替换为渲染后的 HTML
   // （CM6 的 inline Decoration.replace widget 在 StateField 混合 decoration 场景中不可靠）
   if (katexEnabled) {
-    const inlineRe = /(?<!\$)\$(?!\$)((?:[^$\\]|\\.)+?)(?<!\$)\$(?!\$)/g
+    const inlineRe = /\$(?!\$)((?:[^$\\]|\\.)+?)\$(?!\$)/g
     for (let i = 1; i <= doc.lines; i++) {
       if (i >= curLineStart && i <= curLineEnd) continue
       if (htmlBlockLines.has(i)) continue

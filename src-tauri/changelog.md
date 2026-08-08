@@ -1,5 +1,42 @@
 # YiziMarkdown 开发日志
 
+## v0.1.8
+
+**macOS 支持与跨平台适配**
+
+- **macOS 客户端构建**：修复 Windows 专属依赖 `winreg` 在 macOS 上编译失败的问题，将其移入 `[target.'cfg(windows)'.dependencies]`；用 `iconutil` 从 icon.png 生成 `.icns` 并加入 `tauri.conf.json` 打包配置，打通 Tauri 在 macOS 的编译与打包
+- **通用二进制（Universal Binary）**：新增 `aarch64-apple-darwin` 目标，以 `--target universal-apple-darwin` 构建，一份安装包同时含 x86_64 与 arm64 双架构，Intel 与 Apple Silicon 均原生运行
+- **应用资源目录适配**：macOS `.app` 包中主题/模板等资源位于 `Contents/Resources`，而 exe 位于 `Contents/MacOS`。`get_app_root()` 增加 bundle 识别，正确返回资源目录，修复打包后主题、模板全部缺失的问题
+- **全屏逻辑平台适配**：macOS 上 `toggle_maximize` 仅缩放不进入全屏。新增 `toggle_window_size` 命令，macOS 切换原生全屏、其他平台保持最大化；前端按平台轮询 `is_fullscreen`/`is_maximized` 状态
+- **默认编辑器平台适配**：macOS 通过 LaunchServices（`LSSetDefaultRoleHandlerForContentType` / `LSCopyDefaultRoleHandlerForContentType`）设置/取消/检查 `.md` 默认处理器，Windows 保留注册表实现
+- **系统字体获取跨平台**：`get_system_fonts` 由仅 Windows 的 PowerShell 调用改为分平台实现（Windows PowerShell / macOS system_profiler / Linux fc-list）
+- **修复 macOS 启动白屏**：KaTeX 行内公式正则使用 lookbehind 断言 `(?<!\$)`，旧版 WebKit（macOS < 13.3）不支持导致 React 渲染崩溃。经排查该断言在行内渲染路径中冗余（含 `$$` 的行已被跳过），直接移除，行为不变且兼容旧引擎
+- **修复 macOS 12 Mermaid 图表渲染失败**：mermaid 依赖 Constructable Stylesheets API（`new CSSStyleSheet()`，需 Safari 16.4+），旧 WebKit 抛 `Illegal constructor`。引入 `construct-style-sheets-polyfill`，仅在原生不支持时生效，不影响的 Windows/新版 macOS 的原生路径
+
+**斜杠菜单输入触发**
+
+- 新增输入 `/` 或 `、` 自动唤起斜杠菜单（此前仅支持 Ins 键唤起）
+- 修复触发链路三处根因：
+  - **IME 组合态下检测失效**：原 `view.composing` 守卫会在中文输入法（含英文模式）下跳过触发检测，导致中英文输入 `/` 均无反应。改为读取本次交易实际插入文本判断触发字符，中英文均可触发
+  - **update 期间派发/读布局崩溃**：CodeMirror 禁止在更新期间调用 `view.dispatch` 与 `coordsAtPos`，原逻辑一触发即抛异常使插件失效。改为 `queueMicrotask` 延迟派发 `showSlashMenu`，坐标用 `requestAnimationFrame` 延迟测量
+  - **关闭/定位事件不冒泡**：插件在子节点派发 `CustomEvent` 而 React 在父节点监听，默认不冒泡导致继续输入不关闭、菜单位置停在左上角。为 `slash-menu-close`、`slash-menu-update` 加 `bubbles: true`
+- 交互行为：菜单在光标位置弹出；继续输入任意字符（如"我/你"）自动关闭，符合直接输入斜杠文本的使用场景
+
+**HTML 渲染支持（预览模式）**
+
+- 修复文档含大量 HTML 时预览/并排预览仍显示源码的问题：markdown-it 默认 `html: false` 会把 HTML 转义成源码。改为 `html: true`，让预览透传并渲染原始 HTML（表格、行内样式等）
+
+**实时模式 HTML 渲染（所见即所得）**
+
+- 块级 HTML（`<table>`、`<div>` 等，语法树 `HTMLBlock` 节点）在实时模式渲染为真实内容，光标落到块上自动还原源码可编辑
+- 单独成行的行内 HTML 元素（如 `<span>…</span>`）同样按块级渲染
+- 新增 `htmlBlockLines` 行集合，让 mermaid/公式/图片行扫描跳过块内内容，避免把表格单元格里的文本误判为独立块导致装饰重叠崩溃
+- 为 HTML 块内的表格补充与预览一致的边框样式
+
+**超链接外部打开**
+
+- 修复预览中点击超链接在应用内导航（变成"无头浏览器"、用户无法返回）的问题：拦截预览内所有 `<a>` 点击，阻止应用内跳转，统一通过 `open_url` 调用系统默认浏览器打开
+
 ## v0.1.6
 
 **单实例多标签**

@@ -5,10 +5,12 @@ type WindowCtrl = {
   minimize: () => Promise<void>
   maximize: () => Promise<void>
   unmaximize: () => Promise<void>
-  toggleMaximize: () => Promise<void>
+  toggleMaximize: () => Promise<boolean>
   close: () => Promise<void>
   startDragging: () => Promise<void>
   isMaximized: () => Promise<boolean>
+  isFullscreen: () => Promise<boolean>
+  getPlatform: () => Promise<string>
 } | null
 
 const getTauriWindow = (): WindowCtrl => {
@@ -25,10 +27,12 @@ const getTauriWindow = (): WindowCtrl => {
       minimize: () => invoke('plugin:window|minimize', { label }),
       maximize: () => invoke('plugin:window|maximize', { label }),
       unmaximize: () => invoke('plugin:window|unmaximize', { label }),
-      toggleMaximize: () => invoke('plugin:window|toggle_maximize', { label }),
+      toggleMaximize: () => invoke('toggle_window_size'),
       close: () => invoke('plugin:window|close', { label }),
       startDragging: () => invoke('plugin:window|start_dragging', { label }),
       isMaximized: () => invoke('plugin:window|is_maximized', { label }),
+      isFullscreen: () => invoke('plugin:window|is_fullscreen', { label }),
+      getPlatform: () => invoke('get_platform'),
     }
   } catch {
     return null
@@ -41,18 +45,21 @@ interface WindowControlsProps {
 
 export default function WindowControls({ }: WindowControlsProps) {
   const [isMaximized, setIsMaximized] = useState(false)
+  const [isMac, setIsMac] = useState(false)
 
   const checkMaximized = useCallback(async (win: WindowCtrl) => {
     if (!win) return
     try {
-      const result = await win.isMaximized()
+      const result = isMac ? await win.isFullscreen() : await win.isMaximized()
       setIsMaximized(result)
     } catch {}
-  }, [])
+  }, [isMac])
 
   useEffect(() => {
     const win = getTauriWindow()
     if (!win) return
+
+    win.getPlatform().then((p) => setIsMac(p === 'macos'))
 
     checkMaximized(win)
 
@@ -68,7 +75,7 @@ export default function WindowControls({ }: WindowControlsProps) {
 
   const handleMaximize = async () => {
     const win = getTauriWindow()
-    if (win) try { await win.toggleMaximize() } catch {}
+    if (win) try { const v = await win.toggleMaximize(); setIsMaximized(v) } catch {}
   }
 
   const handleClose = async () => {

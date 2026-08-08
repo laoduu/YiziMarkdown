@@ -105,8 +105,8 @@ fn read_directory(path: String) -> Result<Vec<DirEntry>, String> {
 
 // ===== 系统字体 =====
 
-#[tauri::command]
-fn get_system_fonts() -> Result<Vec<String>, String> {
+#[cfg(target_os = "windows")]
+fn collect_system_fonts() -> Result<Vec<String>, String> {
     let mut cmd = Command::new("powershell");
     cmd.args([
         "-NoProfile",
@@ -117,10 +117,7 @@ fn get_system_fonts() -> Result<Vec<String>, String> {
          (New-Object System.Drawing.Text.InstalledFontCollection).Families | \
          ForEach-Object { $_.Name } | Sort-Object"
     ]);
-    #[cfg(target_os = "windows")]
-    {
-        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-    }
+    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
     let output = cmd.output()
         .map_err(|e| format!("Failed to execute PowerShell: {}", e))?;
 
@@ -135,6 +132,57 @@ fn get_system_fonts() -> Result<Vec<String>, String> {
         .collect();
 
     Ok(fonts)
+}
+
+#[cfg(target_os = "macos")]
+fn collect_system_fonts() -> Result<Vec<String>, String> {
+    let output = Command::new("system_profiler")
+        .args(["SPFontsDataType", "-json"])
+        .output()
+        .map_err(|e| format!("Failed to execute system_profiler: {}", e))?;
+
+    if !output.status.success() {
+        return Err(format!("system_profiler error: {}", String::from_utf8_lossy(&output.stderr)));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let parsed: serde_json::Value = serde_json::from_str(&stdout)
+        .map_err(|e| format!("Failed to parse fonts: {}", e))?;
+
+    let mut fonts: Vec<String> = Vec::new();
+    if let Some(items) = parsed.get("SPFontsDataType").and_then(|v| v.as_array()) {
+        for item in items {
+            if let Some(name) = item.get("_name").and_then(|v| v.as_str()) {
+                fonts.push(name.to_string());
+            }
+        }
+    }
+    fonts.sort();
+    fonts.dedup();
+    Ok(fonts)
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+fn collect_system_fonts() -> Result<Vec<String>, String> {
+    // Linux 等平台：用 fontconfig 的 fc-list
+    let output = Command::new("fc-list")
+        .arg(": family")
+        .output()
+        .map_err(|e| format!("Failed to execute fc-list: {}", e))?;
+
+    let mut fonts: Vec<String> = String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .map(|line| line.split(':').next().unwrap_or("").trim().to_string())
+        .filter(|line| !line.is_empty())
+        .collect();
+    fonts.sort();
+    fonts.dedup();
+    Ok(fonts)
+}
+
+#[tauri::command]
+fn get_system_fonts() -> Result<Vec<String>, String> {
+    collect_system_fonts()
 }
 
 // ===== 文件选择对话框 =====
@@ -212,10 +260,26 @@ fn register_md_file_icon() {
 
 // ===== 应用目录（exe 同级）=====
 
-/// 获取 exe 所在目录作为应用根目录
+/// 获取应用根目录（exe 同级；macOS bundle 下为 Contents/Resources）
 fn get_app_root() -> Result<PathBuf, String> {
     let exe = std::env::current_exe()
         .map_err(|e| format!("Failed to get exe path: {}", e))?;
+
+    // macOS .app bundle：exe 位于 Contents/MacOS，资源位于 Contents/Resources
+    #[cfg(target_os = "macos")]
+    {
+        if let Some(parent) = exe.parent() {
+            if parent.file_name().and_then(|n| n.to_str()) == Some("MacOS") {
+                if let Some(contents) = parent.parent() {
+                    let resources = contents.join("Resources");
+                    if resources.is_dir() {
+                        return Ok(resources);
+                    }
+                }
+            }
+        }
+    }
+
     Ok(exe.parent().unwrap_or(Path::new(".")).to_path_buf())
 }
 
@@ -433,6 +497,39 @@ fn get_app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
 
+/// 切换窗口最大化/全屏：macOS 用原生全屏，其他平台用最大化
+/// 返回切换后是否处于全屏/最大化状态
+#[tauri::command]
+fn toggle_window_size(window: tauri::WebviewWindow) -> Result<bool, String> {
+    #[cfg(target_os = "macos")]
+    {
+        let is_fs = window.is_fullscreen().map_err(|e| e.to_string())?;
+        window.set_fullscreen(!is_fs).map_err(|e| e.to_string())?;
+        return Ok(!is_fs);
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let is_max = window.is_maximized().map_err(|e| e.to_string())?;
+        if is_max {
+            window.unmaximize().map_err(|e| e.to_string())?;
+        } else {
+            window.maximize().map_err(|e| e.to_string())?;
+        }
+        return Ok(!is_max);
+    }
+}
+
+/// 获取当前操作系统平台（windows / macos / linux / other）
+#[tauri::command]
+fn get_platform() -> String {
+    match std::env::consts::OS {
+        "windows" => "windows".to_string(),
+        "macos" => "macos".to_string(),
+        "linux" => "linux".to_string(),
+        other => other.to_string(),
+    }
+}
+
 /// 在新窗口中用 YiziMarkdown 自身打开指定文件
 #[tauri::command]
 fn open_in_app(file_path: String) -> Result<(), String> {
@@ -511,7 +608,107 @@ fn write_keybindings(content: String) -> Result<(), String> {
 
 // ===== 文件关联 (.md) =====
 
-/// 注册 .md 文件关联到当前 exe（写入 HKCU，不需要管理员权限）
+/// macOS: 通过 LaunchServices 设置/取消 .md 默认处理器
+#[cfg(target_os = "macos")]
+mod macos_file_assoc {
+    use std::ffi::c_char;
+
+    const APP_BUNDLE_ID: &str = "com.yizimarkdown.editor";
+    const MARKDOWN_UTI: &str = "net.daringfireball.markdown";
+    const TEXT_EDIT_BUNDLE_ID: &str = "com.apple.TextEdit";
+    const KCF_STRING_ENCODING_UTF8: u32 = 0x0800_0100;
+    const KLS_ROLES_ALL: u32 = 0xFFFF_FFFF;
+
+    #[link(name = "CoreFoundation", kind = "framework")]
+    #[link(name = "CoreServices", kind = "framework")]
+    extern "C" {
+        fn CFStringCreateWithCString(
+            allocator: *const std::ffi::c_void,
+            cstr: *const c_char,
+            encoding: u32,
+        ) -> *const std::ffi::c_void;
+        fn CFStringGetLength(cf: *const std::ffi::c_void) -> isize;
+        fn CFStringGetCString(
+            cf: *const std::ffi::c_void,
+            buffer: *mut c_char,
+            buffer_size: isize,
+            encoding: u32,
+        ) -> u8;
+        fn CFRelease(cf: *const std::ffi::c_void);
+        fn LSSetDefaultRoleHandlerForContentType(
+            content_type: *const std::ffi::c_void,
+            role: u32,
+            handler_bundle_id: *const std::ffi::c_void,
+        ) -> i32;
+        fn LSCopyDefaultRoleHandlerForContentType(
+            content_type: *const std::ffi::c_void,
+            role: u32,
+        ) -> *const std::ffi::c_void;
+    }
+
+    fn cfstring(s: &str) -> Result<*const std::ffi::c_void, String> {
+        let cstr = std::ffi::CString::new(s).map_err(|_| "invalid string".to_string())?;
+        let ptr = unsafe {
+            CFStringCreateWithCString(std::ptr::null(), cstr.as_ptr(), KCF_STRING_ENCODING_UTF8)
+        };
+        if ptr.is_null() {
+            Err("CFStringCreateWithCString failed".to_string())
+        } else {
+            Ok(ptr)
+        }
+    }
+
+    fn cfstring_to_string(cf: *const std::ffi::c_void) -> String {
+        unsafe {
+            let len = CFStringGetLength(cf);
+            if len < 0 {
+                return String::new();
+            }
+            let capacity = (len as usize) * 4 + 1;
+            let mut buf = vec![0u8; capacity];
+            let ok = CFStringGetCString(
+                cf,
+                buf.as_mut_ptr() as *mut c_char,
+                capacity as isize,
+                KCF_STRING_ENCODING_UTF8,
+            );
+            if ok == 0 {
+                return String::new();
+            }
+            let cstr = std::ffi::CStr::from_ptr(buf.as_ptr() as *const c_char);
+            cstr.to_string_lossy().into_owned()
+        }
+    }
+
+    pub fn set_default(yes: bool) -> Result<bool, String> {
+        let uti = cfstring(MARKDOWN_UTI)?;
+        let handler = cfstring(if yes { APP_BUNDLE_ID } else { TEXT_EDIT_BUNDLE_ID })?;
+        let status = unsafe { LSSetDefaultRoleHandlerForContentType(uti, KLS_ROLES_ALL, handler) };
+        unsafe {
+            CFRelease(uti);
+            CFRelease(handler);
+        }
+        if status == 0 {
+            Ok(true)
+        } else {
+            Err(format!("LSSetDefaultRoleHandlerForContentType failed: {}", status))
+        }
+    }
+
+    pub fn is_default() -> Result<bool, String> {
+        let uti = cfstring(MARKDOWN_UTI)?;
+        let handler = unsafe { LSCopyDefaultRoleHandlerForContentType(uti, KLS_ROLES_ALL) };
+        unsafe { CFRelease(uti) };
+        if handler.is_null() {
+            return Ok(false);
+        }
+        let bundle_id = cfstring_to_string(handler);
+        unsafe { CFRelease(handler) };
+        Ok(bundle_id == APP_BUNDLE_ID)
+    }
+}
+
+/// 注册 .md 文件关联到当前 exe（Windows 写注册表 / macOS 用 LaunchServices）
 #[tauri::command]
 fn associate_md_files() -> Result<bool, String> {
     #[cfg(target_os = "windows")]
@@ -548,13 +745,18 @@ fn associate_md_files() -> Result<bool, String> {
         return Ok(true);
     }
 
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "macos")]
     {
-        return Err("File association is only supported on Windows".to_string());
+        return macos_file_assoc::set_default(true);
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        return Err("File association is only supported on Windows and macOS".to_string());
     }
 }
 
-/// 取消 .md 文件关蔻（恢复系统默认）
+/// 取消 .md 文件关联（恢复系统默认）
 #[tauri::command]
 fn disassociate_md_files() -> Result<bool, String> {
     #[cfg(target_os = "windows")]
@@ -573,9 +775,14 @@ fn disassociate_md_files() -> Result<bool, String> {
         return Ok(true);
     }
 
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "macos")]
     {
-        return Err("File association is only supported on Windows".to_string());
+        return macos_file_assoc::set_default(false);
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        return Err("File association is only supported on Windows and macOS".to_string());
     }
 }
 
@@ -599,7 +806,12 @@ fn is_md_associated() -> Result<bool, String> {
         return Ok(false);
     }
 
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "macos")]
+    {
+        return macos_file_assoc::is_default();
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
     {
         return Ok(false);
     }
@@ -679,6 +891,7 @@ fn read_image_base64(path: String) -> Result<String, String> {
     let b64 = String::from_utf8(buf).map_err(|e| e.to_string())?;
     Ok(format!("data:{};base64,{}", mime, b64))
 }
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -702,6 +915,8 @@ fn main() {
             read_readme,
             read_help,
             get_app_version,
+            toggle_window_size,
+            get_platform,
             open_in_app,
             open_url,
             list_templates,

@@ -6,7 +6,7 @@
 
 **官方网站：** https://md.yizigpt.com
 
-一款简洁精致的 Windows 便携 `Markdown` 编辑器。可安装，也可下载压缩包，解压即用。
+一款简洁精致的 `Markdown` 编辑器，支持 **Windows 与 macOS**。Windows 可安装，也可下载压缩包解压即用；macOS 提供通用二进制安装包，Intel 与 Apple Silicon 均原生运行。
 
 为什么要开发一款 `Markdown` 编辑器？`Typora` 很漂亮，但要收费，免费的各种 `Markdown` 工具，太复杂也太丑，始终找不到趁手的 `Markdown` 编辑器。
 
@@ -60,8 +60,8 @@
 - **保存 / 自动保存**：手动保存 + 可配置间隔的自动保存（1~10 秒）
 - **另存为**：新建文件保存时自动弹出另存为对话框
 - **导出**：HTML / Markdown / 纯文本三种格式
-- **.md 文件关联**：设置中一键设为系统默认 Markdown 编辑器，双击 .md 直接打开
-- **命令行打开**：`YiziMarkdown.exe 文件路径.md` 直接打开
+- **.md 文件关联**：设置中一键设为系统默认 Markdown 编辑器，双击 .md 直接打开（Windows 注册表 / macOS LaunchServices）
+- **命令行打开**：`YiziMarkdown 文件路径.md` 直接打开
 
 ### 外观定制
 
@@ -173,6 +173,8 @@ npm run tauri:dev
 
 ### 构建发布版
 
+**Windows**
+
 ```bash
 npm run tauri:build
 ```
@@ -183,6 +185,17 @@ npm run tauri:build
 - NSIS 安装包：`src-tauri/target/release/bundle/nsis/`
 
 构建后手动复制 exe 和资源文件到 `public/YiziMarkdown-vX.X.X/` 目录分发。
+
+**macOS（通用二进制，同时支持 Intel 与 Apple Silicon）**
+
+```bash
+rustup target add aarch64-apple-darwin
+npm run tauri:build -- --target universal-apple-darwin
+```
+
+构建产物：
+- 应用包：`src-tauri/target/universal-apple-darwin/release/bundle/macos/YiziMarkdown.app`
+- 安装包：`src-tauri/target/universal-apple-darwin/release/bundle/dmg/YiziMarkdown_0.1.8_universal.dmg`
 
 ### 项目结构
 

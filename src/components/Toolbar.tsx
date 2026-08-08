@@ -57,7 +57,7 @@ interface ToolbarProps {
 }
 
 type WindowCtrl = {
-  toggleMaximize: () => Promise<void>
+  toggleMaximize: () => Promise<boolean>
   isMaximized: () => Promise<boolean>
 } | null
 
@@ -68,7 +68,7 @@ const getTauriWindow = (): WindowCtrl => {
     const label = internals.metadata?.currentWindow?.label || 'main'
     const invoke = internals.invoke.bind(internals)
     return {
-      toggleMaximize: () => invoke('plugin:window|toggle_maximize', { label }),
+      toggleMaximize: () => invoke('toggle_window_size'),
       isMaximized: () => invoke('plugin:window|is_maximized', { label }),
     }
   } catch { return null }
