@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Home, Code, Columns2, Eye, Check, Sparkles } from 'lucide-react'
+import { X, Home, Code, Columns2, Eye, Check, Sparkles, Presentation } from 'lucide-react'
 import { useEditorStore, SaveStatus } from '../stores/editorStore'
 
 interface TabBarProps {
   onNew: () => void
+  onPresent: () => void
 }
 
 
@@ -22,7 +23,7 @@ function StatusDot({ status }: { status: SaveStatus }) {
   return <span className="tab-unsaved-pulse" />
 }
 
-export default function TabBar({ onNew }: TabBarProps) {
+export default function TabBar({ onNew, onPresent }: TabBarProps) {
   const { tabs, activeTabId, switchTab, closeTab, currentTab, markAsSaved, clearJustSaved } = useEditorStore()
   const current = currentTab()
   const [pendingCloseId, setPendingCloseId] = useState<string | null>(null)
@@ -142,6 +143,13 @@ export default function TabBar({ onNew }: TabBarProps) {
             title="预览模式"
           >
             <Eye size={14} /><span>预览</span>
+          </button>
+          <button
+            onClick={onPresent}
+            className="tab-view-btn"
+            title="演示模式 (Ctrl+Alt+P)"
+          >
+            <Presentation size={14} /><span>演示</span>
           </button>
         </div>
       )}

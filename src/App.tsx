@@ -6,6 +6,7 @@ import StatusBar from './components/StatusBar'
 import SettingsModal from './components/SettingsModal'
 import TabBar from './components/TabBar'
 import HomePage from './components/HomePage'
+import Slideshow from './components/Slideshow'
 import { PanelLeftClose, PanelLeft } from 'lucide-react'
 import { invokeTauri } from './lib/tauri'
 import { useSettingsStore } from './stores/settingsStore'
@@ -63,7 +64,7 @@ const openFileDialog = async (): Promise<{ name: string; content: string; filePa
 }
 
 function App() {
-  const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, setField } = useSettingsStore()
+  const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, enabledPlugins, pluginConfigs, setField } = useSettingsStore()
   const {
     activeTabId, currentTab,
     openFile, openNewFile, closeTab, switchTab,
@@ -76,6 +77,7 @@ function App() {
   const [settingsDefaultTab, setSettingsDefaultTab] = useState<string | undefined>(undefined)
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false })
   const [showShortcutsPanel, setShowShortcutsPanel] = useState(false)
+  const [isSlideshow, setIsSlideshow] = useState(false)
   const [currentFolder, setCurrentFolder] = useState<string | null>(null)
   const editorRef = useRef<EditorRef>(null)
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -209,6 +211,7 @@ function App() {
           }
           break
         }
+        case 'presentSlides': startSlideshow(); break
         // 格式化 action：通过 insertMarkdown 注入
         case 'bold': editorRef.current?.insertMarkdown('**', 'wrap'); break
         case 'italic': editorRef.current?.insertMarkdown('*', 'wrap'); break
@@ -474,6 +477,13 @@ function App() {
     setIsSettingsOpen(prev => !prev)
   }, [])
 
+  // 进入演示模式（幻灯片全屏覆盖层）
+  const startSlideshow = useCallback(() => {
+    const tab = useEditorStore.getState().currentTab()
+    if (!tab) return
+    setIsSlideshow(true)
+  }, [])
+
   const handleExport = useCallback(async (format: 'html' | 'md' | 'txt') => {
     const tab = currentTab()
     if (!tab) return
@@ -574,12 +584,13 @@ function App() {
         onExport={(format) => { handleExport(format) }}
         onSearch={handleSearchToggle}
         onSettings={handleSettings}
+        onPresent={startSlideshow}
         isDark={isDark}
         onUndo={() => editorRef.current?.undo()}
         onRedo={() => editorRef.current?.redo()}
       />
       
-      <TabBar onNew={handleNewFile} />
+      <TabBar onNew={handleNewFile} onPresent={startSlideshow} />
       
       <div className="app-body">
         <Sidebar 
@@ -690,6 +701,19 @@ function App() {
         <div className="fixed bottom-12 left-1/2 -translate-x-1/2 px-4 py-2 bg-[var(--editor-text)] text-[var(--editor-bg)] text-sm rounded-lg shadow-lg z-[9999] pointer-events-none transition-opacity duration-300">
           {toast.message}
         </div>
+      )}
+
+      {/* 演示模式：应用内全屏覆盖层 */}
+      {isSlideshow && (
+        <Slideshow
+          content={tab?.content || ''}
+          title={tab?.name || ''}
+          enabledPlugins={enabledPlugins}
+          pluginConfigs={pluginConfigs}
+          currentTheme={currentTheme}
+          isDark={isDark}
+          onExit={() => setIsSlideshow(false)}
+        />
       )}
     </div>
   )

@@ -36,6 +36,7 @@ import {
   FileCode,
   Palette,
   Check,
+  Presentation,
 } from 'lucide-react'
 import WindowControls from './WindowControls'
 import { useSettingsStore } from '../stores/settingsStore'
@@ -51,6 +52,7 @@ interface ToolbarProps {
   onExport: (format: 'html' | 'md' | 'txt') => void
   onSearch: () => void
   onSettings: () => void
+  onPresent: () => void
   isDark: boolean
   onUndo?: () => void
   onRedo?: () => void
@@ -76,7 +78,7 @@ const getTauriWindow = (): WindowCtrl => {
 
 export default function Toolbar({ 
   onNew, onOpen, onSave, onSaveAs, onToggleSidebar, onToggleDark, onUndo, onRedo,
-  onInsertMarkdown, onExport, onSearch, onSettings,
+  onInsertMarkdown, onExport, onSearch, onSettings, onPresent,
   isDark,
 }: ToolbarProps) {
   const [showExportMenu, setShowExportMenu] = useState(false)
@@ -357,6 +359,7 @@ export default function Toolbar({
           onClick={onToggleSidebar} 
           accent
         />
+        <ToolbarButton icon={<Presentation size={16} />} tooltip="演示模式 (Ctrl+Alt+P)" onClick={onPresent} accent />
         <ToolbarButton icon={<Settings size={16} />} tooltip="设置" onClick={onSettings} accent />
         
         {/* 窗口控制按钮 */}

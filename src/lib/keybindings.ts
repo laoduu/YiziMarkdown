@@ -58,6 +58,7 @@ export const SHORTCUT_ACTIONS: ShortcutAction[] = [
   { id: 'showShortcuts', label: '快捷键大全',   defaultKey: 'f1',               category: '视图' },
   { id: 'slashMenu',     label: '斜杠菜单',     defaultKey: 'ins',              category: '视图' },
   { id: 'toggleDevtools', label: '开发者工具',  defaultKey: 'f12',               category: '视图' },
+  { id: 'presentSlides', label: '演示模式',     defaultKey: 'ctrl+alt+p',        category: '视图' },
 ]
 
 /* ------------------------------------------------------------------ */

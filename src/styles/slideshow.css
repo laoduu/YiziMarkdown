@@ -1,0 +1,486 @@
+/* slideshow.css — 演示模式（幻灯片）排版，使用主题 CSS 变量以贴合现有主题 */
+
+.yizi-slideshow {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: var(--editor-bg, #ffffff);
+  color: var(--editor-text, #1f2937);
+  overflow: hidden;
+  font-family: var(--font-sans, sans-serif);
+}
+
+.ys-deck {
+  position: absolute;
+  inset: 0;
+}
+
+.ys-slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 80px;
+  overflow: auto;
+  font-size: clamp(20px, 2.4vw, 32px);
+  line-height: 1.6;
+  text-align: left;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(48px);
+  transition: opacity 0.4s ease, transform 0.4s ease, visibility 0.4s ease;
+}
+
+.ys-slide.ys-active {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+}
+
+.ys-slide.ys-past {
+  transform: translateX(-48px);
+}
+
+/* 幻灯片正文排版 */
+.ys-slide > * {
+  max-width: 960px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ys-slide h1 {
+  font-size: 2.2em;
+  font-weight: 700;
+  margin: 0 0 0.6em;
+  text-align: center;
+  color: var(--editor-text, inherit);
+}
+
+.ys-slide h2 {
+  font-size: 1.7em;
+  font-weight: 600;
+  margin: 0 0 0.5em;
+}
+
+.ys-slide h3 {
+  font-size: 1.35em;
+  font-weight: 600;
+  margin: 0.5em 0 0.3em;
+}
+
+.ys-slide p,
+.ys-slide ul,
+.ys-slide ol,
+.ys-slide blockquote {
+  margin: 0.6em 0;
+}
+
+/* Tailwind preflight 会重置列表符号，这里显式还原 */
+.ys-slide ul {
+  list-style: disc;
+  padding-left: 1.6em;
+}
+
+.ys-slide ol {
+  list-style: decimal;
+  padding-left: 1.6em;
+}
+
+.ys-slide li {
+  margin: 0.25em 0;
+}
+
+.ys-slide li > ul,
+.ys-slide li > ol {
+  margin: 0.2em 0;
+}
+
+.ys-slide li::marker {
+  color: var(--editor-accent, #4f46e5);
+}
+
+.ys-slide input[type="checkbox"] {
+  margin-right: 0.4em;
+}
+
+.ys-slide code {
+  background: var(--editor-surface, rgba(128, 128, 128, 0.15));
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-family: var(--font-mono, monospace);
+}
+
+.ys-slide pre {
+  background: var(--editor-surface, rgba(128, 128, 128, 0.15));
+  padding: 16px 20px;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 0.7em;
+  line-height: 1.5;
+}
+
+.ys-slide pre code {
+  background: transparent;
+  padding: 0;
+  font-size: 1em;
+  display: block;
+}
+
+.ys-slide blockquote {
+  border-left: 4px solid var(--editor-accent, #4f46e5);
+  padding-left: 16px;
+  color: var(--editor-text-muted, inherit);
+  font-style: italic;
+}
+
+.ys-slide table {
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 0.85em;
+  width: 100%;
+}
+
+.ys-slide th,
+.ys-slide td {
+  border: 1px solid var(--editor-border, rgba(128, 128, 128, 0.3));
+  padding: 8px 14px;
+}
+
+.ys-slide th {
+  background: var(--editor-surface, rgba(128, 128, 128, 0.1));
+}
+
+.ys-slide img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.ys-slide a {
+  color: var(--editor-accent, #4f46e5);
+}
+
+.ys-slide hr {
+  border-color: var(--editor-border, rgba(128, 128, 128, 0.3));
+}
+
+.ys-slide .mermaid {
+  display: flex;
+  justify-content: center;
+  margin: 1em 0;
+}
+
+/* HUD */
+.ys-hud {
+  position: fixed;
+  bottom: 16px;
+  right: 24px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--editor-text-muted, rgba(128, 128, 128, 0.8));
+  font-family: var(--font-mono, ui-monospace, monospace);
+  pointer-events: none;
+  z-index: 100;
+}
+
+.ys-pos {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--editor-text, inherit);
+}
+
+.ys-hint {
+  font-size: 11px;
+}
+
+.ys-hud-btn {
+  pointer-events: auto;
+  background: var(--editor-surface, rgba(128, 128, 128, 0.15));
+  border: 1px solid var(--editor-border, rgba(128, 128, 128, 0.3));
+  color: var(--editor-text, inherit);
+  border-radius: 6px;
+  padding: 2px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.ys-hud-btn:hover {
+  background: var(--editor-hover, rgba(128, 128, 128, 0.25));
+}
+
+/* HUD 交互控件（主题/明暗），pointer-events 恢复为 auto */
+.ys-hud-ctrl {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ys-icon-btn {
+  background: var(--editor-surface, rgba(128, 128, 128, 0.15));
+  border: 1px solid var(--editor-border, rgba(128, 128, 128, 0.3));
+  color: var(--editor-text, inherit);
+  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.ys-icon-btn:hover {
+  background: var(--editor-hover, rgba(128, 128, 128, 0.25));
+}
+
+/* 透明点击遮罩（不调暗画面），用于关闭浮层 */
+.ys-dismiss {
+  position: fixed;
+  inset: 0;
+  z-index: 175;
+}
+
+.ys-theme-menu {
+  position: fixed;
+  bottom: 48px;
+  right: 24px;
+  background: var(--editor-surface, #ffffff);
+  border: 1px solid var(--editor-border, rgba(128, 128, 128, 0.3));
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  z-index: 180;
+  padding: 6px 0;
+  min-width: 140px;
+  max-height: 50vh;
+  overflow: auto;
+  pointer-events: auto;
+}
+
+.ys-theme-menu button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--editor-text, inherit);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.ys-theme-menu button:hover {
+  background: var(--editor-hover, rgba(128, 128, 128, 0.12));
+}
+
+.ys-theme-menu button.ys-theme-active {
+  color: var(--editor-accent, #4f46e5);
+  font-weight: 600;
+}
+
+/* 标题（左上角） */
+.ys-title {
+  position: fixed;
+  top: 14px;
+  left: 24px;
+  font-size: 12px;
+  color: var(--editor-text-muted, rgba(128, 128, 128, 0.7));
+  pointer-events: none;
+  z-index: 100;
+  max-width: 60vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 帮助浮层 */
+.ys-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.ys-card {
+  background: var(--editor-surface, #ffffff);
+  color: var(--editor-text, inherit);
+  padding: 28px 36px;
+  border-radius: 12px;
+  max-width: 560px;
+  width: calc(100% - 48px);
+  font-size: 14px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.ys-card h2 {
+  margin: 0 0 16px;
+  font-size: 17px;
+  color: var(--editor-accent, #4f46e5);
+}
+
+.ys-card table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ys-card td {
+  padding: 5px 0;
+  vertical-align: top;
+}
+
+.ys-card td:first-child {
+  color: var(--editor-text-muted, inherit);
+  width: 45%;
+}
+
+.ys-card td:last-child {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+}
+
+.ys-card-foot {
+  margin: 16px 0 0;
+  font-size: 12px;
+  color: var(--editor-text-muted, inherit);
+  border-top: 1px solid var(--editor-border, rgba(128, 128, 128, 0.3));
+  padding-top: 14px;
+  line-height: 1.6;
+}
+
+.ys-card-foot code {
+  background: var(--editor-surface, rgba(128, 128, 128, 0.15));
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+/* 备注面板 */
+.ys-notes-panel {
+  position: fixed;
+  left: 24px;
+  bottom: 16px;
+  width: min(480px, 60vw);
+  background: var(--editor-surface, #ffffff);
+  color: var(--editor-text, inherit);
+  border: 1px solid var(--editor-border, rgba(128, 128, 128, 0.3));
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  z-index: 150;
+  overflow: hidden;
+}
+
+.ys-notes-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--editor-accent, #4f46e5);
+  background: var(--editor-hover, rgba(128, 128, 128, 0.12));
+}
+
+.ys-notes-head button {
+  background: transparent;
+  border: none;
+  color: var(--editor-text-muted, inherit);
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.ys-notes-head button:hover {
+  color: var(--editor-text, inherit);
+}
+
+.ys-notes-body {
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  max-height: 40vh;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+/* ===== 命名布局 ===== */
+/* hero：封面大标题，居中 + 强调色下划线 */
+.ys-layout-hero {
+  justify-content: center;
+}
+.ys-layout-hero h1 {
+  font-size: 3.2em;
+  text-align: center;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+.ys-layout-hero h1::after {
+  content: '';
+  display: block;
+  width: 64px;
+  height: 4px;
+  margin: 0.5em auto 0;
+  border-radius: 2px;
+  background: var(--editor-accent);
+}
+.ys-layout-hero p {
+  text-align: center;
+  font-size: 1.1em;
+  color: var(--editor-text-muted, inherit);
+}
+
+/* divider：分节标题，居中 + 强调色横杠 */
+.ys-layout-divider {
+  justify-content: center;
+  text-align: center;
+}
+.ys-layout-divider h1 {
+  text-align: center;
+  font-size: 2.6em;
+}
+.ys-layout-divider h1::before,
+.ys-layout-divider h1::after {
+  content: '';
+  display: inline-block;
+  width: 24px;
+  height: 3px;
+  margin: 0 16px;
+  vertical-align: middle;
+  background: var(--editor-accent);
+  border-radius: 2px;
+}
+
+/* content：正文，靠左阅读 */
+.ys-layout-content {
+  justify-content: flex-start;
+}
+.ys-layout-content > * {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+/* image：大图居中 */
+.ys-layout-image {
+  justify-content: center;
+}
+
+/* ===== 内容对齐 ===== */
+.ys-align-center { text-align: center; }
+.ys-align-left { text-align: left; }
+.ys-align-right { text-align: right; }
+.ys-align-top { justify-content: flex-start; }
+.ys-align-middle { justify-content: center; }
+.ys-align-bottom { justify-content: flex-end; }

@@ -1,5 +1,28 @@
 # YiziMarkdown 开发日志
 
+## v0.1.9
+
+**演示模式（幻灯片）**
+
+将任意 Markdown 文档按 `---` 分页渲染成**应用内全屏幻灯片**，模拟 PPT 播放，无需导出。参考 solomd 演讲模式的分页思路，围绕 Yizimarkdown 自身产品风格自研轻量引擎。
+
+- **进入演示**：工具栏「放映」按钮、标签栏「演示」按钮、快捷键 `Ctrl+Alt+P`，三种方式均可
+- **分页语法**：`---`（单独成行）横向主页面分页；`--` 纵向子页；代码围栏内不切分；front matter 自动忽略
+- **自研引擎**：零新增依赖，复用 markdown-it + KaTeX + Mermaid 渲染管线，转场/背景/导航用 CSS transition + React 状态实现
+- **跨平台全屏**：Tauri window API 优先、HTML5 Fullscreen 降级（Windows/macOS/Linux 体验一致），退出时自动恢复
+- **主题继承**：进入时继承当前主题与明暗模式，演示内可切换；主题元素级配色（标题/代码/引用等）应用到幻灯片
+- **指令系统**：每页顶部 `<!-- key: value -->` 注释指令，内置 `bg`（颜色/渐变/图片背景）、`layout`（hero/divider/content/image 命名布局）、`align`（内容对齐）、`class`（追加 CSS 类）、`notes`（演讲者备注）；支持自定义指令扩展
+- **front matter 配置**：文档顶部 `slides:` 块配置 `theme`（默认主题）、`defaultLayout`（默认布局）、`splitHorizontal/splitVertical`（可改分页符）、`directives`（自定义指令→类）、`elementMap`（markdown 首元素类型→幻灯片元素的映射）
+- **播放交互**：`→/←` 只在主页面间切换（跳过子页）、`↓/↑` 进入/退出纵向子页、`F` 全屏、`S` 备注、`?` 帮助、`Esc` 退出；右下角页码 HUD
+- **示例与文档**：新增演示模板 `templates/演示模板.md`（含配置与指令示例），`help.md` 补充完整幻灯片语法章节
+
+**Bug 修复**
+
+- 修复 `tauri dev` 启动崩溃（EBUSY）：Vite 监听 cargo 写入中的 `src-tauri/target` 导致文件锁冲突，`server.watch.ignored` 排除 src-tauri
+- 修复幻灯片列表不渲染：Tailwind preflight 重置了 `list-style`，显式还原 `ul/ol` 列表符号
+- 修复 `Esc` 退出不彻底：操作系统截获 Esc 退出全屏时无法收到按键，新增全屏状态丢失检测，退出后恢复打开前视图
+- 修复切换主题文字色不跟随：主题元素级规则作用域为 `.editor-content`，注入时改写为幻灯片作用域
+
 ## v0.1.8
 
 **macOS 支持与跨平台适配**

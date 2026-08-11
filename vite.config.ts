@@ -15,6 +15,10 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
+    // 忽略 src-tauri 与 target，避免 Vite 监听 cargo 写入中的文件导致 EBUSY 崩溃
+    watch: {
+      ignored: ['**/src-tauri/**', '**/target/**'],
+    },
   },
   build: {
     outDir: path.resolve(__dirname, './dist'),

@@ -151,6 +151,168 @@ graph LR
 
 工具栏的图表按钮可快速插入 Mermaid 代码块模板。图表主题可在 设置 → 插件 → Mermaid 配置中切换（默认/深色/森林/中性）。
 
+---
+
+## 演示模式（幻灯片）
+
+把任意 Markdown 文档变成**全屏幻灯片**，模拟 PPT 播放。无需导出，直接播放当前文档。
+
+### 进入演示模式
+
+- 按 `Ctrl+Alt+P`
+- 点击标签栏右侧的「演示」按钮（需处于某个文档中）
+- 点击工具栏右侧的「放映」按钮
+
+进入后自动全屏，按 `Esc` 退出并返回编辑界面。
+
+### 分页语法
+
+幻灯片用**分隔行**切分：
+
+| 语法 | 作用 |
+|------|------|
+| `---`（单独成行） | 横向幻灯片（主页面）分页 |
+| `--`（单独成行） | 同一横向页内的纵向子页（用 ↓ 进入、↑ 退出） |
+
+注意：
+
+- 分隔符必须**单独成行**（前后是空行）
+- 代码围栏（```` ``` ````）内部的 `---` / `--` 属于代码内容，**不会**分页
+- 文档顶部的 front matter（首个 `--- ... ---` 块）会自动忽略，不会成为空白幻灯片
+- **→ / ← 只在主页面之间切换**，会跳过纵向子页；纵向子页作为可选细节，仅在按 ↓ 时展开、按 ↑ 时收起
+
+示例：
+
+```markdown
+# 第一页
+
+这里是内容
+
+---
+
+# 第二页
+
+--
+
+# 第二页的纵向子页
+```
+
+### 背景指令
+
+在幻灯片**顶部**用 HTML 注释设置背景，支持纯色、渐变和图片：
+
+```html
+<!-- bg: #ff9f40 -->
+<!-- bg: linear-gradient(135deg,#667eea,#764ba2) -->
+<!-- bg: ./images/cover.png -->
+```
+
+可选参数：
+
+```html
+<!-- bg-size: cover -->
+<!-- bg-position: center -->
+<!-- bg-opacity: 0.6 -->
+```
+
+- `bg-size`：`cover` / `contain` / `100% 100%` 等，默认 `cover`
+- `bg-position`：`center` / `top left` 等，默认 `center`
+- `bg-opacity`：0~1，仅对图片背景生效
+
+指令行会在渲染时自动移除，不会显示在幻灯片上。
+
+### 布局与对齐指令
+
+用 `layout` 指定整页布局，用 `align` 控制内容对齐：
+
+```html
+<!-- layout: hero -->
+<!-- layout: divider -->
+<!-- layout: content -->
+<!-- layout: image -->
+<!-- align: center -->
+<!-- align: left -->
+<!-- align: top -->
+<!-- align: bottom -->
+```
+
+内置布局：
+
+| 布局 | 效果 |
+|------|------|
+| `hero` | 封面大标题：居中 + 强调色下划线 |
+| `divider` | 分节标题：居中 + 强调色横杠 |
+| `content` | 正文：靠左阅读（默认） |
+| `image` | 大图居中 |
+
+`class` 指令可给本页追加任意 CSS 类：
+
+```html
+<!-- class: my-custom-class another -->
+```
+
+### 自定义指令（directives）
+
+在文档 front matter 的 `slides.directives` 中把自定义指令名映射为 CSS 类。例如定义了 `center: .ys-center` 后，写 `<!-- center -->` 就会给该页加上 `.ys-center` 类（无需冒号值）。
+
+### 幻灯片配置（front matter）
+
+在文档顶部 front matter 中用 `slides:` 块配置整个演示：
+
+```yaml
+---
+slides:
+  theme: vibrant              # 本演示默认主题（可选）
+  defaultLayout: content      # 无 layout 指令时的默认布局
+  splitHorizontal: ---        # 横向分页符（默认 ---）
+  splitVertical: --           # 纵向子页符（默认 --）
+  directives:                 # 自定义指令 -> CSS 类
+    center: .ys-center
+  elementMap:                 # 首块元素类型 -> CSS 类（结构映射）
+    h1: ys-hero
+    img: ys-image-slide
+    blockquote: ys-callout
+---
+```
+
+`elementMap` 按每页「首个元素类型」（`h1`~`h6` / `img` / `code` / `quote` / `table` / `list` / `text`）自动为该页追加对应类，实现「markdown 结构 → 幻灯片元素」的可编辑映射。
+
+### 演讲者备注
+
+在幻灯片任意位置用 HTML 注释书写备注，播放时按 `S` 显示/隐藏：
+
+```html
+<!-- notes: 这一页要强调的重点 -->
+
+<!-- notes
+第一点
+第二点
+-->
+```
+
+备注只显示在左下角面板，不会出现在正片画面上。
+
+### 播放快捷键
+
+| 按键 | 功能 |
+|------|------|
+| → / 空格 / PageDown / Enter | 下一页（主页面） |
+| ← / PageUp / Backspace | 上一页（主页面） |
+| ↑ / ↓ | 纵向子页：↓ 进入 / ↑ 退出 |
+| Home / End | 首页 / 末页 |
+| F | 切换全屏 |
+| S | 显示 / 隐藏演讲者备注 |
+| ? | 显示 / 隐藏快捷键帮助 |
+| Esc | 退出演示 |
+
+### 支持的内容
+
+幻灯片内支持编辑器全部预览能力：标题、列表、表格、引用、行内 / 块级公式（KaTeX）、Mermaid 图表、本地图片等，与预览模式一致（需在 设置 → 插件 中启用对应插件）。
+
+### 演示模板
+
+程序目录 `templates/` 下的 `演示模板.md` 是一个完整的幻灯片示例，涵盖分页、背景、公式、图表、备注等语法。可直接打开后按 `Ctrl+Alt+P` 播放体验，也可作为新幻灯片的起点。
+
 ---## 快捷键
 
 | 快捷键 | 功能 |
