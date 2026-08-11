@@ -20,6 +20,7 @@ desktop.ini
 # Dev artifacts
 output/
 _build_log.txt
+dev.log
 _diag_build.bat
 .solomd/
 .web_builder/
