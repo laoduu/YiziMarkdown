@@ -397,9 +397,21 @@ function App() {
     }
   }, [currentTheme, isDark])
 
-  const handleNewFile = useCallback(() => {
+  const handleNewFile = useCallback(async () => {
     const { defaultTemplate } = useSettingsStore.getState()
-    openNewFile(defaultTemplate || '')
+    if (defaultTemplate) {
+      // 有默认模板：读取模板内容作为新文档结构
+      const content = await invokeTauri<string>('read_template', { name: defaultTemplate })
+      openNewFile(content || '')
+    } else {
+      openNewFile('')
+    }
+  }, [openNewFile])
+
+  // 从指定模板新建文档
+  const handleNewFromTemplate = useCallback(async (templateName: string) => {
+    const content = await invokeTauri<string>('read_template', { name: templateName })
+    openNewFile(content || '')
   }, [openNewFile])
 
   const handleOpenFile = useCallback(async () => {
@@ -575,6 +587,7 @@ function App() {
     <div className="app-container theme-transition">
       <Toolbar 
         onNew={handleNewFile}
+        onNewFromTemplate={handleNewFromTemplate}
         onOpen={handleOpenFile}
         onSave={handleSaveFile}
         onToggleSidebar={() => setSidebarVisible(!sidebarVisible)}

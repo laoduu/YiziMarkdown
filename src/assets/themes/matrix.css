@@ -15,6 +15,9 @@
   --editor-selection: #008a2e;
   --editor-selection-bg: rgba(0, 138, 46, 0.15);
   --editor-cursor: #008a2e;
+  --editor-h1: #008a2e;
+  --editor-h2: #0a9a3a;
+  --editor-h3: #2aaa4a;
   --sidebar-bg: #edf5ed;
   --sidebar-text: #3a7a3a;
   --toolbar-bg: #f5faf5;
@@ -38,6 +41,9 @@
   --editor-selection: #39ff14;
   --editor-selection-bg: rgba(57, 255, 20, 0.25);
   --editor-cursor: #39ff14;
+  --editor-h1: #00ff41;
+  --editor-h2: #00dd38;
+  --editor-h3: #00cc33;
   --sidebar-bg: #000000;
   --sidebar-text: #00b33c;
   --toolbar-bg: #000000;

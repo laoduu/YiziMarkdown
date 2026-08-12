@@ -28,6 +28,9 @@
   --editor-selection-bg: rgba(37, 99, 235, 0.14);
   /* 光标 */
   --editor-cursor: #2563eb;
+  --editor-h1: var(--editor-text);
+  --editor-h2: #1e40af;
+  --editor-h3: #2563eb;
   /* 侧栏：比编辑区稍厚的半透明面板 */
   --sidebar-bg: rgba(235, 245, 255, 0.6);
   /* 侧栏文字 */
@@ -57,6 +60,9 @@
   --editor-selection: #60a5fa;
   --editor-selection-bg: rgba(96, 165, 250, 0.18);
   --editor-cursor: #60a5fa;
+  --editor-h1: #60a5fa;
+  --editor-h2: #93c5fd;
+  --editor-h3: #60a5fa;
   --sidebar-bg: rgba(10, 17, 32, 0.92);
   --sidebar-text: #6b8dc4;
   --toolbar-bg: rgba(12, 18, 34, 0.92);

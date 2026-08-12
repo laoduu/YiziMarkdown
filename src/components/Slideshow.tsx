@@ -1,27 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Sun, Moon, Palette, Check } from 'lucide-react'
 import { renderMarkdown } from '../lib/markdownRenderer'
 import { extendMarkdownIt, postRender as pluginPostRender } from '../plugins/registry'
-import { parseSlidesConfig, splitSlides, extractSlide, detectElementType } from '../lib/slides'
+import { stripFrontMatter, splitSlides, extractNotes, detectSlideKind, type SlideKind } from '../lib/slides'
 import { enterFullscreen, exitFullscreen, toggleFullscreen } from '../lib/fullscreen'
 import '../styles/slideshow.css'
 
 interface Slide {
   html: string
-  bg?: string
-  bgIsImage?: boolean
-  bgSize?: string
-  bgPosition?: string
-  bgOpacity?: string
   notes: string
-  /** 布局指令（hero/divider/content/image 等），未指定时为 defaultLayout */
-  layout?: string
-  /** 对齐指令（center/left/right/top/middle/bottom） */
-  align?: string
-  /** class 指令 + 自定义指令追加的类 */
-  extraClasses: string[]
-  /** elementMap 按首块元素类型映射的类 */
-  elementClass?: string
+  kind: SlideKind
 }
 
 interface SlideshowProps {
@@ -34,26 +22,6 @@ interface SlideshowProps {
   onExit: () => void
 }
 
-/** 将背景指令转为 section 的 inline style */
-function backgroundStyle(slide: Slide): CSSProperties | undefined {
-  if (!slide.bg) return undefined
-  if (slide.bgIsImage) {
-    let image = `url(${slide.bg})`
-    if (slide.bgOpacity) {
-      const o = Number(slide.bgOpacity)
-      const alpha = Number.isFinite(o) ? Math.max(0, Math.min(1, o)) : 1
-      image = `linear-gradient(rgba(0,0,0,${1 - alpha}), rgba(0,0,0,${1 - alpha})), ${image}`
-    }
-    return {
-      backgroundImage: image,
-      backgroundSize: slide.bgSize || 'cover',
-      backgroundPosition: slide.bgPosition || 'center',
-      backgroundRepeat: 'no-repeat',
-    }
-  }
-  return { background: slide.bg }
-}
-
 export default function Slideshow({
   content,
   title,
@@ -64,11 +32,10 @@ export default function Slideshow({
   onExit,
 }: SlideshowProps) {
   const [h, setH] = useState(0)
-  const [v, setV] = useState(0)
   const [showHelp, setShowHelp] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
-  // 主题/明暗：进入时继承应用当前设定，文档 front matter 可指定默认主题；可在演示内切换（仅本次播放生效）
-  const [theme, setTheme] = useState(() => parseSlidesConfig(content).config.theme || currentTheme)
+  // 主题/明暗：进入时继承应用当前设定；可在演示内切换（仅本次播放生效）
+  const [theme, setTheme] = useState(currentTheme)
   const [dark, setDark] = useState(isDark)
   const [themes, setThemes] = useState<string[]>([])
   const [themeMeta, setThemeMeta] = useState<Record<string, { name: string }>>({})
@@ -88,44 +55,20 @@ export default function Slideshow({
     return exts
   }, [enabledPlugins, pluginConfigs])
 
-  const deck: Slide[][] = useMemo(() => {
-    const { config, rest } = parseSlidesConfig(content)
-    const groups = splitSlides(rest, config.splitHorizontal, config.splitVertical)
-    return groups.map((stack) =>
-      stack.map((slideSrc) => {
-        const meta = extractSlide(slideSrc, config.directives)
-        const elementClass = config.elementMap?.[detectElementType(meta.body)]
-        return {
-          html: renderMarkdown(meta.body, pluginExtenders),
-          bg: meta.bg,
-          bgIsImage: meta.bgIsImage,
-          bgSize: meta.bgSize,
-          bgPosition: meta.bgPosition,
-          bgOpacity: meta.bgOpacity,
-          notes: meta.notes,
-          layout: meta.layout || config.defaultLayout,
-          align: meta.align,
-          extraClasses: meta.extraClasses,
-          elementClass,
-        }
-      })
-    )
+  // 纯 markdown → 幻灯片：`---` 分页 + 自动版式推断
+  const slides: Slide[] = useMemo(() => {
+    const body = stripFrontMatter(content)
+    return splitSlides(body).map((src) => {
+      const { body: b, notes } = extractNotes(src)
+      return { html: renderMarkdown(b, pluginExtenders), notes, kind: detectSlideKind(b) }
+    })
   }, [content, pluginExtenders])
 
-  const total = deck.reduce((n, s) => n + s.length, 0)
-  const cur = deck[h]?.[v]
-  // 扁平序号：之前的横向页所有子页数 + 当前横向页内序号 + 1
-  const flatIndex = deck.slice(0, h).reduce((n, s) => n + s.length, 0) + v + 1
+  const total = slides.length
+  const cur = slides[h]
 
-  // 翻页逻辑：→/← 只在主（横向）页之间前进/后退，跳过纵向子页；
-  // 纵向子页仅由 ↑/↓ 进入与退出（作为可选细节展示）。
-  const next = useCallback(() => {
-    if (h < deck.length - 1) { setH(h + 1); setV(0) }
-  }, [deck, h])
-
-  const prev = useCallback(() => {
-    if (h > 0) { setH(h - 1); setV(0) }
-  }, [deck, h])
+  const next = useCallback(() => setH((x) => Math.min(x + 1, slides.length - 1)), [slides.length])
+  const prev = useCallback(() => setH((x) => Math.max(x - 1, 0)), [])
 
   // 统一退出：退出全屏后关闭演示，回到打开前的编辑视图
   const requestExit = useCallback(() => {
@@ -143,14 +86,8 @@ export default function Slideshow({
     if (['ArrowLeft', 'PageUp', 'Backspace'].includes(k)) {
       e.preventDefault(); prev(); return
     }
-    if (k === 'ArrowDown' || k === 'ArrowUp') {
-      e.preventDefault()
-      if (k === 'ArrowDown') setV((vv) => Math.min(vv + 1, deck[h].length - 1))
-      else setV((vv) => Math.max(vv - 1, 0))
-      return
-    }
-    if (k === 'Home') { e.preventDefault(); setH(0); setV(0); return }
-    if (k === 'End') { e.preventDefault(); setH(deck.length - 1); setV(0); return }
+    if (k === 'Home') { e.preventDefault(); setH(0); return }
+    if (k === 'End') { e.preventDefault(); setH(slides.length - 1); return }
     if (k === 'f' || k === 'F') {
       e.preventDefault()
       toggleIntentRef.current = true
@@ -172,7 +109,7 @@ export default function Slideshow({
       if (showHelp) { setShowHelp(false); return }
       requestExit()
     }
-  }, [deck, h, next, prev, requestExit, showHelp])
+  }, [next, prev, slides.length, requestExit, showHelp])
 
   useEffect(() => {
     window.addEventListener('keydown', onKey)
@@ -180,6 +117,7 @@ export default function Slideshow({
   }, [onKey])
 
   // 进入时尝试全屏；卸载时退出全屏
+  // enterFullscreen() 已内建处理窗口最大化状态（先取消最大化再进全屏）
   useEffect(() => {
     enterFullscreen().then((ok) => { if (ok) hadFullscreenRef.current = true })
     return () => { exitFullscreen() }
@@ -227,30 +165,28 @@ export default function Slideshow({
     }).catch(() => {})
   }, [])
 
-  // 主题变更时注入对应主题 CSS。
-  // 主题文件把变量定义在 :root.theme-xxx 上（即 <html>），而幻灯片把 theme-xxx
-  // 类加在根 div 上；这里把 :root.theme-* 改写为 .yizi-slideshow.theme-*，
-  // 使变量作用到幻灯片根节点（保留 .dark 变体以使用当前主题的暗色方案）。
-  // 同时把 .editor-content.theme-* 的元素级配色/排版规则改写为
-  // .yizi-slideshow.theme-*，让标题/代码/引用等跟随主题色（裸容器规则因
-  // 幻灯片无 .editor-content 类而自然不生效，避免 max-width 缩窄根节点）。
+  // 主题继承：只取主题 CSS 的 :root.theme-* 变量定义块，改写为
+  // .yizi-slideshow.theme-*，使配色变量（含 --editor-h1/h2/h3）作用到幻灯片根节点
+  // （保留 .dark 变体以使用暗色方案）。
+  // 丢弃所有元素规则（.theme-x h1 / .editor-content.theme-x 等），因为部分主题用
+  // 未加作用域的选择器（如 .theme-lychee h1）会漏进幻灯片覆盖版式字号/对齐；
+  // 幻灯片的字号/对齐/居中一律由 slideshow.css 控制，配色仅通过 CSS 变量继承。
   useEffect(() => {
     const tauri = (window as any).__TAURI_INTERNALS__
     if (!tauri?.invoke) return
     tauri.invoke('read_theme_css', { name: `${theme}.css` }).then((themeCss: string) => {
       if (!themeCss) return
-      const processed = themeCss
+      const vars = themeCss
+        .split('}')
+        .filter((part) => /^[^{}]*:root\.theme-/.test(part.slice(0, part.indexOf('{'))))
+        .join('}')
         .replace(
           /:root\.theme-[a-zA-Z0-9_-]+(\.dark)?/g,
-          (_m, dark?: string) => `.yizi-slideshow.theme-${theme}${dark || ''}`
-        )
-        .replace(
-          /\.editor-content\.theme-[a-zA-Z0-9_-]+(?=\s+[.#a-zA-Z])/g,
-          `.yizi-slideshow.theme-${theme}`
+          (_m, darkVariant?: string) => `.yizi-slideshow.theme-${theme}${darkVariant || ''}`
         )
       let el = document.getElementById('yizimarkdown-slideshow-theme-css')
       if (!el) { el = document.createElement('style'); el.id = 'yizimarkdown-slideshow-theme-css'; document.head.appendChild(el) }
-      el.textContent = processed
+      el.textContent = vars
     }).catch(() => {})
   }, [theme])
 
@@ -278,38 +214,31 @@ export default function Slideshow({
         .then((dataUrl: string) => img.setAttribute('src', dataUrl))
         .catch(() => {})
     })
-  }, [deck, enabledPlugins, pluginConfigs])
+  }, [slides, enabledPlugins, pluginConfigs])
 
   return (
     <div className={`yizi-slideshow theme-${theme}${dark ? ' dark' : ''}`}>
       <div className="ys-deck" ref={deckRef}>
-        {deck.map((stack, hi) =>
-          stack.map((slide, vi) => {
-            const active = hi === h && vi === v
-            const past = hi < h || (hi === h && vi < v)
-            const classes = ['ys-slide']
-            if (active) classes.push('ys-active')
-            if (past) classes.push('ys-past')
-            else classes.push('ys-future')
-            if (slide.layout) classes.push(`ys-layout-${slide.layout}`)
-            if (slide.align) classes.push(`ys-align-${slide.align}`)
-            if (slide.elementClass) classes.push(slide.elementClass)
-            classes.push(...slide.extraClasses)
-            return (
-              <section
-                key={`${hi}-${vi}`}
-                className={classes.join(' ')}
-                style={backgroundStyle(slide)}
-                dangerouslySetInnerHTML={{ __html: slide.html }}
-              />
-            )
-          })
-        )}
+        {slides.map((slide, i) => {
+          const active = i === h
+          const past = i < h
+          const classes = ['ys-slide', `ys-kind-${slide.kind}`]
+          if (active) classes.push('ys-active')
+          if (past) classes.push('ys-past')
+          else classes.push('ys-future')
+          return (
+            <section
+              key={i}
+              className={classes.join(' ')}
+              dangerouslySetInnerHTML={{ __html: slide.html }}
+            />
+          )
+        })}
       </div>
 
       {/* HUD */}
       <div className="ys-hud">
-        <span className="ys-pos">{total === 0 ? 0 : flatIndex} / {total}</span>
+        <span className="ys-pos">{total === 0 ? 0 : h + 1} / {total}</span>
         {cur?.notes && (
           <button className="ys-hud-btn" onClick={() => setShowNotes((x) => !x)}>备注</button>
         )}
@@ -362,9 +291,8 @@ export default function Slideshow({
             <h2>幻灯片快捷键</h2>
             <table>
               <tbody>
-                <tr><td>下一页</td><td>→ 空格 PageDown Enter（只切主页面）</td></tr>
-                <tr><td>上一页</td><td>← PageUp Backspace（只切主页面）</td></tr>
-                <tr><td>纵向子页</td><td>↓ 进入 / ↑ 退出</td></tr>
+                <tr><td>下一页</td><td>→ 空格 PageDown Enter</td></tr>
+                <tr><td>上一页</td><td>← PageUp Backspace</td></tr>
                 <tr><td>首页 / 末页</td><td>Home / End</td></tr>
                 <tr><td>全屏切换</td><td>F</td></tr>
                 <tr><td>演讲者备注</td><td>S</td></tr>
@@ -373,9 +301,8 @@ export default function Slideshow({
               </tbody>
             </table>
             <p className="ys-card-foot">
-              幻灯片用 <code>---</code> 分页（横向主页面）、<code>--</code>（纵向子页）。
-              →/← 只在主页面间切换，子页用 ↓/↑ 进入退出。
-              背景指令：<code>&lt;!-- bg: #颜色|渐变|图片 --&gt;</code>；
+              纯 Markdown 即幻灯片：用 <code>---</code>（单独成行）分页，
+              版式由引擎按每页结构自动推断，配色继承当前主题。
               备注：<code>&lt;!-- notes: 内容 --&gt;</code>。
             </p>
           </div>

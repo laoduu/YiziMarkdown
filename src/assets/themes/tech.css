@@ -9,6 +9,9 @@
   --editor-selection: #2b6cb0;
   --editor-selection-bg: rgba(43, 108, 176, 0.25);
   --editor-cursor: #2b6cb0;
+  --editor-h1: var(--editor-text);
+  --editor-h2: var(--editor-text);
+  --editor-h3: var(--editor-text);
   --sidebar-bg: #e8edf2;
   --sidebar-text: #4a5568;
   --toolbar-bg: #f7fafc;
@@ -32,6 +35,9 @@
   --editor-selection: #58a6ff;
   --editor-selection-bg: rgba(88, 166, 255, 0.35);
   --editor-cursor: #58a6ff;
+  --editor-h1: #58a6ff;
+  --editor-h2: #58a6ff;
+  --editor-h3: #58a6ff;
   --sidebar-bg: #0d1117;
   --sidebar-text: #8b949e;
   --toolbar-bg: #161b22;

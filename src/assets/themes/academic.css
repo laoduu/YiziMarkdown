@@ -36,6 +36,9 @@
 
   /* 光标颜色：输入时竖线的颜色 */
   --editor-cursor: #002FA7;
+  --editor-h1: #002FA7;
+  --editor-h2: #1a3a7a;
+  --editor-h3: #2a4a9a;
 
   /* 侧栏（大纲/文件浏览）背景色 */
   --sidebar-bg: #F0F7FF;
@@ -99,6 +102,9 @@
 
   /* 光标色 */
   --editor-cursor: #5a7ce3;
+  --editor-h1: #5a7ce3;
+  --editor-h2: #5a7ce3;
+  --editor-h3: #5a7ce3;
 
   /* 侧栏背景：比编辑区略深，形成层次 */
   --sidebar-bg: #111827;

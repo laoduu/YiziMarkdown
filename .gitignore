@@ -25,6 +25,8 @@ _diag_build.bat
 .solomd/
 .web_builder/
 tauri-build.log
+tauri-dev.log
+tauri-dev.log.err
 .mimocode/
 
 # 分发产物

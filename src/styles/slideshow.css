@@ -1,13 +1,14 @@
-/* slideshow.css — 演示模式（幻灯片）排版，使用主题 CSS 变量以贴合现有主题 */
+/* slideshow.css — 演示模式（幻灯片）。纯 markdown → 自动版式，配色继承主题 CSS 变量。 */
 
+/* ===== 容器 ===== */
 .yizi-slideshow {
   position: fixed;
   inset: 0;
   z-index: 10000;
   background: var(--editor-bg, #ffffff);
   color: var(--editor-text, #1f2937);
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif);
   overflow: hidden;
-  font-family: var(--font-sans, sans-serif);
 }
 
 .ys-deck {
@@ -20,107 +21,168 @@
   inset: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
-  padding: 60px 80px;
+  padding: 8vh 9vw;
   overflow: auto;
-  font-size: clamp(20px, 2.4vw, 32px);
-  line-height: 1.6;
-  text-align: left;
+  font-size: clamp(18px, 2.1vw, 30px);
+  line-height: 1.7;
+  text-align: center;
   opacity: 0;
   visibility: hidden;
-  transform: translateX(48px);
-  transition: opacity 0.4s ease, transform 0.4s ease, visibility 0.4s ease;
+  transform: translateY(28px) scale(0.99);
+  transition: opacity 0.45s ease, transform 0.45s ease, visibility 0.45s ease;
 }
 
 .ys-slide.ys-active {
   opacity: 1;
   visibility: visible;
-  transform: translateX(0);
+  transform: none;
 }
 
 .ys-slide.ys-past {
-  transform: translateX(-48px);
+  transform: translateY(-28px);
 }
 
-/* 幻灯片正文排版 */
+.ys-slide.ys-future {
+  transform: translateY(28px);
+}
+
+/* 正文块宽度：块在页面中居中；文字默认居中，列表/引用/表格内保持左对齐 */
 .ys-slide > * {
-  max-width: 960px;
+  max-width: 66rem;
   width: 100%;
   margin-left: auto;
   margin-right: auto;
 }
 
+/* ===== 基础排版：标题一律居中，仅字号区分层级，颜色继承主题 ===== */
 .ys-slide h1 {
-  font-size: 2.2em;
+  font-size: 2.4em;
   font-weight: 700;
-  margin: 0 0 0.6em;
+  letter-spacing: -0.02em;
   text-align: center;
-  color: var(--editor-text, inherit);
+  color: var(--editor-h1, var(--editor-accent, #4f46e5));
+  margin: 0 0 0.6em;
 }
 
 .ys-slide h2 {
-  font-size: 1.7em;
-  font-weight: 600;
+  font-size: 1.9em;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-align: center;
+  color: var(--editor-h2, var(--editor-accent, #4f46e5));
   margin: 0 0 0.5em;
 }
 
 .ys-slide h3 {
-  font-size: 1.35em;
+  font-size: 1.5em;
   font-weight: 600;
-  margin: 0.5em 0 0.3em;
+  text-align: center;
+  color: var(--editor-h3, var(--editor-accent, #4f46e5));
+  margin: 0.8em 0 0.4em;
+}
+
+.ys-slide h4 {
+  font-size: 1.15em;
+  font-weight: 600;
+  text-align: center;
+  margin: 0.8em 0 0.4em;
 }
 
 .ys-slide p,
 .ys-slide ul,
 .ys-slide ol,
 .ys-slide blockquote {
-  margin: 0.6em 0;
+  margin: 0.7em 0;
 }
 
-/* Tailwind preflight 会重置列表符号，这里显式还原 */
+/* 列表/引用：块居中，内容左对齐（段落、标题等默认居中） */
+.ys-slide ul,
+.ys-slide ol,
+.ys-slide blockquote {
+  text-align: left;
+}
+
+/* 列表：统一用 CSS 计数器 + ::before 自定义标记，确保无序/有序文本起始位置完全一致 */
+.ys-slide ul,
+.ys-slide ol {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.7em 0;
+}
+
 .ys-slide ul {
-  list-style: disc;
-  padding-left: 1.6em;
+  padding-left: 0;
 }
 
 .ys-slide ol {
-  list-style: decimal;
-  padding-left: 1.6em;
+  counter-reset: slide-ol;
 }
 
 .ys-slide li {
-  margin: 0.25em 0;
+  position: relative;
+  padding-left: 1.5em;
+  margin: 0.55em 0;
+}
+
+/* 无序列表：主题强调色圆点 */
+.ys-slide ul li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.68em;
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 50%;
+  background: var(--editor-accent, #4f46e5);
+}
+
+/* 有序列表：主题强调色数字，位置与圆点对齐 */
+.ys-slide ol li {
+  counter-increment: slide-ol;
+}
+
+.ys-slide ol li::before {
+  content: counter(slide-ol) ".";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1.2em;
+  color: var(--editor-accent, #4f46e5);
+  font-weight: 600;
 }
 
 .ys-slide li > ul,
 .ys-slide li > ol {
-  margin: 0.2em 0;
-}
-
-.ys-slide li::marker {
-  color: var(--editor-accent, #4f46e5);
+  margin: 0.25em 0;
 }
 
 .ys-slide input[type="checkbox"] {
-  margin-right: 0.4em;
+  margin-right: 0.45em;
 }
 
+/* 代码 */
 .ys-slide code {
-  background: var(--editor-surface, rgba(128, 128, 128, 0.15));
-  padding: 0.1em 0.35em;
-  border-radius: 4px;
+  background: color-mix(in srgb, var(--editor-accent, #4f46e5) 10%, var(--editor-surface, rgba(128, 128, 128, 0.12)));
+  color: var(--editor-accent, #4f46e5);
+  padding: 0.12em 0.5em;
+  border: 1px solid color-mix(in srgb, var(--editor-accent, #4f46e5) 30%, transparent);
+  border-radius: 6px;
   font-size: 0.85em;
-  font-family: var(--font-mono, monospace);
+  font-weight: 500;
+  font-family: var(--font-mono, ui-monospace, 'SF Mono', Consolas, monospace);
 }
 
 .ys-slide pre {
-  background: var(--editor-surface, rgba(128, 128, 128, 0.15));
-  padding: 16px 20px;
-  border-radius: 8px;
+  background: var(--editor-surface, rgba(128, 128, 128, 0.12));
+  border: 1px solid var(--editor-border, rgba(128, 128, 128, 0.2));
+  padding: 1.4em 1.6em;
+  border-radius: 12px;
   overflow-x: auto;
-  font-size: 0.7em;
-  line-height: 1.5;
+  font-size: 0.72em;
+  line-height: 1.6;
+  text-align: left;   /* 代码块居中，内部内容左对齐 */
 }
 
 .ys-slide pre code {
@@ -128,53 +190,181 @@
   padding: 0;
   font-size: 1em;
   display: block;
+  border: none;
+  font-weight: 400;
 }
 
+/* 引用 */
 .ys-slide blockquote {
   border-left: 4px solid var(--editor-accent, #4f46e5);
-  padding-left: 16px;
+  padding: 0.15em 0 0.15em 1.2em;
   color: var(--editor-text-muted, inherit);
-  font-style: italic;
 }
 
+/* 表格 */
 .ys-slide table {
   border-collapse: collapse;
+  width: 100%;
   margin: 1em 0;
   font-size: 0.85em;
-  width: 100%;
 }
 
 .ys-slide th,
 .ys-slide td {
-  border: 1px solid var(--editor-border, rgba(128, 128, 128, 0.3));
-  padding: 8px 14px;
+  border: 1px solid var(--editor-border, rgba(128, 128, 128, 0.25));
+  padding: 0.6em 1em;
+  text-align: left;
 }
 
 .ys-slide th {
-  background: var(--editor-surface, rgba(128, 128, 128, 0.1));
+  background: var(--editor-surface, rgba(128, 128, 128, 0.08));
+  font-weight: 600;
 }
 
+/* 图片 / 链接 / 分隔线 / 图表 / 公式 */
 .ys-slide img {
   max-width: 100%;
   height: auto;
-  border-radius: 6px;
+  border-radius: 12px;
+  box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.35);
 }
 
 .ys-slide a {
   color: var(--editor-accent, #4f46e5);
+  text-decoration: none;
+}
+
+.ys-slide a:hover {
+  text-decoration: underline;
 }
 
 .ys-slide hr {
-  border-color: var(--editor-border, rgba(128, 128, 128, 0.3));
+  border: none;
+  border-top: 1px solid var(--editor-border, rgba(128, 128, 128, 0.25));
 }
 
 .ys-slide .mermaid {
   display: flex;
   justify-content: center;
-  margin: 1em 0;
+  margin: 1.5em 0;
 }
 
-/* HUD */
+.ys-slide .katex-display {
+  margin: 1.5em 0;
+  overflow-x: auto;
+}
+
+/* ===== 自动版式（按首块结构推断） ===== */
+
+/* title：一级标题开头的封面强调，整页居中 */
+.ys-kind-title {
+  justify-content: center;
+}
+
+.ys-kind-title h1 {
+  font-size: clamp(2.8em, 6vw, 4.5em);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
+  margin: 0 0 0.4em;
+}
+
+.ys-kind-title h1::after {
+  content: '';
+  display: block;
+  width: 88px;
+  height: 4px;
+  border-radius: 2px;
+  margin: 0.55em auto 0;
+  background: linear-gradient(90deg, var(--editor-accent, #4f46e5), transparent);
+}
+
+.ys-kind-title p {
+  font-size: 1.12em;
+  color: var(--editor-text-muted, inherit);
+  max-width: 42rem;
+  margin: 0.35em auto 0;
+}
+
+.ys-kind-title p code {
+  font-size: 0.85em;
+}
+
+/* content：正文，顶部对齐（标题位置稳定）+ 文字居中、列表左对齐 */
+.ys-kind-content {
+  justify-content: flex-start;
+  padding-top: 16vh;
+}
+
+/* image：大图居中 */
+.ys-kind-image {
+  justify-content: center;
+}
+
+.ys-kind-image > * {
+  max-width: none;
+}
+
+.ys-kind-image img {
+  max-height: 76vh;
+  width: auto;
+  max-width: 100%;
+}
+
+/* quote：独立引用，大引号 + 居中大字，简洁大气 */
+.ys-kind-quote {
+  justify-content: center;
+}
+
+.ys-kind-quote blockquote {
+  border: none;
+  padding: 0;
+  text-align: left;
+  font-size: 1.7em;
+  line-height: 1.6;
+  font-weight: 500;
+  font-style: normal;
+  color: var(--editor-text, inherit);
+  max-width: 44rem;
+}
+
+.ys-kind-quote blockquote::before {
+  content: '“';
+  display: block;
+  font-size: 6em;
+  line-height: 0.5;
+  margin-bottom: 0.35em;
+  color: var(--editor-accent, #4f46e5);
+  opacity: 0.5;
+}
+
+.ys-kind-quote blockquote p {
+  margin: 0.4em 0;
+}
+
+/* code：代码聚焦 */
+.ys-kind-code {
+  justify-content: center;
+}
+
+.ys-kind-code > * {
+  max-width: 72rem;
+}
+
+.ys-kind-code pre {
+  font-size: 0.8em;
+}
+
+/* chart：图表居中 */
+.ys-kind-chart {
+  justify-content: center;
+}
+
+.ys-kind-chart > * {
+  max-width: 72rem;
+}
+
+/* ===== HUD ===== */
 .ys-hud {
   position: fixed;
   bottom: 16px;
@@ -198,6 +388,7 @@
 
 .ys-hint {
   font-size: 11px;
+  opacity: 0.7;
 }
 
 .ys-hud-btn {
@@ -305,7 +496,7 @@
   white-space: nowrap;
 }
 
-/* 帮助浮层 */
+/* ===== 帮助浮层 ===== */
 .ys-overlay {
   position: fixed;
   inset: 0;
@@ -368,7 +559,7 @@
   border-radius: 3px;
 }
 
-/* 备注面板 */
+/* ===== 备注面板 ===== */
 .ys-notes-panel {
   position: fixed;
   left: 24px;
@@ -415,72 +606,3 @@
   overflow: auto;
   white-space: pre-wrap;
 }
-
-/* ===== 命名布局 ===== */
-/* hero：封面大标题，居中 + 强调色下划线 */
-.ys-layout-hero {
-  justify-content: center;
-}
-.ys-layout-hero h1 {
-  font-size: 3.2em;
-  text-align: center;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
-}
-.ys-layout-hero h1::after {
-  content: '';
-  display: block;
-  width: 64px;
-  height: 4px;
-  margin: 0.5em auto 0;
-  border-radius: 2px;
-  background: var(--editor-accent);
-}
-.ys-layout-hero p {
-  text-align: center;
-  font-size: 1.1em;
-  color: var(--editor-text-muted, inherit);
-}
-
-/* divider：分节标题，居中 + 强调色横杠 */
-.ys-layout-divider {
-  justify-content: center;
-  text-align: center;
-}
-.ys-layout-divider h1 {
-  text-align: center;
-  font-size: 2.6em;
-}
-.ys-layout-divider h1::before,
-.ys-layout-divider h1::after {
-  content: '';
-  display: inline-block;
-  width: 24px;
-  height: 3px;
-  margin: 0 16px;
-  vertical-align: middle;
-  background: var(--editor-accent);
-  border-radius: 2px;
-}
-
-/* content：正文，靠左阅读 */
-.ys-layout-content {
-  justify-content: flex-start;
-}
-.ys-layout-content > * {
-  margin-left: 0;
-  margin-right: auto;
-}
-
-/* image：大图居中 */
-.ys-layout-image {
-  justify-content: center;
-}
-
-/* ===== 内容对齐 ===== */
-.ys-align-center { text-align: center; }
-.ys-align-left { text-align: left; }
-.ys-align-right { text-align: right; }
-.ys-align-top { justify-content: flex-start; }
-.ys-align-middle { justify-content: center; }
-.ys-align-bottom { justify-content: flex-end; }

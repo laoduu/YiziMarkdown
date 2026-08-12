@@ -27,6 +27,9 @@
   --editor-selection-bg: rgba(114, 9, 183, 0.25);
   /* 光标颜色：输入时竖线的颜色 */
   --editor-cursor: #7209B7;
+  --editor-h1: #7209B7;
+  --editor-h2: #5f0899;
+  --editor-h3: #4e077e;
   /* 侧栏（大纲/文件浏览）背景色 */
   --sidebar-bg: #f4eafb;
   /* 侧栏文字色：柔紫色，用于大纲标题、文件名、Tab 未激活文字等辅助信息 */
@@ -70,6 +73,9 @@
   --editor-selection-bg: rgba(167, 92, 240, 0.35);
   /* 光标色 */
   --editor-cursor: #a75cf0;
+  --editor-h1: #c084fc;
+  --editor-h2: #a855f7;
+  --editor-h3: #9333ea;
   /* 侧栏背景：比编辑区略深，形成层次 */
   --sidebar-bg: #1b1228;
   /* 侧栏文字色：浅紫调 */

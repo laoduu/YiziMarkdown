@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { 
   FileText,
+  FilePlus2,
   SaveAll, 
   FolderOpen, 
   Save,
@@ -43,6 +44,7 @@ import { useSettingsStore } from '../stores/settingsStore'
 
 interface ToolbarProps {
   onNew: () => void
+  onNewFromTemplate: (templateName: string) => void
   onOpen: () => void
   onSave: () => void
   onSaveAs: () => void
@@ -77,13 +79,17 @@ const getTauriWindow = (): WindowCtrl => {
 }
 
 export default function Toolbar({ 
-  onNew, onOpen, onSave, onSaveAs, onToggleSidebar, onToggleDark, onUndo, onRedo,
+  onNew, onNewFromTemplate, onOpen, onSave, onSaveAs, onToggleSidebar, onToggleDark, onUndo, onRedo,
   onInsertMarkdown, onExport, onSearch, onSettings, onPresent,
   isDark,
 }: ToolbarProps) {
   const [showExportMenu, setShowExportMenu] = useState(false)
   const [exportMenuPos, setExportMenuPos] = useState<{top: number; left: number}>({top: 0, left: 0})
   const exportBtnRef = useRef<HTMLDivElement>(null)
+  const [showTemplateMenu, setShowTemplateMenu] = useState(false)
+  const [templateMenuPos, setTemplateMenuPos] = useState({top: 0, left: 0})
+  const templateBtnRef = useRef<HTMLDivElement>(null)
+  const [templates, setTemplates] = useState<string[]>([])
   const [showTablePicker, setShowTablePicker] = useState(false)
   const [tablePickerPos, setTablePickerPos] = useState({top: 0, left: 0})
   const [tablePickerSize, setTablePickerSize] = useState({rows: 0, cols: 0})
@@ -96,18 +102,20 @@ export default function Toolbar({
   const [themeFiles, setThemeFiles] = useState<string[]>([])
   const [themeMeta, setThemeMeta] = useState<Record<string, { name: string }>>({})
 
-  // 动态加载主题列表和元信息
+  // 动态加载主题列表和元信息 + 模板列表
   useEffect(() => {
     const load = async () => {
       try {
         const tauri = (window as any).__TAURI_INTERNALS__
         if (tauri && typeof tauri.invoke === 'function') {
-          const [files, json] = await Promise.all([
+          const [files, json, tmpl] = await Promise.all([
             tauri.invoke('list_themes') as Promise<string[]>,
             tauri.invoke('read_theme_json') as Promise<string>,
+            tauri.invoke('list_templates') as Promise<string[]>,
           ])
           if (files) setThemeFiles(files)
           try { setThemeMeta(JSON.parse(json || '{}')) } catch {}
+          if (tmpl) setTemplates(tmpl)
         }
       } catch {}
     }
@@ -137,6 +145,44 @@ export default function Toolbar({
       <div className="flex items-center gap-px overflow-hidden min-w-0 flex-1">
         <span className="text-[15px] font-extrabold tracking-tight text-[var(--editor-accent)] select-none mr-1.5 shrink-0">YiziMarkdown</span>
         <ToolbarButton icon={<FileText size={16} />} tooltip="新建 (Ctrl+N)" onClick={onNew} accent />
+        <div className="relative" ref={templateBtnRef}>
+          <ToolbarButton 
+            icon={<FilePlus2 size={16} />} 
+            tooltip="从模板新建" 
+            onClick={() => {
+              if (templateBtnRef.current) {
+                const rect = templateBtnRef.current.getBoundingClientRect()
+                setTemplateMenuPos({ top: rect.bottom + 4, left: rect.left })
+              }
+              setShowTemplateMenu(!showTemplateMenu)
+            }} 
+            accent
+          />
+          {showTemplateMenu && (
+            <>
+              <div 
+                className="fixed inset-0 z-40" 
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => setShowTemplateMenu(false)}
+              />
+              <div 
+                className="fixed py-1 w-52 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50 max-h-80 overflow-auto"
+                style={{ top: templateMenuPos.top, left: templateMenuPos.left }}
+              >
+                {templates.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-[var(--editor-text-muted)]">暂无模板</div>
+                ) : templates.map((name) => (
+                  <ExportMenuItem 
+                    key={name} 
+                    icon={<FileTextIcon size={14} />} 
+                    label={name.replace(/\.md$/, '')} 
+                    onClick={() => { onNewFromTemplate(name); setShowTemplateMenu(false); }} 
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
         <ToolbarButton icon={<FolderOpen size={16} />} tooltip="打开 (Ctrl+O)" onClick={onOpen} accent />
         <ToolbarButton icon={<Save size={16} />} tooltip="保存 (Ctrl+S)" onClick={onSave} accent />
         <ToolbarButton icon={<SaveAll size={16} />} tooltip="另存为" onClick={onSaveAs} accent />
