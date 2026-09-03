@@ -27,7 +27,7 @@
   overflow: auto;
   font-size: clamp(18px, 2.1vw, 30px);
   line-height: 1.7;
-  text-align: center;
+  text-align: left;
   opacity: 0;
   visibility: hidden;
   transform: translateY(28px) scale(0.99);
@@ -48,7 +48,7 @@
   transform: translateY(28px);
 }
 
-/* 正文块宽度：块在页面中居中；文字默认居中，列表/引用/表格内保持左对齐 */
+/* 正文块宽度：块在页面中居中；文字默认左对齐，列表/引用/表格内保持左对齐 */
 .ys-slide > * {
   max-width: 66rem;
   width: 100%;
@@ -56,12 +56,12 @@
   margin-right: auto;
 }
 
-/* ===== 基础排版：标题一律居中，仅字号区分层级，颜色继承主题 ===== */
+/* ===== 基础排版：标题左对齐，仅字号区分层级，颜色继承主题（居中类版式另行覆盖） ===== */
 .ys-slide h1 {
   font-size: 2.4em;
   font-weight: 700;
   letter-spacing: -0.02em;
-  text-align: center;
+  text-align: left;
   color: var(--editor-h1, var(--editor-accent, #4f46e5));
   margin: 0 0 0.6em;
 }
@@ -70,7 +70,7 @@
   font-size: 1.9em;
   font-weight: 650;
   letter-spacing: -0.01em;
-  text-align: center;
+  text-align: left;
   color: var(--editor-h2, var(--editor-accent, #4f46e5));
   margin: 0 0 0.5em;
 }
@@ -78,7 +78,7 @@
 .ys-slide h3 {
   font-size: 1.5em;
   font-weight: 600;
-  text-align: center;
+  text-align: left;
   color: var(--editor-h3, var(--editor-accent, #4f46e5));
   margin: 0.8em 0 0.4em;
 }
@@ -86,7 +86,7 @@
 .ys-slide h4 {
   font-size: 1.15em;
   font-weight: 600;
-  text-align: center;
+  text-align: left;
   margin: 0.8em 0 0.4em;
 }
 
@@ -254,22 +254,26 @@
   overflow-x: auto;
 }
 
-/* ===== 自动版式（按首块结构推断） ===== */
+/* ===== 自动版式（整页结构推断，见 slides.ts detectLayout） =====
+   标题默认左对齐（基础排版），居中类版式（cover/section/thanks/agenda/quote）单独覆盖 */
 
-/* title：一级标题开头的封面强调，整页居中 */
-.ys-kind-title {
+/* ---- 封面页：整体垂直居中，大标题 + 渐变下划线 + meta 行 ----
+   使用直接子元素选择器：真实封面（h1 开头）与强制版式（任意内容）同样生效 */
+.ys-layout-cover {
   justify-content: center;
+  text-align: center;
 }
 
-.ys-kind-title h1 {
+.ys-layout-cover > :first-child {
   font-size: clamp(2.8em, 6vw, 4.5em);
   font-weight: 800;
   letter-spacing: -0.035em;
   line-height: 1.12;
+  text-align: center;
   margin: 0 0 0.4em;
 }
 
-.ys-kind-title h1::after {
+.ys-layout-cover > :first-child::after {
   content: '';
   display: block;
   width: 88px;
@@ -279,89 +283,491 @@
   background: linear-gradient(90deg, var(--editor-accent, #4f46e5), transparent);
 }
 
-.ys-kind-title p {
+.ys-layout-cover > :not(:first-child):not(.ys-cover-meta) {
   font-size: 1.12em;
   color: var(--editor-text-muted, inherit);
   max-width: 42rem;
   margin: 0.35em auto 0;
 }
 
-.ys-kind-title p code {
+.ys-layout-cover > :not(:first-child):not(.ys-cover-meta) code {
   font-size: 0.85em;
 }
 
-/* content：正文，顶部对齐（标题位置稳定）+ 文字居中、列表左对齐 */
-.ys-kind-content {
-  justify-content: flex-start;
-  padding-top: 16vh;
+.ys-cover-meta {
+  margin-top: 2.2em;
+  font-size: 0.8em;
+  color: var(--editor-text-muted, inherit);
+  letter-spacing: 0.02em;
 }
 
-/* image：大图居中 */
-.ys-kind-image {
+/* ---- 章节过渡页：大序号 + 标题居中 ---- */
+.ys-layout-section {
+  justify-content: center;
+  text-align: center;
+}
+
+.ys-layout-section::before {
+  content: attr(data-num);
+  display: block;
+  font-size: clamp(3em, 10vw, 6em);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--editor-accent, #4f46e5);
+  opacity: 0.35;
+  margin-bottom: 0.35em;
+}
+
+.ys-layout-section > :first-child {
+  font-size: clamp(2em, 4.5vw, 3em);
+  font-weight: 700;
+  text-align: center;
+  margin: 0;
+}
+
+.ys-layout-section > :first-child::after {
+  content: '';
+  display: block;
+  width: 64px;
+  height: 4px;
+  border-radius: 2px;
+  margin: 0.5em auto 0;
+  background: var(--editor-accent, #4f46e5);
+}
+
+/* ---- 结尾页：谢谢观看，居中大字 ---- */
+.ys-layout-thanks {
+  justify-content: center;
+  text-align: center;
+}
+
+.ys-layout-thanks > :first-child {
+  font-size: clamp(2.6em, 6vw, 4em);
+  font-weight: 800;
+  text-align: center;
+  margin: 0 0 0.4em;
+}
+
+.ys-layout-thanks > :first-child::after {
+  content: '';
+  display: block;
+  width: 88px;
+  height: 4px;
+  border-radius: 2px;
+  margin: 0.55em auto 0;
+  background: linear-gradient(90deg, var(--editor-accent, #4f46e5), transparent);
+}
+
+.ys-layout-thanks > :not(:first-child) {
+  font-size: 1.1em;
+  color: var(--editor-text-muted, inherit);
+}
+
+/* ---- 目录页：大号数字编号，横向排列 ---- */
+.ys-layout-agenda {
+  justify-content: center;
+  text-align: center;
+}
+
+.ys-layout-agenda ol {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.4em 3em;
+  list-style: none;
+  padding: 0;
+  margin: 0 auto;
+  max-width: 56rem;
+  counter-reset: ys-agenda;
+}
+
+.ys-layout-agenda li {
+  counter-increment: ys-agenda;
+  position: relative;
+  padding-left: 2.6em;
+  text-align: left;
+  font-size: 1.05em;
+  font-weight: 550;
+  margin: 0;
+}
+
+.ys-layout-agenda li::before {
+  content: counter(ys-agenda);
+  position: absolute;
+  left: 0;
+  top: -0.18em;
+  font-size: 1.6em;
+  font-weight: 800;
+  color: var(--editor-accent, #4f46e5);
+  opacity: 0.85;
+}
+
+/* ---- 内容页：标题左上 + 强调下划线，正文左对齐 ---- */
+.ys-layout-content {
+  justify-content: flex-start;
+  padding-top: 10vh;
+}
+
+.ys-layout-content > * {
+  margin-left: 0;
+}
+
+.ys-layout-content h2 {
+  font-size: 2em;
+  position: relative;
+  padding-bottom: 0.45em;
+}
+
+.ys-layout-content h2::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 72px;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--editor-accent, #4f46e5), transparent);
+}
+
+.ys-layout-content p,
+.ys-layout-content li {
+  max-width: 58rem;
+}
+
+/* ---- 列表内容页：标题左上，列表强调 ---- */
+.ys-layout-content-list {
+  justify-content: flex-start;
+  padding-top: 10vh;
+}
+
+.ys-layout-content-list h2 {
+  font-size: 1.9em;
+  position: relative;
+  padding-bottom: 0.45em;
+}
+
+.ys-layout-content-list h2::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 72px;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--editor-accent, #4f46e5), transparent);
+}
+
+.ys-layout-content-list ul,
+.ys-layout-content-list ol {
+  font-size: 1.08em;
+  max-width: 54rem;
+}
+
+/* ---- 数据表页：标题左上，表格强调表头 ---- */
+.ys-layout-table {
+  justify-content: flex-start;
+  padding-top: 10vh;
+}
+
+.ys-layout-table h2 {
+  font-size: 1.9em;
+  position: relative;
+  padding-bottom: 0.45em;
+}
+
+.ys-layout-table h2::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 72px;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--editor-accent, #4f46e5), transparent);
+}
+
+.ys-layout-table th {
+  background: var(--editor-accent, #4f46e5);
+  color: var(--editor-bg, #ffffff);
+}
+
+.ys-layout-table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--editor-accent, #4f46e5) 6%, transparent);
+}
+
+/* ---- 路线图页：任务列表大勾选 ---- */
+.ys-layout-roadmap {
+  justify-content: flex-start;
+  padding-top: 10vh;
+}
+
+.ys-layout-roadmap h2 {
+  font-size: 1.9em;
+  position: relative;
+  padding-bottom: 0.45em;
+}
+
+.ys-layout-roadmap h2::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 72px;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--editor-accent, #4f46e5), transparent);
+}
+
+.ys-layout-roadmap ul {
+  font-size: 1.08em;
+  max-width: 50rem;
+}
+
+.ys-layout-roadmap input[type="checkbox"] {
+  width: 1.15em;
+  height: 1.15em;
+  accent-color: var(--editor-accent, #4f46e5);
+}
+
+/* ---- 图文页：图左文右双栏 ---- */
+.ys-layout-figure {
+  justify-content: center;
+  display: grid;
+  grid-template-columns: minmax(0, 45fr) minmax(0, 55fr);
+  gap: 2.5vw;
+  align-items: center;
+  width: 100%;
+}
+
+.ys-layout-figure > * {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+}
+
+.ys-layout-figure > *:first-child {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.ys-layout-figure > *:not(:first-child) {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.ys-layout-figure > :first-child img {
+  max-height: 64vh;
+  width: auto;
+  max-width: 100%;
+}
+
+.ys-layout-figure h2 {
+  font-size: 1.9em;
+  position: relative;
+  padding-bottom: 0.45em;
+  margin-bottom: 0.6em;
+}
+
+.ys-layout-figure h2::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 72px;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--editor-accent, #4f46e5), transparent);
+}
+
+/* ---- 图片页：大图居中 ---- */
+.ys-layout-image {
   justify-content: center;
 }
 
-.ys-kind-image > * {
+.ys-layout-image > * {
   max-width: none;
 }
 
-.ys-kind-image img {
+.ys-layout-image img {
   max-height: 76vh;
   width: auto;
   max-width: 100%;
 }
 
-/* quote：独立引用，大引号 + 居中大字，简洁大气 */
-.ys-kind-quote {
+/* ---- 引用页（金句页）：内容上下居中 + 对角大引号装饰 ----
+   使用直接子元素选择器：真实引用（blockquote）与强制版式（任意内容）同样生效。
+   上引号定位在文本块左上角外侧（右下角贴文案左上角），
+   下引号定位在文本块右下角外侧（左上角贴文案右下角）。 */
+.ys-layout-quote {
   justify-content: center;
+  text-align: center;
+  /* 大引号定位在文本块对角外侧，需留出空间且不被滚动容器裁剪 */
+  overflow: visible;
+  padding: 8vh 11vw 14vh;
 }
 
-.ys-kind-quote blockquote {
+/* 去掉 blockquote 默认左边竖线、边距与灰化色（基础规则特异性更高，需显式覆盖） */
+.ys-layout-quote blockquote {
   border: none;
   padding: 0;
+  margin: 0;
+  color: var(--editor-text, inherit);
+}
+
+.ys-layout-quote > * {
   text-align: left;
   font-size: 1.7em;
   line-height: 1.6;
   font-weight: 500;
   font-style: normal;
   color: var(--editor-text, inherit);
-  max-width: 44rem;
+  max-width: 56rem;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.ys-kind-quote blockquote::before {
+/* 上引号：位于首块左上角外侧，右下角紧贴文案左上角 */
+.ys-layout-quote > :first-child {
+  position: relative;
+}
+
+.ys-layout-quote > :first-child::before {
   content: '“';
-  display: block;
+  position: absolute;
+  right: 100%;
+  bottom: calc(100% - 0.35em);
+  font-family: Georgia, 'Times New Roman', serif;
   font-size: 6em;
-  line-height: 0.5;
-  margin-bottom: 0.35em;
+  line-height: 1;
   color: var(--editor-accent, #4f46e5);
-  opacity: 0.5;
+  opacity: 0.35;
+  user-select: none;
+  pointer-events: none;
 }
 
-.ys-kind-quote blockquote p {
+/* 下引号：位于末块右下角外侧，左上角紧贴文案右下角 */
+.ys-layout-quote > :last-child {
+  position: relative;
+}
+
+.ys-layout-quote > :last-child::after {
+  content: '”';
+  position: absolute;
+  left: 100%;
+  top: 100%;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 6em;
+  line-height: 1;
+  color: var(--editor-accent, #4f46e5);
+  opacity: 0.35;
+  user-select: none;
+  pointer-events: none;
+}
+
+.ys-layout-quote > * p {
   margin: 0.4em 0;
 }
 
-/* code：代码聚焦 */
-.ys-kind-code {
+/* ---- 代码页：代码聚焦 ---- */
+.ys-layout-code {
   justify-content: center;
 }
 
-.ys-kind-code > * {
+.ys-layout-code > * {
   max-width: 72rem;
 }
 
-.ys-kind-code pre {
+.ys-layout-code pre {
   font-size: 0.8em;
 }
 
-/* chart：图表居中 */
-.ys-kind-chart {
+/* ---- 图表页：图表居中 ---- */
+.ys-layout-chart {
   justify-content: center;
 }
 
-.ys-kind-chart > * {
+.ys-layout-chart > * {
   max-width: 72rem;
+}
+
+/* ---- 公式页：公式居中放大 ---- */
+.ys-layout-formula {
+  justify-content: center;
+  text-align: center;
+}
+
+.ys-layout-formula .katex-display {
+  font-size: 1.6em;
+  margin: 1.5em 0;
+  overflow-x: auto;
+}
+
+/* ===== 对齐覆盖（<!-- align: left|center|right -->） ===== */
+.ys-align-center {
+  text-align: center;
+}
+
+.ys-align-center h1,
+.ys-align-center h2,
+.ys-align-center h3,
+.ys-align-center h4 {
+  text-align: center;
+}
+
+.ys-align-right {
+  text-align: right;
+}
+
+.ys-align-right h1,
+.ys-align-right h2,
+.ys-align-right h3,
+.ys-align-right h4 {
+  text-align: right;
+}
+
+.ys-align-right ul,
+.ys-align-right ol {
+  text-align: right;
+  padding-left: 0;
+  padding-right: 1.5em;
+}
+
+.ys-align-right ul li::before,
+.ys-align-right ol li::before {
+  left: auto;
+  right: 0;
+}
+
+/* ===== 页脚（章节名 + 页码）与进度条 ===== */
+.ys-footer {
+  position: fixed;
+  bottom: 14px;
+  left: 24px;
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+  font-size: 12px;
+  color: var(--editor-text-muted, rgba(128, 128, 128, 0.8));
+  font-family: var(--font-mono, ui-monospace, monospace);
+  pointer-events: none;
+  z-index: 100;
+  max-width: 70vw;
+}
+
+.ys-chapter {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 45vw;
+}
+
+.ys-progress {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--editor-accent, #4f46e5), color-mix(in srgb, var(--editor-accent, #4f46e5) 40%, transparent));
+  transition: width 0.35s ease;
+  z-index: 100;
 }
 
 /* ===== HUD ===== */

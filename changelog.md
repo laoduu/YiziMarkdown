@@ -1,5 +1,27 @@
 # YiziMarkdown 开发日志
 
+## v0.1.10
+
+**幻灯片版式系统升级（整页结构 → 14 种自动版式）**
+
+在 v0.1.9 的纯 Markdown 演示模式基础上，将版式推断从「只看首块」升级为「分析整页块结构」，补齐 PPT 常见版式，观感全面接近专业幻灯片。
+
+- **整页结构推断**：不再只看页面第一块，而是分析整页的标题层级、块类型与组合方式，自动选择最合适的版式
+- **14 种自动版式**：
+  - `cover` 封面页（`#` 标题 + 副标题段落，居中大标题 + 渐变下划线）
+  - `section` 章节过渡页（`##` 单独成页，大号序号 + 居中标题）
+  - `thanks` 结尾页（`# 谢谢/Thanks/Q&A`，居中收尾）
+  - `agenda` 目录页（`## 目录` + 有序列表，大号数字双列网格）
+  - `content` 内容页（标题左上 + 强调下划线，正文左对齐）
+  - `content-list` 列表页、`table` 数据表页（表头主题色 + 斑马纹）、`roadmap` 路线图页（大号勾选框）
+  - `figure` 图文页（左图右文双栏）、`image` 图片页、`quote` 金句页、`code` 代码页、`chart` 图表页、`formula` 公式页
+- **金句页重设计**：去掉左侧竖线；内容上下居中；大引号改为对角装饰——上引号定位在文案左上角外侧、下引号定位在右下角外侧（6em、35% 透明度）
+- **封面 meta**：front matter 提供 `author`/`date` 时，封面页底部自动显示「作者 · 日期」
+- **显式指令**：`<!-- layout: xxx -->` 强制指定版式、`<!-- align: left|center|right -->` 整页对齐，覆盖自动推断（HTML 注释，渲染不可见）
+- **装饰层**：左下角章节名 + 页码页脚，底部主题色进度条随翻页增长
+- **鼠标滚轮翻页**：内容可滚动时先滚动内容，滚到上/下边界再翻页；翻页后短暂锁定防惯性连翻
+- **文档更新**：`docs/slideshow-style-mapping.md` 重写为整页结构对照表，`Slide-Template.md` 模板覆盖全部新版式
+
 ## v0.1.9
 
 **演示模式（幻灯片）**
@@ -35,29 +57,6 @@
 - 修复无序/有序列表内容宽度不一致：统一用 CSS 计数器 + `::before` 自定义标记
 - 修复最大化窗口进入全屏底部黑条：先 `unmaximize` 再 HTML5 Fullscreen
 - 修复 F 键全屏切换失灵：Tauri `set_fullscreen(false)` 在 borderless 窗口静默失败，改用 HTML5 Fullscreen API
-
-## v0.1.9
-
-**演示模式（幻灯片）**
-
-将任意 Markdown 文档按 `---` 分页渲染成**应用内全屏幻灯片**，模拟 PPT 播放，无需导出。参考 solomd 演讲模式的分页思路，围绕 Yizimarkdown 自身产品风格自研轻量引擎。
-
-- **进入演示**：工具栏「放映」按钮、标签栏「演示」按钮、快捷键 `Ctrl+Alt+P`，三种方式均可
-- **分页语法**：`---`（单独成行）横向主页面分页；`--` 纵向子页；代码围栏内不切分；front matter 自动忽略
-- **自研引擎**：零新增依赖，复用 markdown-it + KaTeX + Mermaid 渲染管线，转场/背景/导航用 CSS transition + React 状态实现
-- **跨平台全屏**：Tauri window API 优先、HTML5 Fullscreen 降级（Windows/macOS/Linux 体验一致），退出时自动恢复
-- **主题继承**：进入时继承当前主题与明暗模式，演示内可切换；主题元素级配色（标题/代码/引用等）应用到幻灯片
-- **指令系统**：每页顶部 `<!-- key: value -->` 注释指令，内置 `bg`（颜色/渐变/图片背景）、`layout`（hero/divider/content/image 命名布局）、`align`（内容对齐）、`class`（追加 CSS 类）、`notes`（演讲者备注）；支持自定义指令扩展
-- **front matter 配置**：文档顶部 `slides:` 块配置 `theme`（默认主题）、`defaultLayout`（默认布局）、`splitHorizontal/splitVertical`（可改分页符）、`directives`（自定义指令→类）、`elementMap`（markdown 首元素类型→幻灯片元素的映射）
-- **播放交互**：`→/←` 只在主页面间切换（跳过子页）、`↓/↑` 进入/退出纵向子页、`F` 全屏、`S` 备注、`?` 帮助、`Esc` 退出；右下角页码 HUD
-- **示例与文档**：新增演示模板 `templates/Slide-Template.md`（含配置与指令示例），`help.md` 补充完整幻灯片语法章节
-
-**Bug 修复**
-
-- 修复 `tauri dev` 启动崩溃（EBUSY）：Vite 监听 cargo 写入中的 `src-tauri/target` 导致文件锁冲突，`server.watch.ignored` 排除 src-tauri
-- 修复幻灯片列表不渲染：Tailwind preflight 重置了 `list-style`，显式还原 `ul/ol` 列表符号
-- 修复 `Esc` 退出不彻底：操作系统截获 Esc 退出全屏时无法收到按键，新增全屏状态丢失检测，退出后恢复打开前视图
-- 修复切换主题文字色不跟随：主题元素级规则作用域为 `.editor-content`，注入时改写为幻灯片作用域
 
 ## v0.1.8
 

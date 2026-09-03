@@ -2,14 +2,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Sun, Moon, Palette, Check } from 'lucide-react'
 import { renderMarkdown } from '../lib/markdownRenderer'
 import { extendMarkdownIt, postRender as pluginPostRender } from '../plugins/registry'
-import { stripFrontMatter, splitSlides, extractNotes, detectSlideKind, type SlideKind } from '../lib/slides'
+import {
+  stripFrontMatter, parseFrontMatter, splitSlides, extractNotes, extractDirectives,
+  detectLayout, type SlideKind, type SlideLayout,
+} from '../lib/slides'
 import { enterFullscreen, exitFullscreen, toggleFullscreen } from '../lib/fullscreen'
 import '../styles/slideshow.css'
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
 
 interface Slide {
   html: string
   notes: string
   kind: SlideKind
+  title?: string
+  align?: 'left' | 'center' | 'right'
 }
 
 interface SlideshowProps {
@@ -55,17 +64,44 @@ export default function Slideshow({
     return exts
   }, [enabledPlugins, pluginConfigs])
 
-  // 纯 markdown → 幻灯片：`---` 分页 + 自动版式推断
+  // 纯 markdown → 幻灯片：`---` 分页 + 整页结构自动版式推断
   const slides: Slide[] = useMemo(() => {
+    const meta = parseFrontMatter(content)
     const body = stripFrontMatter(content)
     return splitSlides(body).map((src) => {
       const { body: b, notes } = extractNotes(src)
-      return { html: renderMarkdown(b, pluginExtenders), notes, kind: detectSlideKind(b) }
+      const { body: b2, directives } = extractDirectives(b)
+      const layout: SlideLayout = detectLayout(b2)
+      const kind = directives.layout || layout.kind
+      let html = renderMarkdown(b2, pluginExtenders)
+      // 封面页：拼接 front matter 提供的作者/日期 meta 行
+      if (kind === 'cover' && (meta.author || meta.date)) {
+        const metaLine = [meta.author, meta.date].filter(Boolean).join(' · ')
+        html += `<div class="ys-cover-meta">${escapeHtml(metaLine)}</div>`
+      }
+      return { html, notes, kind, title: layout.title, align: directives.align }
     })
   }, [content, pluginExtenders])
 
   const total = slides.length
   const cur = slides[h]
+
+  // 章节标记：封面/章节页的标题作为其后续页的章节名，供页脚展示；章节页带序号
+  const { chapter, sectionNums } = useMemo(() => {
+    const nums: number[] = []
+    let sec = 0
+    for (const s of slides) {
+      if (s.kind === 'section') sec += 1
+      nums.push(s.kind === 'section' ? sec : 0)
+    }
+    // 当前页所属章节 = 从第 0 页到第 h 页中最后一个封面/章节页的标题
+    let curChapter = title || ''
+    for (let i = 0; i <= h; i++) {
+      const s = slides[i]
+      if (s && (s.kind === 'cover' || s.kind === 'section') && s.title) curChapter = s.title
+    }
+    return { chapter: curChapter, sectionNums: nums }
+  }, [slides, h, title])
 
   const next = useCallback(() => setH((x) => Math.min(x + 1, slides.length - 1)), [slides.length])
   const prev = useCallback(() => setH((x) => Math.max(x - 1, 0)), [])
@@ -115,6 +151,46 @@ export default function Slideshow({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onKey])
+
+  // 鼠标滚轮：内容可滚动时先滚内容，滚到上/下边界再翻页；翻页后短暂锁定防惯性连翻
+  const wheelLockRef = useRef(false)
+  useEffect(() => {
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) < 8) return
+      const deck = deckRef.current
+      const active = deck?.querySelector<HTMLElement>('.ys-slide.ys-active')
+      if (!active) return
+      const canScroll = active.scrollHeight > active.clientHeight + 4
+      const atTop = active.scrollTop <= 4
+      const atBottom = active.scrollTop + active.clientHeight >= active.scrollHeight - 4
+      if (e.deltaY > 0) {
+        // 向下：内容未滚到底 → 滚动内容；到底 → 下一页
+        if (canScroll && !atBottom) {
+          e.preventDefault()
+          active.scrollBy(0, e.deltaY)
+          return
+        }
+        if (wheelLockRef.current) return
+        wheelLockRef.current = true
+        e.preventDefault()
+        next()
+      } else {
+        // 向上：内容未滚到顶 → 滚动内容；到顶 → 上一页
+        if (canScroll && !atTop) {
+          e.preventDefault()
+          active.scrollBy(0, e.deltaY)
+          return
+        }
+        if (wheelLockRef.current) return
+        wheelLockRef.current = true
+        e.preventDefault()
+        prev()
+      }
+      setTimeout(() => { wheelLockRef.current = false }, 400)
+    }
+    window.addEventListener('wheel', onWheel, { passive: false })
+    return () => window.removeEventListener('wheel', onWheel)
+  }, [next, prev])
 
   // 进入时尝试全屏；卸载时退出全屏
   // enterFullscreen() 已内建处理窗口最大化状态（先取消最大化再进全屏）
@@ -222,7 +298,8 @@ export default function Slideshow({
         {slides.map((slide, i) => {
           const active = i === h
           const past = i < h
-          const classes = ['ys-slide', `ys-kind-${slide.kind}`]
+          const classes = ['ys-slide', `ys-layout-${slide.kind}`]
+          if (slide.align) classes.push(`ys-align-${slide.align}`)
           if (active) classes.push('ys-active')
           if (past) classes.push('ys-past')
           else classes.push('ys-future')
@@ -230,15 +307,22 @@ export default function Slideshow({
             <section
               key={i}
               className={classes.join(' ')}
+              data-num={sectionNums[i] || undefined}
               dangerouslySetInnerHTML={{ __html: slide.html }}
             />
           )
         })}
       </div>
 
+      {/* 页脚：章节名 + 页码 + 进度条 */}
+      <div className="ys-footer">
+        <span className="ys-chapter">{chapter}</span>
+        <span className="ys-pos">{total === 0 ? 0 : h + 1} / {total}</span>
+      </div>
+      <div className="ys-progress" style={{ width: `${total ? ((h + 1) / total) * 100 : 0}%` }} />
+
       {/* HUD */}
       <div className="ys-hud">
-        <span className="ys-pos">{total === 0 ? 0 : h + 1} / {total}</span>
         {cur?.notes && (
           <button className="ys-hud-btn" onClick={() => setShowNotes((x) => !x)}>备注</button>
         )}
