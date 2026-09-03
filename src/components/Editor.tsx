@@ -17,6 +17,7 @@ import SlashMenu from './SlashMenu'
 import { renderMarkdown } from '../lib/markdownRenderer'
 import { extendMarkdownIt, postRender as pluginPostRender } from '../plugins/registry'
 import { invokeTauri } from '../lib/tauri'
+import { resolveLocalImageSrc } from '../lib/localImages'
 
 // const markdownHighlight = HighlightStyle.define([
 //   // 标题
@@ -206,16 +207,13 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
     imgs.forEach((img) => {
       const src = img.getAttribute('src')
       if (!src || src.startsWith('http') || src.startsWith('data:') || src.startsWith('asset://')) return
-      // 判断是否为本地路径（含盘符或以 / 开头）
-      const isLocal = /^[A-Za-z]:\\/.test(src) || /^[A-Za-z]:\//.test(src) || src.startsWith('/')
-      if (!isLocal) return
-
-      const normalized = src.replace(/\\/g, '/')
-      tauri.invoke('read_image_base64', { path: normalized })
-        .then((dataUrl: string) => {
-          img.setAttribute('src', dataUrl)
-        })
-        .catch(() => {})
+      resolveLocalImageSrc(src).then((path) => {
+        if (!path) return
+        return tauri.invoke('read_image_base64', { path })
+          .then((dataUrl: string) => {
+            img.setAttribute('src', dataUrl)
+          })
+      }).catch(() => {})
     })
   }, [renderedHtml])
 

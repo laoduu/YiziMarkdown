@@ -7,6 +7,7 @@ import {
   detectLayout, type SlideKind, type SlideLayout,
 } from '../lib/slides'
 import { enterFullscreen, exitFullscreen, toggleFullscreen } from '../lib/fullscreen'
+import { resolveLocalImageSrc } from '../lib/localImages'
 import '../styles/slideshow.css'
 
 function escapeHtml(s: string): string {
@@ -283,12 +284,11 @@ export default function Slideshow({
     container.querySelectorAll('img').forEach((img) => {
       const src = img.getAttribute('src')
       if (!src || src.startsWith('http') || src.startsWith('data:') || src.startsWith('asset://')) return
-      const isLocal = /^[A-Za-z]:\\/.test(src) || /^[A-Za-z]:\//.test(src) || src.startsWith('/')
-      if (!isLocal) return
-      const normalized = src.replace(/\\/g, '/')
-      tauri.invoke('read_image_base64', { path: normalized })
-        .then((dataUrl: string) => img.setAttribute('src', dataUrl))
-        .catch(() => {})
+      resolveLocalImageSrc(src).then((path) => {
+        if (!path) return
+        return tauri.invoke('read_image_base64', { path })
+          .then((dataUrl: string) => img.setAttribute('src', dataUrl))
+      }).catch(() => {})
     })
   }, [slides, enabledPlugins, pluginConfigs])
 
