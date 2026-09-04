@@ -6,21 +6,25 @@ let mermaidModule: any = null
 export const mermaidPlugin: EditorPlugin = {
   id: 'mermaid',
   name: 'Mermaid 图表',
+  nameKey: 'settings.pluginMermaidName',
   description: '使用 Mermaid.js 渲染流程图、时序图、甘特图等图表',
+  descriptionKey: 'settings.pluginMermaidDesc',
 
   configFields: [
     {
       key: 'theme',
       label: '主题',
+      labelKey: 'settings.pluginMermaidTheme',
       type: 'select',
       options: [
-        { value: 'default', label: '默认' },
-        { value: 'dark', label: '深色' },
-        { value: 'forest', label: '森林' },
-        { value: 'neutral', label: '中性' },
+        { value: 'default', label: '默认', labelKey: 'settings.pluginMermaidThemeDefault' },
+        { value: 'dark', label: '深色', labelKey: 'settings.pluginMermaidThemeDark' },
+        { value: 'forest', label: '森林', labelKey: 'settings.pluginMermaidThemeForest' },
+        { value: 'neutral', label: '中性', labelKey: 'settings.pluginMermaidThemeNeutral' },
       ],
       defaultValue: 'default',
       hint: 'Mermaid 图表的配色主题',
+      hintKey: 'settings.pluginMermaidThemeHint',
     },
   ],
 

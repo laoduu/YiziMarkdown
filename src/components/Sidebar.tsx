@@ -9,6 +9,7 @@ import {
   Hash,
   FileCode,
 } from 'lucide-react'
+import { useI18n } from '../i18n'
 
 interface SidebarProps {
   visible: boolean
@@ -71,6 +72,7 @@ async function fetchDirectory(folderPath: string): Promise<FileNode[]> {
 }
 
 export default function Sidebar({ visible, currentFile, currentFolder, content, onFileSelect, onFolderChange, onNavigateToLine, activeHeadingId }: SidebarProps) {
+  const { t } = useI18n()
   const [activeTab, setActiveTab] = useState<'files' | 'outline'>('outline')
   const [fileTree, setFileTree] = useState<FileNode[]>([])
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
@@ -148,13 +150,13 @@ export default function Sidebar({ visible, currentFile, currentFolder, content, 
           active={activeTab === 'files'} 
           onClick={() => setActiveTab('files')}
           icon={<Folder size={14} />}
-          label="文件"
+          label={t('sidebar.files')}
         />
         <TabButton 
           active={activeTab === 'outline'} 
           onClick={() => setActiveTab('outline')}
           icon={<Hash size={14} />}
-          label="大纲"
+          label={t('sidebar.outline')}
         />
       </div>
 
@@ -172,7 +174,7 @@ export default function Sidebar({ visible, currentFile, currentFolder, content, 
             {fileTree.length === 0 ? (
               <div className="py-8 px-4 text-center text-sm text-[var(--sidebar-text)]">
                 <Folder size={24} className="mx-auto mb-2 opacity-30" />
-                <p>打开文件后显示目录</p>
+                <p>{t('sidebar.showAfterOpen')}</p>
               </div>
             ) : (
               <div className="py-1">
@@ -198,6 +200,7 @@ export default function Sidebar({ visible, currentFile, currentFolder, content, 
 
 // 目录导航栏：显示当前路径 + 上级按钮
 function FolderPathNav({ currentFolder, onGoUp }: { currentFolder: string | null; onGoUp: () => void }) {
+  const { t } = useI18n()
   if (!currentFolder) return null
 
   const canGoUp = currentFolder.length > 3 // 大于 "C:\"
@@ -216,7 +219,7 @@ function FolderPathNav({ currentFolder, onGoUp }: { currentFolder: string | null
             : 'opacity-30 cursor-default'
           }
         `}
-        title="上级目录"
+        title={t('sidebar.parentDir')}
       >
         <ChevronUp size={14} />
         <span>..</span>
@@ -261,6 +264,7 @@ interface FileNodeItemProps {
 function FileNodeItem({ 
   node, currentFile, expandedFolders, onToggleFolder, onFileSelect, depth 
 }: FileNodeItemProps) {
+  const { t } = useI18n()
   const isExpanded = expandedFolders.has(node.path)
   const isSelected = currentFile === node.path
 
@@ -322,7 +326,7 @@ function FileNodeItem({
           className="py-1 px-2 text-xs text-[var(--sidebar-text)] opacity-50 italic"
           style={{ paddingLeft: `${(depth + 1) * 12 + 8}px` }}
         >
-          空文件夹
+          {t('sidebar.emptyFolder')}
         </div>
       )}
     </div>
@@ -330,10 +334,11 @@ function FileNodeItem({
 }
 
 function OutlineView({ items, onNavigate, activeHeadingId }: { items: Array<{ level: number; text: string; id: string; line: number }>; onNavigate?: (target: { id: string; line: number }) => void; activeHeadingId?: string | null }) {
+  const { t } = useI18n()
   if (items.length === 0) {
     return (
       <div className="py-4 px-2 text-center text-sm text-[var(--sidebar-text)]">
-        文档中没有标题
+        {t('sidebar.noHeadings')}
       </div>
     )
   }

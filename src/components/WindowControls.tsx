@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Minus, Square, X, Copy } from 'lucide-react'
+import { useI18n } from '../i18n'
 
 type WindowCtrl = {
   minimize: () => Promise<void>
@@ -44,6 +45,7 @@ interface WindowControlsProps {
 }
 
 export default function WindowControls({ }: WindowControlsProps) {
+  const { t } = useI18n()
   const [isMaximized, setIsMaximized] = useState(false)
   const [isMac, setIsMac] = useState(false)
 
@@ -99,7 +101,7 @@ export default function WindowControls({ }: WindowControlsProps) {
         onMouseDown={(e) => e.stopPropagation()}
         onClick={handleMinimize}
         className="w-11 h-11 flex items-center justify-center hover:bg-[var(--editor-hover)] text-[var(--editor-text)] transition-colors"
-        title="最小化"
+        title={t('window.minimize')}
       >
         <Minus size={16} />
       </button>
@@ -107,7 +109,7 @@ export default function WindowControls({ }: WindowControlsProps) {
         onMouseDown={(e) => e.stopPropagation()}
         onClick={handleMaximize}
         className="w-11 h-11 flex items-center justify-center hover:bg-[var(--editor-hover)] text-[var(--editor-text)] transition-colors"
-        title={isMaximized ? '还原' : '最大化'}
+        title={isMaximized ? t('window.restore') : t('window.maximize')}
       >
         {isMaximized ? <Copy size={14} /> : <Square size={12} />}
       </button>
@@ -115,7 +117,7 @@ export default function WindowControls({ }: WindowControlsProps) {
         onMouseDown={(e) => e.stopPropagation()}
         onClick={handleClose}
         className="w-11 h-11 flex items-center justify-center hover:bg-red-500 hover:text-white text-[var(--editor-text)] transition-colors"
-        title="关闭"
+        title={t('window.close')}
       >
         <X size={16} />
       </button>

@@ -8,6 +8,7 @@ import {
 } from '../lib/slides'
 import { enterFullscreen, exitFullscreen, toggleFullscreen } from '../lib/fullscreen'
 import { resolveLocalImageSrc } from '../lib/localImages'
+import { useI18n } from '../i18n'
 import '../styles/slideshow.css'
 
 function escapeHtml(s: string): string {
@@ -41,6 +42,7 @@ export default function Slideshow({
   isDark,
   onExit,
 }: SlideshowProps) {
+  const { t } = useI18n()
   const [h, setH] = useState(0)
   const [showHelp, setShowHelp] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
@@ -324,25 +326,25 @@ export default function Slideshow({
       {/* HUD */}
       <div className="ys-hud">
         {cur?.notes && (
-          <button className="ys-hud-btn" onClick={() => setShowNotes((x) => !x)}>备注</button>
+          <button className="ys-hud-btn" onClick={() => setShowNotes((x) => !x)}>{t('slideshow.notes')}</button>
         )}
         <div className="ys-hud-ctrl">
           <button
             className="ys-icon-btn"
-            title={dark ? '切换亮色' : '切换暗色'}
+            title={dark ? t('slideshow.toLight') : t('slideshow.toDark')}
             onClick={() => setDark((d) => !d)}
           >
             {dark ? <Sun size={14} /> : <Moon size={14} />}
           </button>
           <button
             className="ys-icon-btn"
-            title="切换主题"
+            title={t('slideshow.toggleTheme')}
             onClick={() => setThemeMenuOpen((o) => !o)}
           >
             <Palette size={14} />
           </button>
         </div>
-        <span className="ys-hint">F 全屏 · ? 帮助 · Esc 退出</span>
+        <span className="ys-hint">{t('slideshow.hintBar')}</span>
       </div>
 
       {/* 主题菜单 */}
@@ -352,7 +354,7 @@ export default function Slideshow({
           <div className="ys-theme-menu">
             {themes.map((file) => {
               const id = file.replace(/\.css$/, '')
-              const name = themeMeta[id]?.name || (id === 'academic' ? '学术蓝' : id)
+              const name = themeMeta[id]?.name || (id === 'academic' ? t('slideshow.academic') : id)
               return (
                 <button
                   key={file}
@@ -372,22 +374,22 @@ export default function Slideshow({
       {showHelp && (
         <div className="ys-overlay" onClick={() => setShowHelp(false)}>
           <div className="ys-card" onClick={(e) => e.stopPropagation()}>
-            <h2>幻灯片快捷键</h2>
+            <h2>{t('slideshow.shortcutsTitle')}</h2>
             <table>
               <tbody>
-                <tr><td>下一页</td><td>→ 空格 PageDown Enter</td></tr>
-                <tr><td>上一页</td><td>← PageUp Backspace</td></tr>
-                <tr><td>首页 / 末页</td><td>Home / End</td></tr>
-                <tr><td>全屏切换</td><td>F</td></tr>
-                <tr><td>演讲者备注</td><td>S</td></tr>
-                <tr><td>帮助开关</td><td>?</td></tr>
-                <tr><td>退出</td><td>Esc</td></tr>
+                <tr><td>{t('slideshow.next')}</td><td>→ 空格 PageDown Enter</td></tr>
+                <tr><td>{t('slideshow.prev')}</td><td>← PageUp Backspace</td></tr>
+                <tr><td>{t('slideshow.homeEnd')}</td><td>Home / End</td></tr>
+                <tr><td>{t('slideshow.fullscreen')}</td><td>F</td></tr>
+                <tr><td>{t('slideshow.speakerNotes')}</td><td>S</td></tr>
+                <tr><td>{t('slideshow.helpToggle')}</td><td>?</td></tr>
+                <tr><td>{t('slideshow.exit')}</td><td>Esc</td></tr>
               </tbody>
             </table>
             <p className="ys-card-foot">
-              纯 Markdown 即幻灯片：用 <code>---</code>（单独成行）分页，
-              版式由引擎按每页结构自动推断，配色继承当前主题。
-              备注：<code>&lt;!-- notes: 内容 --&gt;</code>。
+              {t('slideshow.helpText1')}
+              {t('slideshow.helpText2')}
+              {t('slideshow.helpText3')}
             </p>
           </div>
         </div>
@@ -397,8 +399,8 @@ export default function Slideshow({
       {showNotes && cur?.notes && (
         <div className="ys-notes-panel">
           <div className="ys-notes-head">
-            <span>演讲者备注</span>
-            <button onClick={() => setShowNotes(false)}>关闭</button>
+            <span>{t('slideshow.notesTitle')}</span>
+            <button onClick={() => setShowNotes(false)}>{t('slideshow.close')}</button>
           </div>
           <div className="ys-notes-body">{cur.notes}</div>
         </div>

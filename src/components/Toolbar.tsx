@@ -38,9 +38,11 @@ import {
   Palette,
   Check,
   Presentation,
+  Bot,
 } from 'lucide-react'
 import WindowControls from './WindowControls'
 import { useSettingsStore } from '../stores/settingsStore'
+import { useI18n } from '../i18n'
 
 interface ToolbarProps {
   onNew: () => void
@@ -55,6 +57,7 @@ interface ToolbarProps {
   onSearch: () => void
   onSettings: () => void
   onPresent: () => void
+  onAIChat: () => void
   isDark: boolean
   onUndo?: () => void
   onRedo?: () => void
@@ -80,9 +83,10 @@ const getTauriWindow = (): WindowCtrl => {
 
 export default function Toolbar({ 
   onNew, onNewFromTemplate, onOpen, onSave, onSaveAs, onToggleSidebar, onToggleDark, onUndo, onRedo,
-  onInsertMarkdown, onExport, onSearch, onSettings, onPresent,
+  onInsertMarkdown, onExport, onSearch, onSettings, onPresent, onAIChat,
   isDark,
 }: ToolbarProps) {
+  const { t } = useI18n()
   const [showExportMenu, setShowExportMenu] = useState(false)
   const [exportMenuPos, setExportMenuPos] = useState<{top: number; left: number}>({top: 0, left: 0})
   const exportBtnRef = useRef<HTMLDivElement>(null)
@@ -144,11 +148,11 @@ export default function Toolbar({
       {/* 左侧：品牌 + 格式按钮，允许溢出裁剪 */}
       <div className="flex items-center gap-px overflow-hidden min-w-0 flex-1">
         <span className="text-[15px] font-extrabold tracking-tight text-[var(--editor-accent)] select-none mr-1.5 shrink-0">YiziMarkdown</span>
-        <ToolbarButton icon={<FileText size={16} />} tooltip="新建 (Ctrl+N)" onClick={onNew} accent />
+        <ToolbarButton icon={<FileText size={16} />} tooltip={t('toolbar.newFile')} onClick={onNew} accent />
         <div className="relative" ref={templateBtnRef}>
           <ToolbarButton 
             icon={<FilePlus2 size={16} />} 
-            tooltip="从模板新建" 
+            tooltip={t('toolbar.newFromTemplate')} 
             onClick={() => {
               if (templateBtnRef.current) {
                 const rect = templateBtnRef.current.getBoundingClientRect()
@@ -170,7 +174,7 @@ export default function Toolbar({
                 style={{ top: templateMenuPos.top, left: templateMenuPos.left }}
               >
                 {templates.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-[var(--editor-text-muted)]">暂无模板</div>
+                  <div className="px-3 py-2 text-sm text-[var(--editor-text-muted)]">{t('toolbar.noTemplates')}</div>
                 ) : templates.map((name) => (
                   <ExportMenuItem 
                     key={name} 
@@ -183,13 +187,13 @@ export default function Toolbar({
             </>
           )}
         </div>
-        <ToolbarButton icon={<FolderOpen size={16} />} tooltip="打开 (Ctrl+O)" onClick={onOpen} accent />
-        <ToolbarButton icon={<Save size={16} />} tooltip="保存 (Ctrl+S)" onClick={onSave} accent />
-        <ToolbarButton icon={<SaveAll size={16} />} tooltip="另存为" onClick={onSaveAs} accent />
+        <ToolbarButton icon={<FolderOpen size={16} />} tooltip={t('toolbar.open')} onClick={onOpen} accent />
+        <ToolbarButton icon={<Save size={16} />} tooltip={t('toolbar.save')} onClick={onSave} accent />
+        <ToolbarButton icon={<SaveAll size={16} />} tooltip={t('toolbar.saveAs')} onClick={onSaveAs} accent />
         <div className="relative" ref={exportBtnRef}>
           <ToolbarButton 
             icon={<FileUp size={16} />} 
-            tooltip="导出" 
+            tooltip={t('toolbar.export')} 
             onClick={() => {
               if (exportBtnRef.current) {
                 const rect = exportBtnRef.current.getBoundingClientRect()
@@ -212,17 +216,17 @@ export default function Toolbar({
               >
                 <ExportMenuItem 
                   icon={<FileCode size={14} />} 
-                  label="导出为 HTML" 
+                  label={t('toolbar.exportHtml')} 
                   onClick={() => { onExport('html'); setShowExportMenu(false); }} 
                 />
                 <ExportMenuItem 
                   icon={<FileTextIcon size={14} />} 
-                  label="导出为 Markdown" 
+                  label={t('toolbar.exportMd')} 
                   onClick={() => { onExport('md'); setShowExportMenu(false); }} 
                 />
                 <ExportMenuItem 
                   icon={<FileDown size={14} />} 
-                  label="导出为纯文本" 
+                  label={t('toolbar.exportTxt')} 
                   onClick={() => { onExport('txt'); setShowExportMenu(false); }} 
                 />
               </div>
@@ -230,30 +234,30 @@ export default function Toolbar({
           )}
         </div>
         <ToolbarDivider />
-        <ToolbarButton icon={<Undo2 size={16} />} tooltip="撤销 (Ctrl+Z)" onClick={() => onUndo?.()} accent />
-        <ToolbarButton icon={<Redo2 size={16} />} tooltip="重做 (Ctrl+Y)" onClick={() => onRedo?.()} accent />
-        <ToolbarButton icon={<Search size={16} />} tooltip="搜索 (Ctrl+F)" onClick={onSearch} accent />
+        <ToolbarButton icon={<Undo2 size={16} />} tooltip={t('toolbar.undo')} onClick={() => onUndo?.()} accent />
+        <ToolbarButton icon={<Redo2 size={16} />} tooltip={t('toolbar.redo')} onClick={() => onRedo?.()} accent />
+        <ToolbarButton icon={<Search size={16} />} tooltip={t('toolbar.search')} onClick={onSearch} accent />
         <ToolbarDivider />
-        <ToolbarButton icon={<Bold size={16} />} tooltip="粗体 (Ctrl+B)" onClick={() => onInsertMarkdown('**', 'wrap')} />
-        <ToolbarButton icon={<Italic size={16} />} tooltip="斜体 (Ctrl+I)" onClick={() => onInsertMarkdown('*', 'wrap')} />
-        <ToolbarButton icon={<Strikethrough size={16} />} tooltip="删除线" onClick={() => onInsertMarkdown('~~', 'wrap')} />
-        <ToolbarButton icon={<Code size={16} />} tooltip="行内代码" onClick={() => onInsertMarkdown('\`', 'wrap')} />
+        <ToolbarButton icon={<Bold size={16} />} tooltip={t('toolbar.bold')} onClick={() => onInsertMarkdown('**', 'wrap')} />
+        <ToolbarButton icon={<Italic size={16} />} tooltip={t('toolbar.italic')} onClick={() => onInsertMarkdown('*', 'wrap')} />
+        <ToolbarButton icon={<Strikethrough size={16} />} tooltip={t('toolbar.strikethrough')} onClick={() => onInsertMarkdown('~~', 'wrap')} />
+        <ToolbarButton icon={<Code size={16} />} tooltip={t('toolbar.inlineCode')} onClick={() => onInsertMarkdown('\`', 'wrap')} />
         <ToolbarDivider />
-        <ToolbarButton icon={<Heading1 size={16} />} tooltip="标题 1" onClick={() => onInsertMarkdown('# ', 'prefix')} />
-        <ToolbarButton icon={<Heading2 size={16} />} tooltip="标题 2" onClick={() => onInsertMarkdown('## ', 'prefix')} />
-        <ToolbarButton icon={<Heading3 size={16} />} tooltip="标题 3" onClick={() => onInsertMarkdown('### ', 'prefix')} />
+        <ToolbarButton icon={<Heading1 size={16} />} tooltip={t('toolbar.heading1')} onClick={() => onInsertMarkdown('# ', 'prefix')} />
+        <ToolbarButton icon={<Heading2 size={16} />} tooltip={t('toolbar.heading2')} onClick={() => onInsertMarkdown('## ', 'prefix')} />
+        <ToolbarButton icon={<Heading3 size={16} />} tooltip={t('toolbar.heading3')} onClick={() => onInsertMarkdown('### ', 'prefix')} />
         <ToolbarDivider />
-        <ToolbarButton icon={<List size={16} />} tooltip="无序列表" onClick={() => onInsertMarkdown('- ', 'prefix')} />
-        <ToolbarButton icon={<ListOrdered size={16} />} tooltip="有序列表" onClick={() => onInsertMarkdown('1. ', 'prefix')} />
-        <ToolbarButton icon={<CheckSquare size={16} />} tooltip="任务列表" onClick={() => onInsertMarkdown('- [ ] ', 'prefix')} />
-        <ToolbarButton icon={<Quote size={16} />} tooltip="引用" onClick={() => onInsertMarkdown('> ', 'prefix')} />
+        <ToolbarButton icon={<List size={16} />} tooltip={t('toolbar.unorderedList')} onClick={() => onInsertMarkdown('- ', 'prefix')} />
+        <ToolbarButton icon={<ListOrdered size={16} />} tooltip={t('toolbar.orderedList')} onClick={() => onInsertMarkdown('1. ', 'prefix')} />
+        <ToolbarButton icon={<CheckSquare size={16} />} tooltip={t('toolbar.taskList')} onClick={() => onInsertMarkdown('- [ ] ', 'prefix')} />
+        <ToolbarButton icon={<Quote size={16} />} tooltip={t('toolbar.quote')} onClick={() => onInsertMarkdown('> ', 'prefix')} />
         <ToolbarDivider />
-        <ToolbarButton icon={<Link size={16} />} tooltip="链接" onClick={() => onInsertMarkdown('[链接](url)', 'link')} />
-        <ToolbarButton icon={<Image size={16} />} tooltip="图片" onClick={() => onInsertMarkdown('![alt](url)', 'link')} />
+        <ToolbarButton icon={<Link size={16} />} tooltip={t('toolbar.link')} onClick={() => onInsertMarkdown('[text](url)', 'link')} />
+        <ToolbarButton icon={<Image size={16} />} tooltip={t('toolbar.image')} onClick={() => onInsertMarkdown('![alt](url)', 'link')} />
         <div className="relative" ref={tableBtnRef}>
           <ToolbarButton 
             icon={<Table size={16} />} 
-            tooltip="表格" 
+            tooltip={t('toolbar.table')} 
             onClick={() => {
               if (tableBtnRef.current) {
                 const rect = tableBtnRef.current.getBoundingClientRect()
@@ -276,7 +280,7 @@ export default function Toolbar({
                 style={{ top: tablePickerPos.top, left: tablePickerPos.left }}
               >
                 <div className="text-xs text-[var(--editor-text-muted)] mb-2 h-4">
-                  {tablePickerSize.rows > 0 ? `${tablePickerSize.rows} × ${tablePickerSize.cols}` : '选择大小'}
+                  {tablePickerSize.rows > 0 ? `${tablePickerSize.rows} × ${tablePickerSize.cols}` : t('toolbar.pickSize')}
                 </div>
                 <div 
                   className="grid gap-px"
@@ -298,7 +302,7 @@ export default function Toolbar({
                         onMouseEnter={() => setTablePickerSize({rows: row, cols: col})}
                         onClick={() => {
                           if (row > 0 && col > 0) {
-                            const md = generateTableMd(row, col)
+                            const md = generateTableMd(row, col, t)
                             onInsertMarkdown(md)
                             setShowTablePicker(false)
                           }
@@ -314,7 +318,7 @@ export default function Toolbar({
         <div className="relative" ref={mathBtnRef}>
           <ToolbarButton 
             icon={<Sigma size={16} />} 
-            tooltip="公式" 
+            tooltip={t('toolbar.math')} 
             onClick={() => {
               if (mathBtnRef.current) {
                 const rect = mathBtnRef.current.getBoundingClientRect()
@@ -337,20 +341,20 @@ export default function Toolbar({
               >
                 <ExportMenuItem 
                   icon={<Pi size={14} />} 
-                  label="行内公式 ($...$)" 
+                  label={t('toolbar.mathInline')} 
                   onClick={() => { onInsertMarkdown('$', 'wrap'); setShowMathMenu(false) }} 
                 />
                 <ExportMenuItem 
                   icon={<FunctionSquare size={14} />} 
-                  label="块级公式 ($$...$$)" 
+                  label={t('toolbar.mathBlock')} 
                   onClick={() => { onInsertMarkdown('\n$$\n公式\n$$\n'); setShowMathMenu(false) }} 
                 />
               </div>
             </>
           )}
         </div>
-        <ToolbarButton icon={<Workflow size={16} />} tooltip="Mermaid 图表" onClick={() => onInsertMarkdown('\n```mermaid\ngraph LR\n  A[开始] --> B[结束]\n```\n')} />
-        <ToolbarButton icon={<Minus size={16} />} tooltip="分割线" onClick={() => onInsertMarkdown('\n---\n')} />
+        <ToolbarButton icon={<Workflow size={16} />} tooltip={t('toolbar.mermaid')} onClick={() => onInsertMarkdown('\n```mermaid\ngraph LR\n  A[开始] --> B[结束]\n```\n')} />
+        <ToolbarButton icon={<Minus size={16} />} tooltip={t('toolbar.horizontalRule')} onClick={() => onInsertMarkdown('\n---\n')} />
       </div>
 
       {/* 右侧工具组：永远不被压缩 */}
@@ -359,7 +363,7 @@ export default function Toolbar({
         <div className="relative">
           <ToolbarButton 
             icon={<Palette size={16} />} 
-            tooltip={themeMeta[currentTheme]?.name || (currentTheme === 'academic' ? '学术蓝' : currentTheme)}
+            tooltip={themeMeta[currentTheme]?.name || (currentTheme === 'academic' ? t('toolbar.academic') : currentTheme)}
             onClick={() => setShowThemeMenu(!showThemeMenu)} 
             accent
           />
@@ -373,7 +377,7 @@ export default function Toolbar({
               <div className="absolute top-full right-0 mt-1 py-1 w-48 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50">
                 {themeFiles.map((file) => {
                   const id = file.replace(/\.css$/, '')
-                  const name = themeMeta[id]?.name || (id === 'academic' ? '学术蓝' : id)
+                  const name = themeMeta[id]?.name || (id === 'academic' ? t('toolbar.academic') : id)
                   return (
                   <button
                     key={file}
@@ -394,19 +398,20 @@ export default function Toolbar({
         {/* 明暗切换 */}
         <ToolbarButton 
           icon={isDark ? <Sun size={16} /> : <Moon size={16} />} 
-          tooltip={isDark ? "亮色模式" : "暗色模式"} 
+          tooltip={isDark ? t('toolbar.lightMode') : t('toolbar.darkMode')} 
           onClick={onToggleDark} 
           accent
         />
 
         <ToolbarButton 
           icon={<PanelLeftClose size={16} />} 
-          tooltip="切换侧边栏" 
+          tooltip={t('toolbar.toggleSidebar')} 
           onClick={onToggleSidebar} 
           accent
         />
-        <ToolbarButton icon={<Presentation size={16} />} tooltip="演示模式 (Ctrl+Alt+P)" onClick={onPresent} accent />
-        <ToolbarButton icon={<Settings size={16} />} tooltip="设置" onClick={onSettings} accent />
+        <ToolbarButton icon={<Presentation size={16} />} tooltip={t('toolbar.present')} onClick={onPresent} accent />
+        <ToolbarButton icon={<Bot size={16} />} tooltip={t('ai.chatTitle')} onClick={onAIChat} accent />
+        <ToolbarButton icon={<Settings size={16} />} tooltip={t('toolbar.settings')} onClick={onSettings} accent />
         
         {/* 窗口控制按钮 */}
         <ToolbarDivider />
@@ -450,11 +455,11 @@ function ToolbarDivider() {
   return <div className="w-px h-5 bg-[var(--editor-border)] mx-px shrink-0" />
 }
 
-function generateTableMd(rows: number, cols: number): string {
-  const header = '| ' + Array.from({length: cols}, (_, i) => `列${i + 1}`).join(' | ') + ' |'
+function generateTableMd(rows: number, cols: number, t: (key: string, params?: Record<string, string | number>) => string): string {
+  const header = '| ' + Array.from({length: cols}, (_, i) => `${t('toolbar.column')}${i + 1}`).join(' | ') + ' |'
   const sep = '| ' + Array.from({length: cols}, () => '------').join(' | ') + ' |'
   const bodyRows = Array.from({length: rows - 1}, () => 
-    '| ' + Array.from({length: cols}, () => '内容').join(' | ') + ' |'
+    '| ' + Array.from({length: cols}, () => t('toolbar.content')).join(' | ') + ' |'
   ).join('\n')
   return '\n' + header + '\n' + sep + '\n' + bodyRows + '\n'
 }

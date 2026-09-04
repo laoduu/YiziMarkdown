@@ -2,8 +2,10 @@ import { invokeTauri } from '../lib/tauri'
 import { useEffect, useState } from 'react'
 import { FileText, Clock, Trash2, FolderOpen } from 'lucide-react'
 import { useEditorStore } from '../stores/editorStore'
+import { useI18n } from '../i18n'
 
 export default function HomePage({ onOpenFile }: { onOpenFile: (filePath: string) => void }) {
+  const { t } = useI18n()
   const { recentFiles, removeRecentFile } = useEditorStore()
   const [fileInfos, setFileInfos] = useState<Array<{ path: string; name: string; size: string; modified: string }>>([])
 
@@ -36,13 +38,13 @@ export default function HomePage({ onOpenFile }: { onOpenFile: (filePath: string
         <div className="home-brand">
           <span className="text-2xl font-extrabold tracking-tight text-[var(--editor-accent)]">YiziMarkdown</span>
         </div>
-        <p className="text-sm text-[var(--sidebar-text)] mt-2">点击文件打开，或使用 Ctrl+N 新建文件</p>
+        <p className="text-sm text-[var(--sidebar-text)] mt-2">{t('home.hint')}</p>
       </div>
 
       {fileInfos.length > 0 ? (
         <div className="home-list">
           <div className="home-list-header">
-            <span className="text-xs font-semibold text-[var(--sidebar-text)] uppercase tracking-wider">最近文件</span>
+            <span className="text-xs font-semibold text-[var(--sidebar-text)] uppercase tracking-wider">{t('home.recent')}</span>
           </div>
           {fileInfos.map((info) => (
             <button
@@ -63,7 +65,7 @@ export default function HomePage({ onOpenFile }: { onOpenFile: (filePath: string
                 <span
                   className="home-file-remove"
                   onClick={(e) => { e.stopPropagation(); removeRecentFile(info.path) }}
-                  title="移除记录"
+                  title={t('home.remove')}
                 >
                   <Trash2 size={12} />
                 </span>
@@ -74,8 +76,8 @@ export default function HomePage({ onOpenFile }: { onOpenFile: (filePath: string
       ) : (
         <div className="home-empty">
           <FolderOpen size={48} className="text-[var(--editor-border)] mb-3" />
-          <p className="text-sm text-[var(--sidebar-text)]">暂无最近打开的文件</p>
-          <p className="text-xs text-[var(--sidebar-text)] mt-1">使用 Ctrl+O 打开文件，文件会出现在这里</p>
+          <p className="text-sm text-[var(--sidebar-text)]">{t('home.emptyTitle')}</p>
+          <p className="text-xs text-[var(--sidebar-text)] mt-1">{t('home.emptyHint')}</p>
         </div>
       )}
     </div>

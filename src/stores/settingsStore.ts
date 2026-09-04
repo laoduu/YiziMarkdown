@@ -6,6 +6,7 @@ export interface SettingsState {
   autoSave: boolean
   autoSaveInterval: number
   defaultTemplate: string
+  language: string
 
   // 编辑器
   fontFamily: string
@@ -33,6 +34,14 @@ export interface SettingsState {
   enabledPlugins: string[]
   pluginConfigs: Record<string, Record<string, unknown>>
 
+  // AI（v0.2.0 侧边聊天面板）
+  aiProvider: string
+  aiModel: string
+  aiBaseUrl: string
+  aiSystemPrompt: string
+  /** 引用当前文档时截断的字符上限（0 = 不限） */
+  aiDocLimit: number
+
   // 方法
   setField: <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => void
   updateSettings: (partial: Partial<SettingsState>) => void
@@ -43,8 +52,9 @@ export const useSettingsStore = create<SettingsState>()(
     (set) => ({
       // 通用
       autoSave: true,
-      autoSaveInterval: 3000,
+      autoSaveInterval: 60000,
       defaultTemplate: '',
+      language: 'zh',
 
       // 编辑器
       fontFamily: "'MiSans', 'Mi Sans', system-ui, -apple-system, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif",
@@ -70,12 +80,21 @@ export const useSettingsStore = create<SettingsState>()(
       enabledPlugins: [],
       pluginConfigs: {},
 
+      // AI（v0.2.0 侧边聊天面板）
+      aiProvider: 'deepseek',
+      aiModel: '',
+      aiBaseUrl: '',
+      aiSystemPrompt: '',
+      aiDocLimit: 200000,
+
       // 方法
       setField: (key, value) => set({ [key]: value }),
       updateSettings: (partial) => set(partial),
     }),
     {
       name: 'yizimarkdown-settings',
+      // v1: 自动保存间隔范围改为 5s~180s（旧数据越界需迁移）
+      version: 1,
       migrate: (persisted: unknown) => {
         // 自动迁移旧字体栈到 MiSans 方案
         const oldFont = "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
@@ -84,6 +103,11 @@ export const useSettingsStore = create<SettingsState>()(
         if (state) {
           if (state.fontFamily === oldFont) state.fontFamily = newFont
           if (state.previewFontFamily === oldFont) state.previewFontFamily = newFont
+          // 自动保存间隔迁移：旧范围 1s~10s，新范围 5s~180s，越界值重置为默认 60s
+          const iv = state.autoSaveInterval
+          if (typeof iv !== 'number' || iv < 5000 || iv > 180000) {
+            state.autoSaveInterval = 60000
+          }
         }
         return state
       },

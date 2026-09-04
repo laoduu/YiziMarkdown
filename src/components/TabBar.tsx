@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Home, Code, Columns2, Eye, Check, Sparkles, Presentation, ChevronsRight } from 'lucide-react'
 import { useEditorStore, SaveStatus } from '../stores/editorStore'
+import { useI18n } from '../i18n'
 
 interface TabBarProps {
   onNew: () => void
@@ -24,6 +25,7 @@ function StatusDot({ status }: { status: SaveStatus }) {
 }
 
 export default function TabBar({ onNew, onPresent }: TabBarProps) {
+  const { t } = useI18n()
   const { tabs, activeTabId, switchTab, closeTab, currentTab, markAsSaved, clearJustSaved } = useEditorStore()
   const current = currentTab()
   const [pendingCloseId, setPendingCloseId] = useState<string | null>(null)
@@ -140,10 +142,10 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
         <button
           onClick={() => switchTab(null)}
           className={`tab-item ${activeTabId === null ? 'tab-item-active' : ''}`}
-          title="最近文件"
+          title={t('tabbar.recentFiles')}
         >
           <Home size={13} />
-          <span>首页</span>
+          <span>{t('tabbar.home')}</span>
         </button>
 
         {tabs.map((tab) => (
@@ -154,7 +156,7 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
             onAuxClick={(e) => handleAuxClick(tab.id, e)}
             onDoubleClick={(e) => handleClose(tab.id, e)}
             className={`tab-item ${activeTabId === tab.id ? 'tab-item-active' : ''}`}
-            title={tab.filePath || '未命名新文件'}
+            title={tab.filePath || t('tabbar.untitled')}
           >
             <span className="tab-title truncate max-w-[120px] min-w-0">{tab.name}</span>
             <StatusDot status={tab.saveStatus} />
@@ -167,7 +169,7 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
           </button>
         ))}
 
-        <button className="tab-item tab-new-btn" onClick={onNew} title="新建文件 (Ctrl+N)">
+        <button className="tab-item tab-new-btn" onClick={onNew} title={t('tabbar.newFile')}>
           +
         </button>
       </div>
@@ -177,7 +179,7 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
           <button
             className={`tab-overflow-btn ${menuOpen ? 'tab-overflow-btn-active' : ''}`}
             onClick={() => setMenuOpen(o => !o)}
-            title="所有打开的文档"
+            title={t('tabbar.allOpenDocs')}
           >
             <ChevronsRight size={14} />
           </button>
@@ -192,7 +194,7 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
                     setMenuOpen(false)
                   }}
                   onAuxClick={(e) => handleAuxClick(tab.id, e)}
-                  title={tab.filePath || '未命名新文件'}
+                  title={tab.filePath || t('tabbar.untitled')}
                 >
                   <span className="truncate flex-1 min-w-0 text-left">{tab.name}</span>
                   <StatusDot status={tab.saveStatus} />
@@ -211,37 +213,37 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
           <button
             onClick={() => useEditorStore.getState().updateViewMode('edit')}
             className={`tab-view-btn ${current?.viewMode === 'edit' ? 'tab-view-active' : ''}`}
-            title="源代码模式"
+            title={t('tabbar.sourceTitle')}
           >
-            <Code size={14} /><span>源代码</span>
+            <Code size={14} /><span>{t('tabbar.sourceMode')}</span>
           </button>
           <button
             onClick={() => useEditorStore.getState().updateViewMode('split')}
             className={`tab-view-btn ${current?.viewMode === 'split' ? 'tab-view-active' : ''}`}
-            title="并排模式"
+            title={t('tabbar.splitTitle')}
           >
-            <Columns2 size={14} /><span>并排</span>
+            <Columns2 size={14} /><span>{t('tabbar.splitMode')}</span>
           </button>
           <button
             onClick={() => useEditorStore.getState().updateViewMode('live')}
             className={`tab-view-btn ${current?.viewMode === 'live' ? 'tab-view-active' : ''}`}
-            title="实时模式"
+            title={t('tabbar.liveTitle')}
           >
-            <Sparkles size={14} /><span>实时</span>
+            <Sparkles size={14} /><span>{t('tabbar.liveMode')}</span>
           </button>
           <button
             onClick={() => useEditorStore.getState().updateViewMode('preview')}
             className={`tab-view-btn ${current?.viewMode === 'preview' ? 'tab-view-active' : ''}`}
-            title="预览模式"
+            title={t('tabbar.previewTitle')}
           >
-            <Eye size={14} /><span>预览</span>
+            <Eye size={14} /><span>{t('tabbar.previewMode')}</span>
           </button>
           <button
             onClick={onPresent}
             className="tab-view-btn"
-            title="演示模式 (Ctrl+Alt+P)"
+            title={t('tabbar.presentTitle')}
           >
-            <Presentation size={14} /><span>演示</span>
+            <Presentation size={14} /><span>{t('tabbar.present')}</span>
           </button>
         </div>
       )}
@@ -250,19 +252,19 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
       {pendingCloseId && (
         <div className="tab-close-overlay" onClick={() => setPendingCloseId(null)}>
           <div className="tab-close-dialog" onClick={(e) => e.stopPropagation()}>
-            <p className="tab-close-dialog-title">未保存的更改</p>
+            <p className="tab-close-dialog-title">{t('tabbar.unsavedTitle')}</p>
             <p className="tab-close-dialog-msg">
-              {tabs.find(t => t.id === pendingCloseId)?.name || '文件'} 有未保存的修改，关闭前是否保存？
+              {t('tabbar.unsavedMsg', { name: tabs.find(t => t.id === pendingCloseId)?.name || t('tabbar.file') })}
             </p>
             <div className="tab-close-dialog-actions">
               <button className="tab-close-btn-save" onClick={() => handleConfirmClose('save')}>
-                保存
+                {t('tabbar.save')}
               </button>
               <button className="tab-close-btn-discard" onClick={() => handleConfirmClose('discard')}>
-                不保存
+                {t('tabbar.discard')}
               </button>
               <button className="tab-close-btn-cancel" onClick={() => handleConfirmClose('cancel')}>
-                取消
+                {t('tabbar.cancel')}
               </button>
             </div>
           </div>

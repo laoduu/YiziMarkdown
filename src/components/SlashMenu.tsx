@@ -15,6 +15,7 @@ import {
   Heading1, Heading2, Heading3, Code2,
   Table, Link, Image, Minus,
 } from 'lucide-react'
+import { useI18n } from '../i18n'
 
 /* ------------------------------------------------------------------ */
 /*  菜单项定义                                                          */
@@ -22,34 +23,34 @@ import {
 
 interface SlashMenuItem {
   id: string
-  label: string
+  labelKey: string
   icon: React.ReactNode
   shortcut?: string
-  keywords?: string
+  keywordsKey?: string
 }
 
-/** 所有菜单项，统一为图标卡片 */
+/** 所有菜单项，统一为图标卡片（label 用 i18n key，渲染时解析） */
 const ALL_MENU_ITEMS: SlashMenuItem[] = [
   // -- 行内格式 --
-  { id: 'bold',          label: '粗体',     icon: <Bold size={18} />,          shortcut: 'Ctrl+B' },
-  { id: 'italic',        label: '斜体',     icon: <Italic size={18} />,        shortcut: 'Ctrl+I' },
-  { id: 'strikethrough', label: '删除线',  icon: <Strikethrough size={18} />, shortcut: 'Ctrl+D' },
-  { id: 'inlineCode',    label: '行内代码', icon: <Code size={18} />,         shortcut: 'Ctrl+E' },
+  { id: 'bold',          labelKey: 'slashmenu.bold',          icon: <Bold size={18} />,          shortcut: 'Ctrl+B' },
+  { id: 'italic',        labelKey: 'slashmenu.italic',        icon: <Italic size={18} />,        shortcut: 'Ctrl+I' },
+  { id: 'strikethrough', labelKey: 'slashmenu.strikethrough', icon: <Strikethrough size={18} />, shortcut: 'Ctrl+D' },
+  { id: 'inlineCode',    labelKey: 'slashmenu.inlineCode',    icon: <Code size={18} />,         shortcut: 'Ctrl+E' },
   // -- 块级元素 --
-  { id: 'blockquote',    label: '引用',     icon: <Quote size={18} />,          keywords: '引用块' },
-  { id: 'orderedList',   label: '有序列表', icon: <ListOrdered size={18} />,     keywords: '数字列表' },
-  { id: 'unorderedList', label: '无序列表', icon: <List size={18} />,           keywords: '符号列表' },
-  { id: 'taskList',      label: '任务列表', icon: <CheckSquare size={18} />,    keywords: '待办事项 checkbox' },
+  { id: 'blockquote',    labelKey: 'slashmenu.quote',         icon: <Quote size={18} />,          keywordsKey: 'slashmenu.quoteKeywords' },
+  { id: 'orderedList',   labelKey: 'slashmenu.orderedList',   icon: <ListOrdered size={18} />,     keywordsKey: 'slashmenu.orderedListKeywords' },
+  { id: 'unorderedList', labelKey: 'slashmenu.unorderedList', icon: <List size={18} />,           keywordsKey: 'slashmenu.unorderedListKeywords' },
+  { id: 'taskList',      labelKey: 'slashmenu.taskList',      icon: <CheckSquare size={18} />,    keywordsKey: 'slashmenu.taskListKeywords' },
   // -- 标题 --
-  { id: 'heading1',      label: '一级标题', icon: <Heading1 size={18} />,       shortcut: 'Ctrl+1' },
-  { id: 'heading2',      label: '二级标题', icon: <Heading2 size={18} />,       shortcut: 'Ctrl+2' },
-  { id: 'heading3',      label: '三级标题', icon: <Heading3 size={18} />,       shortcut: 'Ctrl+3' },
+  { id: 'heading1',      labelKey: 'slashmenu.heading1',      icon: <Heading1 size={18} />,       shortcut: 'Ctrl+1' },
+  { id: 'heading2',      labelKey: 'slashmenu.heading2',      icon: <Heading2 size={18} />,       shortcut: 'Ctrl+2' },
+  { id: 'heading3',      labelKey: 'slashmenu.heading3',      icon: <Heading3 size={18} />,       shortcut: 'Ctrl+3' },
   // -- 插入 --
-  { id: 'codeBlock',     label: '代码块',   icon: <Code2 size={18} />,         shortcut: 'Ctrl+`' },
-  { id: 'table',         label: '表格',     icon: <Table size={18} />,          shortcut: 'Ctrl+T' },
-  { id: 'link',          label: '链接',     icon: <Link size={18} />,           shortcut: 'Ctrl+K' },
-  { id: 'image',         label: '图片',     icon: <Image size={18} />,          keywords: '插图' },
-  { id: 'horizontalRule',label: '分割线',   icon: <Minus size={18} />,          shortcut: 'Ctrl+L' },
+  { id: 'codeBlock',     labelKey: 'slashmenu.codeBlock',     icon: <Code2 size={18} />,         shortcut: 'Ctrl+`' },
+  { id: 'table',         labelKey: 'slashmenu.table',         icon: <Table size={18} />,          shortcut: 'Ctrl+T' },
+  { id: 'link',          labelKey: 'slashmenu.link',          icon: <Link size={18} />,           shortcut: 'Ctrl+K' },
+  { id: 'image',         labelKey: 'slashmenu.image',         icon: <Image size={18} />,          keywordsKey: 'slashmenu.imageKeywords' },
+  { id: 'horizontalRule',labelKey: 'slashmenu.horizontalRule', icon: <Minus size={18} />,          shortcut: 'Ctrl+L' },
 ]
 
 /* ------------------------------------------------------------------ */
@@ -69,6 +70,7 @@ interface SlashMenuProps {
 /* ------------------------------------------------------------------ */
 
 export default function SlashMenu({ visible, coords, query, onSelect, onClose }: SlashMenuProps) {
+  const { t } = useI18n()
   const menuRef = useRef<HTMLDivElement>(null)
   const [activeIndex, setActiveIndex] = useState(-1)
 
@@ -76,10 +78,12 @@ export default function SlashMenu({ visible, coords, query, onSelect, onClose }:
   const filteredItems = query
     ? ALL_MENU_ITEMS.filter(item => {
         const q = query.toLowerCase()
+        const label = t(item.labelKey)
+        const keywords = item.keywordsKey ? t(item.keywordsKey) : ''
         return (
-          item.label.toLowerCase().includes(q) ||
+          label.toLowerCase().includes(q) ||
           item.id.toLowerCase().includes(q) ||
-          (item.keywords || '').toLowerCase().includes(q) ||
+          keywords.toLowerCase().includes(q) ||
           (item.shortcut || '').toLowerCase().includes(q)
         )
       })
@@ -176,6 +180,7 @@ export default function SlashMenu({ visible, coords, query, onSelect, onClose }:
         <div className="slash-menu-grid">
           {filteredItems.map((item, idx) => {
             const isActive = idx === activeIndex
+            const label = t(item.labelKey)
             return (
               <button
                 key={item.id}
@@ -183,16 +188,16 @@ export default function SlashMenu({ visible, coords, query, onSelect, onClose }:
                 className={`slash-menu-grid-item ${isActive ? 'slash-menu-active' : ''}`}
                 onClick={() => onSelect(item.id)}
                 onMouseEnter={() => setActiveIndex(idx)}
-                title={item.shortcut ? `${item.label} (${item.shortcut})` : item.label}
+                title={item.shortcut ? `${label} (${item.shortcut})` : label}
               >
                 <span className="slash-menu-grid-icon">{item.icon}</span>
-                <span className="slash-menu-grid-label">{item.label}</span>
+                <span className="slash-menu-grid-label">{label}</span>
               </button>
             )
           })}
         </div>
       ) : (
-        <div className="slash-menu-empty">无匹配项</div>
+        <div className="slash-menu-empty">{t('slashmenu.noMatch')}</div>
       )}
     </div>
   )

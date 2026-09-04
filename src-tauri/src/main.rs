@@ -9,6 +9,12 @@ use std::process::Command;
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 
+// AI 聊天（v0.2.0）：密钥存储 + 流式代理
+mod ai_keystore;
+mod ai_proxy;
+
+use ai_proxy::{ai_cancel, ai_chat, ai_clear_key, ai_has_key, ai_set_key, ai_verify_key};
+
 
 
 // ===== 文件操作命令 =====
@@ -927,6 +933,12 @@ fn main() {
             disassociate_md_files,
             is_md_associated,
             get_cli_open_file, get_file_meta, read_image_base64,
+            ai_set_key,
+            ai_has_key,
+            ai_clear_key,
+            ai_verify_key,
+            ai_chat,
+            ai_cancel,
         ])
                 .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             // 从命令行参数中提取文件路径，通过 eval 直接调用前端全局函数

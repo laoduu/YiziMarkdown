@@ -6,10 +6,12 @@ export interface PluginConfigField {
   key: string
   /** 显示名称 */
   label: string
+  /** i18n key（可选，优先于 label） */
+  labelKey?: string
   /** 配置项类型 */
   type: 'select' | 'checkbox' | 'number'
   /** type=select 时的选项列表 */
-  options?: Array<{ value: string; label: string }>
+  options?: Array<{ value: string; label: string; labelKey?: string }>
   /** type=number 时的范围 */
   min?: number
   max?: number
@@ -20,6 +22,8 @@ export interface PluginConfigField {
   defaultValue: string | number | boolean
   /** 选项下方的说明文字 */
   hint?: string
+  /** 说明文字的 i18n key（可选，优先于 hint） */
+  hintKey?: string
 }
 
 /** 插件接口 */
@@ -28,8 +32,12 @@ export interface EditorPlugin {
   id: string
   /** 显示名称 */
   name: string
+  /** i18n key（可选，优先于 name） */
+  nameKey?: string
   /** 简短描述 */
   description: string
+  /** 描述的 i18n key（可选，优先于 description） */
+  descriptionKey?: string
   /** 配置项定义（可选） */
   configFields?: PluginConfigField[]
 

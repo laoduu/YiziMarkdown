@@ -6,17 +6,32 @@
 
 **官方网站：** https://md.yizigpt.com
 
-一款简洁精致的 `Markdown` 编辑器，支持 **Windows 与 macOS**。Windows 可安装，也可下载压缩包解压即用；macOS 提供通用二进制安装包，Intel 与 Apple Silicon 均原生运行。
+一款简洁精致的跨平台 `Markdown` 编辑器，支持 Windows 便携版与 macOS 版本。免安装，解压即用，兼顾颜值与实用。Windows 可安装，也可下载压缩包解压即用；macOS 提供通用二进制安装包，Intel 与 Apple Silicon 均原生运行。
 
-为什么要开发一款 `Markdown` 编辑器？`Typora` 很漂亮，但要收费，免费的各种 `Markdown` 工具，太复杂也太丑，始终找不到趁手的 `Markdown` 编辑器。
+为什么要开发一款 `Markdown` 编辑器？
 
-于是，就然我的龙虾，帮我开发了一个。
+市面上不少 `Markdown` 编辑器，要么界面观感欠佳，要么功能繁杂臃肿，很难找到一款兼顾简洁美观、上手顺手的编辑工具。
 
-用起来感觉还不错，这个文档，也是我的虾帮我写的，我用 `YiziMarkdown` 改了改。
+于是便有了 YiziMarkdown。
+
+我们为所见即所得模式，创造了一种极为优雅的体验；同时支持类 PPT 快捷演示能力，写好的笔记文档可以快速切换演示模式，方便做分享汇报。试过才知道。
 
 ---
 
 ## 功能特性
+
+### 多语言界面
+
+- **15 种界面语言**：简体中文（默认）、繁體中文、English、日本語、한국어、Deutsch、Français、Español、Português、Italiano、Polski、Nederlands、Türkçe、Svenska、Українська
+- 设置 → 通用 → 界面语言一键切换，即时生效；全部界面文案、快捷键面板、插件说明随语言联动
+
+### AI 助手（侧边聊天面板）
+
+- **17 家大模型供应商**：OpenAI、Anthropic、Gemini、xAI、Mistral、Groq、DeepSeek、通义千问、智谱 GLM、Moonshot Kimi、火山方舟、硅基流动、MiniMax、OpenRouter、OpenCode Go、Ollama（本地）、OpenAI 兼容端点
+- **流式对话**：工具栏机器人按钮打开右侧 AI 面板，回复实时流式输出，可随时停止
+- **密钥安全**：API 密钥存系统钥匙串（OS keychain），支持一键保存、清除、验证
+- **引用当前文档**：勾选后把当前文档作为上下文发送给 AI，可配置引用上限（64K~512K/不限）
+- **结果落盘**：回复可复制、插入到文档光标处、或一键创建为新文档
 
 ### 编辑与预览
 
@@ -24,7 +39,7 @@
 - **实时模式（WYSIWYG）**：所见即所得编辑，输入时自动隐藏 Markdown 标记，专注内容创作
 - **实时模式动画**：4种标记显现动画方案（聚焦/闪光/辉光/涟漪），设置中可预览切换
 - **实时预览**：Markdown 即写即渲染，支持任务列表 checkbox 交互
-- **五种视图模式**：源代码 / 并排 / 实时（所见即所得） / 预览 / 演示（全屏幻灯片），一键切换
+- **五种视图模式**：源码 / 并排 / 实时（所见即所得） / 预览 / 演示（全屏幻灯片），一键切换
 - **大纲驱动滚动同步**：并排模式下左右面板双向联动，切换视图时自动定位到当前位置
 - **搜索替换**：支持匹配项导航、全部替换
 - **工具栏快捷格式**：粗体、斜体、删除线、行内代码，选中文字即裹即用
@@ -69,7 +84,8 @@
 
 - **打开**：支持 .md / .markdown / .txt
 - **新建**：新建空白 Tab，显示「未命名新文件」
-- **保存 / 自动保存**：手动保存 + 可配置间隔的自动保存（1~10 秒）
+- **从模板新建**：工具栏「从模板新建」下拉菜单，按所选模板的 Markdown 结构创建新文档；也可在 设置 → 通用 设定默认模板，之后 `Ctrl+N` 自动套用
+- **保存 / 自动保存**：手动保存 + 可配置间隔的自动保存（5~180 秒，默认 60 秒）
 - **另存为**：新建文件保存时自动弹出另存为对话框
 - **导出**：HTML / Markdown / 纯文本三种格式
 - **.md 文件关联**：设置中一键设为系统默认 Markdown 编辑器，双击 .md 直接打开（Windows 注册表 / macOS LaunchServices）
@@ -79,7 +95,7 @@
 
 - **十五套内置主题**：学术蓝（默认）、活力橙、科技感、极简风、杂志感、自然风、液态玻璃、荔枝红、紫罗兰、赛博朋克、Facebook、黑客帝国、薄荷冰沙、落日熔金、复古打字机，每套均有亮暗两套配色
 - **深色 / 亮色模式**：每套主题均有亮暗两套配色
-- **字体自定义**：源代码模式和预览模式分别设置字体、字号、行高
+- **字体自定义**：源码和预览模式分别设置字体、字号、行高
 - **自定义 CSS**：`user.css` 覆盖在所有主题之后，优先级最高
 - **主题扩展**：`themes/` 目录放入 `.css` 文件，重启后自动识别
 
@@ -87,7 +103,7 @@
 
 - **文档模板**：`templates/` 目录放入 `.md` 文件，新建时可选择
 - **快捷键系统**：可视化快捷键配置面板，支持 30 个 action 的自定义绑定、按键录制、冲突检测和恢复默认
-- **设置面板**：通用、外观、编辑器、实时模式、关于等多个标签页，设置即时预览
+- **设置面板**：通用、外观、编辑器、实时模式、AI、插件、快捷键、模板、关于等多个标签页，设置即时预览
 
 ---
 
@@ -123,6 +139,7 @@
 | F1 | 快捷键大全 |
 | F2 | 切换深浅模式 |
 | F3 | 循环切换视图 |
+| Ctrl+Alt+P | 演示模式（幻灯片） |
 | Ins | 斜杠菜单 |
 | F12 | 开发者工具 |
 
@@ -163,6 +180,8 @@ YiziMarkdown/
 | 状态管理 | Zustand (persist) |
 | 样式方案 | Tailwind CSS + CSS 变量 |
 | Markdown 渲染 | markdown-it |
+| 国际化 | 自研轻量 i18n（15 语言） |
+| AI 接入 | Rust 流式代理（OpenAI/Anthropic/Ollama 协议） |
 | 构建工具 | Vite |
 
 ---
@@ -207,7 +226,7 @@ npm run tauri:build -- --target universal-apple-darwin
 
 构建产物：
 - 应用包：`src-tauri/target/universal-apple-darwin/release/bundle/macos/YiziMarkdown.app`
-- 安装包：`src-tauri/target/universal-apple-darwin/release/bundle/dmg/YiziMarkdown_0.1.8_universal.dmg`
+- 安装包：`src-tauri/target/universal-apple-darwin/release/bundle/dmg/YiziMarkdown_0.2.1_universal.dmg`
 
 ### 项目结构
 

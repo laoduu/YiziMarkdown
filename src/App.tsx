@@ -7,12 +7,14 @@ import SettingsModal from './components/SettingsModal'
 import TabBar from './components/TabBar'
 import HomePage from './components/HomePage'
 import Slideshow from './components/Slideshow'
+import AIChatPanel from './components/AIChatPanel'
 import { PanelLeftClose, PanelLeft } from 'lucide-react'
 import { invokeTauri } from './lib/tauri'
 import { useSettingsStore } from './stores/settingsStore'
 import { loadKeybindings, resolveAction, getKeybindingsMap, formatKey, SHORTCUT_ACTIONS } from './lib/keybindings'
 import { useEditorStore } from './stores/editorStore'
 import { loadPlugin, unloadPlugin } from './plugins/registry'
+import { useI18n } from './i18n'
 
 // 打开文件对话框 - Tauri 环境用 Rust 命令，浏览器降级用 HTML input
 const openFileDialog = async (): Promise<{ name: string; content: string; filePath?: string } | null> => {
@@ -64,6 +66,7 @@ const openFileDialog = async (): Promise<{ name: string; content: string; filePa
 }
 
 function App() {
+  const { t } = useI18n()
   const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, enabledPlugins, pluginConfigs, setField } = useSettingsStore()
   const {
     activeTabId, currentTab,
@@ -78,6 +81,7 @@ function App() {
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false })
   const [showShortcutsPanel, setShowShortcutsPanel] = useState(false)
   const [isSlideshow, setIsSlideshow] = useState(false)
+  const [isAIChatOpen, setIsAIChatOpen] = useState(false)
   const [currentFolder, setCurrentFolder] = useState<string | null>(null)
   const editorRef = useRef<EditorRef>(null)
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -397,6 +401,12 @@ function App() {
     }
   }, [currentTheme, isDark])
 
+  // 同步 <html lang>（i18n）
+  const uiLang = useSettingsStore((s) => s.language)
+  useEffect(() => {
+    document.documentElement.lang = uiLang || 'zh'
+  }, [uiLang])
+
   const handleNewFile = useCallback(async () => {
     const { defaultTemplate } = useSettingsStore.getState()
     if (defaultTemplate) {
@@ -435,7 +445,7 @@ function App() {
     if (tab.filePath) {
       await invokeTauri('save_file', { path: tab.filePath, content: tab.content })
       markAsSaved()
-      showToast('已保存')
+      showToast(t('app.saved'))
     } else {
       // 无文件名 → 触发另存为
       await handleSaveAs()
@@ -456,7 +466,7 @@ function App() {
           updateTabName(tab.id, name)
           updateTabFilePath(tab.id, filePath)
           markAsSaved()
-          showToast('已另存为 ' + name)
+          showToast(t('app.savedAs', { name }))
         }
       } catch {}
     }
@@ -495,6 +505,16 @@ function App() {
     if (!tab) return
     setIsSlideshow(true)
   }, [])
+
+  // 将 AI 回复插入到编辑器光标处
+  const handleAIInsert = useCallback((text: string) => {
+    editorRef.current?.insertMarkdown(text)
+  }, [])
+
+  // 将 AI 回复作为新文档打开
+  const handleAINewDoc = useCallback((text: string) => {
+    openNewFile(text)
+  }, [openNewFile])
 
   const handleExport = useCallback(async (format: 'html' | 'md' | 'txt') => {
     const tab = currentTab()
@@ -549,9 +569,9 @@ function App() {
     // 写入文件
     try {
       await invokeTauri('save_file', { path: savedPath, content: output })
-      showToast('已导出 ' + savedPath.split('\\').pop())
+      showToast(t('app.exported', { name: savedPath.split('\\').pop() || 'file' }))
     } catch {
-      showToast('导出失败')
+      showToast(t('app.exportFailed'))
     }
   }, [currentTab, showToast])
 
@@ -598,6 +618,7 @@ function App() {
         onSearch={handleSearchToggle}
         onSettings={handleSettings}
         onPresent={startSlideshow}
+        onAIChat={() => setIsAIChatOpen((v) => !v)}
         isDark={isDark}
         onUndo={() => editorRef.current?.undo()}
         onRedo={() => editorRef.current?.redo()}
@@ -635,7 +656,7 @@ function App() {
             className="absolute top-1 left-1 z-10 w-6 h-6 flex items-center justify-center rounded
               text-[var(--editor-text)] opacity-40 hover:opacity-100 hover:bg-[var(--editor-hover)]
               transition-opacity duration-150"
-            title={sidebarVisible ? "收起侧边栏" : "展开侧边栏"}
+            title={sidebarVisible ? t('app.collapseSidebar') : t('app.expandSidebar')}
           >
             {sidebarVisible ? <PanelLeftClose size={14} /> : <PanelLeft size={14} />}
           </button>
@@ -655,6 +676,16 @@ function App() {
             />
           )}
         </div>
+
+        {/* AI 侧边聊天面板（v0.2.0）：与左侧文件/大纲对称的右侧面板 */}
+        <AIChatPanel
+          open={isAIChatOpen}
+          onClose={() => setIsAIChatOpen(false)}
+          docContent={tab?.content || ''}
+          docName={tab?.name || ''}
+          onInsert={handleAIInsert}
+          onNewDoc={handleAINewDoc}
+        />
       </div>
       
       <StatusBar 
@@ -690,8 +721,8 @@ function App() {
           >
             <div className="flex items-center justify-between mb-2">
               <div>
-                <h2 className="text-lg font-bold tracking-tight" style={{ color: 'var(--editor-text)' }}>快捷键速查</h2>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--sidebar-text)' }}>按 F1 随时唤出，再次点击关闭</p>
+                <h2 className="text-lg font-bold tracking-tight" style={{ color: 'var(--editor-text)' }}>{t('app.shortcutsTitle')}</h2>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--sidebar-text)' }}>{t('app.shortcutsHint')}</p>
               </div>
               <button 
                 onClick={() => setShowShortcutsPanel(false)}
@@ -699,7 +730,7 @@ function App() {
                 style={{ color: 'var(--sidebar-text)', background: 'transparent' }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--editor-hover)' }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-                title="关闭 (F1)"
+                title={t('app.closeF1')}
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <path d="M3 3l8 8M11 3l-8 8"/>
@@ -735,15 +766,16 @@ function App() {
 
 // 快捷键大全面板内容组件（读取实时配置，非写死）
 function ShortcutsPanel() {
+  const { t } = useI18n()
   const map = getKeybindingsMap()
-  const categories = [...new Set(SHORTCUT_ACTIONS.map(a => a.category))]
+  const categories = [...new Set(SHORTCUT_ACTIONS.map(a => a.categoryKey))]
   return (
     <div className="mt-4 space-y-5">
       {categories.map(cat => (
         <div key={cat}>
-          <h3 className="text-[11px] font-semibold uppercase tracking-widest mb-2.5" style={{ color: 'var(--editor-accent)' }}>{cat}</h3>
+          <h3 className="text-[11px] font-semibold uppercase tracking-widest mb-2.5" style={{ color: 'var(--editor-accent)' }}>{t(cat)}</h3>
           <div className="grid grid-cols-3 gap-2">
-            {SHORTCUT_ACTIONS.filter(a => a.category === cat && a.defaultKey).map(action => {
+            {SHORTCUT_ACTIONS.filter(a => a.categoryKey === cat && a.defaultKey).map(action => {
               const key = formatKey(map[action.id] || action.defaultKey)
               return (
                 <div
@@ -765,7 +797,7 @@ function ShortcutsPanel() {
                       border: '1px solid var(--editor-border)'
                     }}
                   >{key}</kbd>
-                  <span className="text-[13px] truncate" style={{ color: 'var(--editor-text)' }}>{action.label}</span>
+                  <span className="text-[13px] truncate" style={{ color: 'var(--editor-text)' }}>{t(action.labelKey)}</span>
                 </div>
               )
             })}

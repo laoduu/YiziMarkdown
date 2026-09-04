@@ -8,6 +8,7 @@
  */
 
 import { invokeTauri } from './tauri'
+import { translate, getCurrentLang } from '../i18n'
 
 /* ------------------------------------------------------------------ */
 /*  Action 定义                                                        */
@@ -15,50 +16,50 @@ import { invokeTauri } from './tauri'
 
 export interface ShortcutAction {
   id: string          // "save" | "newFile" | ...
-  label: string       // "保存文件"
+  labelKey: string    // "shortcuts.save"
   defaultKey: string  // "ctrl+s"
-  category: string    // "文件" | "编辑" | "格式" | "视图"
+  categoryKey: string // "shortcuts.file" | ...
 }
 
-/** 应用支持的所有快捷键 action（按 category 分组） */
+/** 应用支持的所有快捷键 action（按 category 分组，label 用 i18n key） */
 export const SHORTCUT_ACTIONS: ShortcutAction[] = [
   // -- 文件 --
-  { id: 'newFile',       label: '新建文件',     defaultKey: 'ctrl+n',            category: '文件' },
-  { id: 'openFile',      label: '打开文件',     defaultKey: 'ctrl+o',            category: '文件' },
-  { id: 'save',          label: '保存文件',     defaultKey: 'ctrl+s',            category: '文件' },
-  { id: 'saveAs',        label: '另存为',       defaultKey: 'ctrl+shift+s',      category: '文件' },
-  { id: 'closeTab',      label: '关闭标签',     defaultKey: 'ctrl+w',            category: '文件' },
-  { id: 'exportHtml',    label: '导出 HTML',    defaultKey: 'ctrl+h',                   category: '文件' },
-  { id: 'exportMd',      label: '导出 Markdown', defaultKey: 'ctrl+m',                   category: '文件' },
-  { id: 'exportTxt',     label: '导出纯文本',   defaultKey: '',                   category: '文件' },
+  { id: 'newFile',       labelKey: 'shortcuts.newFile',       defaultKey: 'ctrl+n',            categoryKey: 'shortcuts.file' },
+  { id: 'openFile',      labelKey: 'shortcuts.openFile',      defaultKey: 'ctrl+o',            categoryKey: 'shortcuts.file' },
+  { id: 'save',          labelKey: 'shortcuts.save',          defaultKey: 'ctrl+s',            categoryKey: 'shortcuts.file' },
+  { id: 'saveAs',        labelKey: 'shortcuts.saveAs',        defaultKey: 'ctrl+shift+s',      categoryKey: 'shortcuts.file' },
+  { id: 'closeTab',      labelKey: 'shortcuts.closeTab',      defaultKey: 'ctrl+w',            categoryKey: 'shortcuts.file' },
+  { id: 'exportHtml',    labelKey: 'shortcuts.exportHtml',    defaultKey: 'ctrl+h',                   categoryKey: 'shortcuts.file' },
+  { id: 'exportMd',      labelKey: 'shortcuts.exportMd',      defaultKey: 'ctrl+m',                   categoryKey: 'shortcuts.file' },
+  { id: 'exportTxt',     labelKey: 'shortcuts.exportTxt',     defaultKey: '',                   categoryKey: 'shortcuts.file' },
   // -- 编辑 --
-  { id: 'undo',          label: '撤销',         defaultKey: 'ctrl+z',            category: '编辑' },
-  { id: 'redo',          label: '重做',         defaultKey: 'ctrl+y',            category: '编辑' },
-  { id: 'search',        label: '搜索',         defaultKey: 'ctrl+f',            category: '编辑' },
-  { id: 'toggleSidebar', label: '切换侧边栏',   defaultKey: 'ctrl+\\',           category: '编辑' },
+  { id: 'undo',          labelKey: 'shortcuts.undo',          defaultKey: 'ctrl+z',            categoryKey: 'shortcuts.edit' },
+  { id: 'redo',          labelKey: 'shortcuts.redo',          defaultKey: 'ctrl+y',            categoryKey: 'shortcuts.edit' },
+  { id: 'search',        labelKey: 'shortcuts.search',        defaultKey: 'ctrl+f',            categoryKey: 'shortcuts.edit' },
+  { id: 'toggleSidebar', labelKey: 'shortcuts.toggleSidebar', defaultKey: 'ctrl+\\',           categoryKey: 'shortcuts.edit' },
   // -- 格式 --
-  { id: 'bold',          label: '粗体',         defaultKey: 'ctrl+b',            category: '格式' },
-  { id: 'italic',        label: '斜体',         defaultKey: 'ctrl+i',            category: '格式' },
-  { id: 'strikethrough', label: '删除线',       defaultKey: 'ctrl+-',                   category: '格式' },
-  { id: 'inlineCode',    label: '行内代码',     defaultKey: 'ctrl++',                   category: '格式' },
-  { id: 'heading1',      label: '一级标题',     defaultKey: 'ctrl+1',            category: '格式' },
-  { id: 'heading2',      label: '二级标题',     defaultKey: 'ctrl+2',            category: '格式' },
-  { id: 'heading3',      label: '三级标题',     defaultKey: 'ctrl+3',            category: '格式' },
-  { id: 'unorderedList', label: '无序列表',     defaultKey: 'ctrl+.',                   category: '格式' },
-  { id: 'orderedList',   label: '有序列表',     defaultKey: 'ctrl+0',                   category: '格式' },
-  { id: 'blockquote',    label: '引用',         defaultKey: 'ctrl+\'',                   category: '格式' },
-  { id: 'link',          label: '链接',         defaultKey: 'ctrl+k',            category: '格式' },
-  { id: 'image',         label: '图片',         defaultKey: '',                   category: '格式' },
-  { id: 'codeBlock',     label: '代码块',       defaultKey: 'ctrl+`',                   category: '格式' },
-  { id: 'table',         label: '表格',         defaultKey: 'ctrl+t',                   category: '格式' },
-  { id: 'horizontalRule', label: '分割线',     defaultKey: 'ctrl+l',                   category: '格式' },
+  { id: 'bold',          labelKey: 'shortcuts.bold',          defaultKey: 'ctrl+b',            categoryKey: 'shortcuts.format' },
+  { id: 'italic',        labelKey: 'shortcuts.italic',        defaultKey: 'ctrl+i',            categoryKey: 'shortcuts.format' },
+  { id: 'strikethrough', labelKey: 'shortcuts.strikethrough', defaultKey: 'ctrl+-',                   categoryKey: 'shortcuts.format' },
+  { id: 'inlineCode',    labelKey: 'shortcuts.inlineCode',    defaultKey: 'ctrl++',                   categoryKey: 'shortcuts.format' },
+  { id: 'heading1',      labelKey: 'shortcuts.heading1',      defaultKey: 'ctrl+1',            categoryKey: 'shortcuts.format' },
+  { id: 'heading2',      labelKey: 'shortcuts.heading2',      defaultKey: 'ctrl+2',            categoryKey: 'shortcuts.format' },
+  { id: 'heading3',      labelKey: 'shortcuts.heading3',      defaultKey: 'ctrl+3',            categoryKey: 'shortcuts.format' },
+  { id: 'unorderedList', labelKey: 'shortcuts.unorderedList', defaultKey: 'ctrl+.',                   categoryKey: 'shortcuts.format' },
+  { id: 'orderedList',   labelKey: 'shortcuts.orderedList',   defaultKey: 'ctrl+0',                   categoryKey: 'shortcuts.format' },
+  { id: 'blockquote',    labelKey: 'shortcuts.blockquote',    defaultKey: 'ctrl+\'',                   categoryKey: 'shortcuts.format' },
+  { id: 'link',          labelKey: 'shortcuts.link',          defaultKey: 'ctrl+k',            categoryKey: 'shortcuts.format' },
+  { id: 'image',         labelKey: 'shortcuts.image',         defaultKey: '',                   categoryKey: 'shortcuts.format' },
+  { id: 'codeBlock',     labelKey: 'shortcuts.codeBlock',     defaultKey: 'ctrl+`',                   categoryKey: 'shortcuts.format' },
+  { id: 'table',         labelKey: 'shortcuts.table',         defaultKey: 'ctrl+t',                   categoryKey: 'shortcuts.format' },
+  { id: 'horizontalRule', labelKey: 'shortcuts.horizontalRule', defaultKey: 'ctrl+l',                   categoryKey: 'shortcuts.format' },
   // -- 视图 --
-  { id: 'toggleTheme',   label: '切换深浅模式', defaultKey: 'f2',                   category: '视图' },
-  { id: 'viewCycle',     label: '切换视图',     defaultKey: 'f3',      category: '视图' },
-  { id: 'showShortcuts', label: '快捷键大全',   defaultKey: 'f1',               category: '视图' },
-  { id: 'slashMenu',     label: '斜杠菜单',     defaultKey: 'ins',              category: '视图' },
-  { id: 'toggleDevtools', label: '开发者工具',  defaultKey: 'f12',               category: '视图' },
-  { id: 'presentSlides', label: '演示模式',     defaultKey: 'ctrl+alt+p',        category: '视图' },
+  { id: 'toggleTheme',   labelKey: 'shortcuts.toggleTheme',   defaultKey: 'f2',                   categoryKey: 'shortcuts.view' },
+  { id: 'viewCycle',     labelKey: 'shortcuts.viewCycle',     defaultKey: 'f3',      categoryKey: 'shortcuts.view' },
+  { id: 'showShortcuts', labelKey: 'shortcuts.showShortcuts', defaultKey: 'f1',               categoryKey: 'shortcuts.view' },
+  { id: 'slashMenu',     labelKey: 'shortcuts.slashMenu',     defaultKey: 'ins',              categoryKey: 'shortcuts.view' },
+  { id: 'toggleDevtools', labelKey: 'shortcuts.toggleDevtools', defaultKey: 'f12',               categoryKey: 'shortcuts.view' },
+  { id: 'presentSlides', labelKey: 'shortcuts.presentSlides', defaultKey: 'ctrl+alt+p',        categoryKey: 'shortcuts.view' },
 ]
 
 /* ------------------------------------------------------------------ */
@@ -172,9 +173,10 @@ export function findConflict(combo: string, currentMap: Record<string, string>, 
   return null
 }
 
-/** 根据 actionId 查找 action label */
+/** 根据 actionId 查找 action label（当前语言） */
 export function getActionLabel(actionId: string): string {
-  return SHORTCUT_ACTIONS.find(a => a.id === actionId)?.label || actionId
+  const action = SHORTCUT_ACTIONS.find(a => a.id === actionId)
+  return action ? translate(getCurrentLang(), action.labelKey) : actionId
 }
 
 /* ------------------------------------------------------------------ */
@@ -183,7 +185,7 @@ export function getActionLabel(actionId: string): string {
 
 /** "ctrl+shift+i" → "Ctrl+Shift+I" */
 export function formatKey(combo: string): string {
-  if (!combo) return '未设置'
+  if (!combo) return translate(getCurrentLang(), 'common.notSet')
   return combo
     .split('+')
     .map(part => {

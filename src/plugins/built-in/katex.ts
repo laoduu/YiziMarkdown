@@ -7,7 +7,9 @@ let katexModule: any = null
 export const katexPlugin: EditorPlugin = {
   id: 'katex',
   name: '数学公式',
+  nameKey: 'settings.pluginKatexName',
   description: '使用 KaTeX 渲染 LaTeX 数学公式，支持行内 $...$ 和块级 $$...$$',
+  descriptionKey: 'settings.pluginKatexDesc',
 
   configFields: [],
 

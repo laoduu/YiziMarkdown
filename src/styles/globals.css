@@ -95,6 +95,17 @@ body {
   border-right: none;
 }
 
+/* ===== AI 聊天面板（右侧，与左侧边栏对称） ===== */
+.ai-chat-panel {
+  width: 380px;
+  background-color: var(--sidebar-bg);
+  border-left: 1px solid var(--editor-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
 /* ===== 主编辑区 ===== */
 .editor-container {
   flex: 1;
@@ -901,6 +912,15 @@ body {
 }
 .settings-row:last-child {
   border-bottom: none;
+}
+/* 左侧标签/提示列：限宽 + 提示文字允许换行，避免长 hint 挤掉右侧控件 */
+.settings-row > div:first-child {
+  max-width: 55%;
+  min-width: 0;
+}
+.settings-row > div:first-child p {
+  word-break: break-word;
+  line-height: 1.4;
 }
 
 .settings-select {

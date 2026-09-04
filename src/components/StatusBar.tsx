@@ -1,6 +1,7 @@
 import { invokeTauri } from '../lib/tauri'
 import { useState, useEffect } from 'react'
 import { FileText, Clock, Check, FolderOpen, Save, PanelLeftClose, Eye, Code } from 'lucide-react'
+import { useI18n } from '../i18n'
 
 interface StatusBarProps {
   wordCount: number
@@ -20,6 +21,7 @@ export default function StatusBar({
   filePath, isSaved,
   isPreviewMode, onTogglePreview, onToggleSidebar, onOpenAbout,
 }: StatusBarProps) {
+  const { t } = useI18n()
   const [version, setVersion] = useState('')
 
   useEffect(() => {
@@ -32,7 +34,7 @@ export default function StatusBar({
       <button
         onClick={onToggleSidebar}
         className="statusbar-item"
-        title="切换侧边栏"
+        title={t('statusbar.toggleSidebar')}
       >
         <PanelLeftClose size={12} />
       </button>
@@ -40,7 +42,7 @@ export default function StatusBar({
       <button
         onClick={() => onTogglePreview?.(!isPreviewMode)}
         className="statusbar-item"
-        title={isPreviewMode ? '切换到源代码' : '切换到预览'}
+        title={isPreviewMode ? t('statusbar.toSource') : t('statusbar.toPreview')}
       >
         {isPreviewMode ? <Code size={12} /> : <Eye size={12} />}
       </button>
@@ -54,32 +56,32 @@ export default function StatusBar({
 
       <div className="flex items-center gap-1.5">
         <FileText size={12} />
-        <span>{wordCount} 字</span>
+        <span>{t('statusbar.chars', { n: wordCount })}</span>
       </div>
 
       <div className="flex items-center gap-1.5">
         <Clock size={12} />
-        <span>{readingTime} 分钟阅读</span>
+        <span>{t('statusbar.readingTime', { n: readingTime })}</span>
       </div>
 
       <div className="flex-1" />
 
-      <div className="statusbar-item" onClick={onOpenAbout} style={{ cursor: onOpenAbout ? 'pointer' : 'default' }} title="关于 YiziMarkdown">
+      <div className="statusbar-item" onClick={onOpenAbout} style={{ cursor: onOpenAbout ? 'pointer' : 'default' }} title={t('statusbar.about')}>
         <span>YiziMarkdown {version}</span>
       </div>
 
       <div className="flex-1" />
 
       <div className="flex items-center gap-1.5">
-        <span>行 {cursorLine}</span>
-        <span>列 {cursorColumn}</span>
+        <span>{t('statusbar.line', { n: cursorLine })}</span>
+        <span>{t('statusbar.col', { n: cursorColumn })}</span>
       </div>
 
       <div className="flex items-center gap-1.5">
         {isSaved ? (
-          <><Check size={12} /><span>已保存</span></>
+          <><Check size={12} /><span>{t('statusbar.saved')}</span></>
         ) : (
-          <><Save size={12} /><span>未保存</span></>
+          <><Save size={12} /><span>{t('statusbar.unsaved')}</span></>
         )}
       </div>
 

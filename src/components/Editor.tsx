@@ -18,6 +18,7 @@ import { renderMarkdown } from '../lib/markdownRenderer'
 import { extendMarkdownIt, postRender as pluginPostRender } from '../plugins/registry'
 import { invokeTauri } from '../lib/tauri'
 import { resolveLocalImageSrc } from '../lib/localImages'
+import { useI18n } from '../i18n'
 
 // const markdownHighlight = HighlightStyle.define([
 //   // 标题
@@ -387,6 +388,7 @@ function buildEditorTheme(isDark: boolean, fontFamily: string, fontSize: string,
 }
 
 const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearchToggle, isSearchOpen: externalSearchOpen, viewMode: externalViewMode, onCursorChange }, ref) => {
+  const { t } = useI18n()
 
   const editorRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
@@ -697,7 +699,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         }
       } else if (mode === 'link') {
         if (selectedText) {
-          insertText = markdown.replace('链接', selectedText).replace('alt', selectedText)
+          insertText = markdown.replace('text', selectedText).replace('alt', selectedText)
           newFrom = insertText.indexOf('](') + from + 2
           newTo = newFrom + 3
         } else {
@@ -1131,7 +1133,10 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       case 'heading1': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '# ' }, selection: { anchor: newFrom + 2, head: newFrom + 2 } }); break
       case 'heading2': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '## ' }, selection: { anchor: newFrom + 3, head: newFrom + 3 } }); break
       case 'heading3': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '### ' }, selection: { anchor: newFrom + 4, head: newFrom + 4 } }); break
-      case 'table': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n|  |  |  |\n' }, selection: { anchor: newFrom + 2, head: newFrom + 2 } }); break
+      case 'table': {
+        const col = t('toolbar.column')
+        view.dispatch({ changes: { from: newFrom, to: newTo, insert: `| ${col}1 | ${col}2 | ${col}3 |\n| --- | --- | --- |\n|  |  |  |\n` }, selection: { anchor: newFrom + 2, head: newFrom + 2 } }); break
+      }
       case 'link': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '[]()' }, selection: { anchor: newFrom + 1, head: newFrom + 1 } }); break
       case 'image': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '![]()' }, selection: { anchor: newFrom + 2, head: newFrom + 2 } }); break
       case 'codeBlock': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '\n```\n\n```\n' }, selection: { anchor: newFrom + 4, head: newFrom + 4 } }); break
@@ -1180,7 +1185,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
             <input
               ref={searchInputRef}
               type="text"
-              placeholder="搜索..."
+              placeholder={t('editor.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={(e) => {
@@ -1198,15 +1203,15 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
           <button
             onClick={() => setIsReplaceOpen(!isReplaceOpen)}
             className={`p-1 rounded hover:bg-[var(--editor-hover)] ${isReplaceOpen ? 'bg-[var(--editor-hover)]' : ''}`}
-            title="替换"
+            title={t('editor.replace')}
           >
             <ReplaceIcon size={14} />
           </button>
           
-          <button onClick={handleSearchPrev} className="p-1 rounded hover:bg-[var(--editor-hover)]" title="上一个 (Shift+Enter)">
+          <button onClick={handleSearchPrev} className="p-1 rounded hover:bg-[var(--editor-hover)]" title={t('editor.prev')}>
             <ChevronUp size={14} />
           </button>
-          <button onClick={handleSearchNext} className="p-1 rounded hover:bg-[var(--editor-hover)]" title="下一个 (Enter)">
+          <button onClick={handleSearchNext} className="p-1 rounded hover:bg-[var(--editor-hover)]" title={t('editor.next')}>
             <ChevronDown size={14} />
           </button>
           <span className="text-xs text-[var(--sidebar-text)] tabular-nums min-w-[3em] text-center">
@@ -1232,7 +1237,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
             <Search size={14} className="text-[var(--sidebar-text)] opacity-0" />
             <input
               type="text"
-              placeholder="替换..."
+              placeholder={t('editor.replacePlaceholder')}
               value={replaceTerm}
               onChange={(e) => setReplaceTerm(e.target.value)}
               onKeyDown={(e) => {
@@ -1250,14 +1255,14 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
             onClick={handleReplace}
             className="px-3 py-1 text-sm bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded hover:bg-[var(--editor-hover)]"
           >
-            替换
+            {t('editor.replaceOne')}
           </button>
           
           <button
             onClick={handleReplaceAll}
             className="px-3 py-1 text-sm bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded hover:bg-[var(--editor-hover)]"
           >
-            全部替换
+            {t('editor.replaceAll')}
           </button>
         </div>
       )}
