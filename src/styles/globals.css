@@ -518,7 +518,14 @@ body {
   transition: color 0.15s, border-color 0.15s, background-color 0.15s;
   position: relative;
   max-width: 180px;
+  flex: 0 1 auto;
+  min-width: 0;
 }
+/* 非激活 tab 溢出时可压缩到最小宽度，激活 tab 保持完整显示 */
+.tab-item:not(.tab-item-active) { min-width: 56px; }
+.tab-item-active { flex-shrink: 0; }
+.tab-list > .tab-item:first-child { flex-shrink: 0; }
+.tab-new-btn { flex-shrink: 0; }
 .tab-item:hover {
   color: var(--editor-text);
   background: var(--editor-hover);
@@ -530,16 +537,18 @@ body {
 }
 
 .tab-close {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
   width: 16px;
   height: 16px;
   border-radius: 3px;
-  margin-left: 2px;
   opacity: 0;
   transition: opacity 0.15s, background 0.15s;
-  flex-shrink: 0;
 }
 .tab-item:hover .tab-close,
 .tab-item-active .tab-close {
@@ -549,6 +558,8 @@ body {
   background: var(--editor-hover);
   opacity: 1 !important;
 }
+/* 激活 tab 标题预留关闭按钮空间，避免文字被按钮遮挡 */
+.tab-item-active .tab-title { padding-right: 18px; }
 
 .tab-unsaved-pulse {
   display: inline-block;
@@ -582,6 +593,86 @@ body {
   0% { transform: scale(0.5); opacity: 0; }
   60% { transform: scale(1.2); }
   100% { transform: scale(1); opacity: 1; }
+}
+
+/* 溢出菜单 */
+.tab-overflow-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  flex-shrink: 0;
+}
+.tab-overflow-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 100%;
+  border: none;
+  background: none;
+  color: var(--sidebar-text);
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+}
+.tab-overflow-btn:hover,
+.tab-overflow-btn-active {
+  color: var(--editor-text);
+  background: var(--editor-hover);
+}
+.tab-overflow-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  right: 0;
+  z-index: 100;
+  min-width: 220px;
+  max-width: 320px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--editor-bg);
+  border: 1px solid var(--editor-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.tab-overflow-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--sidebar-text);
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.15s, background-color 0.15s;
+}
+.tab-overflow-item:hover {
+  color: var(--editor-text);
+  background: var(--editor-hover);
+}
+.tab-overflow-item-active {
+  color: var(--editor-accent);
+}
+.tab-overflow-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  opacity: 0.4;
+  transition: opacity 0.15s, background 0.15s;
+}
+.tab-overflow-item:hover .tab-overflow-close {
+  opacity: 0.7;
+}
+.tab-overflow-close:hover {
+  background: var(--editor-hover);
+  opacity: 1 !important;
 }
 
 /* 关闭确认弹窗 */

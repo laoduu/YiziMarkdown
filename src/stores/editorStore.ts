@@ -133,6 +133,9 @@ export const useEditorStore = create<EditorState>()(
 
       updateContent: (content) => {
         const { tabs, activeTabId } = get()
+        const tab = tabs.find(t => t.id === activeTabId)
+        // 内容未变化时（如外部同步回写）不标记为未保存
+        if (!tab || tab.content === content) return
         set({
           tabs: tabs.map(t => t.id === activeTabId ? { ...t, content, isSaved: false, saveStatus: 'unsaved' } : t),
         })
@@ -199,11 +202,21 @@ export const useEditorStore = create<EditorState>()(
         tabs: state.tabs.map(t => ({
           id: t.id, name: t.name, filePath: t.filePath,
           content: t.content, isSaved: t.isSaved,
+          saveStatus: t.saveStatus,
           viewMode: t.viewMode,
         })),
         activeTabId: state.activeTabId,
         recentFiles: state.recentFiles,
       }),
+      // 兼容旧版本持久化数据：saveStatus 缺失时按 isSaved 推断
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<EditorState>
+        const tabs = (p.tabs ?? []).map(t => ({
+          ...t,
+          saveStatus: t.saveStatus ?? (t.isSaved ? 'saved' : 'unsaved'),
+        }))
+        return { ...current, ...p, tabs }
+      },
     }
   )
 )

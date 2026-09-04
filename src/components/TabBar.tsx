@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Home, Code, Columns2, Eye, Check, Sparkles, Presentation } from 'lucide-react'
+import { X, Home, Code, Columns2, Eye, Check, Sparkles, Presentation, ChevronsRight } from 'lucide-react'
 import { useEditorStore, SaveStatus } from '../stores/editorStore'
 
 interface TabBarProps {
@@ -9,7 +9,7 @@ interface TabBarProps {
 
 
 function StatusDot({ status }: { status: SaveStatus }) {
-  if (status === 'saved') return null
+  if (status === 'saved' || status === undefined) return null
 
   if (status === 'just-saved') {
     return (
@@ -27,7 +27,50 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
   const { tabs, activeTabId, switchTab, closeTab, currentTab, markAsSaved, clearJustSaved } = useEditorStore()
   const current = currentTab()
   const [pendingCloseId, setPendingCloseId] = useState<string | null>(null)
+  const [overflowing, setOverflowing] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const justSavedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const tabListRef = useRef<HTMLDivElement>(null)
+  const overflowWrapRef = useRef<HTMLDivElement>(null)
+
+  // 检测 tab 是否溢出容器
+  useEffect(() => {
+    const el = tabListRef.current
+    if (!el) return
+    const check = () => setOverflowing(el.scrollWidth > el.clientWidth + 1)
+    check()
+    const ro = new ResizeObserver(check)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [tabs.length, activeTabId])
+
+  // 活动 tab 变化时滚动到可见区域
+  useEffect(() => {
+    if (activeTabId === null) return
+    const el = tabListRef.current
+    if (!el) return
+    const target = el.querySelector<HTMLElement>(`[data-tab-id="${activeTabId}"]`)
+    if (!target) return
+    const t = target.getBoundingClientRect()
+    const c = el.getBoundingClientRect()
+    if (t.left < c.left) {
+      el.scrollLeft -= c.left - t.left
+    } else if (t.right > c.right) {
+      el.scrollLeft += t.right - c.right
+    }
+  }, [activeTabId, tabs.length])
+
+  // 点击溢出菜单外部时关闭
+  useEffect(() => {
+    if (!menuOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (overflowWrapRef.current && !overflowWrapRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [menuOpen])
 
   // 监听 Ctrl+W 等外部关闭请求
   useEffect(() => {
@@ -65,6 +108,19 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
     }
   }
 
+  // 鼠标中键点击关闭 tab
+  const handleAuxClick = (tabId: string, e: React.MouseEvent) => {
+    if (e.button !== 1) return
+    e.preventDefault()
+    e.stopPropagation()
+    const tab = tabs.find(t => t.id === tabId)
+    if (tab && !tab.isSaved) {
+      setPendingCloseId(tabId)
+    } else {
+      closeTab(tabId)
+    }
+  }
+
   const handleConfirmClose = (action: 'save' | 'discard' | 'cancel') => {
     const tabId = pendingCloseId
     setPendingCloseId(null)
@@ -80,7 +136,7 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
 
   return (
     <div className="tab-bar">
-      <div className="flex items-center min-w-0 flex-1 overflow-x-auto tab-list">
+      <div ref={tabListRef} className="flex items-center min-w-0 flex-1 overflow-x-auto tab-list">
         <button
           onClick={() => switchTab(null)}
           className={`tab-item ${activeTabId === null ? 'tab-item-active' : ''}`}
@@ -93,12 +149,14 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
         {tabs.map((tab) => (
           <button
             key={tab.id}
+            data-tab-id={tab.id}
             onClick={() => switchTab(tab.id)}
+            onAuxClick={(e) => handleAuxClick(tab.id, e)}
             onDoubleClick={(e) => handleClose(tab.id, e)}
             className={`tab-item ${activeTabId === tab.id ? 'tab-item-active' : ''}`}
             title={tab.filePath || '未命名新文件'}
           >
-            <span className="truncate max-w-[120px]">{tab.name}</span>
+            <span className="tab-title truncate max-w-[120px] min-w-0">{tab.name}</span>
             <StatusDot status={tab.saveStatus} />
             <span
               className="tab-close"
@@ -113,6 +171,40 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
           +
         </button>
       </div>
+
+      {overflowing && (
+        <div ref={overflowWrapRef} className="tab-overflow-wrap">
+          <button
+            className={`tab-overflow-btn ${menuOpen ? 'tab-overflow-btn-active' : ''}`}
+            onClick={() => setMenuOpen(o => !o)}
+            title="所有打开的文档"
+          >
+            <ChevronsRight size={14} />
+          </button>
+          {menuOpen && (
+            <div className="tab-overflow-menu">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  className={`tab-overflow-item ${activeTabId === tab.id ? 'tab-overflow-item-active' : ''}`}
+                  onClick={() => {
+                    switchTab(tab.id)
+                    setMenuOpen(false)
+                  }}
+                  onAuxClick={(e) => handleAuxClick(tab.id, e)}
+                  title={tab.filePath || '未命名新文件'}
+                >
+                  <span className="truncate flex-1 min-w-0 text-left">{tab.name}</span>
+                  <StatusDot status={tab.saveStatus} />
+                  <span className="tab-overflow-close" onClick={(e) => handleClose(tab.id, e)}>
+                    <X size={12} />
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {activeTabId && (
         <div className="flex items-center shrink-0 tab-view-modes">
