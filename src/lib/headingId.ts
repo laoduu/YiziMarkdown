@@ -42,7 +42,8 @@ export function computeOutlineItems(content: string): OutlineItem[] {
   const items: OutlineItem[] = []
   const counter: Record<string, number> = {}
   content.split('\n').forEach((line, index) => {
-    const match = line.match(/^(#{1,6})\s+(.+)$/)
+    // 先剥掉 CRLF 行尾的 \r（JS 正则的 . 不匹配 \r，否则 CRLF 文档的标题全部匹配失败）
+    const match = line.replace(/\r$/, '').match(/^(#{1,6})\s+(.+)$/)
     if (match) {
       const id = generateHeadingId(match[2], counter)
       items.push({

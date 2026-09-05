@@ -29,7 +29,7 @@ export type ProviderId =
   | 'opencode-go'
   // Local
   | 'ollama'
-  | 'openai-compat';
+  | 'custom';
 
 /** Rust 侧使用的 wire format。 */
 export type ApiFormat = 'openai' | 'anthropic' | 'ollama';
@@ -203,27 +203,28 @@ export const PROVIDERS: ProviderConfig[] = [
     keyless: true,
   },
   {
-    id: 'openai-compat',
-    label: 'OpenAI 兼容 / OpenAI-compatible (llama.cpp · LM Studio · vLLM)',
+    id: 'custom',
+    label: '自定义服务 / Custom (OpenAI · Anthropic 兼容)',
     apiFormat: 'openai',
     defaultModel: '',
-    defaultBaseUrl: 'http://localhost:8080/v1',
-    keyless: true,
+    defaultBaseUrl: '',
+    modelHint: 'deepseek-chat · gpt-4o-mini · claude-sonnet-4-6 · glm-4.5 …（填供应商提供的模型 ID）',
   },
 ];
 
-/** 解析 provider 别名（local → ollama）。 */
+/** 解析 provider 别名（local → ollama；各类本地/自定义端点 → custom）。 */
 const PROVIDER_ALIASES: Record<string, string> = {
   local: 'ollama',
-  llama: 'openai-compat',
-  'llama-cpp': 'openai-compat',
-  llamacpp: 'openai-compat',
-  'llama.cpp': 'openai-compat',
-  lmstudio: 'openai-compat',
-  'lm-studio': 'openai-compat',
-  vllm: 'openai-compat',
-  custom: 'openai-compat',
-  'openai-compatible': 'openai-compat',
+  llama: 'custom',
+  'llama-cpp': 'custom',
+  llamacpp: 'custom',
+  'llama.cpp': 'custom',
+  lmstudio: 'custom',
+  'lm-studio': 'custom',
+  vllm: 'custom',
+  custom: 'custom',
+  'openai-compat': 'custom',
+  'openai-compatible': 'custom',
 };
 
 export function resolveProvider(id: string): string {

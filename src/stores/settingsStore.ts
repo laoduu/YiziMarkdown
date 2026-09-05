@@ -38,6 +38,8 @@ export interface SettingsState {
   aiProvider: string
   aiModel: string
   aiBaseUrl: string
+  /** 自定义服务的 wire 协议：OpenAI 兼容 / Anthropic 兼容（仅 provider=custom 时生效） */
+  aiApiFormat: 'openai' | 'anthropic'
   aiSystemPrompt: string
   /** 引用当前文档时截断的字符上限（0 = 不限） */
   aiDocLimit: number
@@ -84,6 +86,7 @@ export const useSettingsStore = create<SettingsState>()(
       aiProvider: 'deepseek',
       aiModel: '',
       aiBaseUrl: '',
+      aiApiFormat: 'openai',
       aiSystemPrompt: '',
       aiDocLimit: 200000,
 

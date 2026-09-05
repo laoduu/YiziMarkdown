@@ -1,6 +1,6 @@
 import { invokeTauri, invokeTauriOrThrow } from '../lib/tauri'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { X, Loader2, ChevronRight, FolderOpen, Palette, FileText, Keyboard, Settings2, Eye, Info, Github, History, BookOpen, ExternalLink, Zap, Globe, Puzzle, Bot } from 'lucide-react'
+import { X, Loader2, ChevronRight, FolderOpen, Palette, FileText, Keyboard, Settings2, Eye, EyeOff, Info, Github, History, BookOpen, ExternalLink, Zap, Globe, Puzzle, Bot } from 'lucide-react'
 import { useSettingsStore } from '../stores/settingsStore'
 import { SHORTCUT_ACTIONS, getKeybindingsMap, saveKeybindings, getDefaultMap, formatKey, findConflict, getActionLabel } from '../lib/keybindings'
 import { RotateCcw } from 'lucide-react'
@@ -1159,6 +1159,7 @@ function AISettings() {
   const [baseUrl, setBaseUrl] = useState(store.aiBaseUrl)
   const [systemPrompt, setSystemPrompt] = useState(store.aiSystemPrompt)
   const [keyInput, setKeyInput] = useState('')
+  const [showKey, setShowKey] = useState(false)
   const [hasKey, setHasKey] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [verifyMsg, setVerifyMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -1213,8 +1214,9 @@ function AISettings() {
       const msg = await invokeTauriOrThrow<string>('ai_verify_key', {
         provider: store.aiProvider,
         key: cleanKey(keyInput) || null,
-        apiFormat: provider?.apiFormat,
+        apiFormat: provider?.id === 'custom' ? store.aiApiFormat : provider?.apiFormat,
         baseUrl: baseUrl || provider?.defaultBaseUrl || null,
+        model: model || null,
       })
       setVerifyMsg({ ok: msg.startsWith('OK'), text: msg })
     } catch (e) {
@@ -1228,7 +1230,7 @@ function AISettings() {
 
   return (
     <>
-      <div className="settings-content-scroll">
+      <div className="settings-content-scroll ai-settings">
         <div className="space-y-4">
           <Section title={t('settings.aiSectionGeneral')}>
             <Row label={t('settings.aiProvider')} hint={t('settings.aiProviderHint')}>
@@ -1236,11 +1238,22 @@ function AISettings() {
                 value={store.aiProvider}
                 onChange={(e) => handleProviderChange(e.target.value)}
                 className="settings-select"
-                style={{ maxWidth: '320px' }}
               >
                 {PROVIDERS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
               </select>
             </Row>
+            {provider?.id === 'custom' && (
+              <Row label={t('settings.aiProtocol')} hint={t('settings.aiProtocolHint')}>
+                <select
+                  value={store.aiApiFormat}
+                  onChange={(e) => store.setField('aiApiFormat', e.target.value as 'openai' | 'anthropic')}
+                  className="settings-select"
+                >
+                  <option value="openai">{t('settings.aiProtocolOpenAI')}</option>
+                  <option value="anthropic">{t('settings.aiProtocolAnthropic')}</option>
+                </select>
+              </Row>
+            )}
             <Row label={t('settings.aiModel')}>
               <div className="flex flex-col items-end gap-1 w-full">
                 <input
@@ -1257,7 +1270,7 @@ function AISettings() {
                 )}
               </div>
             </Row>
-            <Row label={t('settings.aiBaseUrl')} hint={t('settings.aiBaseUrlHint')}>
+            <Row label={t('settings.aiBaseUrl')} hint={provider?.id === 'custom' ? t('settings.aiBaseUrlCustomHint') : t('settings.aiBaseUrlHint')}>
               <input
                 type="text"
                 value={baseUrl}
@@ -1299,19 +1312,29 @@ function AISettings() {
               <p className="text-[11px] text-[var(--sidebar-text)] px-5">{t('settings.aiKeylessNote')}</p>
             ) : (
               <>
-                <Row label={t('settings.aiApiKey')} hint={t('settings.aiApiKeyHint')}>
+                <Row label={t('settings.aiApiKey')} hint={provider?.id === 'custom' ? t('settings.aiKeyOptionalHint') : t('settings.aiApiKeyHint')}>
                   <div className="flex flex-col items-end gap-1.5 w-full">
-                    <div className="flex items-center gap-2 w-full">
+                    {/* 密钥输入：独占一行全宽（密钥通常很长），等宽字体 + 显隐切换 */}
+                    <div className="relative w-full">
                       <input
-                        type="password"
+                        type={showKey ? 'text' : 'password'}
                         value={keyInput}
                         onChange={(e) => setKeyInput(e.target.value)}
                         placeholder={signedIn ? t('settings.aiKeySaved') : t('settings.aiKeyNotSet')}
-                        className="settings-input flex-1"
+                        className="settings-input w-full pr-8"
+                        style={{ fontFamily: 'var(--font-mono)' }}
                       />
-                      <button onClick={handleSaveKey} disabled={!keyInput.trim()} className="settings-btn-primary"> {t('settings.aiSaveKey')}</button>
+                      <button
+                        type="button"
+                        onClick={() => setShowKey((v) => !v)}
+                        title={t('settings.aiKeyToggle')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--sidebar-text)] hover:text-[var(--editor-text)]"
+                      >
+                        {showKey ? <EyeOff size={13} /> : <Eye size={13} />}
+                      </button>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 w-full justify-end">
+                      <button onClick={handleSaveKey} disabled={!keyInput.trim()} className="settings-btn-primary"> {t('settings.aiSaveKey')}</button>
                       <span className="text-[10px] text-[var(--sidebar-text)]">{signedIn ? `✓ ${t('settings.aiKeySaved')}` : t('settings.aiKeyNotSet')}</span>
                       {signedIn && (
                         <button onClick={handleClearKey} className="text-[10px] text-[var(--sidebar-text)] hover:text-[var(--editor-accent)] underline">{t('settings.aiClearKey')}</button>
@@ -1321,7 +1344,7 @@ function AISettings() {
                       </button>
                     </div>
                     {verifyMsg && (
-                      <p className={`text-[10px] ${verifyMsg.ok ? 'text-emerald-500' : 'text-red-500'}`}>
+                      <p className={`text-[10px] break-all ${verifyMsg.ok ? 'text-emerald-500' : 'text-red-500'}`}>
                         {verifyMsg.ok ? t('settings.aiVerified', { msg: verifyMsg.text }) : t('settings.aiVerifyFailed', { msg: verifyMsg.text })}
                       </p>
                     )}

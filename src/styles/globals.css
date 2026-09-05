@@ -106,6 +106,103 @@ body {
   flex-shrink: 0;
 }
 
+/* AI 输入区（contentEditable）：与文字混排、可光标操作 */
+.ai-chat-editor {
+  min-height: 76px;
+  max-height: 160px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.5;
+  cursor: text;
+  /* 细边框 1px：激活时边框内流动主题色光点（conic-gradient 旋转），
+     仅线框变色、背景保持纯色不变；无额外外圈、无双层框 */
+  border: 1px solid var(--editor-border);
+  transition: border-color 0.3s ease;
+}
+/* @property 注册角度变量，使 conic-gradient 可被动画驱动旋转 */
+@property --ai-border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+.ai-chat-editor:focus {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--editor-surface), var(--editor-surface)) padding-box,
+    conic-gradient(
+      from var(--ai-border-angle),
+      transparent 0deg,
+      var(--editor-accent) 45deg,
+      transparent 90deg
+    ) border-box;
+  animation: ai-border-flow 2.8s linear infinite;
+}
+@keyframes ai-border-flow {
+  to {
+    --ai-border-angle: 360deg;
+  }
+}
+.ai-chat-editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--sidebar-text);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* Skill 技能 tag：⚡ + 名称；hover 时 ⚡ 原位淡出、❌ 原位淡入（名称不跳动） */
+.skill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  margin: 0 2px;
+  border-radius: 999px;
+  font-size: 13px;
+  line-height: 1.6;
+  background: color-mix(in srgb, var(--editor-accent) 12%, transparent);
+  color: var(--editor-accent);
+  border: 1px solid color-mix(in srgb, var(--editor-accent) 35%, transparent);
+  user-select: none;
+  vertical-align: middle;
+  cursor: default;
+}
+/* 图标位：⚡ 与 ✕ 绝对定位叠加，hover 时 opacity 交叉切换，占位恒定 */
+.skill-tag-icon-zone {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15em;
+  height: 1.15em;
+  flex-shrink: 0;
+}
+.skill-tag-icon,
+.skill-tag-x {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: opacity 0.15s ease;
+}
+.skill-tag-icon {
+  font-size: 0.95em;
+}
+.skill-tag-x {
+  opacity: 0;
+  cursor: pointer;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+.skill-tag:hover .skill-tag-icon {
+  opacity: 0;
+}
+.skill-tag:hover .skill-tag-x {
+  opacity: 1;
+}
+
 /* ===== 主编辑区 ===== */
 .editor-container {
   flex: 1;
@@ -139,7 +236,8 @@ body {
 /* ===== 状态栏 ===== */
 .statusbar {
   height: 28px;
-  background-color: var(--statusbar-bg);
+  /* 用 background 简写：接受纯色，也接受 cyberpunk 等主题的渐变 --statusbar-bg */
+  background: var(--statusbar-bg);
   color: var(--statusbar-text);
   display: flex;
   align-items: center;
@@ -921,6 +1019,24 @@ body {
 .settings-row > div:first-child p {
   word-break: break-word;
   line-height: 1.4;
+}
+
+/* AI 设置页：左列固定宽度，右列控件左缘/宽度对齐；label 与输入框上沿对齐 */
+.ai-settings .settings-row {
+  align-items: flex-start;
+}
+.ai-settings .settings-row > div:first-child {
+  flex: 0 0 160px;
+  padding-top: 8px;
+}
+/* 右列允许收缩：长错误/提示文本（无空格 JSON、URL）换行，不撑宽整行 */
+.ai-settings .settings-row > div:last-child {
+  min-width: 0;
+  max-width: 100%;
+}
+.ai-settings .settings-row > div:last-child p {
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .settings-select {

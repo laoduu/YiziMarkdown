@@ -37,6 +37,7 @@
     "resources": {
       "themes/*": "themes/",
       "templates": "templates/",
+      "skills/*": "skills/",
       "user.css": "user.css",
       "keybindings.json": "keybindings.json",
       "readme.md": "readme.md",

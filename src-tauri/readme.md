@@ -27,9 +27,11 @@
 
 ### AI 助手（侧边聊天面板）
 
-- **17 家大模型供应商**：OpenAI、Anthropic、Gemini、xAI、Mistral、Groq、DeepSeek、通义千问、智谱 GLM、Moonshot Kimi、火山方舟、硅基流动、MiniMax、OpenRouter、OpenCode Go、Ollama（本地）、OpenAI 兼容端点
+- **17 家大模型供应商 + 自定义服务**：OpenAI、Anthropic、Gemini、xAI、Mistral、Groq、DeepSeek、通义千问、智谱 GLM、Moonshot Kimi、火山方舟、硅基流动、MiniMax、OpenRouter、OpenCode Go、Ollama（本地）；「自定义服务」支持 OpenAI 兼容 / Anthropic 兼容两种协议，自填 Base URL、模型 ID 与密钥，可接任意第三方服务
+- **AI 技能（Skill）**：输入框 ⚡ 按钮弹出技能菜单，选中后技能 tag 插入光标处，提示词自动注入上下文；`skills/` 目录放入 `skills.json` + `.md` 提示词即可自定义技能。内置「演示稿提炼」「文档摘要」「润色改写」3 个技能
 - **流式对话**：工具栏机器人按钮打开右侧 AI 面板，回复实时流式输出，可随时停止
-- **密钥安全**：API 密钥存系统钥匙串（OS keychain），支持一键保存、清除、验证
+- **思考过程展示**：推理模型的思考内容（reasoning/thinking）以可折叠区块展示，默认收起，不影响正文阅读
+- **密钥安全**：API 密钥存系统钥匙串（OS keychain），支持一键保存、清除、验证；本地端点（llama.cpp / LM Studio / vLLM 等）密钥可留空
 - **引用当前文档**：勾选后把当前文档作为上下文发送给 AI，可配置引用上限（64K~512K/不限）
 - **结果落盘**：回复可复制、插入到文档光标处、或一键创建为新文档
 
@@ -164,6 +166,11 @@ YiziMarkdown/
 │   ├── minimal.css         # 极简风
 │   ├── magazine.css        # 杂志感
 │   └── nature.css          # 自然风
+├── skills/                 # AI 技能（Skill）
+│   ├── skills.json         # 技能清单
+│   ├── slides-outline.md   # 演示稿提炼
+│   ├── doc-summary.md      # 文档摘要
+│   └── polish-writing.md   # 润色改写
 └── templates/              # 文档模板
     └── default.md          # 默认模板
 ```

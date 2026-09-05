@@ -292,7 +292,7 @@ fn get_app_root() -> Result<PathBuf, String> {
 /// 确保应用根目录下的子目录和默认文件存在
 fn ensure_app_structure(root: &Path) -> Result<(), String> {
     // 子目录
-    for subdir in &["themes", "templates"] {
+    for subdir in &["themes", "templates", "skills"] {
         fs::create_dir_all(root.join(subdir))
             .map_err(|e| format!("Failed to create {} dir: {}", subdir, e))?;
     }
@@ -587,6 +587,35 @@ fn read_template(name: String) -> Result<String, String> {
     }
     fs::read_to_string(&path)
         .map_err(|e| format!("Failed to read template: {}", e))
+}
+
+// ===== AI Skills 技能 =====
+
+/// 读取 skills/skills.json（技能清单），原样返回 JSON 字符串。
+#[tauri::command]
+fn list_skills() -> Result<String, String> {
+    let root = get_app_root()?;
+    let path = root.join("skills").join("skills.json");
+    if !path.exists() {
+        return Ok(r#"{"version":1,"skills":[]}"#.to_string());
+    }
+    fs::read_to_string(&path).map_err(|e| format!("Failed to read skills.json: {}", e))
+}
+
+/// 读取 skills/ 目录下的技能文件（.md 提示词等）。
+#[tauri::command]
+fn read_skill_file(file_name: String) -> Result<String, String> {
+    let root = get_app_root()?;
+    // 仅允许文件名，防止路径穿越
+    let clean = Path::new(&file_name)
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .ok_or_else(|| "Invalid skill file name".to_string())?;
+    let path = root.join("skills").join(&clean);
+    if !path.exists() {
+        return Err(format!("Skill file not found: {}", clean));
+    }
+    fs::read_to_string(&path).map_err(|e| format!("Failed to read skill file: {}", e))
 }
 
 // ===== 快捷键配置 =====
@@ -927,6 +956,8 @@ fn main() {
             open_url,
             list_templates,
             read_template,
+            list_skills,
+            read_skill_file,
             read_keybindings,
             write_keybindings,
             associate_md_files,

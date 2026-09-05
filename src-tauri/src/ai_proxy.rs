@@ -28,22 +28,24 @@ use crate::ai_keystore;
 // Provider helpers
 // ---------------------------------------------------------------------------
 
-/// `local` → `ollama`；其余原样返回。
+/// `local` → `ollama`；各类本地/自定义端点别名 → `custom`；其余原样返回。
 fn resolve_provider(id: &str) -> &str {
     match id {
         "local" => "ollama",
+        "openai-compat" | "openai-compatible" | "llama" | "llama-cpp" | "llamacpp"
+        | "llama.cpp" | "lmstudio" | "lm-studio" | "vllm" => "custom",
         other => other,
     }
 }
 
-/// 无需密钥的本地运行时。
+/// 无需密钥（或密钥可选）的本地/自定义运行时。
 fn is_keyless_provider(provider: &str) -> bool {
-    matches!(resolve_provider(provider), "ollama")
+    matches!(resolve_provider(provider), "ollama" | "custom")
 }
 
 fn wire_format(format: &str) -> String {
     match resolve_provider(format) {
-        "openai-compat" => "openai".to_string(),
+        "custom" => "openai".to_string(),
         other => other.to_string(),
     }
 }
@@ -119,7 +121,7 @@ fn default_base_url(provider: &str, format: &str) -> String {
         ("openrouter", _) => "https://openrouter.ai/api/v1".to_string(),
         ("opencode-go", _) => "https://opencode.ai/zen/go/v1".to_string(),
         ("ollama", _) => "http://localhost:11434".to_string(),
-        ("openai-compat", _) => "http://localhost:8080/v1".to_string(),
+        ("custom", _) => String::new(),
         _ => match format {
             "anthropic" => "https://api.anthropic.com".to_string(),
             "ollama" => "http://localhost:11434".to_string(),
@@ -193,6 +195,9 @@ struct ChunkEvent {
 struct DoneEvent {
     request_id: String,
     full_text: String,
+    /// 完整思考内容（reasoning / thinking），无则为空串。
+    #[serde(default)]
+    full_thinking: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -264,17 +269,26 @@ pub async fn ai_verify_key(
     key: Option<String>,
     api_format: Option<String>,
     base_url: Option<String>,
+    model: Option<String>,
 ) -> Result<String, String> {
     let format = wire_format(&api_format.unwrap_or_else(|| provider.clone()));
-    // 输入框有内容优先用输入；否则回退 keychain（设置页需展示来源，避免用错旧 key）
+    // 输入框有内容优先用输入；否则回退 keychain（设置页需展示来源，避免用错旧 key）。
+    // custom 为可选 key：keychain 有则用，无则 keyless（兼容本地端点）。
     let (key_str, key_source) = match key {
         Some(k) if !k.trim().is_empty() => (k.trim().to_string(), "input".to_string()),
+        _ if resolve_provider(&provider) == "custom" => match read_key(&provider) {
+            Ok(k) if !k.trim().is_empty() => (k.trim().to_string(), "keychain".to_string()),
+            _ => (String::new(), "keyless".to_string()),
+        },
         _ if is_keyless_provider(&provider) => (String::new(), "keyless".to_string()),
         _ => (read_key(&provider)?, "keychain".to_string()),
     };
     // 实际发送的密钥指纹（脱敏），用于诊断粘贴错误 / keychain 旧 key
     let fp = key_fingerprint(&key_str);
-    let diag = format!(" [key: src={key_source} len={} mask={fp}]", key_str.len());
+    let diag = format!(
+        " [key: src={key_source} len={} mask={fp} format={format}]",
+        key_str.len()
+    );
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(15))
         .build()
@@ -298,7 +312,7 @@ pub async fn ai_verify_key(
                 return Ok(format!("OK · {n} models available"));
             }
             let txt = res.text().await.unwrap_or_default();
-            Err(format!("HTTP {status}: {}{diag}", truncate(&txt, 200)))
+            Err(format!("HTTP {status} (GET {url}): {}{diag}", truncate(&txt, 200)))
         }
         "anthropic" => {
             let base = base_url
@@ -307,15 +321,25 @@ pub async fn ai_verify_key(
                 .filter(|s| !s.is_empty())
                 .unwrap_or_else(|| "https://api.anthropic.com".to_string());
             let url = format!("{base}/v1/messages");
+            // 验证请求用用户填写的模型 ID（自定义服务可能不提供默认的 claude-haiku-4-5）
+            let verify_model = model
+                .filter(|m| !m.trim().is_empty())
+                .unwrap_or_else(|| "claude-haiku-4-5".to_string());
             let body = serde_json::json!({
-                "model": "claude-haiku-4-5",
+                "model": verify_model,
                 "max_tokens": 1,
                 "messages": [{"role":"user","content":"ping"}]
             });
-            let res = client
-                .post(url)
+            // 同时发 x-api-key 与 Authorization: Bearer：Anthropic 官方两者都认，
+            // 部分 OpenAI 兼容网关只认 Bearer，只发 x-api-key 会被当作 missing_api_key。
+            let mut rb = client
+                .post(&url)
                 .header("x-api-key", &key_str)
-                .header("anthropic-version", "2023-06-01")
+                .header("anthropic-version", "2023-06-01");
+            if !key_str.is_empty() {
+                rb = rb.bearer_auth(&key_str);
+            }
+            let res = rb
                 .json(&body)
                 .send()
                 .await
@@ -325,7 +349,7 @@ pub async fn ai_verify_key(
                 Ok("OK · key accepted".to_string())
             } else {
                 let txt = res.text().await.unwrap_or_default();
-                Err(format!("HTTP {status}: {}{diag}", truncate(&txt, 200)))
+                Err(format!("HTTP {status} (POST {url}): {}{diag}", truncate(&txt, 200)))
             }
         }
         "ollama" => {
@@ -371,6 +395,19 @@ pub async fn ai_chat(app: AppHandle, request: ChatRequest) -> Result<String, Str
         .unwrap_or_else(make_request_id);
     let cancel = register_cancel_flag(&request_id);
 
+    // 自定义服务必须显式提供 base URL 和模型 ID，否则无法路由
+    if resolve_provider(&request.provider) == "custom"
+        && (request.model.trim().is_empty()
+            || request
+                .base_url
+                .as_deref()
+                .map(|s| s.trim().is_empty())
+                .unwrap_or(true))
+    {
+        drop_cancel_flag(&request_id);
+        return Err("custom provider requires base_url and model".to_string());
+    }
+
     let format = wire_format(
         &request
             .api_format
@@ -378,17 +415,18 @@ pub async fn ai_chat(app: AppHandle, request: ChatRequest) -> Result<String, Str
             .unwrap_or_else(|| request.provider.clone()),
     );
 
-    // 本地运行时不要求密钥；其余 provider 必须已保存密钥。
-    let api_key = if is_keyless_provider(&request.provider) {
-        String::new()
-    } else {
-        match read_key(&request.provider) {
+    // 密钥策略：ollama 本地协议无 key；custom 为可选——keychain 有则用，无则空
+    // （兼容 llama.cpp 等本地端点）；其余 provider 必须已保存密钥。
+    let api_key = match resolve_provider(&request.provider) {
+        "ollama" => String::new(),
+        "custom" => read_key(&request.provider).unwrap_or_default(),
+        _ => match read_key(&request.provider) {
             Ok(k) => k,
             Err(e) => {
                 drop_cancel_flag(&request_id);
                 return Err(e);
             }
-        }
+        },
     };
 
     let id_for_task = request_id.clone();
@@ -404,12 +442,13 @@ pub async fn ai_chat(app: AppHandle, request: ChatRequest) -> Result<String, Str
         };
 
         match result {
-            Ok(full_text) => {
+            Ok((full_text, full_thinking)) => {
                 let _ = app_clone.emit(
                     "yizi://ai-done",
                     DoneEvent {
                         request_id: id_for_task.clone(),
                         full_text,
+                        full_thinking,
                     },
                 );
             }
@@ -465,9 +504,52 @@ fn emit_chunk(app: &AppHandle, request_id: &str, chunk: &str) {
     );
 }
 
+/// 推送思考内容增量（reasoning / thinking），事件结构与 chunk 相同。
+fn emit_thinking(app: &AppHandle, request_id: &str, chunk: &str) {
+    if chunk.is_empty() {
+        return;
+    }
+    let _ = app.emit(
+        "yizi://ai-thinking",
+        ChunkEvent {
+            request_id: request_id.to_string(),
+            chunk: chunk.to_string(),
+        },
+    );
+}
+
 /// SSE 事件边界：\n\n 或 \r\n\r\n。返回边界起始下标。
 fn find_event_boundary(buf: &str) -> Option<usize> {
     buf.find("\n\n").or_else(|| buf.find("\r\n\r\n"))
+}
+
+/// 从字节缓冲中解码出完整文本，被网络块切碎的多字节字符（如中文）尾部
+/// 保留在缓冲中等后续字节补齐，避免 from_utf8_lossy 将半个字符替换为
+/// U+FFFD 导致中文乱码/缺字。
+fn drain_utf8(pending: &mut Vec<u8>) -> String {
+    let mut out = String::new();
+    loop {
+        match std::str::from_utf8(pending) {
+            Ok(s) => {
+                out.push_str(s);
+                pending.clear();
+                break;
+            }
+            Err(e) => {
+                let valid = e.valid_up_to();
+                if valid > 0 {
+                    out.push_str(&String::from_utf8_lossy(&pending[..valid]));
+                    pending.drain(..valid);
+                }
+                if let Some(len) = e.error_len() {
+                    pending.drain(..len.min(pending.len()));
+                } else {
+                    break; // 末尾多字节字符不完整：保留待补齐
+                }
+            }
+        }
+    }
+    out
 }
 
 /// --- OpenAI Chat Completions（含 DeepSeek/Qwen/GLM/Kimi/豆包等兼容端点） ---
@@ -477,7 +559,7 @@ async fn run_openai(
     req: &ChatRequest,
     api_key: &str,
     cancel: Arc<AtomicBool>,
-) -> Result<String, String> {
+) -> Result<(String, String), String> {
     let base = openai_base(&req.provider, req.base_url.as_deref());
     let url = format!("{base}/chat/completions");
 
@@ -508,14 +590,17 @@ async fn run_openai(
     }
 
     let mut full = String::new();
+    let mut thinking = String::new();
     let mut buf = String::new();
+    let mut pending: Vec<u8> = Vec::new();
     let mut stream = resp.bytes_stream();
     while let Some(chunk) = stream.next().await {
         if cancel.load(Ordering::SeqCst) {
             return Err("cancelled".to_string());
         }
         let bytes = chunk.map_err(|e| format!("openai stream error: {e}"))?;
-        buf.push_str(&String::from_utf8_lossy(&bytes));
+        pending.extend_from_slice(&bytes);
+        buf.push_str(&drain_utf8(&mut pending));
         while let Some(idx) = find_event_boundary(&buf) {
             let event = buf[..idx].to_string();
             let after = if buf[idx..].starts_with("\r\n\r\n") {
@@ -532,12 +617,36 @@ async fn run_openai(
                     None => continue,
                 };
                 if payload == "[DONE]" {
-                    return Ok(full);
+                    return Ok((full, thinking));
                 }
                 let json: Value = match serde_json::from_str(payload) {
                     Ok(v) => v,
                     Err(_) => continue,
                 };
+                // 思考内容：DeepSeek/Qwen/GLM/Kimi 等用 reasoning_content，部分实现用 reasoning
+                if let Some(r) = json
+                    .get("choices")
+                    .and_then(|c| c.get(0))
+                    .and_then(|c| c.get("delta"))
+                    .and_then(|d| d.get("reasoning_content"))
+                    .and_then(|s| s.as_str())
+                {
+                    if !r.is_empty() {
+                        thinking.push_str(r);
+                        emit_thinking(app, request_id, r);
+                    }
+                } else if let Some(r) = json
+                    .get("choices")
+                    .and_then(|c| c.get(0))
+                    .and_then(|c| c.get("delta"))
+                    .and_then(|d| d.get("reasoning"))
+                    .and_then(|s| s.as_str())
+                {
+                    if !r.is_empty() {
+                        thinking.push_str(r);
+                        emit_thinking(app, request_id, r);
+                    }
+                }
                 if let Some(content) = json
                     .get("choices")
                     .and_then(|c| c.get(0))
@@ -553,7 +662,7 @@ async fn run_openai(
             }
         }
     }
-    Ok(full)
+    Ok((full, thinking))
 }
 
 /// --- Anthropic Messages API ---
@@ -563,7 +672,7 @@ async fn run_anthropic(
     req: &ChatRequest,
     api_key: &str,
     cancel: Arc<AtomicBool>,
-) -> Result<String, String> {
+) -> Result<(String, String), String> {
     let base = req
         .base_url
         .as_ref()
@@ -596,11 +705,17 @@ async fn run_anthropic(
     });
 
     let client = http_client()?;
-    let resp = client
+    // 同时发 x-api-key 与 Authorization: Bearer：Anthropic 官方两者都认，
+    // 部分 OpenAI 兼容网关只认 Bearer，只发 x-api-key 会被当作 missing_api_key。
+    let mut rb = client
         .post(&url)
         .header("x-api-key", api_key)
         .header("anthropic-version", "2023-06-01")
-        .header("content-type", "application/json")
+        .header("content-type", "application/json");
+    if !api_key.is_empty() {
+        rb = rb.bearer_auth(api_key);
+    }
+    let resp = rb
         .json(&body)
         .send()
         .await
@@ -613,14 +728,17 @@ async fn run_anthropic(
     }
 
     let mut full = String::new();
+    let mut thinking = String::new();
     let mut buf = String::new();
+    let mut pending: Vec<u8> = Vec::new();
     let mut stream = resp.bytes_stream();
     while let Some(chunk) = stream.next().await {
         if cancel.load(Ordering::SeqCst) {
             return Err("cancelled".to_string());
         }
         let bytes = chunk.map_err(|e| format!("anthropic stream error: {e}"))?;
-        buf.push_str(&String::from_utf8_lossy(&bytes));
+        pending.extend_from_slice(&bytes);
+        buf.push_str(&drain_utf8(&mut pending));
         while let Some(idx) = find_event_boundary(&buf) {
             let event = buf[..idx].to_string();
             let after = if buf[idx..].starts_with("\r\n\r\n") {
@@ -643,7 +761,24 @@ async fn run_anthropic(
                 let kind = json.get("type").and_then(|t| t.as_str()).unwrap_or("");
                 match kind {
                     "content_block_delta" => {
-                        if let Some(text) = json
+                        let delta_type = json
+                            .get("delta")
+                            .and_then(|d| d.get("type"))
+                            .and_then(|s| s.as_str())
+                            .unwrap_or("");
+                        if delta_type == "thinking_delta" {
+                            // 扩展思考：delta.thinking
+                            if let Some(t) = json
+                                .get("delta")
+                                .and_then(|d| d.get("thinking"))
+                                .and_then(|s| s.as_str())
+                            {
+                                if !t.is_empty() {
+                                    thinking.push_str(t);
+                                    emit_thinking(app, request_id, t);
+                                }
+                            }
+                        } else if let Some(text) = json
                             .get("delta")
                             .and_then(|d| d.get("text"))
                             .and_then(|s| s.as_str())
@@ -655,7 +790,7 @@ async fn run_anthropic(
                         }
                     }
                     "message_stop" => {
-                        return Ok(full);
+                        return Ok((full, thinking));
                     }
                     "error" => {
                         let msg = json
@@ -670,7 +805,7 @@ async fn run_anthropic(
             }
         }
     }
-    Ok(full)
+    Ok((full, thinking))
 }
 
 /// --- Ollama（本地，无需密钥） ---
@@ -679,7 +814,7 @@ async fn run_ollama(
     request_id: &str,
     req: &ChatRequest,
     cancel: Arc<AtomicBool>,
-) -> Result<String, String> {
+) -> Result<(String, String), String> {
     let base = req
         .base_url
         .as_ref()
@@ -715,14 +850,17 @@ async fn run_ollama(
     }
 
     let mut full = String::new();
+    let mut thinking = String::new();
     let mut buf = String::new();
+    let mut pending: Vec<u8> = Vec::new();
     let mut stream = resp.bytes_stream();
     while let Some(chunk) = stream.next().await {
         if cancel.load(Ordering::SeqCst) {
             return Err("cancelled".to_string());
         }
         let bytes = chunk.map_err(|e| format!("ollama stream error: {e}"))?;
-        buf.push_str(&String::from_utf8_lossy(&bytes));
+        pending.extend_from_slice(&bytes);
+        buf.push_str(&drain_utf8(&mut pending));
         // Ollama 流式返回逐行 JSON（每行一个完整对象）。
         while let Some(nl) = buf.find('\n') {
             let line = buf[..nl].to_string();
@@ -734,6 +872,16 @@ async fn run_ollama(
                 Ok(v) => v,
                 Err(_) => continue,
             };
+            if let Some(r) = json
+                .get("message")
+                .and_then(|m| m.get("reasoning_content"))
+                .and_then(|s| s.as_str())
+            {
+                if !r.is_empty() {
+                    thinking.push_str(r);
+                    emit_thinking(app, request_id, r);
+                }
+            }
             if let Some(content) = json
                 .get("message")
                 .and_then(|m| m.get("content"))
@@ -745,9 +893,9 @@ async fn run_ollama(
                 }
             }
             if json.get("done").and_then(|d| d.as_bool()).unwrap_or(false) {
-                return Ok(full);
+                return Ok((full, thinking));
             }
         }
     }
-    Ok(full)
+    Ok((full, thinking))
 }

@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": [
+    {
+      "id": "slides-outline",
+      "name": "演示稿提炼",
+      "summary": "把当前文档提炼为简洁的演示模式 Markdown",
+      "description": "将当前文档提炼为适合演示模式（幻灯片）的精简 Markdown：用 `---` 分页，每页一个要点，语言简练、句式短小，保留核心结论与数据，去掉冗余叙述。需要引用当前文档。",
+      "file": "slides-outline.md",
+      "needsDoc": true
+    },
+    {
+      "id": "doc-summary",
+      "name": "文档摘要",
+      "summary": "快速总结当前文档的核心内容",
+      "description": "阅读当前文档，输出结构化摘要：一句话主旨、3~6 个核心要点、关键结论。语言简洁，适合快速了解全文。需要引用当前文档。",
+      "file": "doc-summary.md",
+      "needsDoc": true
+    },
+    {
+      "id": "polish-writing",
+      "name": "润色改写",
+      "summary": "润色文字，使其更通顺专业",
+      "description": "对用户输入或选中的内容进行润色：修正语法与不通顺之处、优化表达节奏，保持原意与原语言，不随意增删观点。可直接在对话中给出改写后的文本。",
+      "file": "polish-writing.md",
+      "needsDoc": false
+    }
+  ]
+}

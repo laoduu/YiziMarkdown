@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YiziMarkdown - 免费开源 Markdown 编辑器（Windows / macOS） | 免安装、多主题、实时预览</title>
+    <meta name="description" content="YiziMarkdown 是一款免费开源、跨平台的 Markdown 编辑器（Windows 便携 / macOS 原生），基于 Tauri + React + CodeMirror 6 构建。支持实时预览、并排编辑、15 套精美主题（液态玻璃、赛博朋克等）、类 PPT 演示模式、KaTeX 公式、Mermaid 图表。免安装，解压即用。">
+    <meta name="keywords" content="Markdown编辑器,Windows编辑器,macOS编辑器,Mac编辑器,跨平台编辑器,便携编辑器,免安装编辑器,Markdown,实时预览,代码编辑器,Tauri,开源编辑器,免费编辑器,Markdown写作,笔记软件,主题编辑器,KaTeX,Mermaid,语法高亮,演示模式,幻灯片,PPT">
+    <meta name="author" content="YiziPaper">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://md.yizigpt.com/">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="YiziMarkdown - 免费开源 Markdown 编辑器（Windows / macOS）">
+    <meta property="og:description" content="Windows 便携 / macOS 原生。支持实时预览、15 套精美主题、KaTeX 公式、Mermaid 图表。开源免费。">
+    <meta property="og:url" content="https://md.yizigpt.com/">
+    <meta property="og:site_name" content="YiziMarkdown">
+    <meta property="og:locale" content="zh_CN">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="YiziMarkdown - 免费开源 Markdown 编辑器（Windows / macOS）">
+    <meta name="twitter:description" content="Windows 便携 / macOS 原生。支持实时预览、15 套精美主题、KaTeX 公式、Mermaid 图表。开源免费。">
+
+    <link rel="icon" href="assets/icon.png">
+    <link rel="stylesheet" href="assets/css/style.css">
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "YiziMarkdown",
+        "description": "一款免费开源、跨平台的 Markdown 编辑器（Windows 便携 / macOS 原生），支持实时预览、并排编辑、15 套精美主题、类 PPT 演示模式、KaTeX 公式、Mermaid 图表。免安装，解压即用。",
+        "url": "https://md.yizigpt.com/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Windows, macOS",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "CNY"
+        },
+        "license": "https://github.com/laoduu/YiziMarkdown/blob/main/LICENSE",
+        "programmingLanguage": ["TypeScript", "Rust"],
+        "screenshot": "https://md.yizigpt.com/screenshots/liquidglass.png",
+        "version": "0.1.9",
+        "author": {
+            "@type": "Organization",
+            "name": "YiziPaper",
+            "url": "https://github.com/laoduu"
+        }
+    }
+    </script>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav" id="nav">
+    <div class="nav-inner">
+        <a href="#" class="nav-brand">
+            <img src="assets/icon.png" alt="YiziMarkdown">
+            <span><span class="yizi">Yizi</span><span class="markdown">Markdown</span></span>
+        </a>
+        <div class="nav-links">
+            <a href="#features">功能</a>
+            <a href="#themes">主题</a>
+            <a href="#shortcuts">快捷键</a>
+            <a href="#changelog">更新</a>
+            <a href="https://github.com/laoduu/YiziMarkdown/releases" target="_blank" class="btn-nav">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 7l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                下载
+            </a>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+    <div class="hero-content">
+        <div class="hero-badge"><span class="dot"></span> V0.1.9 · 演示模式 · 纯 Markdown 自动版式 + 模板功能</div>
+        <h1>既<span style="color: var(--orange);">好看</span>，又<span class="highlight">彪悍</span></h1>
+        <p class="hero-sub">一款简洁精致的跨平台 Markdown 编辑器<br><span class="nowrap">Windows 便携版/安装版 · macOS 版 · 支持类 PPT 演示，让你专注于写作本身</span></p>
+        <div class="hero-actions">
+            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.1.9/YiziMarkdown_0.1.9_x64-setup.exe" target="_blank" class="btn-primary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.55 10.5 4.5v6.8H3V5.55zm0 12.9 7.5-1.05v-6.3H3v7.35zM11.5 4.3 21 3v8.3h-9.5V4.3zm0 15.4 9.5-1.3V12.7h-9.5v7z"/></svg>
+                Windows 版下载
+            </a>
+            <a href="https://github.com/laoduu/YiziMarkdown/releases" target="_blank" class="btn-secondary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 12.54c-.03-3.04 2.48-4.5 2.6-4.57-1.42-2.07-3.62-2.36-4.4-2.39-1.88-.19-3.66 1.1-4.62 1.1-.95 0-2.43-1.08-4-1.05-2.05.03-3.95 1.2-5 3.04-2.14 3.7-.55 9.17 1.53 12.18 1.02 1.46 2.23 3.1 3.83 3.04 1.53-.06 2.11-.99 3.96-.99 1.85 0 2.37.99 4 .96 1.65-.03 2.7-1.49 3.71-2.95 1.17-1.71 1.65-3.37 1.68-3.45-.04-.02-3.22-1.24-3.29-4.92zM14.4 4.2c.85-1.03 1.42-2.46 1.26-3.89-1.22.05-2.7.81-3.58 1.84-.79.91-1.47 2.36-1.29 3.76 1.36.1 2.76-.69 3.61-1.71z"/></svg>
+                MacOS 版下载
+            </a>
+            <a href="https://github.com/laoduu/YiziMarkdown" target="_blank" class="btn-secondary">
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+                GitHub
+            </a>
+        </div>
+    </div>
+    <div class="mockup-section">
+        <div class="mockup-stage">
+            <div class="float-dot d1"></div>
+            <div class="float-dot d2"></div>
+            <div class="float-dot d3"></div>
+            <div class="mockup-window">
+                <div class="mockup-chrome">
+                    <span class="dot r"></span>
+                    <span class="dot y"></span>
+                    <span class="dot g"></span>
+                    <span class="title">YiziMarkdown — welcome.md</span>
+                </div>
+                <img src="screenshots/liquidglass.png" alt="YiziMarkdown 编辑器" loading="eager">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features -->
+<section class="features" id="features">
+    <div class="section-header">
+        <span class="section-label">核心功能</span>
+        <h2 class="section-title">为 Markdown 写作而生</h2>
+        <p class="section-desc">基于 CodeMirror 6 构建，支持实时预览、并排编辑、多主题切换，让写作回归纯粹。</p>
+    </div>
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon blue"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+            <h3>五种视图模式</h3>
+            <p>源代码、并排、实时预览、纯预览、演示模式，随心切换，找到最适合你的写作与汇报节奏。</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon orange"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 7h10"/><path d="M7 11h7"/></svg></div>
+            <h3>类 PPT 演示模式</h3>
+            <p>笔记一键变全屏幻灯片，纯 Markdown 自动版式，`Ctrl+Alt+P` 即可演示汇报，支持主题换肤与演讲备注。</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon orange"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg></div>
+            <h3>十五套主题系统</h3>
+            <p>内置液态玻璃、黑客帝国、落日熔金、赛博朋克等15套精美主题，每套均支持亮暗双模式，支持自定义主题。</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon blue"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+            <h3>多文件 Tab 管理</h3>
+            <p>像浏览器一样管理多个文件，轻松在文档间切换，工作流不断不乱。</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon orange"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg></div>
+            <h3>智能大纲导航</h3>
+            <p>自动提取标题生成文档大纲，点击跳转，长文档也能快速定位。</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon orange"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+            <h3>跨平台便携</h3>
+            <p>Windows 便携免安装解压即用，macOS 原生通用二进制（Intel + Apple Silicon），换机也能无缝继续。</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon blue"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+            <h3>数学公式支持</h3>
+            <p>内置KaTeX插件，支持LaTeX行内公式与块级公式，满足学术写作需求。</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon orange"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h16"/><path d="M6 18l4-4 4 4 6-6"/></svg></div>
+            <h3>Mermaid图表</h3>
+            <p>内置Mermaid插件，支持流程图、时序图、甘特图等可视化图表渲染。</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon blue"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg></div>
+            <h3>表格选择器</h3>
+            <p>8×8网格表格插入表格，点击即可插入对应行列的Markdown表格，无需手动写语法。</p>
+        </div>
+    </div>
+</section>
+
+<!-- Themes — Magazine Stack -->
+<section class="themes" id="themes">
+    <div class="section-header">
+        <span class="section-label">精心打磨</span>
+        <h2 class="section-title">十五款主题，各有风格</h2>
+        <p class="section-desc">从学术严谨到赛博朋克、液态玻璃，每款主题都支持亮暗双模式，反复调校只为最舒适的阅读体验。</p>
+    </div>
+    <div class="theme-stage">
+        <div class="theme-stack" id="themeStack">
+            <!-- Cards injected by JS -->
+        </div>
+        <div class="theme-info">
+            <div class="theme-info-name" id="themeName">学术蓝</div>
+            <div class="theme-info-tag" id="themeTag">经典</div>
+            <div class="theme-info-desc" id="themeDesc">沉稳的蓝色主调，适合学术论文、技术文档等正式场景。清晰的层级结构，让内容一目了然。</div>
+            <div class="theme-selector" id="themeSelector">
+                <!-- Buttons injected by JS -->
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Shortcuts -->
+<section class="shortcuts" id="shortcuts">
+    <div class="section-header">
+        <span class="section-label">高效写作</span>
+        <h2 class="section-title">快捷键速查</h2>
+        <p class="section-desc">键盘流的快乐，一键直达。</p>
+    </div>
+    <div class="shortcut-grid">
+        <div class="shortcut-item"><span class="shortcut-key">/ 或 、</span><span class="shortcut-desc">斜杠菜单</span></div>
+        <div class="shortcut-item"><span class="shortcut-key">Ctrl + O</span><span class="shortcut-desc">打开文件</span></div>
+        <div class="shortcut-item"><span class="shortcut-key">Ctrl + N</span><span class="shortcut-desc">新建文件</span></div>
+        <div class="shortcut-item"><span class="shortcut-key">Ctrl + Alt + P</span><span class="shortcut-desc">演示模式</span></div>
+        <div class="shortcut-item"><span class="shortcut-key">Ctrl + S</span><span class="shortcut-desc">保存</span></div>
+        <div class="shortcut-item"><span class="shortcut-key">Ctrl + F</span><span class="shortcut-desc">搜索</span></div>
+        <div class="shortcut-item"><span class="shortcut-key">Ctrl + W</span><span class="shortcut-desc">关闭标签</span></div>
+        <div class="shortcut-item"><span class="shortcut-key">Ctrl + B</span><span class="shortcut-desc">粗体</span></div>
+        <div class="shortcut-item"><span class="shortcut-key">Ctrl + I</span><span class="shortcut-desc">斜体</span></div>
+        <div class="shortcut-item"><span class="shortcut-key">Ctrl + Z</span><span class="shortcut-desc">撤销</span></div>
+        <div class="shortcut-item"><span class="shortcut-key">F1</span><span class="shortcut-desc">快捷键大全</span></div>
+        <div class="shortcut-item"><span class="shortcut-key">F2</span><span class="shortcut-desc">深浅模式切换</span></div>
+        <div class="shortcut-item"><span class="shortcut-key">F3</span><span class="shortcut-desc">视图循环切换</span></div>
+        <div class="shortcut-item"><span class="shortcut-key">Ctrl + T</span><span class="shortcut-desc">插入表格</span></div>
+        <div class="shortcut-item"><span class="shortcut-key">Ctrl + `</span><span class="shortcut-desc">插入代码块</span></div>
+        <div class="shortcut-item"><span class="shortcut-key">Ctrl + 1/2/3</span><span class="shortcut-desc">1/2/3级标题</span></div>
+        <div class="shortcut-item"><span class="shortcut-key">Ctrl + '</span><span class="shortcut-desc">引用</span></div>
+        <div class="shortcut-item"><span class="shortcut-key">Ctrl + .</span><span class="shortcut-desc">无序列表</span></div>
+        <div class="shortcut-item"><span class="shortcut-key">Ctrl + 0</span><span class="shortcut-desc">有序列表</span></div>
+    </div>
+</section>
+
+<!-- Changelog -->
+<section class="changelog" id="changelog">
+    <div class="section-header">
+        <span class="section-label">持续迭代</span>
+        <h2 class="section-title">更新记录</h2>
+        <p class="section-desc">功能持续优化，你的建议是最好的迭代方向。</p>
+    </div>
+    <div class="changelog-container">
+        <div class="changelog-tabs" id="changelogTabs">
+            <button class="changelog-tab active" data-version="0.1.9">v0.1.9</button>
+            <button class="changelog-tab" data-version="0.1.8">v0.1.8</button>
+            <button class="changelog-tab" data-version="0.1.7">v0.1.7</button>
+            <button class="changelog-tab" data-version="0.1.6">v0.1.6</button>
+            <button class="changelog-tab" data-version="0.1.5">v0.1.5</button>
+            <button class="changelog-tab" data-version="0.1.4">v0.1.4</button>
+            <button class="changelog-tab" data-version="0.1.3">v0.1.3</button>
+        </div>
+        <div class="changelog-content" id="changelogContent">
+            <div class="changelog-panel active" data-version="0.1.9">
+                <div class="changelog-date">2026.08.11</div>
+                <ul class="changelog-list">
+                    <li><span class="changelog-tag new">新增</span>演示模式重构：纯 Markdown 自动版式，<code>---</code> 分页，引擎按内容结构自动选版式（封面/内容/图片/引用/代码/图表）</li>
+                    <li><span class="changelog-tag new">新增</span>类 PPT 演示能力：笔记一键变全屏幻灯片，支持主题换肤、演讲备注（<code>Ctrl+Alt+P</code>）</li>
+                    <li><span class="changelog-tag new">新增</span>主题标题颜色精确继承：15 套主题全部支持 <code>--editor-h1/h2/h3</code> 标题配色</li>
+                    <li><span class="changelog-tag new">新增</span>模板功能完善：工具栏「从模板新建」下拉，可选模板快速创建文档</li>
+                    <li><span class="changelog-tag fix">修复</span>默认模板误把文件名当文档内容、无序/有序列表宽度不一致、最大化窗口进入全屏黑条与 F 键切换失灵</li>
+                    <li><span class="changelog-tag improve">优化</span>全屏切换（HTML5 Fullscreen）、居中排版、大引号引用页、行内代码标签强化</li>
+                </ul>
+            </div>
+            <div class="changelog-panel" data-version="0.1.8">
+                <div class="changelog-date">2026.08.07</div>
+                <ul class="changelog-list">
+                    <li><span class="changelog-tag new">新增</span>斜杠菜单输入触发：输入 <code>/</code> 或 <code>、</code> 自动唤起，继续输入任意字符自动关闭</li>
+                    <li><span class="changelog-tag new">新增</span>HTML 渲染支持：预览模式（整页与并排）可渲染原始 HTML（表格、行内样式等）</li>
+                    <li><span class="changelog-tag new">新增</span>实时模式 HTML 渲染：块级 HTML 及单独成行的行内元素渲染为真实内容，光标落上还原源码编辑</li>
+                    <li><span class="changelog-tag new">新增</span>超链接外部打开：预览中点击链接改为系统默认浏览器打开，不再应用内导航</li>
+                    <li><span class="changelog-tag platform">macOS</span>macOS 版本正式发布：通用二进制安装包（Universal Binary），Intel 与 Apple Silicon 均原生运行，无需 Rosetta</li>
+                    <li><span class="changelog-tag platform">macOS</span>原生全屏、一键设为默认 Markdown 编辑器、系统字体获取（system_profiler）</li>
+                    <li><span class="changelog-tag fix">修复</span>中文输入法下 / 无法唤起斜杠菜单、触发时插件崩溃、继续输入菜单不消失等问题</li>
+                    <li><span class="changelog-tag fix">修复</span>macOS 启动白屏、Mermaid 图表在 macOS 12 无法渲染、打包后主题资源缺失</li>
+                </ul>
+            </div>
+            <div class="changelog-panel" data-version="0.1.7">
+                <div class="changelog-date">2026.06.22</div>
+                <ul class="changelog-list">
+                    <li><span class="changelog-tag new">新增</span>斜杠菜单重构：Notion 风格全图标网格布局，16 个选项统一为图标+标签卡片</li>
+                    <li><span class="changelog-tag new">新增</span>双击标签关闭文档</li>
+                    <li><span class="changelog-tag fix">修复</span>实时模式任务列表不渲染 checkbox，改为原生 checkbox 元素，效果与预览模式一致</li>
+                    <li><span class="changelog-tag fix">修复</span>预览模式任务列表 checkbox 样式缺失</li>
+                    <li><span class="changelog-tag fix">修复</span>双击已关联 .md 文件时窗口不切到前台</li>
+                    <li><span class="changelog-tag fix">修复</span>从网页粘贴内容丢失 Markdown 格式</li>
+                </ul>
+            </div>
+            <div class="changelog-panel" data-version="0.1.6">
+                <div class="changelog-date">2026.06.18</div>
+                <ul class="changelog-list">
+                    <li><span class="changelog-tag new">新增</span>单实例多标签：双击 .md 或文件关联打开时合并到已有实例，已打开的文件自动切换定位</li>
+                    <li><span class="changelog-tag new">新增</span>F1 快捷键大全面板（3列卡片网格），F2 深浅切换，F3 视图循环，Ins 斜杠菜单</li>
+                    <li><span class="changelog-tag fix">修复</span>Ctrl+F 同时弹出 CM6 内置英文搜索面板的问题</li>
+                    <li><span class="changelog-tag fix">修复</span>液态玻璃主题：长行内代码换行模糊、切换后下拉菜单无法调出、列表中代码高亮不按主题色</li>
+                    <li><span class="changelog-tag improve">优化</span>版本号统一为 0.1.6，设置-外观恢复「自定义 CSS」选项</li>
+                </ul>
+            </div>
+            <div class="changelog-panel" data-version="0.1.5">
+                <div class="changelog-date">2026.06.17</div>
+                <ul class="changelog-list">
+                    <li><span class="changelog-tag new">新增</span>主题管理系统，theme.json动态管理14套主题元信息，支持编辑名称、内联色板预览</li>
+                    <li><span class="changelog-tag new">新增</span>7套新主题：液态玻璃、荔枝红、紫罗兰、赛博朋克、Facebook、黑客帝国、薄荷冰沙、落日熔金</li>
+                    <li><span class="changelog-tag new">新增</span>液态玻璃主题：玻璃材质视觉体系，毛玻璃、折射光线、玻璃胶囊效果</li>
+                    <li><span class="changelog-tag new">新增</span>黑客帝国/落日熔金/复古打字机/赛博朋克四套主题亮色模式</li>
+                    <li><span class="changelog-tag new">新增</span>MiSans优先字体栈，自动适配各平台系统字体，历史用户自动迁移</li>
+                    <li><span class="changelog-tag improve">优化</span>所有主题暗色模式全覆盖，h1/h2/h3/code/table/strong等元素全部适配</li>
+                    <li><span class="changelog-tag improve">优化</span>快捷键系统扩展到28个，可视化配置面板支持录制、冲突检测、恢复默认</li>
+                    <li><span class="changelog-tag improve">优化</span>深浅模式双向切换，修复闭包bug；视图循环顺序与页面按钮对齐</li>
+                    <li><span class="changelog-tag fix">修复</span>表格选择器、公式、Mermaid渲染等诸多问题</li>
+                </ul>
+            </div>
+            <div class="changelog-panel" data-version="0.1.4">
+                <div class="changelog-date">2026.06.15</div>
+                <ul class="changelog-list">
+                    <li><span class="changelog-tag new">新增</span>实时编辑模式（WYSIWYG），Markdown标记自动隐藏，光标进入时显示</li>
+                    <li><span class="changelog-tag new">新增</span>4种实时模式动画效果：聚焦、闪光、辉光、涟漪，支持配置选择</li>
+                    <li><span class="changelog-tag new">新增</span>实时模式表格渲染为HTML表格，点击单元格直接编辑</li>
+                    <li><span class="changelog-tag improve">优化</span>行内代码背景对比度提升，圆角增大到5px，文字统一为主题色</li>
+                    <li><span class="changelog-tag improve">优化</span>撤销/重做、拼写检查开关、同步滚动机制修复</li>
+                    <li><span class="changelog-tag improve">优化</span>新增荔枝红、紫罗兰两套主题</li>
+                </ul>
+            </div>
+            <div class="changelog-panel" data-version="0.1.3">
+                <div class="changelog-date">2026.06.10</div>
+                <ul class="changelog-list">
+                    <li><span class="changelog-tag new">新增</span>导出按钮主题色适配，导出菜单fixed定位修复</li>
+                    <li><span class="changelog-tag new">新增</span>系统保存对话框，替换浏览器原生下载</li>
+                    <li><span class="changelog-tag improve">优化</span>同步滚动精度重写，并排模式下大纲点击跳转精准</li>
+                    <li><span class="changelog-tag improve">优化</span>行内代码对比度提升，文字统一为主题色</li>
+                    <li><span class="changelog-tag fix">修复</span>新打开文件小圆点误触发、搜索替换面板关闭按钮无效等问题</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA — Light card -->
+<section class="cta">
+    <div class="cta-inner">
+        <h2>用 YiziMarkdown<br>开心写出好运气</h2>
+        <p>免费、开源、便携。下载解压，即刻开始你的 Markdown 写作之旅。</p>
+        <a href="https://github.com/laoduu/YiziMarkdown/releases" target="_blank" class="btn-cta">
+            <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 7l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            立即下载 v0.1.9
+        </a>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+    <p>&copy; 2026 YiziMarkdown &middot; <a href="https://github.com/laoduu/YiziMarkdown/blob/main/LICENSE" target="_blank">MIT License</a> &middot; Built with Tauri + React + CodeMirror 6</p>
+    <p style="margin-top: 6px; font-size: 12px; color: #94a3b8;">渝ICP备2023007919号-1</p>
+</footer>
+
+<script src="assets/js/main.js"></script>
+
+</body>
+</html>
