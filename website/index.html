@@ -4,24 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YiziMarkdown - 免费开源 Markdown 编辑器（Windows / macOS） | 免安装、多主题、实时预览</title>
-    <meta name="description" content="YiziMarkdown 是一款免费开源、跨平台的 Markdown 编辑器（Windows 便携 / macOS 原生），基于 Tauri + React + CodeMirror 6 构建。支持实时预览、并排编辑、15 套精美主题（液态玻璃、赛博朋克等）、类 PPT 演示模式、KaTeX 公式、Mermaid 图表。免安装，解压即用。">
-    <meta name="keywords" content="Markdown编辑器,Windows编辑器,macOS编辑器,Mac编辑器,跨平台编辑器,便携编辑器,免安装编辑器,Markdown,实时预览,代码编辑器,Tauri,开源编辑器,免费编辑器,Markdown写作,笔记软件,主题编辑器,KaTeX,Mermaid,语法高亮,演示模式,幻灯片,PPT">
+    <meta name="description" content="YiziMarkdown 是一款免费开源、跨平台的 Markdown 编辑器（Windows 便携 / macOS 原生），基于 Tauri + React + CodeMirror 6 构建。内置 AI 大模型助手（17 家供应商 + 自定义接入 + 技能 Skill 系统）、类 PPT 演示模式（纯 Markdown 自动版式）、实时预览、15 套精美主题、KaTeX 公式、Mermaid 图表。免安装，解压即用。">
+    <meta name="keywords" content="Markdown编辑器,AI写作,AI编辑器,大模型,演示模式,幻灯片,PPT,Skill,技能,Windows编辑器,macOS编辑器,跨平台编辑器,便携编辑器,免安装编辑器,Markdown,实时预览,Tauri,开源编辑器,免费编辑器,KaTeX,Mermaid,主题编辑器">
     <meta name="author" content="YiziPaper">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://md.yizigpt.com/">
 
     <!-- Open Graph -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="YiziMarkdown - 免费开源 Markdown 编辑器（Windows / macOS）">
-    <meta property="og:description" content="Windows 便携 / macOS 原生。支持实时预览、15 套精美主题、KaTeX 公式、Mermaid 图表。开源免费。">
+    <meta property="og:title" content="YiziMarkdown - AI 加持的 Markdown 编辑器（Windows / macOS）">
+    <meta property="og:description" content="内置 AI 大模型助手与技能系统，笔记一键变演示。15 套主题、实时预览、便携免安装，开源免费。">
     <meta property="og:url" content="https://md.yizigpt.com/">
     <meta property="og:site_name" content="YiziMarkdown">
     <meta property="og:locale" content="zh_CN">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="YiziMarkdown - 免费开源 Markdown 编辑器（Windows / macOS）">
-    <meta name="twitter:description" content="Windows 便携 / macOS 原生。支持实时预览、15 套精美主题、KaTeX 公式、Mermaid 图表。开源免费。">
+    <meta name="twitter:title" content="YiziMarkdown - AI 加持的 Markdown 编辑器（Windows / macOS）">
+    <meta name="twitter:description" content="内置 AI 大模型助手与技能系统，笔记一键变演示。15 套主题、实时预览、便携免安装，开源免费。">
 
     <link rel="icon" href="assets/icon.png">
     <link rel="stylesheet" href="assets/css/style.css">
@@ -32,7 +32,7 @@
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
         "name": "YiziMarkdown",
-        "description": "一款免费开源、跨平台的 Markdown 编辑器（Windows 便携 / macOS 原生），支持实时预览、并排编辑、15 套精美主题、类 PPT 演示模式、KaTeX 公式、Mermaid 图表。免安装，解压即用。",
+        "description": "一款免费开源、跨平台的 Markdown 编辑器（Windows 便携 / macOS 原生），内置 AI 大模型助手与技能系统、类 PPT 演示模式，支持实时预览、15 套精美主题、KaTeX 公式、Mermaid 图表。免安装，解压即用。",
         "url": "https://md.yizigpt.com/",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Windows, macOS",
@@ -44,7 +44,7 @@
         "license": "https://github.com/laoduu/YiziMarkdown/blob/main/LICENSE",
         "programmingLanguage": ["TypeScript", "Rust"],
         "screenshot": "https://md.yizigpt.com/screenshots/liquidglass.png",
-        "version": "0.1.9",
+        "version": "0.2.1",
         "author": {
             "@type": "Organization",
             "name": "YiziPaper",
@@ -64,6 +64,8 @@
         </a>
         <div class="nav-links">
             <a href="#features">功能</a>
+            <a href="#slideshow">演示模式</a>
+            <a href="#ai">AI 助手</a>
             <a href="#themes">主题</a>
             <a href="#shortcuts">快捷键</a>
             <a href="#changelog">更新</a>
@@ -78,19 +80,19 @@
 <!-- Hero -->
 <section class="hero">
     <div class="hero-content">
-        <div class="hero-badge"><span class="dot"></span> V0.1.9 · 演示模式 · 纯 Markdown 自动版式 + 模板功能</div>
+        <div class="hero-badge"><span class="dot"></span> V0.2.1 · AI 大模型助手 · Skill 技能系统 · 15 种界面语言</div>
         <h1>既<span style="color: var(--orange);">好看</span>，又<span class="highlight">彪悍</span></h1>
-        <p class="hero-sub">一款简洁精致的跨平台 Markdown 编辑器<br><span class="nowrap">Windows 便携版/安装版 · macOS 版 · 支持类 PPT 演示，让你专注于写作本身</span></p>
+        <p class="hero-sub">一款 AI 加持的跨平台 Markdown 编辑器<br><span class="nowrap">内置大模型助手与类 PPT 演示模式，写作、提炼、汇报一站搞定</span></p>
         <div class="hero-actions">
-            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.1.9/YiziMarkdown_0.1.9_x64-setup.exe" target="_blank" class="btn-primary">
+            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.2.1/YiziMarkdown_0.2.1_x64-setup.exe" target="_blank" class="btn-primary">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.55 10.5 4.5v6.8H3V5.55zm0 12.9 7.5-1.05v-6.3H3v7.35zM11.5 4.3 21 3v8.3h-9.5V4.3zm0 15.4 9.5-1.3V12.7h-9.5v7z"/></svg>
                 Windows 版下载
             </a>
-            <a href="https://github.com/laoduu/YiziMarkdown/releases" target="_blank" class="btn-secondary">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 12.54c-.03-3.04 2.48-4.5 2.6-4.57-1.42-2.07-3.62-2.36-4.4-2.39-1.88-.19-3.66 1.1-4.62 1.1-.95 0-2.43-1.08-4-1.05-2.05.03-3.95 1.2-5 3.04-2.14 3.7-.55 9.17 1.53 12.18 1.02 1.46 2.23 3.1 3.83 3.04 1.53-.06 2.11-.99 3.96-.99 1.85 0 2.37.99 4 .96 1.65-.03 2.7-1.49 3.71-2.95 1.17-1.71 1.65-3.37 1.68-3.45-.04-.02-3.22-1.24-3.29-4.92zM14.4 4.2c.85-1.03 1.42-2.46 1.26-3.89-1.22.05-2.7.81-3.58 1.84-.79.91-1.47 2.36-1.29 3.76 1.36.1 2.76-.69 3.61-1.71z"/></svg>
-                MacOS 版下载
+            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.2.1/YiziMarkdown-v0.2.1-portable.zip" target="_blank" class="btn-secondary">
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 7l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                便携版（解压即用）
             </a>
-            <a href="https://github.com/laoduu/YiziMarkdown" target="_blank" class="btn-secondary">
+            <a href="https://github.com/laoduu/YiziMarkdown/releases" target="_blank" class="btn-secondary">
                 <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
                 GitHub
             </a>
@@ -128,9 +130,24 @@
             <p>源代码、并排、实时预览、纯预览、演示模式，随心切换，找到最适合你的写作与汇报节奏。</p>
         </div>
         <div class="feature-card">
-            <div class="feature-icon orange"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 7h10"/><path d="M7 11h7"/></svg></div>
+            <div class="feature-icon orange"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 1 4 4v1h1a4 4 0 0 1 0 8h-1v-2h1a2 2 0 0 0 0-4h-1v1a4 4 0 0 1-8 0V9H7a2 2 0 0 0 0 4h1v2H7a4 4 0 0 1 0-8h1V6a4 4 0 0 1 4-4z"/><line x1="12" y1="15" x2="12" y2="22"/></svg></div>
             <h3>类 PPT 演示模式</h3>
-            <p>笔记一键变全屏幻灯片，纯 Markdown 自动版式，`Ctrl+Alt+P` 即可演示汇报，支持主题换肤与演讲备注。</p>
+            <p>笔记一键变全屏幻灯片，纯 Markdown 自动版式，14 种排版自动匹配，<code>Ctrl+Alt+P</code> 即可汇报演示。</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon blue"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M12 8V4M8 4h8"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/><path d="M9 17h6"/></svg></div>
+            <h3>AI 大模型助手</h3>
+            <p>侧边聊天面板接入 17 家大模型，支持自定义服务、流式回复、思考过程展示，还能引用当前文档对话。</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon blue"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+            <h3>Skill 技能系统</h3>
+            <p>一键调用技能（演示稿提炼、文档摘要、润色改写），提示词自动注入；自定义技能放进 skills 目录即可扩展。</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon orange"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+            <h3>15 种界面语言</h3>
+            <p>简繁中文、英日韩、德法西葡等 15 种语言即时切换，全界面文案、快捷键、插件说明同步国际化。</p>
         </div>
         <div class="feature-card">
             <div class="feature-icon orange"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg></div>
@@ -170,7 +187,85 @@
     </div>
 </section>
 
-<!-- Themes — Magazine Stack -->
+<!-- Slideshow Spotlight -->
+<section class="spotlight" id="slideshow">
+    <div class="spotlight-inner">
+        <div class="spotlight-text">
+            <span class="section-label">类 PPT 演示模式</span>
+            <h2 class="spotlight-title">写好的笔记，<br>一键变成幻灯片</h2>
+            <p class="spotlight-desc">无需导出、无需另装软件。<code>Ctrl+Alt+P</code> 进入全屏演示，纯 Markdown 用 <code>---</code> 分页，引擎分析整页内容自动匹配版式。主题色、字体随当前主题实时继承。</p>
+            <ul class="spotlight-list">
+                <li><strong>14 种自动版式</strong>：封面、章节、目录、内容、列表、数据表、路线图、图文、图片、金句、代码、图表、公式、结尾</li>
+                <li><strong>显式指令</strong>：<code>&lt;!-- layout: quote --&gt;</code> 强制版式，<code>&lt;!-- align: center --&gt;</code> 指定对齐</li>
+                <li><strong>Mermaid / 公式</strong>：流程图、时序图、LaTeX 公式自动渲染成页</li>
+                <li><strong>滚轮翻页 + 演讲备注</strong>：内容先滚动、到边界再翻页；按 <code>S</code> 查看备注</li>
+            </ul>
+        </div>
+        <div class="spotlight-visual">
+            <div class="deck-mock">
+                <div class="deck-slide active">
+                    <div class="deck-num">01</div>
+                    <div class="deck-title">项目年度复盘</div>
+                    <div class="deck-sub">核心指标 · 里程碑 · 规划</div>
+                    <div class="deck-grad"></div>
+                </div>
+                <div class="deck-slide s2">
+                    <div class="deck-h">关键成果</div>
+                    <div class="deck-bullet"><i></i>用户增长 230%，月活突破 100 万</div>
+                    <div class="deck-bullet"><i></i>完成 3 个核心版本迭代</div>
+                    <div class="deck-bullet"><i></i>跨平台 macOS 正式发布</div>
+                </div>
+                <div class="deck-slide s3">
+                    <div class="deck-quote">好的演示，<br>让想法自己说话</div>
+                </div>
+                <div class="deck-progress"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- AI Spotlight -->
+<section class="spotlight ai" id="ai">
+    <div class="spotlight-inner">
+        <div class="spotlight-visual">
+            <div class="chat-mock">
+                <div class="chat-head"><span class="chat-dot"></span> AI 助手 · DeepSeek · deepseek-v4</div>
+                <div class="chat-body">
+                    <div class="chat-msg skill">
+                        <span class="skill-pill">⚡ 演示稿提炼 ✕</span>
+                    </div>
+                    <div class="chat-msg user">把这份项目复盘提炼成演示稿</div>
+                    <div class="chat-msg think"><span class="think-tag">思考过程</span>
+                        <div class="think-line"></div><div class="think-line short"></div>
+                    </div>
+                    <div class="chat-msg ai">
+                        <div class="ai-line w90"></div>
+                        <div class="ai-line w75"></div>
+                        <div class="ai-line w82"></div>
+                        <div class="ai-line w60"></div>
+                        <div class="ai-cursor"></div>
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <span class="chat-zap">⚡</span>
+                    <div class="chat-bar"></div>
+                    <span class="chat-send">↑</span>
+                </div>
+            </div>
+        </div>
+        <div class="spotlight-text">
+            <span class="section-label">AI 大模型助手</span>
+            <h2 class="spotlight-title">AI 加持，<br>写作进入快车道</h2>
+            <p class="spotlight-desc">右侧聊天面板内置大模型，侧边对称为写作而生。API 密钥存系统钥匙串，安全不落盘，支持流式输出与随时停止。</p>
+            <ul class="spotlight-list light">
+                <li><strong>17 家供应商</strong>：OpenAI、Anthropic、Gemini、DeepSeek、通义千问、智谱 GLM、Kimi、豆包、Ollama 本地等</li>
+                <li><strong>自定义服务</strong>：OpenAI / Anthropic 兼容协议，自填 Base URL、模型 ID 与密钥，可接任意第三方</li>
+                <li><strong>Skill 技能</strong>：一键「演示稿提炼」「文档摘要」「润色改写」，技能标签插入输入框，可自定义扩展</li>
+                <li><strong>思考过程 + 引用文档</strong>：推理模型的 reasoning 可折叠查看，可把当前文档作为上下文提问</li>
+            </ul>
+        </div>
+    </div>
+</section>
 <section class="themes" id="themes">
     <div class="section-header">
         <span class="section-label">精心打磨</span>
@@ -231,7 +326,8 @@
     </div>
     <div class="changelog-container">
         <div class="changelog-tabs" id="changelogTabs">
-            <button class="changelog-tab active" data-version="0.1.9">v0.1.9</button>
+            <button class="changelog-tab active" data-version="0.2.1">v0.2.1</button>
+            <button class="changelog-tab" data-version="0.1.9">v0.1.9</button>
             <button class="changelog-tab" data-version="0.1.8">v0.1.8</button>
             <button class="changelog-tab" data-version="0.1.7">v0.1.7</button>
             <button class="changelog-tab" data-version="0.1.6">v0.1.6</button>
@@ -240,7 +336,19 @@
             <button class="changelog-tab" data-version="0.1.3">v0.1.3</button>
         </div>
         <div class="changelog-content" id="changelogContent">
-            <div class="changelog-panel active" data-version="0.1.9">
+            <div class="changelog-panel active" data-version="0.2.1">
+                <div class="changelog-date">2026.09.05</div>
+                <ul class="changelog-list">
+                    <li><span class="changelog-tag new">新增</span><strong>AI 大模型接入</strong>：侧边聊天面板，支持 OpenAI / Anthropic / Ollama 三种协议，17 家供应商目录，流式 SSE 输出、协作式取消，密钥存 OS keychain 不落盘</li>
+                    <li><span class="changelog-tag new">新增</span><strong>AI 技能（Skill）系统</strong>：<code>skills/</code> 目录承载技能清单与提示词，内置「演示稿提炼」「文档摘要」「润色改写」，技能标签插入输入框、提示词自动注入，用户可自由扩展</li>
+                    <li><span class="changelog-tag new">新增</span><strong>自定义服务</strong>：OpenAI 兼容 / Anthropic 兼容协议二选一，自填 Base URL、模型 ID 与密钥，可接任意第三方大模型，本地端点密钥可留空</li>
+                    <li><span class="changelog-tag new">新增</span><strong>思考过程展示</strong>：DeepSeek / Qwen / GLM / Anthropic 推理模型的 reasoning 内容以可折叠区块呈现</li>
+                    <li><span class="changelog-tag new">新增</span><strong>15 种界面语言</strong>：自研轻量 i18n 引擎，简繁中文、英日韩、德法西葡等，全组件文案随语言切换</li>
+                    <li><span class="changelog-tag improve">优化</span>AI 设置页布局统一对齐、密钥输入框加长并支持显隐、验证诊断显示协议与请求 URL</li>
+                    <li><span class="changelog-tag fix">修复</span>AI 长回复被 10 秒兜底误杀截断、流式中文乱码缺字、Anthropic 兼容网关 401、CRLF 行尾文档大纲无法提取、赛博朋克主题状态栏主题色丢失等问题</li>
+                </ul>
+            </div>
+            <div class="changelog-panel" data-version="0.1.9">
                 <div class="changelog-date">2026.08.11</div>
                 <ul class="changelog-list">
                     <li><span class="changelog-tag new">新增</span>演示模式重构：纯 Markdown 自动版式，<code>---</code> 分页，引擎按内容结构自动选版式（封面/内容/图片/引用/代码/图表）</li>
@@ -331,7 +439,7 @@
         <p>免费、开源、便携。下载解压，即刻开始你的 Markdown 写作之旅。</p>
         <a href="https://github.com/laoduu/YiziMarkdown/releases" target="_blank" class="btn-cta">
             <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 7l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            立即下载 v0.1.9
+            立即下载 v0.2.1
         </a>
     </div>
 </section>

@@ -158,7 +158,7 @@
             }
         });
     }, { threshold: 0.15 });
-    document.querySelectorAll('.feature-card, .shortcut-item, .changelog-panel').forEach(el => {
+    document.querySelectorAll('.feature-card, .shortcut-item, .changelog-panel, .spotlight-text, .spotlight-visual').forEach(el => {
         el.style.opacity = '0';
         el.style.transform = 'translateY(24px)';
         el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
