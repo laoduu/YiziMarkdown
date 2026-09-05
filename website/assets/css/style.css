@@ -119,8 +119,21 @@
             white-space: nowrap;
         }
         .hero-actions {
-            display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+            display: flex; gap: 14px; justify-content: center; flex-wrap: nowrap;
+            width: max-content; max-width: calc(100vw - 48px); margin: 0 auto;
             animation: fadeUp 0.6s ease-out 0.3s both;
+        }
+        .hero-actions .btn-primary,
+        .hero-actions .btn-secondary {
+            white-space: nowrap;
+        }
+        /* 平板：适度收紧按钮，保证 4 个下载按钮单行且文字不换行 */
+        @media (max-width: 1024px) {
+            .hero-actions { gap: 10px; }
+            .hero-actions .btn-primary,
+            .hero-actions .btn-secondary {
+                padding: 13px 22px; font-size: 14.5px;
+            }
         }
 
         @keyframes fadeUp {
@@ -244,8 +257,13 @@
             gap: 20px;
         }
         .feature-card {
-            padding: 36px 30px; border-radius: 16px;
+            padding: 24px 26px; border-radius: 16px;
             border: 1px solid #eef0f4; background: var(--white);
+            display: grid;
+            grid-template-columns: 44px 1fr;
+            grid-template-areas: "icon title" "desc desc";
+            align-items: center;
+            column-gap: 14px; row-gap: 6px;
             transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
         }
         .feature-card:hover {
@@ -254,14 +272,22 @@
             border-color: rgba(0,47,167,0.15);
         }
         .feature-icon {
-            width: 52px; height: 52px; border-radius: 14px;
+            grid-area: icon;
+            width: 44px; height: 44px; border-radius: 12px;
             display: flex; align-items: center; justify-content: center;
-            margin-bottom: 22px;
         }
         .feature-icon.blue { background: rgba(0,47,167,0.07); color: var(--blue); }
         .feature-icon.orange { background: rgba(243,112,33,0.07); color: var(--orange); }
-        .feature-card h3 { font-size: 18px; font-weight: 700; color: var(--dark); margin-bottom: 10px; }
-        .feature-card p { font-size: 14.5px; color: var(--gray); line-height: 1.7; }
+        .feature-card h3 {
+            grid-area: title;
+            font-size: 17px; font-weight: 700; color: var(--dark);
+            line-height: 1.3;
+        }
+        .feature-card p { grid-area: desc; font-size: 14.5px; color: var(--gray); line-height: 1.65; }
+        .feature-card p code {
+            background: var(--light); padding: 1px 6px; border-radius: 4px;
+            font-size: 13px; color: var(--blue); font-weight: 600;
+        }
 
         /* ===== THEME SHOWCASE — Magazine Stack ===== */
         .themes {
@@ -512,9 +538,6 @@
         .changelog-list li {
             padding: 14px 0;
             border-bottom: 1px solid #f1f5f9;
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
             font-size: 15px;
             color: var(--dark);
             line-height: 1.7;
@@ -522,15 +545,18 @@
         .changelog-list li:last-child {
             border-bottom: none;
         }
+        /* 标签固定在左侧不占 flex 宽度，整行文本自然排布，避免粗体标题被挤换行错位 */
+        .changelog-list li strong { font-weight: 700; }
         .changelog-tag {
-            flex-shrink: 0;
+            display: inline-block;
+            margin-right: 10px;
             padding: 2px 8px;
             border-radius: 4px;
             font-size: 11px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            margin-top: 2px;
+            vertical-align: 1px;
         }
         .changelog-tag.new {
             background: rgba(16, 185, 129, 0.12);
@@ -552,30 +578,21 @@
         /* ===== SPOTLIGHT（演示模式 / AI 重点板块） ===== */
         .spotlight {
             padding: 100px clamp(16px, 4vw, 32px);
+            background: var(--white);
         }
         .spotlight.ai {
-            background: linear-gradient(160deg, #0f1a3a 0%, #101d47 55%, #0a1128 100%);
+            background: linear-gradient(160deg, #f4f7ff 0%, #eef3fd 100%);
         }
         .spotlight-inner {
-            max-width: 1200px; margin: 0 auto;
+            max-width: 1100px; margin: 0 auto;
             display: grid; grid-template-columns: 1fr 1fr;
             gap: 56px; align-items: center;
         }
-        .spotlight-text { max-width: 520px; }
-        .spotlight-title {
-            font-size: clamp(28px, 4vw, 42px);
-            font-weight: 900; color: var(--dark);
-            letter-spacing: -0.02em; line-height: 1.2; margin: 10px 0 20px;
-        }
-        .spotlight.ai .spotlight-title { color: #fff; }
-        .spotlight-desc { font-size: 16px; color: var(--gray); line-height: 1.8; margin-bottom: 26px; }
-        .spotlight.ai .spotlight-desc { color: #b6c0dd; }
-        .spotlight-desc code {
-            background: var(--light); padding: 2px 7px; border-radius: 5px;
+        .section-desc code {
+            background: var(--light); padding: 2px 8px; border-radius: 5px;
             font-size: 13px; color: var(--blue); font-weight: 600;
         }
-        .spotlight.ai .spotlight-desc code { background: rgba(255,255,255,0.1); color: #8fb0ff; }
-        .spotlight-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+        .spotlight-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 16px; }
         .spotlight-list li {
             position: relative; padding-left: 30px;
             font-size: 15px; line-height: 1.7; color: #334155;
@@ -585,12 +602,11 @@
             width: 9px; height: 9px; border-radius: 50%;
             background: var(--orange); box-shadow: 0 0 0 4px rgba(243,112,33,0.12);
         }
-        .spotlight-list.light li { color: #cbd5ea; }
-        .spotlight-list.light li::before { background: #5b8cff; box-shadow: 0 0 0 4px rgba(91,140,255,0.18); }
+        .spotlight.ai .spotlight-list li::before {
+            background: var(--blue); box-shadow: 0 0 0 4px rgba(0,47,167,0.1);
+        }
         .spotlight-list strong { color: var(--dark); font-weight: 700; }
-        .spotlight.ai .spotlight-list strong { color: #fff; }
         .spotlight-list code { font-size: 12.5px; background: var(--light); padding: 1px 6px; border-radius: 4px; color: var(--blue); }
-        .spotlight.ai .spotlight-list code { background: rgba(255,255,255,0.1); color: #9db8ff; }
 
         /* 演示 mockup：幻灯片堆叠 */
         .deck-mock {
@@ -712,10 +728,7 @@
             .theme-stack { max-width: 680px; margin: 0 auto; }
             .theme-info { text-align: center; }
             .theme-selector { justify-items: center; }
-            .spotlight-inner { grid-template-columns: 1fr; gap: 40px; }
-            .spotlight.ai .spotlight-inner { direction: rtl; }
-            .spotlight.ai .spotlight-visual { direction: ltr; }
-            .spotlight.ai .spotlight-text { direction: ltr; }
+            .spotlight-inner { grid-template-columns: 1fr; gap: 44px; }
         }
         @media (max-width: 900px) {
             .features-grid { grid-template-columns: repeat(2, 1fr); }
@@ -728,6 +741,7 @@
         @media (max-width: 768px) {
             .nav-links a:not(.btn-nav) { display: none; }
             .hero { min-height: auto; padding: 110px 20px 0; }
+            .hero-sub .nowrap { white-space: normal; }
             .mockup-section { padding-bottom: 60px; }
             .mockup-chrome { display: none; }
             .features, .shortcuts { padding: 60px 20px; }
@@ -737,8 +751,8 @@
         @media (max-width: 600px) {
             .features-grid { grid-template-columns: 1fr; }
             .shortcut-grid { grid-template-columns: 1fr; }
-            .theme-selector { grid-template-columns: 1fr; }
-            .hero-actions { flex-direction: column; align-items: center; }
+            .theme-selector { grid-template-columns: repeat(2, 1fr); }
+            .hero-actions { flex-direction: column; align-items: center; flex-wrap: wrap; }
             .btn-primary, .btn-secondary { width: 100%; justify-content: center; max-width: 320px; }
             .theme-info-name { font-size: 28px; }
         }

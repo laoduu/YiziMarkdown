@@ -17,13 +17,15 @@
     <meta property="og:url" content="https://md.yizigpt.com/">
     <meta property="og:site_name" content="YiziMarkdown">
     <meta property="og:locale" content="zh_CN">
+    <meta property="og:image" content="https://md.yizigpt.com/assets/index.webp">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="YiziMarkdown - AI 加持的 Markdown 编辑器（Windows / macOS）">
     <meta name="twitter:description" content="内置 AI 大模型助手与技能系统，笔记一键变演示。15 套主题、实时预览、便携免安装，开源免费。">
 
-    <link rel="icon" href="assets/icon.png">
+    <link rel="icon" type="image/png" href="assets/icon.png">
+    <link rel="shortcut icon" href="assets/favicon.ico">
     <link rel="stylesheet" href="assets/css/style.css">
 
     <!-- Structured Data -->
@@ -43,7 +45,7 @@
         },
         "license": "https://github.com/laoduu/YiziMarkdown/blob/main/LICENSE",
         "programmingLanguage": ["TypeScript", "Rust"],
-        "screenshot": "https://md.yizigpt.com/screenshots/liquidglass.png",
+        "screenshot": "https://md.yizigpt.com/assets/index.webp",
         "version": "0.2.1",
         "author": {
             "@type": "Organization",
@@ -88,6 +90,10 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.55 10.5 4.5v6.8H3V5.55zm0 12.9 7.5-1.05v-6.3H3v7.35zM11.5 4.3 21 3v8.3h-9.5V4.3zm0 15.4 9.5-1.3V12.7h-9.5v7z"/></svg>
                 Windows 版下载
             </a>
+            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.2.1/YiziMarkdown_0.2.1_universal.dmg" target="_blank" class="btn-secondary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 12.54c-.03-3.04 2.48-4.5 2.6-4.57-1.42-2.07-3.62-2.36-4.4-2.39-1.88-.19-3.66 1.1-4.62 1.1-.95 0-2.43-1.08-4-1.05-2.05.03-3.95 1.2-5 3.04-2.14 3.7-.55 9.17 1.53 12.18 1.02 1.46 2.23 3.1 3.83 3.04 1.53-.06 2.11-.99 3.96-.99 1.85 0 2.37.99 4 .96 1.65-.03 2.7-1.49 3.71-2.95 1.17-1.71 1.65-3.37 1.68-3.45-.04-.02-3.22-1.24-3.29-4.92zM14.4 4.2c.85-1.03 1.42-2.46 1.26-3.89-1.22.05-2.7.81-3.58 1.84-.79.91-1.47 2.36-1.29 3.76 1.36.1 2.76-.69 3.61-1.71z"/></svg>
+                macOS 版下载
+            </a>
             <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.2.1/YiziMarkdown-v0.2.1-portable.zip" target="_blank" class="btn-secondary">
                 <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 7l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                 便携版（解压即用）
@@ -104,13 +110,7 @@
             <div class="float-dot d2"></div>
             <div class="float-dot d3"></div>
             <div class="mockup-window">
-                <div class="mockup-chrome">
-                    <span class="dot r"></span>
-                    <span class="dot y"></span>
-                    <span class="dot g"></span>
-                    <span class="title">YiziMarkdown — welcome.md</span>
-                </div>
-                <img src="screenshots/liquidglass.png" alt="YiziMarkdown 编辑器" loading="eager">
+                <img src="assets/index.webp" alt="YiziMarkdown 编辑器界面" loading="eager">
             </div>
         </div>
     </div>
@@ -189,11 +189,13 @@
 
 <!-- Slideshow Spotlight -->
 <section class="spotlight" id="slideshow">
+    <div class="section-header">
+        <span class="section-label">类 PPT 演示模式</span>
+        <h2 class="section-title">写好的笔记，一键变成幻灯片</h2>
+        <p class="section-desc">无需导出、无需另装软件。<code>Ctrl+Alt+P</code> 进入全屏演示，纯 Markdown 用 <code>---</code> 分页，引擎分析整页内容自动匹配版式，主题色与字体实时继承。</p>
+    </div>
     <div class="spotlight-inner">
         <div class="spotlight-text">
-            <span class="section-label">类 PPT 演示模式</span>
-            <h2 class="spotlight-title">写好的笔记，<br>一键变成幻灯片</h2>
-            <p class="spotlight-desc">无需导出、无需另装软件。<code>Ctrl+Alt+P</code> 进入全屏演示，纯 Markdown 用 <code>---</code> 分页，引擎分析整页内容自动匹配版式。主题色、字体随当前主题实时继承。</p>
             <ul class="spotlight-list">
                 <li><strong>14 种自动版式</strong>：封面、章节、目录、内容、列表、数据表、路线图、图文、图片、金句、代码、图表、公式、结尾</li>
                 <li><strong>显式指令</strong>：<code>&lt;!-- layout: quote --&gt;</code> 强制版式，<code>&lt;!-- align: center --&gt;</code> 指定对齐</li>
@@ -226,6 +228,11 @@
 
 <!-- AI Spotlight -->
 <section class="spotlight ai" id="ai">
+    <div class="section-header">
+        <span class="section-label">AI 大模型助手</span>
+        <h2 class="section-title">AI 加持，写作进入快车道</h2>
+        <p class="section-desc">右侧聊天面板内置大模型，侧边对称为写作而生。API 密钥存系统钥匙串，安全不落盘，支持流式输出、随时停止与推理过程折叠查看。</p>
+    </div>
     <div class="spotlight-inner">
         <div class="spotlight-visual">
             <div class="chat-mock">
@@ -254,13 +261,10 @@
             </div>
         </div>
         <div class="spotlight-text">
-            <span class="section-label">AI 大模型助手</span>
-            <h2 class="spotlight-title">AI 加持，<br>写作进入快车道</h2>
-            <p class="spotlight-desc">右侧聊天面板内置大模型，侧边对称为写作而生。API 密钥存系统钥匙串，安全不落盘，支持流式输出与随时停止。</p>
-            <ul class="spotlight-list light">
+            <ul class="spotlight-list">
                 <li><strong>17 家供应商</strong>：OpenAI、Anthropic、Gemini、DeepSeek、通义千问、智谱 GLM、Kimi、豆包、Ollama 本地等</li>
-                <li><strong>自定义服务</strong>：OpenAI / Anthropic 兼容协议，自填 Base URL、模型 ID 与密钥，可接任意第三方</li>
-                <li><strong>Skill 技能</strong>：一键「演示稿提炼」「文档摘要」「润色改写」，技能标签插入输入框，可自定义扩展</li>
+                <li><strong>自定义服务</strong>：OpenAI / Anthropic 兼容协议，自填 Base URL、模型 ID 与密钥，可接任意第三方大模型，本地端点密钥可留空</li>
+                <li><strong>Skill 技能</strong>：一键「演示稿提炼」「文档摘要」「润色改写」，技能标签插入输入框，用户可自定义扩展</li>
                 <li><strong>思考过程 + 引用文档</strong>：推理模型的 reasoning 可折叠查看，可把当前文档作为上下文提问</li>
             </ul>
         </div>
