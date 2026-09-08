@@ -1164,14 +1164,33 @@ function AISettings() {
   const [verifying, setVerifying] = useState(false)
   const [verifyMsg, setVerifyMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
-  // 切换供应商时更新模型输入为默认模型
+  // 切换供应商时：保存当前供应商配置，加载目标供应商配置
   const handleProviderChange = (pid: string) => {
-    const cfg = providerById(pid)
-    store.setField('aiProvider', pid)
-    setModel(cfg?.defaultModel || '')
-    setBaseUrl('')
-    store.setField('aiModel', cfg?.defaultModel || '')
-    store.setField('aiBaseUrl', '')
+    const currentPid = store.aiProvider
+    const currentCfg = providerById(currentPid)
+    
+    // 保存当前供应商的配置（如果用户修改过）
+    const newConfigs = { ...store.aiProviderConfigs }
+    newConfigs[currentPid] = {
+      model: model || currentCfg?.defaultModel || '',
+      baseUrl: baseUrl || '',
+      apiFormat: store.aiApiFormat,
+    }
+    
+    // 加载目标供应商的配置
+    const targetCfg = providerById(pid)
+    const savedCfg = newConfigs[pid]
+    
+    store.updateSettings({
+      aiProvider: pid,
+      aiProviderConfigs: newConfigs,
+      aiModel: savedCfg?.model || targetCfg?.defaultModel || '',
+      aiBaseUrl: savedCfg?.baseUrl || '',
+      aiApiFormat: (savedCfg?.apiFormat || targetCfg?.apiFormat || 'openai') as 'openai' | 'anthropic',
+    })
+    
+    setModel(savedCfg?.model || targetCfg?.defaultModel || '')
+    setBaseUrl(savedCfg?.baseUrl || '')
     setVerifyMsg(null)
   }
 
@@ -1179,7 +1198,19 @@ function AISettings() {
     invokeTauri<boolean>('ai_has_key', { provider: store.aiProvider }).then((v) => setHasKey(v || false))
   }, [store.aiProvider])
 
-  const saveModel = () => { store.setField('aiModel', model); store.setField('aiBaseUrl', baseUrl); store.setField('aiSystemPrompt', systemPrompt) }
+  const saveModel = () => {
+    store.setField('aiModel', model)
+    store.setField('aiBaseUrl', baseUrl)
+    store.setField('aiSystemPrompt', systemPrompt)
+    // 更新当前供应商的缓存
+    const newConfigs = { ...store.aiProviderConfigs }
+    newConfigs[store.aiProvider] = {
+      model: model || providerById(store.aiProvider)?.defaultModel || '',
+      baseUrl: baseUrl || '',
+      apiFormat: store.aiApiFormat,
+    }
+    store.setField('aiProviderConfigs', newConfigs)
+  }
 
   // 清理粘贴时常见的多余字符：首尾空白 + 包裹引号 + 尾随引号
   const cleanKey = (raw: string) => {
@@ -1239,7 +1270,7 @@ function AISettings() {
                 onChange={(e) => handleProviderChange(e.target.value)}
                 className="settings-select"
               >
-                {PROVIDERS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+                {PROVIDERS.map((p) => <option key={p.id} value={p.id}>{p.i18nKey ? t(`settings.${p.i18nKey}`) : p.label}</option>)}
               </select>
             </Row>
             {provider?.id === 'custom' && (
@@ -1303,6 +1334,21 @@ function AISettings() {
                 <option value={262144}>{t('settings.aiDocLimitK', { n: 256 })}</option>
                 <option value={524288}>{t('settings.aiDocLimitK', { n: 512 })}</option>
                 <option value={0}>{t('settings.aiDocLimitNone')}</option>
+              </select>
+            </Row>
+            <Row label={t('settings.aiContextTurns')} hint={t('settings.aiContextTurnsHint')}>
+              <select
+                value={store.aiContextTurns}
+                onChange={(e) => store.setField('aiContextTurns', Number(e.target.value))}
+                className="settings-select"
+              >
+                <option value={0}>{t('settings.aiContextTurnsNone')}</option>
+                <option value={1}>{t('settings.aiContextTurnsN', { n: 1 })}</option>
+                <option value={2}>{t('settings.aiContextTurnsN', { n: 2 })}</option>
+                <option value={3}>{t('settings.aiContextTurnsN', { n: 3 })}</option>
+                <option value={5}>{t('settings.aiContextTurnsN', { n: 5 })}</option>
+                <option value={10}>{t('settings.aiContextTurnsN', { n: 10 })}</option>
+                <option value={20}>{t('settings.aiContextTurnsN', { n: 20 })}</option>
               </select>
             </Row>
           </Section>

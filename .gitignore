@@ -32,3 +32,6 @@ tauri-dev.log.err
 # 分发产物
 *.zip
 *.dmg
+
+# Build releases
+releases/

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Sun, Moon, Palette, Check } from 'lucide-react'
+import { Sun, Moon, Palette, Check, X } from 'lucide-react'
 import { renderMarkdown } from '../lib/markdownRenderer'
 import { extendMarkdownIt, postRender as pluginPostRender } from '../plugins/registry'
 import {
@@ -59,6 +59,13 @@ export default function Slideshow({
   const toggleIntentRef = useRef(false)
   const hadFullscreenRef = useRef(false)
 
+  // 记录进入演示前的窗口状态
+  const savedWindowState = useRef<{ isMaximized: boolean; isFullscreen: boolean }>({ isMaximized: false, isFullscreen: false })
+
+  // 鼠标活动检测
+  const [showExitBtn, setShowExitBtn] = useState(false)
+  const mouseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const pluginExtenders = useMemo(() => {
     const exts: Array<(md: any) => void> = []
     for (const _id of enabledPlugins) {
@@ -110,10 +117,24 @@ export default function Slideshow({
   const prev = useCallback(() => setH((x) => Math.max(x - 1, 0)), [])
 
   // 统一退出：退出全屏后关闭演示，回到打开前的编辑视图
-  const requestExit = useCallback(() => {
+  const requestExit = useCallback(async () => {
     if (exitingRef.current) return
     exitingRef.current = true
-    exitFullscreen()
+    await exitFullscreen()
+    // 还原之前的窗口状态
+    const tauri = (window as any).__TAURI_INTERNALS__
+    if (tauri?.invoke) {
+      const label = tauri.metadata?.currentWindow?.label || 'main'
+      const { isMaximized, isFullscreen } = savedWindowState.current
+      try {
+        const currentFs = await tauri.invoke('plugin:window|is_fullscreen', { label })
+        if (isFullscreen && !currentFs) {
+          await tauri.invoke('plugin:window|set_fullscreen', { label, fullscreen: true })
+        } else if (!isFullscreen && isMaximized) {
+          await tauri.invoke('toggle_window_size')
+        }
+      } catch {}
+    }
     onExit()
   }, [onExit])
 
@@ -198,8 +219,35 @@ export default function Slideshow({
   // 进入时尝试全屏；卸载时退出全屏
   // enterFullscreen() 已内建处理窗口最大化状态（先取消最大化再进全屏）
   useEffect(() => {
+    // 记录进入演示前的窗口状态
+    const tauri = (window as any).__TAURI_INTERNALS__
+    if (tauri?.invoke) {
+      const label = tauri.metadata?.currentWindow?.label || 'main'
+      Promise.all([
+        tauri.invoke('plugin:window|is_maximized', { label }),
+        tauri.invoke('plugin:window|is_fullscreen', { label }),
+      ]).then(([maximized, fullscreen]) => {
+        savedWindowState.current = { isMaximized: !!maximized, isFullscreen: !!fullscreen }
+      }).catch(() => {})
+    }
     enterFullscreen().then((ok) => { if (ok) hadFullscreenRef.current = true })
     return () => { exitFullscreen() }
+  }, [])
+
+  // 鼠标活动检测：显示/隐藏退出按钮
+  useEffect(() => {
+    const onMouseMove = () => {
+      setShowExitBtn(true)
+      if (mouseTimerRef.current) clearTimeout(mouseTimerRef.current)
+      mouseTimerRef.current = setTimeout(() => setShowExitBtn(false), 1500)
+    }
+    window.addEventListener('mousemove', onMouseMove)
+    // 初始触发一次
+    onMouseMove()
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      if (mouseTimerRef.current) clearTimeout(mouseTimerRef.current)
+    }
   }, [])
 
   // 全屏状态丢失（如操作系统截获 Esc 退出全屏）→ 关闭演示
@@ -296,6 +344,17 @@ export default function Slideshow({
 
   return (
     <div className={`yizi-slideshow theme-${theme}${dark ? ' dark' : ''}`}>
+      {/* 退出按钮：鼠标活动时显示 */}
+      <button
+        className="ys-exit-btn"
+        style={{ opacity: showExitBtn ? 1 : 0, pointerEvents: showExitBtn ? 'auto' : 'none' }}
+        onClick={requestExit}
+        title={t('slideshow.exit')}
+      >
+        <X size={16} />
+        <span>{t('slideshow.exit')}</span>
+      </button>
+
       <div className="ys-deck" ref={deckRef}>
         {slides.map((slide, i) => {
           const active = i === h

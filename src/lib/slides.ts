@@ -16,12 +16,12 @@
 
 /** 去掉文档顶部的 front matter（首个 `--- ... ---` 块），避免其成为一页幻灯片 */
 export function stripFrontMatter(src: string): string {
-  return src.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '')
+  return src.replace(/^\s*---\r?\n[\s\S]*?\r?\n---\r?\n?/, '')
 }
 
 /** 解析文档顶部 front matter（简易 YAML：仅支持 `key: value` 单行键值） */
 export function parseFrontMatter(src: string): Record<string, string> {
-  const m = src.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/)
+  const m = src.match(/^\s*---\r?\n([\s\S]*?)\r?\n---\r?\n?/)
   if (!m) return {}
   const meta: Record<string, string> = {}
   for (const line of m[1].split(/\r?\n/)) {

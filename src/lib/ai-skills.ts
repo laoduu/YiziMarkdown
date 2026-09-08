@@ -39,8 +39,12 @@ export async function loadSkills(): Promise<Skill[]> {
 export async function loadSkillPrompt(file: string): Promise<string> {
   if (!file) return ''
   try {
-    return (await invokeTauri<string>('read_skill_file', { fileName: file })) || ''
-  } catch {
+    console.log('[AI Skills] Loading skill prompt:', file)
+    const result = await invokeTauri<string>('read_skill_file', { fileName: file })
+    console.log('[AI Skills] Skill prompt loaded, length:', result?.length || 0)
+    return result || ''
+  } catch (e) {
+    console.error('[AI Skills] Failed to load skill prompt:', file, e)
     return ''
   }
 }

@@ -11,6 +11,31 @@
   overflow: hidden;
 }
 
+/* 退出按钮：右上角，半透明 */
+.ys-exit-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+  transition: opacity 0.3s ease, background 0.15s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.ys-exit-btn:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
 .ys-deck {
   position: absolute;
   inset: 0;

@@ -83,6 +83,7 @@ import { useI18n } from '../i18n'
 
 export interface EditorRef {
   insertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'link') => void
+  insertCodeBlock: () => void
   toggleSearch: () => void
   navigateToLine: (target: { id: string; line: number }) => void
   getScrollDoms: () => { editor: HTMLElement | null; preview: HTMLElement | null }
@@ -215,6 +216,75 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
             img.setAttribute('src', dataUrl)
           })
       }).catch(() => {})
+    })
+  }, [renderedHtml])
+
+  // 代码块增强：添加复制按钮、换行控制、语言标签
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const codeBlocks = container.querySelectorAll('pre.hljs')
+    codeBlocks.forEach((pre) => {
+      // 避免重复处理
+      if (pre.querySelector('.code-block-header')) return
+
+      const code = pre.querySelector('code')
+      const lang = pre.getAttribute('data-lang') || ''
+      const codeText = code?.textContent || ''
+
+      // 创建头部容器
+      const header = document.createElement('div')
+      header.className = 'code-block-header'
+      header.innerHTML = `
+        <div class="code-block-lang">${lang && lang !== 'auto' ? lang : ''}</div>
+        <div class="code-block-actions">
+          <button class="code-block-wrap-btn" title="切换换行">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18M3 12h12M3 18h6"/>
+            </svg>
+          </button>
+          <button class="code-block-copy-btn" title="复制代码">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+            </svg>
+          </button>
+        </div>
+      `
+      pre.insertBefore(header, pre.firstChild)
+
+      // 复制按钮功能
+      const copyBtn = header.querySelector('.code-block-copy-btn')
+      copyBtn?.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(codeText)
+          copyBtn.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          `
+          setTimeout(() => {
+            copyBtn.innerHTML = `
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+              </svg>
+            `
+          }, 1500)
+        } catch (err) {
+          console.error('复制失败:', err)
+        }
+      })
+
+      // 换行控制按钮功能
+      const wrapBtn = header.querySelector('.code-block-wrap-btn')
+      wrapBtn?.addEventListener('click', () => {
+        const preEl = pre as HTMLElement
+        const isWrapped = preEl.style.whiteSpace === 'pre-wrap'
+        preEl.style.whiteSpace = isWrapped ? 'pre' : 'pre-wrap'
+        wrapBtn.classList.toggle('active', !isWrapped)
+      })
     })
   }, [renderedHtml])
 
@@ -713,6 +783,22 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         newFrom = from + markdown.length
         newTo = from + markdown.length
       }
+
+      view.dispatch({
+        changes: { from, to, insert: insertText },
+        selection: { anchor: newFrom, head: newTo },
+      })
+      view.focus()
+    },
+    insertCodeBlock: () => {
+      const view = viewRef.current
+      if (!view) return
+      const { from, to } = view.state.selection.main
+      const insertText = '\n```\n\n```\n'
+      // 光标定位到两个 ``` 之间（第3个字符位置）
+      const cursorOffset = 4
+      const newFrom = from + cursorOffset
+      const newTo = from + cursorOffset
 
       view.dispatch({
         changes: { from, to, insert: insertText },

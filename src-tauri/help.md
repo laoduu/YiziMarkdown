@@ -2,7 +2,7 @@
 
 ## 快速上手
 
-YiziMarkdown 是一款简洁精致的 Windows 便携 Markdown 编辑器。解压即可使用，无需安装。
+YiziMarkdown 是一款简洁精致的跨平台 Markdown 编辑器，支持 Windows 便携版与 macOS 版本。解压即可使用，无需安装。
 
 首次启动会自动打开欢迎文档。点击「新建」开始写作，或按 Ctrl+O 打开已有文件。
 
@@ -161,8 +161,6 @@ YiziMarkdown 是一款简洁精致的 Windows 便携 Markdown 编辑器。解压
 
 ---
 
----
-
 ## 数学公式
 
 内置 KaTeX 公式插件，支持 LaTeX 公式渲染：
@@ -201,7 +199,7 @@ graph LR
 - 点击标签栏右侧的「演示」按钮（需处于某个文档中）
 - 点击工具栏右侧的「放映」按钮
 
-进入后自动全屏，按 `Esc` 退出并返回编辑界面。
+进入后自动全屏，按 `Esc` 退出并返回编辑界面。鼠标活动时右上角会显示半透明退出按钮，1.5 秒无操作自动隐藏。退出时会自动还原到进入前的窗口状态（全屏/最大化/普通）。
 
 ### 分页
 
@@ -411,38 +409,6 @@ graph LR
 
 > 提示：默认模板直接决定「新建（Ctrl+N）」的文档结构；若未设置，则新建空白文档。
 
-#---
-
-## 数学公式
-
-内置 KaTeX 公式插件，支持 LaTeX 公式渲染：
-
-- **行内公式**：在文本中用 `$...$` 包裹，如 `$E=mc^2$`，会渲染为行内数学符号
-- **块级公式**：用 `$$...$$` 獬占一行，自动居中渲染为独立公式块
-
-工具栏的 Σ 按钮可快速将选中文字包裹为行内公式。在 设置 → 插件 中可开关 KaTeX 插件。
-
----
-
-## Mermaid 图表
-
-内置 Mermaid 图表插件，用代码描述即可生成流程图、时序图、甘特图等：
-
-```mermaid
-graph LR
-    A[开始] --> B{判断}
-    B -->|是| C[执行]
-    B -->|否| D[跳过]
-```
-
-支持的图表类型：流程图（graph/flowchart）、时序图（sequenceDiagram）、甘特图（gantt）、类图（classDiagram）、饼图（pie）、状态图（stateDiagram）等。
-
-工具栏的图表按钮可快速插入 Mermaid 代码块模板。图表主题可在 设置 → 插件 → Mermaid 配置中切换（默认/深色/森林/中性）。
-
----## 快捷键配置
-
-在 设置 > 快捷键 中通过可视化面板自定义快捷键。支持按键录制、冲突检测和恢复默认。
-
 ---
 
 ## 目录结构
@@ -461,11 +427,20 @@ YiziMarkdown/
 ├── md-icon.ico             # Markdown 文件关联图标
 ├── themes/                 # 主题 CSS 文件
 │   ├── academic.css        # 学术蓝（默认）
-│   ├── vibrant.css          # 活力橙
+│   ├── vibrant.css         # 活力橙
 │   ├── tech.css            # 科技感
 │   ├── minimal.css         # 极简风
-│   ├── magazine.css         # 杂志感
-│   └── nature.css          # 自然风
+│   ├── magazine.css        # 杂志感
+│   ├── nature.css          # 自然风
+│   ├── liquidglass.css     # 液态玻璃
+│   ├── lychee.css          # 荔枝红
+│   ├── violet.css          # 紫罗兰
+│   ├── cyberpunk.css       # 赛博朋克
+│   ├── facebook.css        # Facebook
+│   ├── matrix.css          # 黑客帝国
+│   ├── mint.css            # 薄荷冰沙
+│   ├── sunset.css          # 落日熔金
+│   └── typewriter.css      # 复古打字机
 ├── skills/                 # AI 技能（Skill）
 │   ├── skills.json         # 技能清单（名称/简介/提示词文件名）
 │   ├── slides-outline.md   # 演示稿提炼

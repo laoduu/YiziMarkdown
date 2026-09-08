@@ -97,7 +97,6 @@ body {
 
 /* ===== AI 聊天面板（右侧，与左侧边栏对称） ===== */
 .ai-chat-panel {
-  width: 380px;
   background-color: var(--sidebar-bg);
   border-left: 1px solid var(--editor-border);
   display: flex;
@@ -402,15 +401,76 @@ body {
 
 .editor-content pre {
   margin: 1em 0;
-  padding: 1em;
+  padding: 0;
   background-color: var(--editor-surface);
   border-radius: 8px;
-  overflow-x: auto;
+  overflow: hidden;
+  position: relative;
 }
 
 .editor-content pre code {
-  background: none;
-  padding: 0;
+  display: block;
+  padding: 1em;
+  overflow-x: auto;
+}
+
+/* 代码块头部：语言标签 + 操作按钮 */
+.code-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.03);
+  border-bottom: 1px solid var(--editor-border);
+  font-size: 12px;
+}
+
+.code-block-lang {
+  color: var(--sidebar-text);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.code-block-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.code-block-wrap-btn,
+.code-block-copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--sidebar-text);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.code-block-wrap-btn:hover,
+.code-block-copy-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--editor-text);
+}
+
+.code-block-wrap-btn.active {
+  background: var(--editor-accent);
+  color: white;
+}
+
+/* 暗色模式代码块 */
+.dark .code-block-header {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dark .code-block-wrap-btn:hover,
+.dark .code-block-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .editor-content a {
@@ -620,7 +680,8 @@ body {
   font-size: 12px;
   color: var(--sidebar-text);
   border: none;
-  background: none;
+  border-left: 1px solid var(--editor-border);
+  background: transparent;
   cursor: pointer;
   white-space: nowrap;
   border-bottom: 2px solid transparent;
@@ -630,8 +691,13 @@ body {
   flex: 0 1 auto;
   min-width: 0;
 }
+.tab-item:first-child {
+  border-left: none;
+}
 /* 非激活 tab 溢出时可压缩到最小宽度，激活 tab 保持完整显示 */
-.tab-item:not(.tab-item-active) { min-width: 56px; }
+.tab-item:not(.tab-item-active) { 
+  min-width: 56px;
+}
 .tab-item-active { flex-shrink: 0; }
 .tab-list > .tab-item:first-child { flex-shrink: 0; }
 .tab-new-btn { flex-shrink: 0; }
@@ -959,6 +1025,14 @@ body {
 
 .animate-settings-in {
   animation: settingsIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dialogIn {
+  from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.animate-dialog-in {
+  animation: dialogIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* 侧栏分类项 */

@@ -43,6 +43,12 @@ export interface SettingsState {
   aiSystemPrompt: string
   /** 引用当前文档时截断的字符上限（0 = 不限） */
   aiDocLimit: number
+  /** 每次发送时包含的最近对话轮次（0 = 无上下文） */
+  aiContextTurns: number
+  /** 各供应商的配置缓存 { providerId: { model, baseUrl, apiFormat } } */
+  aiProviderConfigs: Record<string, { model?: string; baseUrl?: string; apiFormat?: 'openai' | 'anthropic' }>
+  /** AI 聊天面板宽度（px） */
+  aiChatWidth: number
 
   // 方法
   setField: <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => void
@@ -89,6 +95,9 @@ export const useSettingsStore = create<SettingsState>()(
       aiApiFormat: 'openai',
       aiSystemPrompt: '',
       aiDocLimit: 200000,
+      aiContextTurns: 3,
+      aiProviderConfigs: {},
+      aiChatWidth: 380,
 
       // 方法
       setField: (key, value) => set({ [key]: value }),

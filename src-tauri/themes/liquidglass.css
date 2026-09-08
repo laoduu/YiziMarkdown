@@ -11,32 +11,32 @@
 /* ── 亮色模式 ────────────────────────────────────────────────── */
 :root.theme-liquidglass {
   /* 编辑器主背景：冰晶白底，极微弱蓝调 */
-  --editor-bg: #f6f9fe;
+  --editor-bg: #f0f5fc;
   /* 文字：深墨蓝 */
   --editor-text: #1a2538;
   /* 品牌色：明亮冰蓝，用于标题、链接、光标、高亮 */
   --editor-accent: #2563eb;
-  /* 边框：极淡的蓝灰玻璃边 */
-  --editor-border: rgba(140, 165, 210, 0.25);
+  /* 边框：淡蓝玻璃边，增强玻璃质感 */
+  --editor-border: rgba(140, 165, 210, 0.35);
   /* 表面：半透明白色玻璃面板 */
-  --editor-surface: rgba(255, 255, 255, 0.65);
+  --editor-surface: rgba(255, 255, 255, 0.72);
   /* 悬停：略微加厚的白玻璃 */
-  --editor-hover: rgba(210, 225, 250, 0.35);
+  --editor-hover: rgba(200, 220, 250, 0.45);
   /* 选中文字色 */
   --editor-selection: #1d4ed8;
   /* 选中背景：冰蓝光晕 */
-  --editor-selection-bg: rgba(37, 99, 235, 0.14);
+  --editor-selection-bg: rgba(37, 99, 235, 0.18);
   /* 光标 */
   --editor-cursor: #2563eb;
   --editor-h1: var(--editor-text);
   --editor-h2: #1e40af;
   --editor-h3: #2563eb;
   /* 侧栏：比编辑区稍厚的半透明面板 */
-  --sidebar-bg: rgba(235, 245, 255, 0.6);
+  --sidebar-bg: rgba(230, 242, 255, 0.75);
   /* 侧栏文字 */
-  --sidebar-text: #5578a8;
+  --sidebar-text: #4a6fa5;
   /* 工具栏：近乎不透明的白玻璃，保证图标清晰 */
-  --toolbar-bg: rgba(246, 249, 254, 0.88);
+  --toolbar-bg: rgba(240, 245, 252, 0.92);
   /* 状态栏：品牌色，实色不透明 */
   --statusbar-bg: #2563eb;
   --statusbar-text: #ffffff;
@@ -51,23 +51,23 @@
 
 /* ── 深色模式 ────────────────────────────────────────────────── */
 :root.theme-liquidglass.dark {
-  --editor-bg: #0c1222;
-  --editor-text: #cdd8ee;
+  --editor-bg: #0a1020;
+  --editor-text: #c8d6ee;
   --editor-accent: #60a5fa;
-  --editor-border: rgba(96, 165, 250, 0.12);
-  --editor-surface: rgba(96, 165, 250, 0.06);
-  --editor-hover: rgba(96, 165, 250, 0.10);
+  --editor-border: rgba(96, 165, 250, 0.18);
+  --editor-surface: rgba(96, 165, 250, 0.08);
+  --editor-hover: rgba(96, 165, 250, 0.14);
   --editor-selection: #60a5fa;
-  --editor-selection-bg: rgba(96, 165, 250, 0.18);
+  --editor-selection-bg: rgba(96, 165, 250, 0.22);
   --editor-cursor: #60a5fa;
   --editor-h1: #60a5fa;
   --editor-h2: #93c5fd;
   --editor-h3: #60a5fa;
-  --sidebar-bg: rgba(10, 17, 32, 0.92);
-  --sidebar-text: #6b8dc4;
-  --toolbar-bg: rgba(12, 18, 34, 0.92);
-  --statusbar-bg: rgba(30, 50, 90, 0.85);
-  --statusbar-text: #a0bde8;
+  --sidebar-bg: rgba(8, 14, 28, 0.95);
+  --sidebar-text: #5d85c0;
+  --toolbar-bg: rgba(10, 16, 32, 0.95);
+  --statusbar-bg: rgba(25, 45, 85, 0.9);
+  --statusbar-text: #90b4e0;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -77,23 +77,68 @@
    让整个界面都拥有玻璃质感。
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── 工具栏（不设 backdrop-filter，避免创建堆叠上下文导致内部 fixed 定位失效）── */
+/* ── 工具栏：不设 backdrop-filter，避免创建堆叠上下文导致内部 fixed 定位失效 ── */
 .theme-liquidglass .toolbar {
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.06);
+  background: var(--toolbar-bg);
+  box-shadow: 
+    0 1px 2px rgba(37, 99, 235, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  border-bottom: 1px solid rgba(140, 165, 210, 0.2);
 }
 
 /* ── 侧栏：毛玻璃面板 ────────────────────────────────────────── */
 .theme-liquidglass .sidebar {
-  box-shadow: 1px 0 8px rgba(37, 99, 235, 0.04);
+  background: var(--sidebar-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 
+    1px 0 8px rgba(37, 99, 235, 0.06),
+    inset -1px 0 0 rgba(255, 255, 255, 0.3);
 }
 
+/* ── 下拉菜单：不透明背景，保证可识别性 ────────────────────────── */
+.theme-liquidglass .fixed.py-1,
+.theme-liquidglass [class*="menu"],
+.theme-liquidglass [class*="dropdown"] {
+  background: rgba(255, 255, 255, 0.96) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 
+    0 8px 32px rgba(37, 99, 235, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(140, 165, 210, 0.3) !important;
+}
 
 /* ── 深色模式组件 ────────────────────────────────────────────── */
 .theme-liquidglass.dark .toolbar {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  background: var(--toolbar-bg);
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(96, 165, 250, 0.08);
+  border-bottom: 1px solid rgba(96, 165, 250, 0.12);
 }
 .theme-liquidglass.dark .sidebar {
-  box-shadow: 1px 0 8px rgba(0, 0, 0, 0.3);
+  background: var(--sidebar-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 
+    1px 0 12px rgba(0, 0, 0, 0.35),
+    inset -1px 0 0 rgba(96, 165, 250, 0.06);
+}
+
+/* ── 深色模式下拉菜单：不透明背景 ────────────────────────────── */
+.theme-liquidglass.dark .fixed.py-1,
+.theme-liquidglass.dark [class*="menu"],
+.theme-liquidglass.dark [class*="dropdown"] {
+  background: rgba(12, 18, 32, 0.96) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(96, 165, 250, 0.1);
+  border: 1px solid rgba(96, 165, 250, 0.15) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════

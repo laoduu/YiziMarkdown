@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicedoc/tauri/dev/.schema/config.schema.json",
   "productName": "YiziMarkdown",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "identifier": "com.yizimarkdown.editor",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -37,7 +37,7 @@
     "resources": {
       "themes/*": "themes/",
       "templates": "templates/",
-      "skills/*": "skills/",
+      "skills": "skills/",
       "user.css": "user.css",
       "keybindings.json": "keybindings.json",
       "readme.md": "readme.md",

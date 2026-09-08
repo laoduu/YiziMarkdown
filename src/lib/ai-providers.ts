@@ -37,6 +37,7 @@ export type ApiFormat = 'openai' | 'anthropic' | 'ollama';
 export interface ProviderConfig {
   id: ProviderId;
   label: string;
+  i18nKey?: string;
   apiFormat: ApiFormat;
   defaultModel: string;
   defaultBaseUrl?: string;
@@ -51,6 +52,7 @@ export const PROVIDERS: ProviderConfig[] = [
   {
     id: 'openai',
     label: 'OpenAI',
+    i18nKey: 'providerOpenAI',
     apiFormat: 'openai',
     defaultModel: 'gpt-5.6',
     defaultBaseUrl: 'https://api.openai.com/v1',
@@ -60,6 +62,7 @@ export const PROVIDERS: ProviderConfig[] = [
   {
     id: 'anthropic',
     label: 'Anthropic Claude',
+    i18nKey: 'providerAnthropic',
     apiFormat: 'anthropic',
     defaultModel: 'claude-sonnet-4-6',
     defaultBaseUrl: 'https://api.anthropic.com',
@@ -69,6 +72,7 @@ export const PROVIDERS: ProviderConfig[] = [
   {
     id: 'gemini',
     label: 'Google Gemini',
+    i18nKey: 'providerGemini',
     apiFormat: 'openai',
     defaultModel: 'gemini-3.1-pro-preview',
     defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
@@ -79,6 +83,7 @@ export const PROVIDERS: ProviderConfig[] = [
   {
     id: 'xai',
     label: 'xAI Grok',
+    i18nKey: 'providerXai',
     apiFormat: 'openai',
     defaultModel: 'grok-4.5',
     defaultBaseUrl: 'https://api.x.ai/v1',
@@ -88,6 +93,7 @@ export const PROVIDERS: ProviderConfig[] = [
   {
     id: 'mistral',
     label: 'Mistral',
+    i18nKey: 'providerMistral',
     apiFormat: 'openai',
     defaultModel: 'mistral-large-3',
     defaultBaseUrl: 'https://api.mistral.ai/v1',
@@ -97,6 +103,7 @@ export const PROVIDERS: ProviderConfig[] = [
   {
     id: 'groq',
     label: 'Groq (fast inference)',
+    i18nKey: 'providerGroq',
     apiFormat: 'openai',
     defaultModel: 'llama-3.3-70b-versatile',
     defaultBaseUrl: 'https://api.groq.com/openai/v1',
@@ -108,6 +115,7 @@ export const PROVIDERS: ProviderConfig[] = [
   {
     id: 'deepseek',
     label: 'DeepSeek',
+    i18nKey: 'providerDeepseek',
     apiFormat: 'openai',
     defaultModel: 'deepseek-v4-flash',
     defaultBaseUrl: 'https://api.deepseek.com/v1',
@@ -117,6 +125,7 @@ export const PROVIDERS: ProviderConfig[] = [
   {
     id: 'qwen',
     label: '通义千问 Qwen (DashScope)',
+    i18nKey: 'providerQwen',
     apiFormat: 'openai',
     defaultModel: 'qwen-plus',
     defaultBaseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
@@ -127,6 +136,7 @@ export const PROVIDERS: ProviderConfig[] = [
   {
     id: 'glm',
     label: '智谱 GLM',
+    i18nKey: 'providerGlm',
     apiFormat: 'openai',
     defaultModel: 'glm-5.2',
     defaultBaseUrl: 'https://open.bigmodel.cn/api/paas/v4',
@@ -136,6 +146,7 @@ export const PROVIDERS: ProviderConfig[] = [
   {
     id: 'kimi',
     label: 'Moonshot Kimi',
+    i18nKey: 'providerKimi',
     apiFormat: 'openai',
     defaultModel: 'kimi-k3',
     defaultBaseUrl: 'https://api.moonshot.cn/v1',
@@ -145,6 +156,7 @@ export const PROVIDERS: ProviderConfig[] = [
   {
     id: 'volcengine',
     label: '火山方舟 / 豆包 (Volcengine ARK)',
+    i18nKey: 'providerVolcengine',
     apiFormat: 'openai',
     defaultModel: 'doubao-seed-2.1-pro',
     defaultBaseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
@@ -155,6 +167,7 @@ export const PROVIDERS: ProviderConfig[] = [
   {
     id: 'siliconflow',
     label: '硅基流动 SiliconFlow',
+    i18nKey: 'providerSiliconflow',
     apiFormat: 'openai',
     defaultModel: 'deepseek-ai/DeepSeek-V3',
     defaultBaseUrl: 'https://api.siliconflow.cn/v1',
@@ -165,6 +178,7 @@ export const PROVIDERS: ProviderConfig[] = [
   {
     id: 'minimax',
     label: 'MiniMax',
+    i18nKey: 'providerMinimax',
     apiFormat: 'openai',
     defaultModel: 'MiniMax-M3',
     defaultBaseUrl: 'https://api.minimax.io/v1',
@@ -175,6 +189,7 @@ export const PROVIDERS: ProviderConfig[] = [
   {
     id: 'openrouter',
     label: 'OpenRouter (聚合, 400+ 模型)',
+    i18nKey: 'providerOpenrouter',
     apiFormat: 'openai',
     defaultModel: 'anthropic/claude-sonnet-4-6',
     defaultBaseUrl: 'https://openrouter.ai/api/v1',
@@ -185,6 +200,7 @@ export const PROVIDERS: ProviderConfig[] = [
   {
     id: 'opencode-go',
     label: 'OpenCode Go (订阅聚合)',
+    i18nKey: 'providerOpencodeGo',
     apiFormat: 'openai',
     defaultModel: 'deepseek-v4-flash',
     defaultBaseUrl: 'https://opencode.ai/zen/go/v1',
@@ -196,6 +212,7 @@ export const PROVIDERS: ProviderConfig[] = [
   {
     id: 'ollama',
     label: 'Ollama (本地 / local)',
+    i18nKey: 'providerOllama',
     apiFormat: 'ollama',
     defaultModel: 'qwen2.5:7b',
     defaultBaseUrl: 'http://localhost:11434',
@@ -205,6 +222,7 @@ export const PROVIDERS: ProviderConfig[] = [
   {
     id: 'custom',
     label: '自定义服务 / Custom (OpenAI · Anthropic 兼容)',
+    i18nKey: 'providerCustom',
     apiFormat: 'openai',
     defaultModel: '',
     defaultBaseUrl: '',

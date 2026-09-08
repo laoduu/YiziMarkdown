@@ -213,6 +213,20 @@ fn pick_and_read_file(app: tauri::AppHandle) -> Result<FileReadResult, String> {
     Ok(FileReadResult { content, path: file_path })
 }
 
+#[tauri::command]
+fn pick_image_file(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    
+    let result = app.dialog()
+        .file()
+        .add_filter("Images", &["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"])
+        .blocking_pick_file()
+        .and_then(|p| p.into_path().ok())
+        .map(|p| p.to_string_lossy().to_string());
+    
+    Ok(result)
+}
+
 /// 注册 .md 文件关联的默认图标（仅写 HKCU，无需管理员权限）
 /// Tauri MSI 不会自动设置自定义文件图标，需要手动写入 DefaultIcon
 #[cfg(target_os = "windows")]
@@ -597,6 +611,20 @@ fn list_skills() -> Result<String, String> {
     let root = get_app_root()?;
     let path = root.join("skills").join("skills.json");
     if !path.exists() {
+        // 开发模式下：exe 在 target/debug/，技能文件在项目根目录
+        // 尝试从项目根目录读取
+        if let Some(exe_dir) = root.parent() {
+            // target/debug -> target -> src-tauri -> 项目根目录
+            if let Some(src_tauri_dir) = exe_dir.parent() {
+                if let Some(project_root) = src_tauri_dir.parent() {
+                    let dev_path = project_root.join("skills").join("skills.json");
+                    if dev_path.exists() {
+                        return fs::read_to_string(&dev_path)
+                            .map_err(|e| format!("Failed to read skills.json: {}", e));
+                    }
+                }
+            }
+        }
         return Ok(r#"{"version":1,"skills":[]}"#.to_string());
     }
     fs::read_to_string(&path).map_err(|e| format!("Failed to read skills.json: {}", e))
@@ -613,6 +641,19 @@ fn read_skill_file(file_name: String) -> Result<String, String> {
         .ok_or_else(|| "Invalid skill file name".to_string())?;
     let path = root.join("skills").join(&clean);
     if !path.exists() {
+        // 开发模式下：exe 在 target/debug/，技能文件在项目根目录
+        // 尝试从项目根目录读取
+        if let Some(exe_dir) = root.parent() {
+            if let Some(src_tauri_dir) = exe_dir.parent() {
+                if let Some(project_root) = src_tauri_dir.parent() {
+                    let dev_path = project_root.join("skills").join(&clean);
+                    if dev_path.exists() {
+                        return fs::read_to_string(&dev_path)
+                            .map_err(|e| format!("Failed to read skill file: {}", e));
+                    }
+                }
+            }
+        }
         return Err(format!("Skill file not found: {}", clean));
     }
     fs::read_to_string(&path).map_err(|e| format!("Failed to read skill file: {}", e))
@@ -939,6 +980,7 @@ fn main() {
             read_directory,
             get_system_fonts,
             pick_and_read_file,
+            pick_image_file,
             get_config_dir,
             list_themes,
             read_theme_css,

@@ -1,5 +1,6 @@
 import MarkdownIt from 'markdown-it'
 import taskLists from 'markdown-it-task-lists'
+import hljs from 'highlight.js'
 import { generateHeadingId } from './headingId'
 
 // ---- Core ruler：给块级元素注入 data-source-line 属性 ----
@@ -61,6 +62,22 @@ export function createMarkdownIt(
     langPrefix: 'language-',
     linkify: true,
     typographer: false,
+    highlight: function (str: string, lang: string): string {
+      // 如果指定了语言且 highlight.js 支持该语言
+      if (lang && hljs.getLanguage(lang)) {
+        try {
+          const result = hljs.highlight(str, { language: lang, ignoreIllegals: true })
+          return `<pre class="hljs" data-lang="${lang}"><code class="language-${lang}">${result.value}</code></pre>`
+        } catch (__) {}
+      }
+      // 尝试自动检测语言
+      try {
+        const result = hljs.highlightAuto(str)
+        return `<pre class="hljs" data-lang="auto"><code>${result.value}</code></pre>`
+      } catch (__) {}
+      // 降级：转义 HTML
+      return `<pre class="hljs"><code>${md.utils.escapeHtml(str)}</code></pre>`
+    }
   })
 
   md.use(taskLists, { enabled: true, label: true, labelAfter: true })
@@ -107,7 +124,9 @@ export function renderMarkdown(
 ): string {
   // 重置标题计数
   Object.keys(headingCountRef).forEach(k => delete headingCountRef[k])
-  return getMarkdownIt(pluginExtenders).render(content)
+  // 过滤 frontmatter（以 --- 开头和结尾的 YAML 块，允许前导空行）
+  const cleaned = content.replace(/^\s*---\r?\n[\s\S]*?\r?\n---\r?\n/, '')
+  return getMarkdownIt(pluginExtenders).render(cleaned)
 }
 
 export default getMarkdownIt

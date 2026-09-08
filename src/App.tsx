@@ -488,7 +488,12 @@ function App() {
   }, [openFile])
 
   const handleInsertMarkdown = useCallback((markdown: string, mode?: 'wrap' | 'prefix' | 'link') => {
-    editorRef.current?.insertMarkdown(markdown, mode)
+    // 代码块特殊处理：光标定位到两个 ``` 之间
+    if (markdown === '\n```\n\n```\n') {
+      editorRef.current?.insertCodeBlock()
+    } else {
+      editorRef.current?.insertMarkdown(markdown, mode)
+    }
   }, [])
 
   const handleSearchToggle = useCallback(() => {

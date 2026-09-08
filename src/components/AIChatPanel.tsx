@@ -35,7 +35,7 @@ interface ErrorPayload { request_id: string; error: string }
 
 export default function AIChatPanel({ open, onClose, docContent, docName, onInsert, onNewDoc }: AIChatPanelProps) {
   const { t } = useI18n()
-  const { aiProvider, aiModel, aiBaseUrl, aiApiFormat, aiSystemPrompt, aiDocLimit } = useSettingsStore()
+  const { aiProvider, aiModel, aiBaseUrl, aiApiFormat, aiSystemPrompt, aiDocLimit, aiContextTurns, aiChatWidth } = useSettingsStore()
   const provider = providerById(aiProvider)
 
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -44,6 +44,36 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
   const [useDoc, setUseDoc] = useState(false)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // 拖拽调节宽度
+  const [isDragging, setIsDragging] = useState(false)
+  const dragStartX = useRef(0)
+  const dragStartWidth = useRef(0)
+  const MIN_WIDTH = 280
+  const MAX_WIDTH = Math.min(600, window.innerWidth * 0.4)
+
+  const handleDragStart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+    dragStartX.current = e.clientX
+    dragStartWidth.current = aiChatWidth
+  }
+
+  useEffect(() => {
+    if (!isDragging) return
+    const handleDragMove = (e: MouseEvent) => {
+      const delta = dragStartX.current - e.clientX
+      const newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, dragStartWidth.current + delta))
+      useSettingsStore.getState().setField('aiChatWidth', newWidth)
+    }
+    const handleDragEnd = () => setIsDragging(false)
+    document.addEventListener('mousemove', handleDragMove)
+    document.addEventListener('mouseup', handleDragEnd)
+    return () => {
+      document.removeEventListener('mousemove', handleDragMove)
+      document.removeEventListener('mouseup', handleDragEnd)
+    }
+  }, [isDragging])
 
   // Skills：技能清单、当前选中、弹窗开关、提示词缓存
   const [skills, setSkills] = useState<Skill[]>([])
@@ -98,10 +128,10 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
     }
   }, [open]) // eslint-disable-line
 
-  // 自动滚动到底部
+  // 自动滚动到底部（等待 DOM 渲染完成后再滚，确保内容高度已更新）
   useEffect(() => {
     const el = scrollRef.current
-    if (el) el.scrollTop = el.scrollHeight
+    if (el) requestAnimationFrame(() => { el.scrollTop = el.scrollHeight })
   }, [messages, streamingId])
 
   // 清空消息
@@ -182,26 +212,29 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
     editorRef.current?.focus()
   }
 
-  /** 发送后清空用户文本，保留技能 tag。 */
+  /** 发送后清空输入区全部内容（文字 + 技能 tag）。 */
   const clearEditorText = () => {
     const el = editorRef.current
     if (!el) return
-    el.childNodes.forEach((node) => {
-      if (node instanceof HTMLElement && node.classList.contains('skill-tag')) return
-      node.remove()
-    })
+    el.innerHTML = ''
+    if (activeSkillRef.current) removeSkill()
   }
 
   // 发送一条消息（含系统提示 + 可选的当前文档上下文）
   const handleSend = async () => {
     const text = input.trim()
+    console.log('[AI Chat] handleSend called, text:', text, 'activeSkill:', activeSkill?.id)
     if ((!text && !activeSkill) || streamingId) return
     setInput('')
     clearEditorText()
 
     const requestId = `ai-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-    // 选中技能但未输入文字时，给一条默认指令让模型执行技能
-    const userContent = text || t('ai.skillAutoRun')
+    // 选中技能时，将技能名称和摘要注入用户消息，让 AI 明确知道要执行哪个技能
+    let userContent = text
+    if (activeSkill) {
+      const skillInfo = `【已选择技能：${activeSkill.name} - ${activeSkill.summary}】`
+      userContent = text ? `${skillInfo}\n${text}` : `${skillInfo}\n${t('ai.skillAutoRun')}`
+    }
     const userMsg: ChatMessage = { role: 'user', content: userContent }
     setMessages((prev) => [...prev, userMsg, { role: 'assistant', content: '' }])
     setStreamingId(requestId)
@@ -211,22 +244,36 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
     const skillNeedsDoc = !!activeSkill?.needsDoc && !!docContent.trim()
     const docLimit = aiDocLimit > 0 ? aiDocLimit : docContent.length
     const messagesPayload: Array<{ role: string; content: string }> = []
+    // 1. 基础系统提示词：始终在最前
     if (systemPrompt) messagesPayload.push({ role: 'system', content: systemPrompt })
-    // 技能提示词作为独立 system 消息注入（懒加载并缓存正文）
+    // 2. 历史对话：保持时间顺序
+    if (aiContextTurns > 0 && messages.length > 0) {
+      const validHistory = messages.filter(m => m.content.trim() && !m.error)
+      const maxMessages = aiContextTurns * 2
+      const recentHistory = validHistory.slice(-maxMessages)
+      recentHistory.forEach(m => {
+        messagesPayload.push({ role: m.role, content: m.content })
+      })
+    }
+    // 3. 技能提示词：在历史之后、当前用户消息之前注入
     if (activeSkill) {
       let prompt = skillPromptCache.current[activeSkill.file]
       if (prompt === undefined) {
         prompt = await loadSkillPrompt(activeSkill.file)
         skillPromptCache.current[activeSkill.file] = prompt
       }
-      if (prompt) messagesPayload.push({ role: 'system', content: prompt })
+      if (prompt) {
+        messagesPayload.push({ role: 'system', content: prompt })
+      }
     }
+    // 4. 文档上下文：在技能之后、当前用户消息之前注入
     if ((useDoc || skillNeedsDoc) && docContent.trim()) {
       messagesPayload.push({
         role: 'system',
         content: `The user is editing a Markdown document titled "${docName}". Current document content:\n\n"""\n${docContent.slice(0, docLimit)}\n"""\n\nUse this as context to answer.`,
       })
     }
+    // 5. 当前用户消息：始终在最后
     messagesPayload.push({ role: 'user', content: userContent })
 
     // 先注册事件监听，再发起请求，避免快速失败时事件丢失
@@ -348,13 +395,18 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
   if (!open) return null
 
   return (
-    <div className="ai-chat-panel">
+    <div className="ai-chat-panel relative" style={{ width: aiChatWidth }}>
+      {/* 拖拽手柄 */}
+      <div
+        onMouseDown={handleDragStart}
+        className={`absolute left-0 top-0 w-1 h-full cursor-col-resize hover:bg-[var(--editor-accent)] transition-colors z-20 ${isDragging ? 'bg-[var(--editor-accent)]' : 'bg-transparent'}`}
+      />
       {/* 头部：标题 + 服务商 · 模型 ID（自定义服务简写），紧跟标题左对齐，不推挤右侧按钮 */}
       <div className="flex items-center gap-2 px-4 h-11 border-b border-[var(--editor-border)] shrink-0">
         <Bot size={15} className="text-[var(--editor-accent)] shrink-0" />
         <span className="text-sm font-semibold shrink-0">{t('ai.chatTitle')}</span>
         <span className="text-[10px] text-[var(--sidebar-text)] truncate min-w-0">
-          {provider?.id === 'custom' ? t('ai.customLabel') : provider?.label || aiProvider} · {aiModel || provider?.defaultModel || ''}
+          {provider?.id === 'custom' ? t('ai.customLabel') : (provider?.i18nKey ? t(`settings.${provider.i18nKey}`) : provider?.label || aiProvider)} · {aiModel || provider?.defaultModel || ''}
         </span>
         <div className="flex-1" />
         <button onClick={handleClear} className="p-1 rounded hover:bg-[var(--editor-hover)]" title={t('ai.clear')}>
@@ -375,31 +427,40 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
         )}
         {messages.map((m, i) => (
           <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
-            {/* 思考内容：可折叠区块，位于回答上方，默认收起 */}
-            {m.role === 'assistant' && m.thinking && (
-              <details className="max-w-[85%] w-fit mb-1.5 rounded-lg border border-[var(--editor-border)] bg-[var(--editor-surface)] px-3 py-1.5">
+            {/* 思考内容：有思考内容时显示；流式传输中无正文内容时也显示（思考阶段） */}
+            {m.role === 'assistant' && (m.thinking || (streamingId && i === messages.length - 1 && !m.content)) && (
+              <details open={!!streamingId && i === messages.length - 1 && !m.content} className="max-w-[85%] w-fit mb-1.5 rounded-lg border border-[var(--editor-border)] bg-[var(--editor-surface)] px-3 py-1.5">
                 <summary className="text-[10px] text-[var(--sidebar-text)] cursor-pointer select-none">
                   {t('ai.thinkingSection')}
                 </summary>
-                <div className="mt-1.5 text-[11px] leading-relaxed text-[var(--sidebar-text)] whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
+                <div className={`mt-1.5 text-[11px] leading-relaxed text-[var(--sidebar-text)] whitespace-pre-wrap break-all ${!(streamingId && i === messages.length - 1 && !m.content) ? 'max-h-48 overflow-y-auto' : ''}`}>
                   {m.thinking}
+                  {streamingId && i === messages.length - 1 && !m.content && (
+                    <span className="inline-block w-1.5 h-3 ml-0.5 align-middle animate-pulse bg-[var(--editor-accent)]" />
+                  )}
                 </div>
               </details>
             )}
-            <div
-              className={`max-w-[85%] px-3 py-2 rounded-lg text-[13px] leading-relaxed whitespace-pre-wrap break-words ${
-                m.role === 'user'
-                  ? 'bg-[var(--editor-accent)] text-white rounded-br-sm'
-                  : m.error
+            {/* 正文气泡 */}
+            {m.role === 'user' && (
+              <div className="max-w-[85%] px-3 py-2 rounded-lg text-[13px] leading-relaxed whitespace-pre-wrap break-words bg-[var(--editor-accent)] text-white rounded-br-sm">
+                {m.content}
+              </div>
+            )}
+            {m.role === 'assistant' && (m.content || (!m.thinking && !(streamingId && i === messages.length - 1))) && (
+              <div
+                className={`max-w-[85%] px-3 py-2 rounded-lg text-[13px] leading-relaxed whitespace-pre-wrap break-words ${
+                  m.error
                     ? 'bg-red-500/10 text-red-500 border border-red-500/30 rounded-bl-sm'
                     : 'bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-bl-sm'
-              }`}
-            >
-              {m.content}
-              {m.role === 'assistant' && streamingId && i === messages.length - 1 && !m.content && (
-                <span className="inline-block w-2 h-4 ml-0.5 align-middle animate-pulse bg-[var(--editor-accent)]" />
-              )}
-            </div>
+                }`}
+              >
+                {m.content}
+                {m.content && streamingId && i === messages.length - 1 && (
+                  <span className="inline-block w-2 h-4 ml-0.5 align-middle animate-pulse bg-[var(--editor-accent)]" />
+                )}
+              </div>
+            )}
             {/* 每条 AI 回复的操作图标：图标常显，hover 显示文字说明 */}
             {m.role === 'assistant' && m.content && !m.error && (
               <div className="mt-1 flex items-center gap-0.5">
@@ -451,14 +512,31 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
                 <button
                   key={s.id}
                   onClick={() => selectSkill(s)}
-                  className={`group w-full text-left px-3.5 py-2.5 hover:bg-[var(--editor-hover)] border-b border-[var(--editor-border)] last:border-b-0 ${activeSkill?.id === s.id ? 'bg-[var(--editor-accent)]/5' : ''}`}
+                  onMouseEnter={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect()
+                    const descEl = e.currentTarget.querySelector('.skill-desc') as HTMLElement
+                    if (descEl) {
+                      descEl.style.display = 'block'
+                      descEl.style.left = `${rect.left - 230}px`
+                      descEl.style.top = `${rect.top}px`
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    const descEl = e.currentTarget.querySelector('.skill-desc') as HTMLElement
+                    if (descEl) descEl.style.display = 'none'
+                  }}
+                  className={`group relative w-full text-left px-3.5 py-2.5 hover:bg-[var(--editor-hover)] border-b border-[var(--editor-border)] last:border-b-0 ${activeSkill?.id === s.id ? 'bg-[var(--editor-accent)]/5' : ''}`}
                 >
                   <div className="flex items-center gap-1.5">
                     <Zap size={12} className="text-[var(--editor-accent)] shrink-0" />
-                    <span className="text-[13px] font-medium text-[var(--editor-text)]">{s.name}</span>
+                    <span className="text-[13px] font-medium text-[var(--sidebar-text)]">{s.name}</span>
                   </div>
-                  <p className="text-[11px] text-[var(--sidebar-text)] mt-1 leading-snug">{s.summary}</p>
-                  <p className="hidden group-hover:block text-[11px] text-[var(--sidebar-text)] mt-1.5 pt-1.5 border-t border-[var(--editor-border)] leading-relaxed">{s.description}</p>
+                  <p className="text-[11px] text-[var(--editor-text)] mt-1 leading-snug">{s.summary}</p>
+                  {s.description && (
+                    <div className="skill-desc hidden fixed w-[220px] bg-[var(--editor-surface)] border border-[var(--editor-border)] shadow-xl p-3 z-50 rounded-lg">
+                      <p className="text-[11px] text-[var(--editor-text)] leading-relaxed">{s.description}</p>
+                    </div>
+                  )}
                 </button>
               ))
             )}
@@ -501,7 +579,7 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
           className="ai-chat-editor w-full px-3 py-2 bg-[var(--editor-surface)] rounded-lg text-[13px] text-[var(--editor-text)] outline-none resize-none"
         />
         <div className="flex items-center justify-between mt-1.5">
-          <span className="text-[10px] text-[var(--sidebar-text)]">Enter 发送 · Shift+Enter 换行</span>
+          <span className="text-[10px] text-[var(--sidebar-text)]">{t('ai.hint')}</span>
           {streamingId ? (
             <button onClick={handleStop} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white bg-red-500/90 hover:bg-red-500">
               <Square size={11} /> {t('ai.stop')}
