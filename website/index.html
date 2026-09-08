@@ -462,6 +462,18 @@
             <h3 class="faq-q">macOS 打开时提示「无法验证开发者」，怎么办？</h3>
             <p class="faq-a">这是 macOS 安全机制（Gatekeeper）对未公证应用的正常拦截，不影响使用。YiziMarkdown 采用 ad-hoc 签名免费分发，首次打开请：在「访达」中按住 Control 点击（或触控板双指轻点）应用图标 → 选择「打开」→ 在弹出的对话框中再次点击「打开」，之后即可正常启动。也可以在终端执行 <code>xattr -dr com.apple.quarantine /Applications/YiziMarkdown.app</code> 一键解除隔离标记。</p>
         </div>
+        <div class="faq-item">
+            <h3 class="faq-q">macOS 上保存 AI 密钥时弹出「想要访问您的钥匙串」并要求输入密码授权，正常吗？</h3>
+            <p class="faq-a">正常，这是 macOS 的安全机制。YiziMarkdown 的 AI 密钥通过系统钥匙串（Keychain）加密存储，绝不写入设置文件或上传网络。首次访问钥匙串时，macOS 会要求输入你的 Mac 登录密码（或使用 Touch ID）完成授权，点击「始终允许」后之后不再提示，密钥也依然只保存在本机钥匙串中。</p>
+        </div>
+        <div class="faq-item">
+            <h3 class="faq-q">AI 聊天功能需要付费吗？如何接入？</h3>
+            <p class="faq-a">软件本身免费开源。AI 聊天需要你在「设置 → AI」中配置模型服务商的 API 密钥（内置 OpenAI、Anthropic、DeepSeek、通义千问、智谱 GLM、Kimi 等 17 家，也支持自定义兼容服务），调用费用由对应服务商收取；若使用 Ollama 本地模型则完全免费、无需联网。</p>
+        </div>
+        <div class="faq-item">
+            <h3 class="faq-q">换电脑或重装系统后，我的文档和 AI 密钥会丢吗？</h3>
+            <p class="faq-a">文档不会丢：你的内容以标准 <code>.md</code> 文件保存，放在任意位置，换机后用本软件或任何 Markdown 编辑器都能打开。AI 密钥存在本机系统钥匙串 / Windows 凭据管理器，不随软件迁移，换机后需在新机器上重新配置一次 API 密钥。</p>
+        </div>
     </div>
 </section>
 
