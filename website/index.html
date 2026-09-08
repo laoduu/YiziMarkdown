@@ -71,6 +71,7 @@
             <a href="#themes">主题</a>
             <a href="#shortcuts">快捷键</a>
             <a href="#changelog">更新</a>
+            <a href="#faq">常见问题</a>
             <a href="https://github.com/laoduu/YiziMarkdown/releases" target="_blank" class="btn-nav">
                 <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 7l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                 下载
@@ -445,6 +446,21 @@
                     <li><span class="changelog-tag fix">修复</span>新打开文件小圆点误触发、搜索替换面板关闭按钮无效等问题</li>
                 </ul>
             </div>
+        </div>
+    </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq" id="faq">
+    <div class="section-header">
+        <span class="section-label">常见问题</span>
+        <h2 class="section-title">常见问题解答</h2>
+        <p class="section-desc">遇到使用问题？这里也许有答案。</p>
+    </div>
+    <div class="faq-list">
+        <div class="faq-item">
+            <h3 class="faq-q">macOS 打开时提示「无法验证开发者」，怎么办？</h3>
+            <p class="faq-a">这是 macOS 安全机制（Gatekeeper）对未公证应用的正常拦截，不影响使用。YiziMarkdown 采用 ad-hoc 签名免费分发，首次打开请：在「访达」中按住 Control 点击（或触控板双指轻点）应用图标 → 选择「打开」→ 在弹出的对话框中再次点击「打开」，之后即可正常启动。也可以在终端执行 <code>xattr -dr com.apple.quarantine /Applications/YiziMarkdown.app</code> 一键解除隔离标记。</p>
         </div>
     </div>
 </section>
