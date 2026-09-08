@@ -46,6 +46,9 @@
       "icons/md-icon.ico": "md-icon.ico",
       "help.md": "help.md"
     },
+    "macOS": {
+      "signingIdentity": "-"
+    },
     "windows": {
       "nsis": {
         "installerHooks": "installer.nsh",
