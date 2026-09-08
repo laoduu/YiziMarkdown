@@ -46,7 +46,7 @@
         "license": "https://github.com/laoduu/YiziMarkdown/blob/main/LICENSE",
         "programmingLanguage": ["TypeScript", "Rust"],
         "screenshot": "https://md.yizigpt.com/assets/index.webp",
-        "version": "0.2.1",
+        "version": "0.2.2",
         "author": {
             "@type": "Organization",
             "name": "YiziPaper",
@@ -82,19 +82,19 @@
 <!-- Hero -->
 <section class="hero">
     <div class="hero-content">
-        <div class="hero-badge"><span class="dot"></span> V0.2.1 · AI 大模型助手 · Skill 技能系统 · 15 种界面语言</div>
+        <div class="hero-badge"><span class="dot"></span> V0.2.2 · 代码块高亮 · 链接/图片对话框 · AI 上下文增强</div>
         <h1>既<span style="color: var(--orange);">好看</span>，又<span class="highlight">彪悍</span></h1>
         <p class="hero-sub">一款 AI 加持的跨平台 Markdown 编辑器<br><span class="nowrap">内置大模型助手与类 PPT 演示模式，写作、提炼、汇报一站搞定</span></p>
         <div class="hero-actions">
-            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.2.1/YiziMarkdown_0.2.1_x64-setup.exe" target="_blank" class="btn-primary">
+            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.2.2/YiziMarkdown_0.2.2_x64-setup.exe" target="_blank" class="btn-primary">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.55 10.5 4.5v6.8H3V5.55zm0 12.9 7.5-1.05v-6.3H3v7.35zM11.5 4.3 21 3v8.3h-9.5V4.3zm0 15.4 9.5-1.3V12.7h-9.5v7z"/></svg>
                 Windows 版下载
             </a>
-            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.2.1/YiziMarkdown_0.2.1_universal.dmg" target="_blank" class="btn-secondary">
+            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.2.2/YiziMarkdown_0.2.2_universal.dmg" target="_blank" class="btn-secondary">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 12.54c-.03-3.04 2.48-4.5 2.6-4.57-1.42-2.07-3.62-2.36-4.4-2.39-1.88-.19-3.66 1.1-4.62 1.1-.95 0-2.43-1.08-4-1.05-2.05.03-3.95 1.2-5 3.04-2.14 3.7-.55 9.17 1.53 12.18 1.02 1.46 2.23 3.1 3.83 3.04 1.53-.06 2.11-.99 3.96-.99 1.85 0 2.37.99 4 .96 1.65-.03 2.7-1.49 3.71-2.95 1.17-1.71 1.65-3.37 1.68-3.45-.04-.02-3.22-1.24-3.29-4.92zM14.4 4.2c.85-1.03 1.42-2.46 1.26-3.89-1.22.05-2.7.81-3.58 1.84-.79.91-1.47 2.36-1.29 3.76 1.36.1 2.76-.69 3.61-1.71z"/></svg>
                 macOS 版下载
             </a>
-            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.2.1/YiziMarkdown-v0.2.1-portable.zip" target="_blank" class="btn-secondary">
+            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.2.2/YiziMarkdown-v0.2.2-portable.zip" target="_blank" class="btn-secondary">
                 <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 7l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                 便携版（解压即用）
             </a>
@@ -330,7 +330,8 @@
     </div>
     <div class="changelog-container">
         <div class="changelog-tabs" id="changelogTabs">
-            <button class="changelog-tab active" data-version="0.2.1">v0.2.1</button>
+            <button class="changelog-tab active" data-version="0.2.2">v0.2.2</button>
+            <button class="changelog-tab" data-version="0.2.1">v0.2.1</button>
             <button class="changelog-tab" data-version="0.1.9">v0.1.9</button>
             <button class="changelog-tab" data-version="0.1.8">v0.1.8</button>
             <button class="changelog-tab" data-version="0.1.7">v0.1.7</button>
@@ -340,7 +341,19 @@
             <button class="changelog-tab" data-version="0.1.3">v0.1.3</button>
         </div>
         <div class="changelog-content" id="changelogContent">
-            <div class="changelog-panel active" data-version="0.2.1">
+            <div class="changelog-panel active" data-version="0.2.2">
+                <div class="changelog-date">2026.09.08</div>
+                <ul class="changelog-list">
+                    <li><span class="changelog-tag new">新增</span><strong>代码块增强</strong>：集成 highlight.js 语法高亮，头部显示语言标签，支持一键复制与自动换行切换</li>
+                    <li><span class="changelog-tag new">新增</span><strong>链接/图片插入对话框</strong>：图片支持网络 URL 与本地文件两种方式，本地文件走 Tauri 原生文件选择器</li>
+                    <li><span class="changelog-tag new">新增</span><strong>工具栏交互重构</strong>：导出/表格/代码块/模板菜单改鼠标悬浮展开（100ms 防抖），窄窗口自动折叠格式工具栏</li>
+                    <li><span class="changelog-tag new">新增</span><strong>AI 增强</strong>：上下文轮数可配置（0-20 轮），供应商名称随界面语言本地化，切换供应商自动保存并恢复配置</li>
+                    <li><span class="changelog-tag new">新增</span><strong>演示模式改进</strong>：鼠标活动时显示半透明退出按钮、退出后还原全屏/最大化窗口状态、预览自动过滤 YAML frontmatter</li>
+                    <li><span class="changelog-tag improve">优化</span>液态玻璃主题透明度与光效增强、标签栏分隔线、AI 聊天面板宽度可拖拽、技能菜单悬浮介绍面板</li>
+                    <li><span class="changelog-tag fix">修复</span>AI 上下文注入顺序（技能提示词移入对话历史之后）、已安装版技能加载失败、思考内容流式显示与自动滚动、Frontmatter 前导空行容错等问题</li>
+                </ul>
+            </div>
+            <div class="changelog-panel" data-version="0.2.1">
                 <div class="changelog-date">2026.09.05</div>
                 <ul class="changelog-list">
                     <li><span class="changelog-tag new">新增</span><strong>AI 大模型接入</strong>：侧边聊天面板，支持 OpenAI / Anthropic / Ollama 三种协议，17 家供应商目录，流式 SSE 输出、协作式取消，密钥存 OS keychain 不落盘</li>
@@ -443,7 +456,7 @@
         <p>免费、开源、便携。下载解压，即刻开始你的 Markdown 写作之旅。</p>
         <a href="https://github.com/laoduu/YiziMarkdown/releases" target="_blank" class="btn-cta">
             <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 7l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            立即下载 v0.2.1
+            立即下载 v0.2.2
         </a>
     </div>
 </section>
