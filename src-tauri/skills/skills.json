@@ -24,6 +24,14 @@
       "description": "对用户输入或选中的内容进行润色：修正语法与不通顺之处、优化表达节奏，保持原意与原语言，不随意增删观点。可直接在对话中给出改写后的文本。",
       "file": "polish-writing.md",
       "needsDoc": false
-    }
+    },
+    {
+  "id": "translate-fulltext",
+  "name": "全文翻译",
+  "summary": "将内容完整翻译为目标语言",
+  "description": "对用户提供的内容进行全文翻译：根据用户指定的或自动判断的目标语言，准确传达原意、语气与情感色彩，保留专有名词、技术术语的规范译法，保持原文风格与 Markdown 排版，代码与命令原样保留，直接输出翻译结果而不附加说明。",
+  "file": "translate-fulltext.md",
+  "needsDoc": true
+}
   ]
 }
