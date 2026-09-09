@@ -1,19 +1,19 @@
-/* ═══════════════════════════════════════════════════════════════
-   薄荷冰沙 (Mint Frappe) — YiziMarkdown 实验主题
+/* ══════════════════════════════════════════════════════════════�?
+   薄荷冰沙 (Mint Frappe) �?YiziMarkdown 实验主题
 
    设计理念：清爽薄荷绿为主调，奶白底色，圆润边角，
-   整体像一杯薄荷奶昔——凉而不冷、甜而不腻。
-   代码块用薄荷奶底色，引用块有薄荷糖般的半透明质感。
-   ═══════════════════════════════════════ */
+   整体像一杯薄荷奶昔——凉而不冷、甜而不腻�?
+   代码块用薄荷奶底色，引用块有薄荷糖般的半透明质感�?
+   ══════════════════════════════════════�?*/
 
 :root.theme-mint {
   --editor-bg: #f5fbf8;
   --editor-text: #1a3a2a;
   --editor-accent: #10b981;
-  --toolbar-text: #1a3a2a;
-  --toolbar-border: #c6eee0;
-  --toolbar-hover: #d0f0e0;
-  --toolbar-accent: #10b981;
+  --sel-toolbar-text: #1a3a2a;
+  --sel-toolbar-border: #c6eee0;
+  --sel-toolbar-hover: #d0f0e0;
+  --sel-toolbar-accent: #10b981;
   --editor-border: #c6eee0;
   --editor-surface: #e8f8f0;
   --editor-hover: #d0f0e0;
@@ -25,7 +25,7 @@
   --editor-h3: #34d399;
   --sidebar-bg: #e8f8f0;
   --sidebar-text: #34d399;
-  --toolbar-bg: #f5fbf8;
+  --sel-toolbar-bg: #f5fbf8;
   --statusbar-bg: #10b981;
   --statusbar-text: #ffffff;
   --font-sans: 'MiSans', 'Mi Sans', system-ui, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;

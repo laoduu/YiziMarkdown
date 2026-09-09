@@ -1,12 +1,12 @@
-/* 杂志感 (Magazine) */
+/* 杂志�?(Magazine) */
 :root.theme-magazine {
   --editor-bg: #faf8f5;
   --editor-text: #2c2416;
   --editor-accent: #8b4513;
-  --toolbar-text: #2c2416;
-  --toolbar-border: #e0d8c8;
-  --toolbar-hover: #f0ebe0;
-  --toolbar-accent: #8b4513;
+  --sel-toolbar-text: #2c2416;
+  --sel-toolbar-border: #e0d8c8;
+  --sel-toolbar-hover: #f0ebe0;
+  --sel-toolbar-accent: #8b4513;
   --editor-border: #e0d8c8;
   --editor-surface: #f5f0e8;
   --editor-hover: #f0ebe0;
@@ -18,7 +18,7 @@
   --editor-h3: var(--editor-text);
   --sidebar-bg: #f5f0e8;
   --sidebar-text: #7a6e5d;
-  --toolbar-bg: #faf8f5;
+  --sel-toolbar-bg: #faf8f5;
   --statusbar-bg: #e8e0d0;
   --statusbar-text: #7a6e5d;
   --font-sans: 'Source Serif Pro', 'Noto Serif SC', Georgia, serif;
@@ -49,7 +49,7 @@
   --statusbar-text: #8a7e6e;
 }
 
-/* 杂志风 - 标题样式 */
+/* 杂志�?- 标题样式 */
 .editor-content.theme-magazine h1 { 
   font-family: var(--font-serif); 
   font-size: 2.5em; 
@@ -92,4 +92,4 @@
 .editor-content.theme-magazine th, .editor-content.theme-magazine td { border: 1px solid var(--editor-border); padding: 0.6em 1em; text-align: left; }
 .editor-content.theme-magazine th { background: var(--editor-surface); font-weight: 600; font-family: var(--font-serif); }
 .editor-content.theme-magazine hr { border: none; text-align: center; margin: 2.5em 0; }
-.editor-content.theme-magazine hr::after { content: '⁕ ⁕ ⁕'; color: var(--editor-accent); letter-spacing: 1em; }
+.editor-content.theme-magazine hr::after { content: '�?�?�?; color: var(--editor-accent); letter-spacing: 1em; }

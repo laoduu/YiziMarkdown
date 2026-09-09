@@ -1,18 +1,18 @@
-/* ═══════════════════════════════════════════════════════════════
-   复古打字机 (Typewriter) — YiziMarkdown 主题
+/* ══════════════════════════════════════════════════════════════�?
+   复古打字�?(Typewriter) �?YiziMarkdown 主题
 
    亮色：老纸底色 + 深褐墨色，像在午后的书房敲打字机
    暗色：深灰底 + 暖金字，暗室中的老式终端
-   ═══════════════════════════════════════════════════════════════ */
+   ══════════════════════════════════════════════════════════════�?*/
 
 :root.theme-typewriter {
   --editor-bg: #f5f0e8;
   --editor-text: #2a2520;
   --editor-accent: #8b6914;
-  --toolbar-text: #2a2520;
-  --toolbar-border: #d0c8b8;
-  --toolbar-hover: #e0d8c8;
-  --toolbar-accent: #8b6914;
+  --sel-toolbar-text: #2a2520;
+  --sel-toolbar-border: #d0c8b8;
+  --sel-toolbar-hover: #e0d8c8;
+  --sel-toolbar-accent: #8b6914;
   --editor-border: #d0c8b8;
   --editor-surface: #ede6d8;
   --editor-hover: #e0d8c8;
@@ -24,7 +24,7 @@
   --editor-h3: #7a6a40;
   --sidebar-bg: #f0ebe0;
   --sidebar-text: #7a6a50;
-  --toolbar-bg: #f5f0e8;
+  --sel-toolbar-bg: #f5f0e8;
   --statusbar-bg: #8b6914;
   --statusbar-text: #f5f0e8;
   --font-sans: 'Courier New', 'SimSun', monospace;

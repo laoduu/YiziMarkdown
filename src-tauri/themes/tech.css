@@ -1,12 +1,12 @@
-/* 科技感 (Tech) */
+/* 科技�?(Tech) */
 :root.theme-tech {
   --editor-bg: #f0f4f8;
   --editor-text: #1a202c;
   --editor-accent: #2b6cb0;
-  --toolbar-text: #1a202c;
-  --toolbar-border: #cbd5e0;
-  --toolbar-hover: #edf2f7;
-  --toolbar-accent: #2b6cb0;
+  --sel-toolbar-text: #1a202c;
+  --sel-toolbar-border: #cbd5e0;
+  --sel-toolbar-hover: #edf2f7;
+  --sel-toolbar-accent: #2b6cb0;
   --editor-border: #cbd5e0;
   --editor-surface: #e2e8f0;
   --editor-hover: #edf2f7;
@@ -18,7 +18,7 @@
   --editor-h3: var(--editor-text);
   --sidebar-bg: #e8edf2;
   --sidebar-text: #4a5568;
-  --toolbar-bg: #f7fafc;
+  --sel-toolbar-bg: #f7fafc;
   --statusbar-bg: #2b6cb0;
   --statusbar-text: #ffffff;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -48,7 +48,7 @@
   --statusbar-text: #ffffff;
 }
 
-/* 科技风 - 标题样式 */
+/* 科技�?- 标题样式 */
 .editor-content.theme-tech h1 {
   font-size: 2em;
   font-weight: 700;

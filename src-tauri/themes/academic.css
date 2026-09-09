@@ -1,33 +1,33 @@
-/* ═══════════════════════════════════════════════════════════════
-   学术蓝 (Academic Blue) — YiziMarkdown 默认主题
+/* ══════════════════════════════════════════════════════════════�?
+   学术�?(Academic Blue) �?YiziMarkdown 默认主题
    
-   设计理念：以 #002FA7 深蓝为品牌色，营造沉稳专业的学术氛围。
-   亮色模式以淡蓝白为主背景，深色模式参考 GitHub Dark 色板。
-   ═══════════════════════════════════════════════════════════════ */
+   设计理念：以 #002FA7 深蓝为品牌色，营造沉稳专业的学术氛围�?
+   亮色模式以淡蓝白为主背景，深色模式参�?GitHub Dark 色板�?
+   ══════════════════════════════════════════════════════════════�?*/
 
 /* ── 亮色模式 ────────────────────────────────────────────────── */
 :root.theme-academic {
-  /* 编辑器主背景：淡蓝白，整个编辑区的底层 */
+  /* 编辑器主背景：淡蓝白，整个编辑区的底�?*/
   --editor-bg: #f5f8ff;
 
-  /* 主文字色：近黑色，源代码编辑区默认文字颜色 */
+  /* 主文字色：近黑色，源代码编辑区默认文字颜�?*/
   --editor-text: #1a1a2e;
 
-  /* 强调色/品牌色：贯穿全文的核心颜色
-     用于：标题、链接、光标、选中高亮、大纲激活项、
+  /* 强调�?品牌色：贯穿全文的核心颜�?
+     用于：标题、链接、光标、选中高亮、大纲激活项�?
      按钮激活态、状态栏背景、引用块左边框等 */
   --editor-accent: #002FA7;
 
-  --toolbar-text: #1a1a2e;
-  --toolbar-border: #d5e2ff;
-  --toolbar-hover: #e0ecff;
-  --toolbar-accent: #002FA7;
+  --sel-toolbar-text: #1a1a2e;
+  --sel-toolbar-border: #d5e2ff;
+  --sel-toolbar-hover: #e0ecff;
+  --sel-toolbar-accent: #002FA7;
 
   /* 边框色：淡蓝，用于分割线、表格边框、代码块边框、行号分隔线 */
   --editor-border: #d5e2ff;
 
-  /* 表面色/卡片色：比主背景略深的蓝白
-     用于：代码块背景、表格表头、侧栏背景、搜索匹配底色 */
+  /* 表面�?卡片色：比主背景略深的蓝�?
+     用于：代码块背景、表格表头、侧栏背景、搜索匹配底�?*/
   --editor-surface: #F0F7FF;
 
   /* 悬停态：工具栏按钮、侧栏文件项、Tab 等元素的 hover 背景 */
@@ -39,20 +39,20 @@
   /* 文字选中背景：半透明蓝色覆盖层，让选中区域有蓝色底 */
   --editor-selection-bg: rgba(0, 47, 167, 0.25);
 
-  /* 光标颜色：输入时竖线的颜色 */
+  /* 光标颜色：输入时竖线的颜�?*/
   --editor-cursor: #002FA7;
   --editor-h1: #002FA7;
   --editor-h2: #1a3a7a;
   --editor-h3: #2a4a9a;
 
-  /* 侧栏（大纲/文件浏览）背景色 */
+  /* 侧栏（大�?文件浏览）背景色 */
   --sidebar-bg: #F0F7FF;
 
   /* 侧栏文字色：灰蓝色，用于大纲标题、文件名、Tab 未激活文字等辅助信息 */
   --sidebar-text: #5a7ce3;
 
-  /* 顶部工具栏背景 */
-  --toolbar-bg: #f5f8ff;
+  /* 顶部工具栏背�?*/
+  --sel-toolbar-bg: #f5f8ff;
 
   /* 底部状态栏背景：深蓝色带，与品牌色统一 */
   --statusbar-bg: #002FA7;
@@ -60,10 +60,10 @@
   /* 底部状态栏文字：白色，深蓝底上的高对比文字 */
   --statusbar-text: #ffffff;
 
-  /* 预览模式字体栈：英文 Inter → 中文 Noto Sans SC → 系统字体 */
+  /* 预览模式字体栈：英文 Inter �?中文 Noto Sans SC �?系统字体 */
   --font-sans: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
 
-  /* 源代码模式字体栈：等宽编程字体 */
+  /* 源代码模式字体栈：等宽编程字�?*/
   --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
 
   /* 基础字号 */
@@ -81,16 +81,16 @@
 
 /* ── 深色模式 ────────────────────────────────────────────────── */
 :root.theme-academic.dark {
-  /* 主背景：深蓝黑，参考 GitHub Dark #0d1117 */
+  /* 主背景：深蓝黑，参�?GitHub Dark #0d1117 */
   --editor-bg: #0d1117;
 
-  /* 主文字：浅灰白，深色背景上的高可读文字 */
+  /* 主文字：浅灰白，深色背景上的高可读文�?*/
   --editor-text: #c9d1d9;
 
-  /* 强调色：比亮色模式更亮的蓝，保证深色背景下有足够对比度 */
+  /* 强调色：比亮色模式更亮的蓝，保证深色背景下有足够对比�?*/
   --editor-accent: #5a7ce3;
 
-  /* 边框：深蓝灰，微妙的分隔线 */
+  /* 边框：深蓝灰，微妙的分隔�?*/
   --editor-border: #1c2940;
 
   /* 表面色：比主背景略深，用于代码块、表头等需要区分的区域 */
@@ -99,13 +99,13 @@
   /* 悬停态：比表面色略亮 */
   --editor-hover: #1a2540;
 
-  /* 选中文字色 */
+  /* 选中文字�?*/
   --editor-selection: #5a7ce3;
 
-  /* 选中背景：半透明蓝色，深色模式下透明度略高（0.35 vs 0.25） */
+  /* 选中背景：半透明蓝色，深色模式下透明度略高（0.35 vs 0.25�?*/
   --editor-selection-bg: rgba(90, 124, 227, 0.35);
 
-  /* 光标色 */
+  /* 光标�?*/
   --editor-cursor: #5a7ce3;
   --editor-h1: #5a7ce3;
   --editor-h2: #5a7ce3;
@@ -125,10 +125,10 @@
 }
 
 
-/* ═══════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════════�?
    预览模式排版样式
-   作用于预览区渲染后的 HTML 元素（.theme-academic 容器内）
-   ═══════════════════════════════════════════════════════════════ */
+   作用于预览区渲染后的 HTML 元素�?theme-academic 容器内）
+   ══════════════════════════════════════════════════════════════�?*/
 
 /* 一级标题：2em，品牌蓝色，字重 700，紧凑字间距 */
 .editor-content.theme-academic h1 {
@@ -139,7 +139,7 @@
   letter-spacing: -0.02em;
 }
 
-/* 二级标题：1.5em，比一级更深的蓝，字重 600 */
+/* 二级标题�?.5em，比一级更深的蓝，字重 600 */
 .editor-content.theme-academic h2 {
   font-size: 1.5em;
   font-weight: 600;
@@ -148,7 +148,7 @@
   letter-spacing: -0.01em;
 }
 
-/* 三级标题：1.25em，更深的蓝 */
+/* 三级标题�?.25em，更深的�?*/
 .editor-content.theme-academic h3 {
   font-size: 1.25em;
   font-weight: 600;
@@ -161,7 +161,7 @@
   margin: 0 0 var(--paragraph-spacing);
 }
 
-/* 引用块：左边框为品牌蓝色线，文字使用侧栏文字色（灰蓝），与正文区分 */
+/* 引用块：左边框为品牌蓝色线，文字使用侧栏文字色（灰蓝），与正文区�?*/
 .editor-content.theme-academic blockquote {
   border-left: 3px solid var(--editor-accent);
   padding-left: 1em;
@@ -169,7 +169,7 @@
   color: var(--sidebar-text);
 }
 
-/* 行内代码：等宽字体，字号略小，表面色背景，轻微圆角 */
+/* 行内代码：等宽字体，字号略小，表面色背景，轻微圆�?*/
 .editor-content.theme-academic code {
   font-family: var(--font-mono);
   font-size: 0.9em;
@@ -179,7 +179,7 @@
   border-radius: 5px;
 }
 
-/* 代码块：表面色背景，边框包围，内边距，圆角 */
+/* 代码块：表面色背景，边框包围，内边距，圆�?*/
 .theme-academic pre {
   background: var(--editor-surface);
   padding: 1em;
@@ -189,7 +189,7 @@
   border: 1px solid var(--editor-border);
 }
 
-/* 代码块内的行内代码：去掉重复的背景和内边距 */
+/* 代码块内的行内代码：去掉重复的背景和内边�?*/
 .editor-content.theme-academic pre code {
   background: none;
   padding: 0;
@@ -204,14 +204,14 @@
   text-decoration: underline;
 }
 
-/* 图片：自适应宽度，轻微圆角 */
+/* 图片：自适应宽度，轻微圆�?*/
 .editor-content.theme-academic img {
   max-width: 100%;
   border-radius: var(--border-radius);
   margin: 1em 0;
 }
 
-/* 表格：满宽，边框合并，表头用表面色背景 */
+/* 表格：满宽，边框合并，表头用表面色背�?*/
 .editor-content.theme-academic table {
   width: 100%;
   border-collapse: collapse;
@@ -228,14 +228,14 @@
   font-weight: 600;
 }
 
-/* 分隔线：无默认边框，用顶部细线替代 */
+/* 分隔线：无默认边框，用顶部细线替�?*/
 .editor-content.theme-academic hr {
   border: none;
   border-top: 1px solid var(--editor-border);
   margin: 2em 0;
 }
 
-/* 列表：缩进 2em，列表项间距 */
+/* 列表：缩�?2em，列表项间距 */
 .editor-content.theme-academic ul,
 .editor-content.theme-academic ol {
   padding-left: 2em;

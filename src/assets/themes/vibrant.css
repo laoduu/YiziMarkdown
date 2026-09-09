@@ -1,12 +1,12 @@
-/* 活力橙 (Vibrant Orange) */
+/* 活力�?(Vibrant Orange) */
 :root.theme-vibrant {
   --editor-bg: #FFF8F2;
   --editor-text: #2a1a0e;
   --editor-accent: #F3641E;
-  --toolbar-text: #2a1a0e;
-  --toolbar-border: #FFE6D5;
-  --toolbar-hover: #ffe0cc;
-  --toolbar-accent: #F3641E;
+  --sel-toolbar-text: #2a1a0e;
+  --sel-toolbar-border: #FFE6D5;
+  --sel-toolbar-hover: #ffe0cc;
+  --sel-toolbar-accent: #F3641E;
   --editor-border: #FFE6D5;
   --editor-surface: #FEF1F1;
   --editor-hover: #ffe0cc;
@@ -18,7 +18,7 @@
   --editor-h3: #e06a30;
   --sidebar-bg: #FEF1F1;
   --sidebar-text: #b06030;
-  --toolbar-bg: #FFF8F2;
+  --sel-toolbar-bg: #FFF8F2;
   --statusbar-bg: #F3641E;
   --statusbar-text: #ffffff;
   --font-sans: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
@@ -48,7 +48,7 @@
   --statusbar-text: #e0c0a0;
 }
 
-/* 活力橙 - 标题样式 */
+/* 活力�?- 标题样式 */
 .editor-content.theme-vibrant h1 {
   font-size: 2em;
   font-weight: 700;

@@ -1,20 +1,20 @@
-/* ═══════════════════════════════════════════════════════════════
-   赛博朋克 (Cyberpunk) — YiziMarkdown 实验主题
+/* ══════════════════════════════════════════════════════════════�?
+   赛博朋克 (Cyberpunk) �?YiziMarkdown 实验主题
 
-   设计理念：
+   设计理念�?
    - 亮色：冷白底 + 霓虹青粉点缀，干净利落的未来感
    - 暗色：深黑底 + 霓虹青粉撞色发光，霓虹灯下的终端
-   ═══════════════════════════════════════════════════════════════ */
+   ══════════════════════════════════════════════════════════════�?*/
 
 /* ── 亮色模式 ────────────────────────────────────────────────── */
 :root.theme-cyberpunk {
   --editor-bg: #f0f4f8;
   --editor-text: #1a1a2e;
   --editor-accent: #0077b6;
-  --toolbar-text: #1a1a2e;
-  --toolbar-border: #c0c8d8;
-  --toolbar-hover: #e8eef6;
-  --toolbar-accent: #0077b6;
+  --sel-toolbar-text: #1a1a2e;
+  --sel-toolbar-border: #c0c8d8;
+  --sel-toolbar-hover: #e8eef6;
+  --sel-toolbar-accent: #0077b6;
   --editor-border: #c0c8d8;
   --editor-surface: #ffffff;
   --editor-hover: #e8eef6;
@@ -26,7 +26,7 @@
   --editor-h3: #0096c7;
   --sidebar-bg: #e8eef6;
   --sidebar-text: #1a1a2e;
-  --toolbar-bg: #f0f4f8;
+  --sel-toolbar-bg: #f0f4f8;
   --statusbar-bg: linear-gradient(90deg, #0077b6, #9b2fa6);
   --statusbar-text: #ffffff;
   --font-sans: 'MiSans', 'Mi Sans', system-ui, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;

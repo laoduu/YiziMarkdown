@@ -1,18 +1,18 @@
-/* ═══════════════════════════════════════════════════════════════
-   落日熔金 (Sunset Gold) — YiziMarkdown 主题
+/* ══════════════════════════════════════════════════════════════�?
+   落日熔金 (Sunset Gold) �?YiziMarkdown 主题
 
    亮色：暖白底 + 琥珀色标题，像午后的暖阳
    暗色：深紫底 + 金色光芒，暮色中的精装书
-   ═══════════════════════════════════════════════════════════════ */
+   ══════════════════════════════════════════════════════════════�?*/
 
 :root.theme-sunset {
   --editor-bg: #fef8f0;
   --editor-text: #3a2a1a;
   --editor-accent: #b45309;
-  --toolbar-text: #3a2a1a;
-  --toolbar-border: #e8d0b0;
-  --toolbar-hover: #f5e0c5;
-  --toolbar-accent: #b45309;
+  --sel-toolbar-text: #3a2a1a;
+  --sel-toolbar-border: #e8d0b0;
+  --sel-toolbar-hover: #f5e0c5;
+  --sel-toolbar-accent: #b45309;
   --editor-border: #e8d0b0;
   --editor-surface: #fdf0e0;
   --editor-hover: #f5e0c5;
@@ -24,7 +24,7 @@
   --editor-h3: #d88030;
   --sidebar-bg: #faf0e5;
   --sidebar-text: #8a6a40;
-  --toolbar-bg: #fef8f0;
+  --sel-toolbar-bg: #fef8f0;
   --statusbar-bg: #b45309;
   --statusbar-text: #ffffff;
   --font-sans: 'Georgia', 'Noto Serif SC', 'SimSun', serif;

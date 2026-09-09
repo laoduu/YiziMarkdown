@@ -1,18 +1,18 @@
-/* ═══════════════════════════════════════════════════════════════
-   黑客帝国 (Matrix) — YiziMarkdown 主题
+/* ══════════════════════════════════════════════════════════════�?
+   黑客帝国 (Matrix) �?YiziMarkdown 主题
 
    亮色：白底绿字，像终端的白日模式
    暗色：纯黑底矩阵绿，沉浸式代码雨
-   ═══════════════════════════════════════════════════════════════ */
+   ══════════════════════════════════════════════════════════════�?*/
 
 :root.theme-matrix {
   --editor-bg: #f5faf5;
   --editor-text: #1a2a1a;
   --editor-accent: #008a2e;
-  --toolbar-text: #1a2a1a;
-  --toolbar-border: #c0e0c0;
-  --toolbar-hover: #d5ecd5;
-  --toolbar-accent: #008a2e;
+  --sel-toolbar-text: #1a2a1a;
+  --sel-toolbar-border: #c0e0c0;
+  --sel-toolbar-hover: #d5ecd5;
+  --sel-toolbar-accent: #008a2e;
   --editor-border: #c0e0c0;
   --editor-surface: #e8f5e8;
   --editor-hover: #d5ecd5;
@@ -24,7 +24,7 @@
   --editor-h3: #2aaa4a;
   --sidebar-bg: #edf5ed;
   --sidebar-text: #3a7a3a;
-  --toolbar-bg: #f5faf5;
+  --sel-toolbar-bg: #f5faf5;
   --statusbar-bg: #008a2e;
   --statusbar-text: #ffffff;
   --font-sans: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;

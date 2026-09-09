@@ -406,7 +406,6 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
       })
     }
     const text = input.trim()
-    console.log('[AI Chat] handleSend called, text:', text, 'capsules:', capsuleTexts, 'activeSkill:', activeSkill?.id)
     if ((!text && !activeSkill && capsuleTexts.length === 0) || streamingId) return
     setInput('')
     clearEditorText()

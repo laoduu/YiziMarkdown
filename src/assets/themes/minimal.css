@@ -1,12 +1,12 @@
-/* 极简风 (Minimal) - 默认主题 */
+/* 极简�?(Minimal) - 默认主题 */
 :root.theme-minimal {
   --editor-bg: #ffffff;
   --editor-text: #333333;
   --editor-accent: #0066cc;
-  --toolbar-text: #333333;
-  --toolbar-border: #e8e8e8;
-  --toolbar-hover: #f5f5f5;
-  --toolbar-accent: #0066cc;
+  --sel-toolbar-text: #333333;
+  --sel-toolbar-border: #e8e8e8;
+  --sel-toolbar-hover: #f5f5f5;
+  --sel-toolbar-accent: #0066cc;
   --editor-border: #e8e8e8;
   --editor-surface: #fafafa;
   --editor-hover: #f5f5f5;
@@ -18,7 +18,7 @@
   --editor-h3: var(--editor-text);
   --sidebar-bg: #f8f8f8;
   --sidebar-text: #666666;
-  --toolbar-bg: #ffffff;
+  --sel-toolbar-bg: #ffffff;
   --statusbar-bg: #f0f0f0;
   --statusbar-text: #888888;
   --font-sans: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
@@ -48,7 +48,7 @@
   --statusbar-text: #888888;
 }
 
-/* 极简风 - 标题样式 */
+/* 极简�?- 标题样式 */
 .editor-content.theme-minimal h1 { font-size: 2em; font-weight: 600; margin: 1.5em 0 0.5em; letter-spacing: -0.02em; }
 .editor-content.theme-minimal h2 { font-size: 1.5em; font-weight: 600; margin: 1.3em 0 0.4em; letter-spacing: -0.01em; }
 .editor-content.theme-minimal h3 { font-size: 1.25em; font-weight: 500; margin: 1.2em 0 0.3em; }
