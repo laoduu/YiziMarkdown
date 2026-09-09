@@ -79,7 +79,7 @@
 
         .hero-content {
             position: relative; z-index: 2;
-            text-align: center; max-width: 800px;
+            text-align: center; max-width: 960px;
         }
         .hero-badge {
             display: inline-flex; align-items: center; gap: 8px;
@@ -126,6 +126,7 @@
         .hero-actions .btn-primary,
         .hero-actions .btn-secondary {
             white-space: nowrap;
+            padding: 14px 22px; font-size: 15px;
         }
         /* 平板：适度收紧按钮，保证 4 个下载按钮单行且文字不换行 */
         @media (max-width: 1024px) {
