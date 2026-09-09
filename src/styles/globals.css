@@ -17,6 +17,10 @@
   --sidebar-bg: #fafafa;
   --sidebar-text: #666666;
   --toolbar-bg: #ffffff;
+  --toolbar-text: #333333;
+  --toolbar-border: #e5e5e5;
+  --toolbar-hover: rgba(0, 0, 0, 0.03);
+  --toolbar-accent: #0066cc;
   --statusbar-bg: #f5f5f5;
   --statusbar-text: #888888;
   --font-sans: 'MiSans', 'Mi Sans', system-ui, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
@@ -39,7 +43,6 @@
   --editor-cursor: #569cd6;
   --sidebar-bg: #252526;
   --sidebar-text: #858585;
-  --toolbar-bg: #1e1e1e;
   --statusbar-bg: #007acc;
   --statusbar-text: #ffffff;
 }
@@ -114,10 +117,9 @@ body {
   word-break: break-word;
   line-height: 1.5;
   cursor: text;
-  /* 细边框 1px：激活时边框内流动主题色光点（conic-gradient 旋转），
-     仅线框变色、背景保持纯色不变；无额外外圈、无双层框 */
   border: 1px solid var(--editor-border);
   transition: border-color 0.3s ease;
+  position: relative;
 }
 /* @property 注册角度变量，使 conic-gradient 可被动画驱动旋转 */
 @property --ai-border-angle {
@@ -125,16 +127,32 @@ body {
   initial-value: 0deg;
   inherits: false;
 }
+/* 激活态：伪元素承载 conic-gradient 旋转动画，mask 只露出边框区域，
+   避免半透明背景下渐变穿透 padding-box 导致中心扫描效果 */
 .ai-chat-editor:focus {
   border-color: transparent;
-  background:
-    linear-gradient(var(--editor-surface), var(--editor-surface)) padding-box,
-    conic-gradient(
-      from var(--ai-border-angle),
-      transparent 0deg,
-      var(--editor-accent) 45deg,
-      transparent 90deg
-    ) border-box;
+}
+.ai-chat-editor:focus::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--ai-border-angle),
+    transparent 0deg,
+    var(--editor-accent) 60deg,
+    transparent 120deg
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
   animation: ai-border-flow 2.8s linear infinite;
 }
 @keyframes ai-border-flow {
@@ -149,7 +167,7 @@ body {
   pointer-events: none;
 }
 
-/* Skill 技能 tag：⚡ + 名称；hover 时 ⚡ 原位淡出、❌ 原位淡入（名称不跳动） */
+/* Skill 技能 tag：⚡ 名称 ✕，左右分布 */
 .skill-tag {
   display: inline-flex;
   align-items: center;
@@ -166,40 +184,44 @@ body {
   vertical-align: middle;
   cursor: default;
 }
-/* 图标位：⚡ 与 ✕ 绝对定位叠加，hover 时 opacity 交叉切换，占位恒定 */
-.skill-tag-icon-zone {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.15em;
-  height: 1.15em;
-  flex-shrink: 0;
-}
-.skill-tag-icon,
-.skill-tag-x {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-  transition: opacity 0.15s ease;
-}
 .skill-tag-icon {
   font-size: 0.95em;
+  flex-shrink: 0;
 }
 .skill-tag-x {
-  opacity: 0;
-  cursor: pointer;
   font-size: 0.85em;
   font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
 }
-.skill-tag:hover .skill-tag-icon {
-  opacity: 0;
-}
-.skill-tag:hover .skill-tag-x {
+.skill-tag-x:hover {
   opacity: 1;
+}
+
+/* 文本胶囊 hover 预览气泡 */
+.text-capsule-tooltip {
+  display: none;
+  position: fixed;
+  max-width: 320px;
+  max-height: 180px;
+  overflow: hidden;
+  background: var(--editor-surface);
+  border: 1px solid var(--editor-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--editor-text);
+  white-space: pre-wrap;
+  word-break: break-all;
+  z-index: 2147483646;
+  pointer-events: none;
+}
+.skill-tag {
+  position: relative;
 }
 
 /* ===== 主编辑区 ===== */
@@ -1436,4 +1458,66 @@ body {
 }
 .editor-content .task-list-item-label {
   cursor: pointer;
+}
+
+/* ===== 划词助手浮动工具栏 ===== */
+.selection-toolbar {
+  position: fixed;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  color-scheme: light;
+  background: var(--toolbar-bg);
+  border: 1px solid var(--toolbar-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08);
+  white-space: nowrap;
+  user-select: none;
+  animation: selection-toolbar-in 0.15s ease-out;
+  height: 28px;
+  box-sizing: border-box;
+  font-size: 12px;
+  line-height: 1;
+}
+@keyframes selection-toolbar-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.selection-toolbar-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  margin: 0 4px 0 2px;
+}
+.selection-toolbar-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--toolbar-border);
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+.selection-toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 7px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--toolbar-text);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+.selection-toolbar-btn:hover {
+  background: var(--toolbar-hover);
+  color: var(--toolbar-accent);
+}
+.selection-toolbar-btn svg {
+  flex-shrink: 0;
 }

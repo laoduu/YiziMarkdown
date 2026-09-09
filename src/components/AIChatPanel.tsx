@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
-import { Bot, Send, Square, Trash2, Copy, Check, FileDown, FilePlus2, X, Sparkles, Zap } from 'lucide-react'
+import { Bot, Send, Square, Trash2, Copy, Check, FileDown, FilePlus2, X, Sparkles, Zap, Settings } from 'lucide-react'
 import { useSettingsStore } from '../stores/settingsStore'
 import { providerById } from '../lib/ai-providers'
 import { invokeTauriOrThrow } from '../lib/tauri'
@@ -35,7 +35,7 @@ interface ErrorPayload { request_id: string; error: string }
 
 export default function AIChatPanel({ open, onClose, docContent, docName, onInsert, onNewDoc }: AIChatPanelProps) {
   const { t } = useI18n()
-  const { aiProvider, aiModel, aiBaseUrl, aiApiFormat, aiSystemPrompt, aiDocLimit, aiContextTurns, aiChatWidth } = useSettingsStore()
+  const { aiProvider, aiModel, aiBaseUrl, aiApiFormat, aiSystemPrompt, aiDocLimit, aiContextTurns, aiChatWidth, aiPendingAction, updateSettings } = useSettingsStore()
   const provider = providerById(aiProvider)
 
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -43,6 +43,7 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
   const [streamingId, setStreamingId] = useState<string | null>(null)
   const [useDoc, setUseDoc] = useState(false)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
+  const [fromSelection, setFromSelection] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // 拖拽调节宽度
@@ -81,6 +82,7 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
   const [skillMenuOpen, setSkillMenuOpen] = useState(false)
   const skillPromptCache = useRef<Record<string, string>>({})
   const skillMenuRef = useRef<HTMLDivElement>(null)
+  const skillMenuTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   // 输入区（contentEditable）：skill tag 与用户文字混排
   const editorRef = useRef<HTMLDivElement>(null)
   const activeSkillRef = useRef<Skill | null>(null)
@@ -121,6 +123,164 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
     return () => document.removeEventListener('mousedown', onDown)
   }, [skillMenuOpen])
 
+  // 清理 hover 定时器
+  useEffect(() => {
+    return () => { if (skillMenuTimer.current) clearTimeout(skillMenuTimer.current) }
+  }, [])
+
+  // 文本胶囊完整文本存储（contentEditable 剥离 data-* 且重建 DOM 引用，用唯一 class ID 做 key）
+  const capsuleTextMap = useRef(new Map<string, string>())
+  const capsuleIdCounter = useRef(0)
+
+  /** 从元素的 class 列表中提取 tc-* ID，查 Map 返回完整文本 */
+  const getCapsuleFullText = (el: Element): string | undefined => {
+    for (const cls of el.classList) {
+      if (cls.startsWith('tc-')) return capsuleTextMap.current.get(cls)
+    }
+    return undefined
+  }
+
+  // 文本胶囊 hover 预览：mousemove 追踪光标位置
+  useEffect(() => {
+    const el = editorRef.current
+    if (!el || !open) return
+
+    let tooltipEl: HTMLDivElement | null = null
+    let currentCapsule: HTMLElement | null = null
+
+    const ensureTooltip = () => {
+      if (!tooltipEl) {
+        tooltipEl = document.createElement('div')
+        tooltipEl.className = 'text-capsule-tooltip'
+        document.body.appendChild(tooltipEl)
+      }
+      return tooltipEl
+    }
+
+    const onMove = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      const capsule = target.closest('.skill-tag') as HTMLElement | null
+      const fullText = capsule ? getCapsuleFullText(capsule) : undefined
+
+      if (capsule && fullText) {
+        currentCapsule = capsule
+        const tip = ensureTooltip()
+        tip.textContent = fullText.length > 200 ? fullText.slice(0, 200) + '…' : fullText
+        tip.style.display = 'block'
+        const rect = capsule.getBoundingClientRect()
+        tip.style.left = `${rect.left}px`
+        tip.style.top = `${rect.top - tip.offsetHeight - 6}px`
+        if (parseFloat(tip.style.top) < 4) {
+          tip.style.top = `${rect.bottom + 6}px`
+        }
+      } else {
+        if (currentCapsule) {
+          currentCapsule = null
+          if (tooltipEl) tooltipEl.style.display = 'none'
+        }
+      }
+    }
+
+    el.addEventListener('mousemove', onMove)
+    el.addEventListener('mouseleave', () => {
+      currentCapsule = null
+      if (tooltipEl) tooltipEl.style.display = 'none'
+    })
+
+    return () => {
+      el.removeEventListener('mousemove', onMove)
+      if (tooltipEl) tooltipEl.remove()
+    }
+  }, [open])
+
+  // 处理来自划词助手的待执行动作
+  useEffect(() => {
+    if (!aiPendingAction || !open) return
+    if (aiPendingAction.type === 'skill') {
+      const skill = skills.find((s) => s.id === aiPendingAction.skillId)
+      if (!skill) return
+      if (aiPendingAction.fromSelection && aiPendingAction.selectedText) {
+        // 划词工具栏触发：同时插入文本胶囊和技能胶囊，不注入全文
+        setFromSelection(true)
+        const el = editorRef.current
+        if (el) {
+          // 1. 插入文本胶囊（📄）
+          const textCapsule = document.createElement('span')
+          const capsuleId = `tc-${++capsuleIdCounter.current}`
+          textCapsule.className = `skill-tag ${capsuleId}`
+          textCapsule.contentEditable = 'false'
+          capsuleTextMap.current.set(capsuleId, aiPendingAction.selectedText)
+          textCapsule.innerHTML =
+            '<span class="skill-tag-icon">📄</span><span class="skill-tag-name"></span><span class="skill-tag-x">✕</span>'
+          const displayName = aiPendingAction.selectedText.length > 20
+            ? aiPendingAction.selectedText.slice(0, 20) + '…'
+            : aiPendingAction.selectedText
+          ;(textCapsule.querySelector('.skill-tag-name') as HTMLElement).textContent = displayName
+          ;(textCapsule.querySelector('.skill-tag-x') as HTMLElement).addEventListener('click', () => textCapsule.remove())
+          el.appendChild(textCapsule)
+          const space1 = document.createTextNode('\u00A0')
+          el.appendChild(space1)
+          // 2. 插入技能胶囊（⚡）
+          const skillTag = document.createElement('span')
+          skillTag.className = 'skill-tag'
+          skillTag.contentEditable = 'false'
+          skillTag.innerHTML =
+            '<span class="skill-tag-icon">⚡</span><span class="skill-tag-name"></span><span class="skill-tag-x">✕</span>'
+          ;(skillTag.querySelector('.skill-tag-name') as HTMLElement).textContent = skill.name
+          ;(skillTag.querySelector('.skill-tag-x') as HTMLElement).addEventListener('click', () => {
+            skillTag.remove()
+            setFromSelection(false)
+          })
+          el.appendChild(skillTag)
+          const space2 = document.createTextNode('\u00A0')
+          el.appendChild(space2)
+          el.focus()
+          const sel = window.getSelection()
+          const range = document.createRange()
+          range.setStartAfter(space2)
+          range.collapse(true)
+          sel?.removeAllRanges()
+          sel?.addRange(range)
+        }
+        setActiveSkill(skill)
+        setSkillMenuOpen(false)
+      } else {
+        // 正常技能选择流程
+        setFromSelection(false)
+        selectSkill(skill)
+      }
+    } else if (aiPendingAction.type === 'chat') {
+      // 插入选中文本胶囊到输入区
+      const el = editorRef.current
+      if (el) {
+        const capsule = document.createElement('span')
+        const capsuleId = `tc-${++capsuleIdCounter.current}`
+        capsule.className = `skill-tag ${capsuleId}`
+        capsule.contentEditable = 'false'
+        capsuleTextMap.current.set(capsuleId, aiPendingAction.text)
+        capsule.innerHTML =
+          '<span class="skill-tag-icon">📄</span><span class="skill-tag-name"></span><span class="skill-tag-x">✕</span>'
+        const displayName = aiPendingAction.text.length > 20
+          ? aiPendingAction.text.slice(0, 20) + '…'
+          : aiPendingAction.text
+        ;(capsule.querySelector('.skill-tag-name') as HTMLElement).textContent = displayName
+        ;(capsule.querySelector('.skill-tag-x') as HTMLElement).addEventListener('click', () => capsule.remove())
+        el.appendChild(capsule)
+        const space = document.createTextNode('\u00A0')
+        el.appendChild(space)
+        el.focus()
+        // 光标移到末尾
+        const sel = window.getSelection()
+        const range = document.createRange()
+        range.setStartAfter(space)
+        range.collapse(true)
+        sel?.removeAllRanges()
+        sel?.addRange(range)
+      }
+    }
+    updateSettings({ aiPendingAction: null })
+  }, [aiPendingAction, open, skills])
+
   // 关闭面板时取消进行中的流
   useEffect(() => {
     if (!open && streamingId) {
@@ -138,6 +298,7 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
   const handleClear = () => {
     setMessages([])
     setCopiedIndex(null)
+    setFromSelection(false)
   }
 
   // ── Skill 输入框交互 ──────────────────────────────────────────
@@ -163,7 +324,7 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
     tag.className = 'skill-tag'
     tag.contentEditable = 'false'
     tag.innerHTML =
-      '<span class="skill-tag-icon-zone"><span class="skill-tag-icon">⚡</span><span class="skill-tag-x">✕</span></span><span class="skill-tag-name"></span>'
+      '<span class="skill-tag-icon">⚡</span><span class="skill-tag-name"></span><span class="skill-tag-x">✕</span>'
     ;(tag.querySelector('.skill-tag-name') as HTMLElement).textContent = skill.name
     ;(tag.querySelector('.skill-tag-x') as HTMLElement).addEventListener('click', () => removeSkill())
 
@@ -196,7 +357,16 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
     const s = activeSkillRef.current
     if (!s) return
     if (s.needsDoc) setUseDoc(prevUseDocRef.current)
-    editorRef.current?.querySelectorAll('.skill-tag').forEach((n) => n.remove())
+    if (fromSelection) {
+      // 划词模式：只移除技能胶囊，保留文本胶囊
+      editorRef.current?.querySelectorAll('.skill-tag').forEach((n) => {
+        const icon = n.querySelector('.skill-tag-icon')
+        if (icon && icon.textContent === '⚡') n.remove()
+      })
+      setFromSelection(false)
+    } else {
+      editorRef.current?.querySelectorAll('.skill-tag').forEach((n) => n.remove())
+    }
     setActiveSkill(null)
     setSkillMenuOpen(false)
   }
@@ -222,26 +392,46 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
 
   // 发送一条消息（含系统提示 + 可选的当前文档上下文）
   const handleSend = async () => {
+    // 先从 DOM 提取文本胶囊内容（📄 图标的是选中文本胶囊）
+    const el = editorRef.current
+    let capsuleTexts: string[] = []
+    if (el) {
+      el.querySelectorAll('.skill-tag').forEach((tag) => {
+        const icon = tag.querySelector('.skill-tag-icon')
+        if (icon && icon.textContent === '📄') {
+          const fullText = getCapsuleFullText(tag)
+          const name = tag.querySelector('.skill-tag-name')
+          capsuleTexts.push(fullText || name?.textContent || '')
+        }
+      })
+    }
     const text = input.trim()
-    console.log('[AI Chat] handleSend called, text:', text, 'activeSkill:', activeSkill?.id)
-    if ((!text && !activeSkill) || streamingId) return
+    console.log('[AI Chat] handleSend called, text:', text, 'capsules:', capsuleTexts, 'activeSkill:', activeSkill?.id)
+    if ((!text && !activeSkill && capsuleTexts.length === 0) || streamingId) return
     setInput('')
     clearEditorText()
 
     const requestId = `ai-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     // 选中技能时，将技能名称和摘要注入用户消息，让 AI 明确知道要执行哪个技能
     let userContent = text
+    // 将文本胶囊内容拼入消息
+    if (capsuleTexts.length > 0) {
+      const capsuleBlock = capsuleTexts.map((t) => `"""\n${t}\n"""`).join('\n\n')
+      userContent = userContent ? `${userContent}\n\n${capsuleBlock}` : capsuleBlock
+    }
     if (activeSkill) {
-      const skillInfo = `【已选择技能：${activeSkill.name} - ${activeSkill.summary}】`
-      userContent = text ? `${skillInfo}\n${text}` : `${skillInfo}\n${t('ai.skillAutoRun')}`
+      const skillInfo = fromSelection
+        ? `【已选择技能：${activeSkill.name} - ${activeSkill.summary}】\n请直接对以下选中文本执行操作，无需全文。`
+        : `【已选择技能：${activeSkill.name} - ${activeSkill.summary}】`
+      userContent = userContent ? `${skillInfo}\n${userContent}` : `${skillInfo}\n${t('ai.skillAutoRun')}`
     }
     const userMsg: ChatMessage = { role: 'user', content: userContent }
     setMessages((prev) => [...prev, userMsg, { role: 'assistant', content: '' }])
     setStreamingId(requestId)
 
     const systemPrompt = aiSystemPrompt.trim()
-    // 技能需要文档且当前文档非空时，自动引用当前文档
-    const skillNeedsDoc = !!activeSkill?.needsDoc && !!docContent.trim()
+    // 技能需要文档且当前文档非空时，自动引用当前文档；划词模式不注入全文
+    const skillNeedsDoc = !fromSelection && !!activeSkill?.needsDoc && !!docContent.trim()
     const docLimit = aiDocLimit > 0 ? aiDocLimit : docContent.length
     const messagesPayload: Array<{ role: string; content: string }> = []
     // 1. 基础系统提示词：始终在最前
@@ -497,14 +687,19 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
       {/* 操作行：技能（闪电）+ 引用文档 */}
       <div className="relative flex items-center gap-3 px-4 py-1.5 border-t border-[var(--editor-border)] shrink-0" ref={skillMenuRef}>
         <button
-          onClick={() => setSkillMenuOpen((v) => !v)}
+          onMouseEnter={() => { clearTimeout(skillMenuTimer.current!); setSkillMenuOpen(true) }}
+          onMouseLeave={() => { skillMenuTimer.current = setTimeout(() => setSkillMenuOpen(false), 150) }}
           className={`flex items-center gap-1 p-1 rounded hover:bg-[var(--editor-hover)] ${activeSkill ? 'text-[var(--editor-accent)]' : 'text-[var(--sidebar-text)]'}`}
           title={t('ai.skillButton')}
         >
           <Zap size={14} />
         </button>
         {skillMenuOpen && (
-          <div className="absolute bottom-full left-2 mb-1 w-[300px] max-h-[280px] overflow-y-auto rounded-lg border border-[var(--editor-border)] bg-[var(--editor-surface)] shadow-xl z-10">
+          <div
+            onMouseEnter={() => { clearTimeout(skillMenuTimer.current!) }}
+            onMouseLeave={() => { skillMenuTimer.current = setTimeout(() => setSkillMenuOpen(false), 150) }}
+            className="absolute bottom-full left-2 mb-1 w-[300px] max-h-[280px] overflow-y-auto rounded-lg border border-[var(--editor-border)] bg-[var(--editor-surface)] shadow-xl z-10"
+          >
             {skills.length === 0 ? (
               <p className="px-3 py-3 text-[12px] text-[var(--sidebar-text)]">{t('ai.skillEmpty')}</p>
             ) : (
@@ -525,33 +720,50 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
                     const descEl = e.currentTarget.querySelector('.skill-desc') as HTMLElement
                     if (descEl) descEl.style.display = 'none'
                   }}
-                  className={`group relative w-full text-left px-3.5 py-2.5 hover:bg-[var(--editor-hover)] border-b border-[var(--editor-border)] last:border-b-0 ${activeSkill?.id === s.id ? 'bg-[var(--editor-accent)]/5' : ''}`}
+                  className={`group relative w-full text-left px-3 py-1.5 hover:bg-[var(--editor-hover)] border-b border-[var(--editor-border)] last:border-b-0 ${activeSkill?.id === s.id ? 'bg-[var(--editor-accent)]/5' : ''}`}
                 >
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
                     <Zap size={12} className="text-[var(--editor-accent)] shrink-0" />
-                    <span className="text-[13px] font-medium text-[var(--sidebar-text)]">{s.name}</span>
+                    <span className="text-[13px] font-medium text-[var(--sidebar-text)] shrink-0">{s.name}</span>
+                    <span className="text-[12px] text-[var(--editor-text)] truncate">{s.summary}</span>
                   </div>
-                  <p className="text-[11px] text-[var(--editor-text)] mt-1 leading-snug">{s.summary}</p>
                   {s.description && (
                     <div className="skill-desc hidden fixed w-[220px] bg-[var(--editor-surface)] border border-[var(--editor-border)] shadow-xl p-3 z-50 rounded-lg">
-                      <p className="text-[11px] text-[var(--editor-text)] leading-relaxed">{s.description}</p>
+                      <p className="text-[13px] text-[var(--editor-text)] leading-relaxed">{s.description}</p>
                     </div>
                   )}
                 </button>
               ))
             )}
+            <button
+              onClick={async () => {
+                try {
+                  const guidePath = await invokeTauriOrThrow<string>('get_skill_guide_path')
+                  await invokeTauriOrThrow('open_in_app', { filePath: guidePath })
+                } catch (e) {
+                  console.error('[AI Chat] Failed to open skill guide:', e)
+                }
+                setSkillMenuOpen(false)
+              }}
+              className="flex items-center gap-1.5 w-full text-left px-3 py-1.5 text-[12px] text-[var(--sidebar-text)] hover:bg-[var(--editor-hover)] border-t border-[var(--editor-border)]"
+            >
+              <Settings size={12} />
+              <span>{t('ai.manageSkills')}</span>
+            </button>
           </div>
         )}
-        <label className={`flex items-center gap-1.5 text-[11px] ${activeSkill?.needsDoc ? 'opacity-70' : 'cursor-pointer text-[var(--sidebar-text)]'}`}>
-          <input
-            type="checkbox"
-            checked={useDoc || !!activeSkill?.needsDoc}
-            disabled={!!activeSkill?.needsDoc}
-            onChange={(e) => setUseDoc(e.target.checked)}
-            className="settings-checkbox"
-          />
-          {t('ai.useCurrentDoc')}
-        </label>
+        {!fromSelection && (
+          <label className={`flex items-center gap-1.5 text-[11px] ${activeSkill?.needsDoc ? 'opacity-70' : 'cursor-pointer text-[var(--sidebar-text)]'}`}>
+            <input
+              type="checkbox"
+              checked={useDoc || !!activeSkill?.needsDoc}
+              disabled={!!activeSkill?.needsDoc}
+              onChange={(e) => setUseDoc(e.target.checked)}
+              className="settings-checkbox"
+            />
+            {t('ai.useCurrentDoc')}
+          </label>
+        )}
       </div>
 
       {/* 输入区：contentEditable，skill tag 与文字混排、可光标删除 */}

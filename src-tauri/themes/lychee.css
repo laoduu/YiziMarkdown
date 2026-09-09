@@ -18,6 +18,11 @@
      按钮激活态、状态栏背景、引用块左边框等 */
   --editor-accent: #E63946;
 
+  --toolbar-text: #2b2726;
+  --toolbar-border: #ffd6d8;
+  --toolbar-hover: #ffe6e8;
+  --toolbar-accent: #E63946;
+
   /* 边框色：淡红，用于分割线、表格边框、代码块边框、行号分隔线 */
   --editor-border: #ffd6d8;
 
@@ -111,9 +116,6 @@
 
   /* 侧栏文字：灰红色 */
   --sidebar-text: #d17880;
-
-  /* 工具栏背景：与编辑区同色 */
-  --toolbar-bg: #171212;
 
   /* 状态栏背景：暗红灰 */
   --statusbar-bg: #2d1e20;

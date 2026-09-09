@@ -303,10 +303,37 @@ fn get_app_root() -> Result<PathBuf, String> {
     Ok(exe.parent().unwrap_or(Path::new(".")).to_path_buf())
 }
 
+/// 获取用户文档中的 skills 目录：~/Documents/yizimarkdown/skills/
+/// Windows: C:\Users\<user>\Documents\yizimarkdown\skills\
+/// macOS:   /Users/<user>/Documents/yizimarkdown\skills\
+fn get_user_skills_dir() -> Result<PathBuf, String> {
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(profile) = std::env::var("USERPROFILE") {
+            return Ok(PathBuf::from(profile)
+                .join("Documents")
+                .join("yizimarkdown")
+                .join("skills"));
+        }
+    }
+    #[cfg(target_os = "macos")]
+    {
+        if let Ok(home) = std::env::var("HOME") {
+            return Ok(PathBuf::from(home)
+                .join("Documents")
+                .join("yizimarkdown")
+                .join("skills"));
+        }
+    }
+    // fallback：应用根目录下的 skills/
+    let root = get_app_root()?;
+    Ok(root.join("skills"))
+}
+
 /// 确保应用根目录下的子目录和默认文件存在
 fn ensure_app_structure(root: &Path) -> Result<(), String> {
-    // 子目录
-    for subdir in &["themes", "templates", "skills"] {
+    // 子目录（skills 已迁移至用户文档目录，不再在应用目录创建）
+    for subdir in &["themes", "templates"] {
         fs::create_dir_all(root.join(subdir))
             .map_err(|e| format!("Failed to create {} dir: {}", subdir, e))?;
     }
@@ -331,6 +358,104 @@ fn ensure_app_structure(root: &Path) -> Result<(), String> {
         fs::write(&tmpl, "# 标题\n\n在这里开始写作...\n")
             .map_err(|e| format!("Failed to create default template: {}", e))?;
     }
+
+    Ok(())
+}
+
+/// 将内置技能从应用目录同步到用户文档目录。
+/// - 首次运行：全量复制
+/// - 版本更新：覆盖内置技能文件，合并 manifest（保留用户自定义技能）
+fn sync_builtin_skills() -> Result<(), String> {
+    let app_root = get_app_root()?;
+    let builtin_dir = app_root.join("skills");
+    let user_dir = get_user_skills_dir()?;
+
+    if !builtin_dir.exists() {
+        return Ok(()); // 开发模式或资源未解包，跳过
+    }
+
+    fs::create_dir_all(&user_dir)
+        .map_err(|e| format!("Failed to create user skills dir: {}", e))?;
+
+    let builtin_manifest_path = builtin_dir.join("skills.json");
+    if !builtin_manifest_path.exists() {
+        return Ok(());
+    }
+
+    let builtin_manifest_str = fs::read_to_string(&builtin_manifest_path)
+        .map_err(|e| format!("Failed to read builtin skills.json: {}", e))?;
+    let builtin_manifest: serde_json::Value = serde_json::from_str(&builtin_manifest_str)
+        .map_err(|e| format!("Failed to parse builtin skills.json: {}", e))?;
+    let builtin_version = builtin_manifest["version"].as_i64().unwrap_or(0);
+
+    let user_manifest_path = user_dir.join("skills.json");
+    if !user_manifest_path.exists() {
+        // 首次安装：复制所有内置技能文件 + manifest
+        if let Ok(entries) = fs::read_dir(&builtin_dir) {
+            for entry in entries.flatten() {
+                let file_name = entry.file_name();
+                let _ = fs::copy(entry.path(), user_dir.join(&file_name));
+            }
+        }
+        return Ok(());
+    }
+
+    // 已有用户目录：比较版本号
+    let user_manifest_str = fs::read_to_string(&user_manifest_path)
+        .map_err(|e| format!("Failed to read user skills.json: {}", e))?;
+    let user_manifest: serde_json::Value = serde_json::from_str(&user_manifest_str)
+        .map_err(|e| format!("Failed to parse user skills.json: {}", e))?;
+    let user_version = user_manifest["version"].as_i64().unwrap_or(0);
+
+    if builtin_version == user_version {
+        return Ok(()); // 版本一致，无需同步
+    }
+
+    // 版本不同：覆盖内置技能 .md 文件
+    let builtin_skills = builtin_manifest["skills"].as_array();
+    if let Some(skills) = builtin_skills {
+        for skill in skills {
+            if let Some(file) = skill["file"].as_str() {
+                let src = builtin_dir.join(file);
+                let dst = user_dir.join(file);
+                if src.exists() {
+                    let _ = fs::copy(&src, &dst);
+                }
+            }
+        }
+    }
+
+    // 合并 manifest：内置技能 + 用户自定义技能
+    let mut merged_skills: Vec<serde_json::Value> = Vec::new();
+
+    // 先放内置技能（使用新版 manifest）
+    if let Some(skills) = builtin_manifest["skills"].as_array() {
+        merged_skills.extend(skills.iter().cloned());
+    }
+
+    // 追加用户自定义技能（id 不在内置列表中的）
+    if let Some(user_skills) = user_manifest["skills"].as_array() {
+        let builtin_ids: Vec<String> = merged_skills
+            .iter()
+            .filter_map(|s| s["id"].as_str().map(|s| s.to_string()))
+            .collect();
+        for skill in user_skills {
+            if let Some(id) = skill["id"].as_str() {
+                if !builtin_ids.contains(&id.to_string()) {
+                    merged_skills.push(skill.clone());
+                }
+            }
+        }
+    }
+
+    let mut merged = builtin_manifest.clone();
+    merged["skills"] = serde_json::Value::Array(merged_skills);
+
+    fs::write(
+        &user_manifest_path,
+        serde_json::to_string_pretty(&merged).unwrap_or_default(),
+    )
+    .map_err(|e| format!("Failed to write merged skills.json: {}", e))?;
 
     Ok(())
 }
@@ -606,57 +731,87 @@ fn read_template(name: String) -> Result<String, String> {
 // ===== AI Skills 技能 =====
 
 /// 读取 skills/skills.json（技能清单），原样返回 JSON 字符串。
+/// 优先从用户文档目录读取，dev 模式 fallback 到项目根目录。
 #[tauri::command]
 fn list_skills() -> Result<String, String> {
+    // 主路径：用户文档目录
+    if let Ok(user_dir) = get_user_skills_dir() {
+        let path = user_dir.join("skills.json");
+        if path.exists() {
+            return fs::read_to_string(&path)
+                .map_err(|e| format!("Failed to read skills.json: {}", e));
+        }
+    }
+    // 开发模式 fallback：exe 在 target/debug/，技能文件在项目根目录
     let root = get_app_root()?;
-    let path = root.join("skills").join("skills.json");
-    if !path.exists() {
-        // 开发模式下：exe 在 target/debug/，技能文件在项目根目录
-        // 尝试从项目根目录读取
-        if let Some(exe_dir) = root.parent() {
-            // target/debug -> target -> src-tauri -> 项目根目录
-            if let Some(src_tauri_dir) = exe_dir.parent() {
-                if let Some(project_root) = src_tauri_dir.parent() {
-                    let dev_path = project_root.join("skills").join("skills.json");
-                    if dev_path.exists() {
-                        return fs::read_to_string(&dev_path)
-                            .map_err(|e| format!("Failed to read skills.json: {}", e));
-                    }
+    if let Some(exe_dir) = root.parent() {
+        if let Some(src_tauri_dir) = exe_dir.parent() {
+            if let Some(project_root) = src_tauri_dir.parent() {
+                let dev_path = project_root.join("skills").join("skills.json");
+                if dev_path.exists() {
+                    return fs::read_to_string(&dev_path)
+                        .map_err(|e| format!("Failed to read skills.json: {}", e));
                 }
             }
         }
-        return Ok(r#"{"version":1,"skills":[]}"#.to_string());
     }
-    fs::read_to_string(&path).map_err(|e| format!("Failed to read skills.json: {}", e))
+    Ok(r#"{"version":1,"skills":[]}"#.to_string())
 }
 
 /// 读取 skills/ 目录下的技能文件（.md 提示词等）。
+/// 优先从用户文档目录读取，dev 模式 fallback 到项目根目录。
 #[tauri::command]
 fn read_skill_file(file_name: String) -> Result<String, String> {
-    let root = get_app_root()?;
     // 仅允许文件名，防止路径穿越
     let clean = Path::new(&file_name)
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .ok_or_else(|| "Invalid skill file name".to_string())?;
-    let path = root.join("skills").join(&clean);
-    if !path.exists() {
-        // 开发模式下：exe 在 target/debug/，技能文件在项目根目录
-        // 尝试从项目根目录读取
-        if let Some(exe_dir) = root.parent() {
-            if let Some(src_tauri_dir) = exe_dir.parent() {
-                if let Some(project_root) = src_tauri_dir.parent() {
-                    let dev_path = project_root.join("skills").join(&clean);
-                    if dev_path.exists() {
-                        return fs::read_to_string(&dev_path)
-                            .map_err(|e| format!("Failed to read skill file: {}", e));
-                    }
+
+    // 主路径：用户文档目录
+    if let Ok(user_dir) = get_user_skills_dir() {
+        let path = user_dir.join(&clean);
+        if path.exists() {
+            return fs::read_to_string(&path)
+                .map_err(|e| format!("Failed to read skill file: {}", e));
+        }
+    }
+    // 开发模式 fallback：exe 在 target/debug/，技能文件在项目根目录
+    let root = get_app_root()?;
+    if let Some(exe_dir) = root.parent() {
+        if let Some(src_tauri_dir) = exe_dir.parent() {
+            if let Some(project_root) = src_tauri_dir.parent() {
+                let dev_path = project_root.join("skills").join(&clean);
+                if dev_path.exists() {
+                    return fs::read_to_string(&dev_path)
+                        .map_err(|e| format!("Failed to read skill file: {}", e));
                 }
             }
         }
-        return Err(format!("Skill file not found: {}", clean));
     }
-    fs::read_to_string(&path).map_err(|e| format!("Failed to read skill file: {}", e))
+    Err(format!("Skill file not found: {}", clean))
+}
+
+/// 获取 skill-guide.md 的完整路径（供前端打开说明文档）
+#[tauri::command]
+fn get_skill_guide_path() -> Result<String, String> {
+    let root = get_app_root()?;
+    let path = root.join("skill-guide.md");
+    if path.exists() {
+        return Ok(path.to_string_lossy().to_string());
+    }
+    // 开发模式 fallback
+    if let Some(exe_dir) = root.parent() {
+        if let Some(src_tauri_dir) = exe_dir.parent() {
+            if let Some(project_root) = src_tauri_dir.parent() {
+                let dev_path = project_root.join("skill-guide.md");
+                if dev_path.exists() {
+                    return Ok(dev_path.to_string_lossy().to_string());
+                }
+            }
+        }
+    }
+    Err("skill-guide.md not found".to_string())
 }
 
 // ===== 快捷键配置 =====
@@ -1000,6 +1155,7 @@ fn main() {
             read_template,
             list_skills,
             read_skill_file,
+            get_skill_guide_path,
             read_keybindings,
             write_keybindings,
             associate_md_files,
@@ -1051,6 +1207,9 @@ fn main() {
                 .and_then(|p| p.parent().map(|d| d.to_path_buf()))
                 .unwrap_or(PathBuf::from("."));
             let _ = ensure_app_structure(&root);
+
+            // 将内置技能同步到用户文档目录（~/Documents/yizimarkdown/skills/）
+            let _ = sync_builtin_skills();
 
             // 注册 .md 文件图标（覆盖MSI安装后缺失DefaultIcon的问题）
             #[cfg(target_os = "windows")]

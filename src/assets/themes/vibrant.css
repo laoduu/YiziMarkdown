@@ -3,6 +3,10 @@
   --editor-bg: #FFF8F2;
   --editor-text: #2a1a0e;
   --editor-accent: #F3641E;
+  --toolbar-text: #2a1a0e;
+  --toolbar-border: #FFE6D5;
+  --toolbar-hover: #ffe0cc;
+  --toolbar-accent: #F3641E;
   --editor-border: #FFE6D5;
   --editor-surface: #FEF1F1;
   --editor-hover: #ffe0cc;
@@ -40,7 +44,6 @@
   --editor-h3: #ffb060;
   --sidebar-bg: #1e1610;
   --sidebar-text: #a08060;
-  --toolbar-bg: #1a1410;
   --statusbar-bg: #2e241c;
   --statusbar-text: #e0c0a0;
 }

@@ -41,6 +41,7 @@ const bulletItemLine = lineClass('cm-md-bullet-item')
 const orderedItemLine = lineClass('cm-md-ordered-item')
 const taskItemLine = lineClass('cm-md-task-item')
 const taskItemLineChecked = lineClass('cm-md-task-item-checked')
+const hrLine = lineClass('cm-md-hr-line')
 
 /** 创建任务列表 checkbox widget，和预览模式使用同样的 appearance:auto 样式 */
 class TaskCheckboxWidget extends WidgetType {
@@ -85,6 +86,7 @@ function buildDecorations(view: EditorView): DecorationSet {
   const seenQuoteLines = new Set<number>()
   const seenFencedLines = new Set<number>()
   const seenHeadingLines = new Set<number>()
+  const seenHrLines = new Set<number>()
 
   // 标记光标所在行，用于CSS过渡动画
   const caretLineClass = Decoration.line({ class: 'cm-md-caret-line' })
@@ -156,6 +158,16 @@ function buildDecorations(view: EditorView): DecorationSet {
           for (let ln = sL; ln <= eL; ln++) {
             const lo = view.state.doc.line(ln)
             if (!seenQuoteLines.has(lo.from)) { seenQuoteLines.add(lo.from); ranges.push(quoteLine.range(lo.from)) }
+          }
+          return
+        }
+
+        if (name === 'HorizontalRule') {
+          const lo = view.state.doc.lineAt(nFrom)
+          if (!seenHrLines.has(lo.from)) {
+            seenHrLines.add(lo.from)
+            ranges.push(hideDeco.range(lo.from, lo.to))
+            ranges.push(hrLine.range(lo.from))
           }
           return
         }
@@ -298,6 +310,10 @@ export const liveEditTheme = EditorView.theme({
   '.cm-md-quote-line': {
     borderLeft: '3px solid var(--editor-accent)', paddingLeft: '12px',
     color: 'var(--sidebar-text)', fontStyle: 'italic', backgroundColor: 'var(--editor-surface)',
+  },
+  '.cm-md-hr-line': {
+    borderTop: '1px solid var(--editor-border)', minHeight: '1px',
+    backgroundColor: 'transparent',
   },
   '.cm-md-fenced-line': {
     backgroundColor: 'color-mix(in srgb, var(--editor-text) 5%, var(--editor-surface))',

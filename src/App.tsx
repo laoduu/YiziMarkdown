@@ -67,7 +67,7 @@ const openFileDialog = async (): Promise<{ name: string; content: string; filePa
 
 function App() {
   const { t } = useI18n()
-  const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, enabledPlugins, pluginConfigs, setField } = useSettingsStore()
+  const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, enabledPlugins, pluginConfigs, setField, aiPanelOpen, updateSettings } = useSettingsStore()
   const {
     activeTabId, currentTab,
     openFile, openNewFile, closeTab, switchTab,
@@ -81,7 +81,6 @@ function App() {
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false })
   const [showShortcutsPanel, setShowShortcutsPanel] = useState(false)
   const [isSlideshow, setIsSlideshow] = useState(false)
-  const [isAIChatOpen, setIsAIChatOpen] = useState(false)
   const [currentFolder, setCurrentFolder] = useState<string | null>(null)
   const editorRef = useRef<EditorRef>(null)
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -623,7 +622,7 @@ function App() {
         onSearch={handleSearchToggle}
         onSettings={handleSettings}
         onPresent={startSlideshow}
-        onAIChat={() => setIsAIChatOpen((v) => !v)}
+        onAIChat={() => updateSettings({ aiPanelOpen: !aiPanelOpen })}
         isDark={isDark}
         onUndo={() => editorRef.current?.undo()}
         onRedo={() => editorRef.current?.redo()}
@@ -684,8 +683,8 @@ function App() {
 
         {/* AI 侧边聊天面板（v0.2.0）：与左侧文件/大纲对称的右侧面板 */}
         <AIChatPanel
-          open={isAIChatOpen}
-          onClose={() => setIsAIChatOpen(false)}
+          open={aiPanelOpen}
+          onClose={() => updateSettings({ aiPanelOpen: false })}
           docContent={tab?.content || ''}
           docName={tab?.name || ''}
           onInsert={handleAIInsert}

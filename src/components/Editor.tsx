@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, forwardRef, useImper
 import { EditorView, keymap, lineNumbers, drawSelection, highlightActiveLine } from '@codemirror/view'
 import { EditorState, Compartment, Extension } from '@codemirror/state'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
-import { defaultHighlightStyle, syntaxHighlighting, indentOnInput, bracketMatching } from '@codemirror/language'
+import { defaultHighlightStyle, syntaxHighlighting, indentOnInput, bracketMatching, codeFolding, foldKeymap } from '@codemirror/language'
 import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo } from '@codemirror/commands'
 import { search, searchKeymap, highlightSelectionMatches, closeSearchPanel } from '@codemirror/search'
 import { autocompletion, completionKeymap } from '@codemirror/autocomplete'
@@ -12,8 +12,11 @@ import { useSettingsStore } from '../stores/settingsStore'
 import { useEditorStore, type ViewMode } from '../stores/editorStore'
 import { findOutlineByLine, computeOutlineItems } from '../lib/headingId'
 import { liveEditExtension } from '../lib/cm-live-render'
+import { headingFoldExtension } from '../lib/cm-heading-fold'
 import { slashMenuExtension, slashMenuState, showSlashMenu, hideSlashMenu, slashMenuAction } from '../lib/cm-slash-menu'
+import { selectionToolbarExtension, type SelectionToolbarInfo } from '../lib/cm-selection-toolbar'
 import SlashMenu from './SlashMenu'
+import SelectionToolbar from './SelectionToolbar'
 import { renderMarkdown } from '../lib/markdownRenderer'
 import { extendMarkdownIt, postRender as pluginPostRender } from '../plugins/registry'
 import { invokeTauri } from '../lib/tauri'
@@ -432,6 +435,26 @@ function buildEditorTheme(isDark: boolean, fontFamily: string, fontSize: string,
       backgroundColor: 'var(--editor-hover)',
       color: 'var(--editor-text)',
       border: '1px solid var(--editor-border)',
+      borderRadius: '3px',
+      padding: '0 4px',
+    },
+    '.cm-heading-fold-marker': {
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '16px',
+      height: '16px',
+      cursor: 'pointer',
+      color: 'var(--editor-border)',
+      borderRadius: '3px',
+      transition: 'color 0.15s, background-color 0.15s',
+      flexShrink: '0',
+      verticalAlign: 'middle',
+      marginRight: '2px',
+    },
+    '.cm-heading-fold-marker:hover': {
+      color: 'var(--editor-accent)',
+      backgroundColor: 'var(--editor-hover)',
     },
     '.cm-searchMatch': {
       backgroundColor: 'rgba(255, 213, 0, 0.3)',
@@ -475,6 +498,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   const [slashMenuVisible, setSlashMenuVisible] = useState(false)
   const [slashMenuCoords, setSlashMenuCoords] = useState({ left: 0, bottom: 0 })
   const [slashMenuQuery, setSlashMenuQuery] = useState('')
+  const [selToolbar, setSelToolbar] = useState<SelectionToolbarInfo & { visible: boolean }>({ visible: false, x: 0, y: 0, text: '' })
   const lineNumbersCompartment = useRef(new Compartment()).current
   const richCompartment = useRef(new Compartment()).current
   const lineWrappingCompartment = useRef(new Compartment()).current
@@ -922,8 +946,15 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         spellCheckCompartment.of(EditorView.contentAttributes.of({ spellcheck: spellCheck ? 'true' : 'false' })),
         highlightActiveLine(),
         highlightSelectionMatches(),
+        codeFolding(),
+        keymap.of(foldKeymap),
+        headingFoldExtension,
         search(),
         slashMenuExtension(),
+        selectionToolbarExtension(
+          (info) => setSelToolbar({ ...info, visible: true }),
+          () => setSelToolbar((prev) => ({ ...prev, visible: false })),
+        ),
         EditorView.updateListener.of((update) => {
           if (!update.docChanged && !update.selectionSet && update.transactions.length === 0) return
           for (const tr of update.transactions) {
@@ -1240,6 +1271,41 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     setSlashMenuVisible(false)
   }, [])
 
+  // 预览区划词监听：在 preview 或 split 模式下监听 selectionchange
+  useEffect(() => {
+    if (viewMode !== 'preview' && viewMode !== 'split') return
+    const container = previewScrollRef.current
+    if (!container) return
+
+    let pendingRaf = 0
+    const onSelectionChange = () => {
+      const sel = window.getSelection()
+      if (!sel || sel.isCollapsed || !sel.rangeCount) {
+        setSelToolbar((prev) => ({ ...prev, visible: false }))
+        return
+      }
+      const range = sel.getRangeAt(0)
+      // 检查选区是否在预览容器内
+      if (!container.contains(range.commonAncestorContainer)) return
+      const text = sel.toString()
+      if (text.trim().length < 2) {
+        setSelToolbar((prev) => ({ ...prev, visible: false }))
+        return
+      }
+      if (pendingRaf) cancelAnimationFrame(pendingRaf)
+      pendingRaf = requestAnimationFrame(() => {
+        const rect = range.getBoundingClientRect()
+        setSelToolbar({ visible: true, x: rect.left, y: rect.top, text })
+      })
+    }
+
+    document.addEventListener('selectionchange', onSelectionChange)
+    return () => {
+      document.removeEventListener('selectionchange', onSelectionChange)
+      if (pendingRaf) cancelAnimationFrame(pendingRaf)
+    }
+  }, [viewMode])
+
   return (
     <div className="editor-container h-full flex flex-col">
       <div className="flex-1 overflow-hidden flex">
@@ -1257,6 +1323,14 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
             onClose={handleSlashMenuClose}
           />
         )}
+
+        {/* 划词助手浮动工具栏 */}
+        <SelectionToolbar
+          visible={selToolbar.visible}
+          x={selToolbar.x}
+          y={selToolbar.y}
+          text={selToolbar.text}
+        />
 
         {/* 预览面板：永远挂载 */}
         <div ref={previewScrollRef} style={{ flex: viewMode === 'split' ? '1 1 0%' : viewMode === 'preview' ? '1 1 100%' : '0 0 0%', minHeight: 0, overflow: 'auto', pointerEvents: (viewMode === 'edit' || viewMode === 'live') ? 'none' : 'auto' }}>

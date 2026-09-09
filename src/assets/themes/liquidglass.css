@@ -16,6 +16,10 @@
   --editor-text: #1a2538;
   /* 品牌色：明亮冰蓝，用于标题、链接、光标、高亮 */
   --editor-accent: #2563eb;
+  --toolbar-text: #1a2538;
+  --toolbar-border: rgba(140, 165, 210, 0.35);
+  --toolbar-hover: rgba(200, 220, 250, 0.45);
+  --toolbar-accent: #2563eb;
   /* 边框：淡蓝玻璃边，增强玻璃质感 */
   --editor-border: rgba(140, 165, 210, 0.35);
   /* 表面：半透明白色玻璃面板 */
@@ -65,7 +69,6 @@
   --editor-h3: #60a5fa;
   --sidebar-bg: rgba(8, 14, 28, 0.95);
   --sidebar-text: #5d85c0;
-  --toolbar-bg: rgba(10, 16, 32, 0.95);
   --statusbar-bg: rgba(25, 45, 85, 0.9);
   --statusbar-text: #90b4e0;
 }

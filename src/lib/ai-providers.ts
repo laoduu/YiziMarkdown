@@ -24,6 +24,8 @@ export type ProviderId =
   | 'volcengine'
   | 'siliconflow'
   | 'minimax'
+  | 'mimo'
+  | 'longcat'
   // Aggregator
   | 'openrouter'
   | 'opencode-go'
@@ -184,6 +186,26 @@ export const PROVIDERS: ProviderConfig[] = [
     defaultBaseUrl: 'https://api.minimax.io/v1',
     modelHint: 'MiniMax-M3 · MiniMax-M2.7',
     signupUrl: 'https://platform.minimax.io/',
+  },
+  {
+    id: 'mimo',
+    label: 'Xiaomi MiMo',
+    i18nKey: 'providerMimo',
+    apiFormat: 'openai',
+    defaultModel: 'mimo-v2.5',
+    defaultBaseUrl: 'https://api.xiaomimimo.com/v1',
+    modelHint: 'mimo-v2.5 · mimo-v2.5-pro',
+    signupUrl: 'https://platform.xiaomimimo.com/#/console/api-keys',
+  },
+  {
+    id: 'longcat',
+    label: 'Meituan LongCat',
+    i18nKey: 'providerLongcat',
+    apiFormat: 'openai',
+    defaultModel: 'LongCat-2.0',
+    defaultBaseUrl: 'https://api.longcat.chat/openai',
+    modelHint: 'LongCat-2.0',
+    signupUrl: 'https://longcat.chat/platform/api_keys',
   },
   // ---- Aggregator ----------------------------------------------------
   {

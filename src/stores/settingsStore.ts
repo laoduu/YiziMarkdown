@@ -50,6 +50,12 @@ export interface SettingsState {
   /** AI 聊天面板宽度（px） */
   aiChatWidth: number
 
+  // AI 面板运行时状态（不持久化）
+  /** AI 面板是否打开 */
+  aiPanelOpen: boolean
+  /** 来自划词助手的待执行动作 */
+  aiPendingAction: { type: 'skill'; skillId: string; fromSelection?: boolean; selectedText?: string } | { type: 'chat'; text: string } | null
+
   // 方法
   setField: <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => void
   updateSettings: (partial: Partial<SettingsState>) => void
@@ -98,6 +104,10 @@ export const useSettingsStore = create<SettingsState>()(
       aiContextTurns: 3,
       aiProviderConfigs: {},
       aiChatWidth: 380,
+
+      // AI 面板运行时状态
+      aiPanelOpen: false,
+      aiPendingAction: null,
 
       // 方法
       setField: (key, value) => set({ [key]: value }),

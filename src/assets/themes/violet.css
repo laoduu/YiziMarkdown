@@ -14,6 +14,10 @@
      用于：标题、链接、光标、选中高亮、大纲激活项、
      按钮激活态、状态栏背景、引用块左边框等 */
   --editor-accent: #7209B7;
+  --toolbar-text: #271b30;
+  --toolbar-border: #e4d0f5;
+  --toolbar-hover: #ede0f8;
+  --toolbar-accent: #7209B7;
   /* 边框色：浅淡紫，用于分割线、表格边框、代码块边框、行号分隔线 */
   --editor-border: #e4d0f5;
   /* 表面色/卡片色：比主背景略深的淡紫
@@ -80,8 +84,6 @@
   --sidebar-bg: #1b1228;
   /* 侧栏文字色：浅紫调 */
   --sidebar-text: #b484e0;
-  /* 工具栏背景：与编辑区同色 */
-  --toolbar-bg: #16101f;
   /* 状态栏背景：深紫灰 */
   --statusbar-bg: #271b38;
   /* 状态栏文字：浅紫灰 */

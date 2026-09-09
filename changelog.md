@@ -1,5 +1,44 @@
 # YiziMarkdown 开发日志
 
+## v0.2.3
+
+**划词助手 + AI 深度集成**
+
+- **划词浮动工具栏**：源码编辑器和预览模式中选中文本后，选区上方显示浮动操作栏（左对齐），提供 6 个操作按钮（演示稿、摘要、改写、翻译、复制、添加到 AI 对话）
+- **CM6 扩展**：CodeMirror 6 ViewPlugin 监听选区变化，锚点锁定避免拖拽时工具栏跟随移动；`requestAnimationFrame` 延迟读取坐标避免 `readMeasured` 崩溃
+- **预览模式支持**：通过 `selectionchange` 事件委托，在 preview 和 split 模式下也能触发划词工具栏
+- **划词 + 技能联动**：从划词工具栏触发技能时，输入区同时显示文本胶囊（📄）和技能胶囊（⚡），AI 只处理选中文本而非全文；`fromSelection` 模式跳过全文注入，用户消息标注"请直接对以下选中文本执行操作"
+- **文本胶囊 hover 预览**：hover 文本胶囊时显示完整内容预览卡片（`position: fixed`，最大 200 字 + 省略号），用 `Map<string, string>` + 唯一 CSS class ID 存储完整文本
+- **多 AI 供应商**：新增小米 MiMo（`mimo`，默认模型 `mimo-v2.5`）和美团 LongCat（`longcat`，默认模型 `LongCat-2.0`），i18n 覆盖全部 15 种语言
+- **技能存储迁移**：技能文件迁移至 `~/Documents/yizimarkdown/skills/`，启动时自动同步内置技能；新增 `skill-guide.md` 定制指南，AI 面板底部"管理技能"按钮直接打开
+- **AI 面板状态持久化**：`aiPanelOpen` 和 `aiPendingAction` 持久化到 settings store
+
+**划词工具栏主题适配**
+
+- **专属 CSS 变量**：每个主题定义 `--toolbar-bg` / `--toolbar-text` / `--toolbar-border` / `--toolbar-hover` / `--toolbar-accent`，暗色模式不覆盖，工具栏始终亮色
+- **两套主题文件同步**：`src/assets/themes/` 和 `src-tauri/themes/` 同步更新
+
+**踩坑记录（重点）**
+
+1. **contentEditable 剥离 `data-*` 属性**：`dataset.fullText` 被浏览器静默移除 → 改用 `Map<string, string>` + CSS class ID
+2. **contentEditable DOM 重建致 WeakMap 引用失效**：`appendChild` 进 contentEditable 后浏览器重建 DOM 树，原始元素引用不再匹配 → 改用字符串 key 的 Map
+3. **CM6 `coordsAtPos` update 阶段崩溃**：`readMeasured` 不能在 update 事务中调用 → `requestAnimationFrame` 延迟
+4. **Portal 脱离主题容器**：`createPortal` 到 `document.body` 后暗色模式覆盖 CSS 变量 → 主题专属 `--toolbar-*` 变量，暗色模式不覆盖
+5. **两套主题文件不同步**：`src/assets/themes/` vs `src-tauri/themes/` 运行时只加载后者 → 必须同步修改
+6. **foldGutter 挤压标题文字**：`foldGutter()` 永久占据 gutter 空间 → 改用绝对定位 ViewPlugin
+7. **Decoration.widget 挤压标题文字**：widget 在内容流中占空间 → 改用 `position: absolute` 脱离文档流
+
+**标题折叠（Obsidian 风格）**
+
+- **hover 三角图标**：鼠标 hover 到标题行时，标题左侧出现 `▸` 折叠图标，移开隐藏；已折叠标题常显 `▾` 图标
+- **绝对定位浮层**：`coordsAtPos` 计算标题文字实际位置，定位在标题左侧，不插入内容区，不挤压标题文字
+- **折叠范围**：从当前标题到下一个同级或更高级标题；快捷键 `Ctrl+Shift+[` / `Ctrl+Shift+]`
+- **新增 `cm-heading-fold.ts`**：自定义 ViewPlugin，用绝对定位 `div` 替代 `Decoration.widget`，避免 DOM 拆入内容区
+
+**实时模式分割线修复**
+
+- **修复 `---` 分割线**：`cm-live-render.ts` 新增 `HorizontalRule` 节点处理，隐藏原文 + `border-top` 水平线样式
+
 ## v0.2.2
 
 **工具栏交互重构**
