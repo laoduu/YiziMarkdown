@@ -1,4 +1,4 @@
-/* 活力�?(Vibrant Orange) */
+/* 活力橙 (Vibrant Orange) */
 :root.theme-vibrant {
   --editor-bg: #FFF8F2;
   --editor-text: #2a1a0e;
@@ -48,7 +48,7 @@
   --statusbar-text: #e0c0a0;
 }
 
-/* 活力�?- 标题样式 */
+/* 活力橙 - 标题样式 */
 .editor-content.theme-vibrant h1 {
   font-size: 2em;
   font-weight: 700;

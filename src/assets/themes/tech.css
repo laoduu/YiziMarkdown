@@ -1,4 +1,4 @@
-/* 科技�?(Tech) */
+/* 科技感 (Tech) */
 :root.theme-tech {
   --editor-bg: #f0f4f8;
   --editor-text: #1a202c;
@@ -48,7 +48,7 @@
   --statusbar-text: #ffffff;
 }
 
-/* 科技�?- 标题样式 */
+/* 科技风 - 标题样式 */
 .editor-content.theme-tech h1 {
   font-size: 2em;
   font-weight: 700;

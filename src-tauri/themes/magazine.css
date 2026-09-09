@@ -1,4 +1,4 @@
-/* 杂志�?(Magazine) */
+/* 杂志感 (Magazine) */
 :root.theme-magazine {
   --editor-bg: #faf8f5;
   --editor-text: #2c2416;
@@ -49,7 +49,7 @@
   --statusbar-text: #8a7e6e;
 }
 
-/* 杂志�?- 标题样式 */
+/* 杂志风 - 标题样式 */
 .editor-content.theme-magazine h1 { 
   font-family: var(--font-serif); 
   font-size: 2.5em; 
@@ -92,4 +92,4 @@
 .editor-content.theme-magazine th, .editor-content.theme-magazine td { border: 1px solid var(--editor-border); padding: 0.6em 1em; text-align: left; }
 .editor-content.theme-magazine th { background: var(--editor-surface); font-weight: 600; font-family: var(--font-serif); }
 .editor-content.theme-magazine hr { border: none; text-align: center; margin: 2.5em 0; }
-.editor-content.theme-magazine hr::after { content: '�?�?�?; color: var(--editor-accent); letter-spacing: 1em; }
+.editor-content.theme-magazine hr::after { content: '⁕ ⁕ ⁕'; color: var(--editor-accent); letter-spacing: 1em; }

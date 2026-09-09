@@ -1,4 +1,4 @@
-/* 自然�?(Nature) */
+/* 自然风 (Nature) */
 :root.theme-nature {
   --editor-bg: #f5f2eb;
   --editor-text: #2d3a2e;
@@ -49,7 +49,7 @@
   --statusbar-text: #7a8a78;
 }
 
-/* 自然�?- 标题样式 */
+/* 自然风 - 标题样式 */
 .editor-content.theme-nature h1 { 
   font-family: var(--font-serif); 
   font-size: 2.2em; 
@@ -106,7 +106,7 @@
 .editor-content.theme-nature th { background: var(--editor-surface); font-weight: 600; }
 .editor-content.theme-nature hr { border: none; height: 1px; background: linear-gradient(to right, transparent, var(--editor-border), transparent); margin: 2em 0; }
 
-/* 自然�?- 装饰元素 */
+/* 自然风 - 装饰元素 */
 .editor-content.theme-nature ul, .editor-content.theme-nature ol { padding-left: 1.5em; margin: 1em 0; }
 .editor-content.theme-nature li { margin: 0.3em 0; }
 .editor-content.theme-nature li::marker { color: var(--editor-accent); }

@@ -1,4 +1,4 @@
-/* 极简�?(Minimal) - 默认主题 */
+/* 极简风 (Minimal) - 默认主题 */
 :root.theme-minimal {
   --editor-bg: #ffffff;
   --editor-text: #333333;
@@ -48,7 +48,7 @@
   --statusbar-text: #888888;
 }
 
-/* 极简�?- 标题样式 */
+/* 极简风 - 标题样式 */
 .editor-content.theme-minimal h1 { font-size: 2em; font-weight: 600; margin: 1.5em 0 0.5em; letter-spacing: -0.02em; }
 .editor-content.theme-minimal h2 { font-size: 1.5em; font-weight: 600; margin: 1.3em 0 0.4em; letter-spacing: -0.01em; }
 .editor-content.theme-minimal h3 { font-size: 1.25em; font-weight: 500; margin: 1.2em 0 0.3em; }
