@@ -194,7 +194,39 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
       if (!href || href.startsWith('#')) return
       e.preventDefault()
       e.stopPropagation()
-      invokeTauri('open_url', { url: href })
+      // 解析相对路径为绝对路径
+      let url = href
+      if (!href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('file://') && !href.startsWith('mailto:')) {
+        const currentFilePath = useEditorStore.getState().currentFilePath()
+        if (currentFilePath) {
+          // 获取当前文件所在目录
+          const lastSep = Math.max(currentFilePath.lastIndexOf('\\'), currentFilePath.lastIndexOf('/'))
+          if (lastSep > 0) {
+            const dir = currentFilePath.substring(0, lastSep)
+            // 处理 ./ 和 ../ 相对路径
+            if (href.startsWith('./')) {
+              url = dir + '\\' + href.substring(2).replace(/\//g, '\\')
+            } else if (href.startsWith('../')) {
+              // 逐级向上查找
+              const parts = href.split('/')
+              let resolvedDir = dir
+              for (const part of parts) {
+                if (part === '..') {
+                  const parentSep = Math.max(resolvedDir.lastIndexOf('\\'), resolvedDir.lastIndexOf('/'))
+                  if (parentSep > 0) resolvedDir = resolvedDir.substring(0, parentSep)
+                } else if (part !== '.') {
+                  resolvedDir = resolvedDir + '\\' + part
+                }
+              }
+              url = resolvedDir
+            } else {
+              // 直接相对路径（如 docs/readme.md）
+              url = dir + '\\' + href.replace(/\//g, '\\')
+            }
+          }
+        }
+      }
+      invokeTauri('open_url', { url })
     }
     container.addEventListener('click', handleLinkClick)
     return () => container.removeEventListener('click', handleLinkClick)

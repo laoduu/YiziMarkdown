@@ -38,6 +38,7 @@
       "themes/*": "themes/",
       "templates": "templates/",
       "skills": "skills/",
+      "docs": "docs/",
       "user.css": "user.css",
       "keybindings.json": "keybindings.json",
       "readme.md": "readme.md",
