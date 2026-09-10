@@ -15,8 +15,9 @@
 
 **划词工具栏主题适配**
 
-- **专属 CSS 变量**：每个主题定义 `--toolbar-bg` / `--toolbar-text` / `--toolbar-border` / `--toolbar-hover` / `--toolbar-accent`，暗色模式不覆盖，工具栏始终亮色
+- **专属 CSS 变量**：每个主题定义 `--sel-toolbar-bg` / `--sel-toolbar-text` / `--sel-toolbar-border` / `--sel-toolbar-hover` / `--sel-toolbar-accent`，暗色模式不覆盖，工具栏始终亮色
 - **两套主题文件同步**：`src/assets/themes/` 和 `src-tauri/themes/` 同步更新
+- **顶部工具栏恢复主题适配**：`.toolbar` 背景改用 `--editor-surface`，正确跟随明暗切换
 
 **踩坑记录（重点）**
 
@@ -27,6 +28,8 @@
 5. **两套主题文件不同步**：`src/assets/themes/` vs `src-tauri/themes/` 运行时只加载后者 → 必须同步修改
 6. **foldGutter 挤压标题文字**：`foldGutter()` 永久占据 gutter 空间 → 改用绝对定位 ViewPlugin
 7. **Decoration.widget 挤压标题文字**：widget 在内容流中占空间 → 改用 `position: absolute` 脱离文档流
+8. **`--toolbar-*` 变量名冲突**：划词工具栏和顶部工具栏共用 `--toolbar-*` 变量，暗色模式下顶部工具栏也被锁定亮色 → 划词工具栏改用 `--sel-toolbar-*` 专属变量
+9. **PowerShell `Set-Content` 破坏 UTF-8 编码**：批量重命名 CSS 变量时 `Set-Content` 默认用系统 ANSI 编码写回，中文注释变乱码 → 改用 `[System.IO.File]::WriteAllBytes` + `Encoding.UTF8`
 
 **标题折叠（Obsidian 风格）**
 
