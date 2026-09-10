@@ -1,8 +1,9 @@
 # YiziMarkdown
 
-<p align="center">
-    <img src="docs/index.png" alt="YiziMarkdown" width="100%" />
-</p>
+
+![image](https://github.com/laoduu/YiziMarkdown/raw/main/docs/index.png)
+
+[简体中文](./readme.md) | [繁體中文](./docs/readme-zh-TW.md) | [English](./docs/readme-en.md) | [日本語](./docs/readme-ja.md) | [한국어](./docs/readme-ko.md) | [Deutsch](./docs/readme-de.md) | [Français](./docs/readme-fr.md) | [Español](./docs/readme-es.md) | [Português](./docs/readme-pt.md) | [Italiano](./docs/readme-it.md) | [Polski](./docs/readme-pl.md) | [Nederlands](./docs/readme-nl.md) | [Türkçe](./docs/readme-tr.md) | [Svenska](./docs/readme-sv.md) | [Українська](./docs/readme-uk.md)
 
 **官方网站：** https://md.yizigpt.com
 
@@ -71,7 +72,6 @@
 - **全屏切换**：F 键全屏/还原，支持从任意窗口状态（普通/最大化）可靠进入
 - **退出按钮**：鼠标活动时右上角显示半透明退出按钮，1.5 秒无操作自动隐藏
 - **窗口状态还原**：退出演示时自动还原到进入前的窗口状态（全屏/最大化/普通）
-- **演讲者备注**：`<!-- notes: ... -->` 注释，播放时按 `S` 显示
 
 ### 插件系统
 
@@ -96,7 +96,6 @@
 - **另存为**：新建文件保存时自动弹出另存为对话框
 - **导出**：HTML / Markdown / 纯文本三种格式
 - **.md 文件关联**：设置中一键设为系统默认 Markdown 编辑器，双击 .md 直接打开（Windows 注册表 / macOS LaunchServices）
-- **命令行打开**：`YiziMarkdown 文件路径.md` 直接打开
 
 ### 外观定制
 
@@ -104,7 +103,7 @@
 - **深色 / 亮色模式**：每套主题均有亮暗两套配色
 - **字体自定义**：源码和预览模式分别设置字体、字号、行高
 - **自定义 CSS**：`user.css` 覆盖在所有主题之后，优先级最高
-- **主题扩展**：`themes/` 目录放入 `.css` 文件，重启后自动识别
+- **主题扩展**：`themes/` 目录放入 `.css` 文件，并在 `themes/theme.json` 中添加主题参数，重启后自动识别
 
 ### 其他
 
