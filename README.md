@@ -1,7 +1,7 @@
 # YiziMarkdown
 
 <p align="center">
-  <img src="docs/index.png" alt="YiziMarkdown" width="100%" />
+    <img src="docs/index.png" alt="YiziMarkdown" width="100%" />
 </p>
 
 **官方网站：** https://md.yizigpt.com

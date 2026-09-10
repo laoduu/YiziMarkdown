@@ -57,28 +57,8 @@
 </head>
 <body>
 
-<!-- Nav -->
-<nav class="nav" id="nav">
-    <div class="nav-inner">
-        <a href="#" class="nav-brand">
-            <img src="assets/icon.png" alt="YiziMarkdown">
-            <span><span class="yizi">Yizi</span><span class="markdown">Markdown</span></span>
-        </a>
-        <div class="nav-links">
-            <a href="#features">功能</a>
-            <a href="#slideshow">演示模式</a>
-            <a href="#ai">AI 助手</a>
-            <a href="#themes">主题</a>
-            <a href="#shortcuts">快捷键</a>
-            <a href="#changelog">更新</a>
-            <a href="#faq">常见问题</a>
-            <a href="https://github.com/laoduu/YiziMarkdown/releases" target="_blank" class="btn-nav">
-                <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 7l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                下载
-            </a>
-        </div>
-    </div>
-</nav>
+<!-- Nav（与帮助中心共用，由 assets/js/site-chrome.js 渲染） -->
+<div id="site-nav"></div>
 
 <!-- Hero -->
 <section class="hero">
@@ -123,6 +103,7 @@
         <span class="section-label">核心功能</span>
         <h2 class="section-title">为 Markdown 写作而生</h2>
         <p class="section-desc">基于 CodeMirror 6 构建，支持实时预览、并排编辑、多主题切换，让写作回归纯粹。</p>
+        <a class="section-more" href="help.html#edit">查看详细用法与编辑技巧<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
     </div>
     <div class="features-grid">
         <div class="feature-card">
@@ -194,6 +175,7 @@
         <span class="section-label">类 PPT 演示模式</span>
         <h2 class="section-title">写好的笔记，一键变成幻灯片</h2>
         <p class="section-desc">无需导出、无需另装软件。<code>Ctrl+Alt+P</code> 进入全屏演示，纯 Markdown 用 <code>---</code> 分页，引擎分析整页内容自动匹配版式，主题色与字体实时继承。</p>
+        <a class="section-more" href="help.html#slideshow">演示模式完整说明<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
     </div>
     <div class="spotlight-inner">
         <div class="spotlight-text">
@@ -233,6 +215,7 @@
         <span class="section-label">AI 大模型助手</span>
         <h2 class="section-title">AI 加持，写作进入快车道</h2>
         <p class="section-desc">右侧聊天面板内置大模型，侧边对称为写作而生。API 密钥存系统钥匙串，安全不落盘，支持流式输出、随时停止与推理过程折叠查看。</p>
+        <a class="section-more" href="help.html#ai">AI 助手配置与技能用法<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
     </div>
     <div class="spotlight-inner">
         <div class="spotlight-visual">
@@ -276,6 +259,7 @@
         <span class="section-label">精心打磨</span>
         <h2 class="section-title">十五款主题，各有风格</h2>
         <p class="section-desc">从学术严谨到赛博朋克、液态玻璃，每款主题都支持亮暗双模式，反复调校只为最舒适的阅读体验。</p>
+        <a class="section-more" href="help.html#appearance">主题切换与外观定制<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
     </div>
     <div class="theme-stage">
         <div class="theme-stack" id="themeStack">
@@ -298,6 +282,7 @@
         <span class="section-label">高效写作</span>
         <h2 class="section-title">快捷键速查</h2>
         <p class="section-desc">键盘流的快乐，一键直达。</p>
+        <a class="section-more" href="help.html#shortcuts">完整快捷键表<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
     </div>
     <div class="shortcut-grid">
         <div class="shortcut-item"><span class="shortcut-key">/ 或 、</span><span class="shortcut-desc">斜杠菜单</span></div>
@@ -471,6 +456,7 @@
         <span class="section-label">常见问题</span>
         <h2 class="section-title">常见问题解答</h2>
         <p class="section-desc">遇到使用问题？这里也许有答案。</p>
+        <a class="section-more" href="help.html#faq">更多问题见帮助中心<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
     </div>
     <div class="faq-list">
         <div class="faq-item">
@@ -512,12 +498,9 @@
     </div>
 </section>
 
-<!-- Footer -->
-<footer class="footer">
-    <p>&copy; 2026 YiziMarkdown &middot; <a href="https://github.com/laoduu/YiziMarkdown/blob/main/LICENSE" target="_blank">MIT License</a> &middot; Built with Tauri + React + CodeMirror 6</p>
-    <p style="margin-top: 6px; font-size: 12px; color: #94a3b8;">渝ICP备2023007919号-1</p>
-</footer>
+<div id="site-footer"></div>
 
+<script src="assets/js/site-chrome.js"></script>
 <script src="assets/js/main.js"></script>
 
 </body>

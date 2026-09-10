@@ -15,6 +15,9 @@
 
         html { scroll-behavior: smooth; }
 
+        /* 固定导航 64px，锚点跳转预留偏移，避免标题被压在导航下面 */
+        section[id], .help-section[id], .help-sub[id] { scroll-margin-top: 84px; }
+
         body {
             font-family: 'Inter', -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
             color: var(--dark); background: var(--white);
@@ -40,12 +43,39 @@
         .nav-brand span { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
         .nav-brand .yizi { color: var(--orange); }
         .nav-brand .markdown { color: var(--blue); }
-        .nav-links { display: flex; align-items: center; gap: 32px; }
+        .nav-links { display: flex; align-items: center; gap: clamp(16px, 2.2vw, 30px); }
         .nav-links a {
             font-size: 14px; font-weight: 500; color: var(--gray);
             text-decoration: none; transition: color 0.2s;
+            white-space: nowrap;
         }
         .nav-links a:hover { color: var(--blue); }
+        .nav-links a.active { color: var(--blue); font-weight: 700; }
+
+        /* 指向帮助中心的深度链接 */
+        .section-more {
+            display: inline-flex; align-items: center; gap: 6px;
+            margin-top: 16px; font-size: 14px; font-weight: 600;
+            color: var(--blue); text-decoration: none;
+        }
+        .section-more:hover { gap: 11px; text-decoration: underline; }
+        .section-more svg { flex: none; }
+
+        /* 移动端汉堡按钮 */
+
+        /* 移动端汉堡按钮 */
+        .nav-toggle {
+            display: none; width: 40px; height: 36px; padding: 0;
+            background: none; border: none; cursor: pointer;
+            flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+        }
+        .nav-toggle span {
+            display: block; width: 20px; height: 2px; border-radius: 2px;
+            background: var(--dark); transition: transform 0.25s, opacity 0.2s;
+        }
+        .nav-toggle.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+        .nav-toggle.open span:nth-child(2) { opacity: 0; }
+        .nav-toggle.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
         .btn-nav {
             display: inline-flex; align-items: center; gap: 6px;
             padding: 9px 22px; border-radius: 10px;
@@ -784,8 +814,27 @@
             .theme-info { text-align: center; }
             .theme-selector { justify-items: center; }
         }
+        @media (max-width: 900px) {
+            .nav-toggle { display: flex; }
+            .nav-links {
+                position: absolute; top: 64px; left: 0; right: 0;
+                flex-direction: column; align-items: stretch; gap: 0;
+                background: #fff; border-bottom: 1px solid rgba(0,0,0,0.06);
+                box-shadow: 0 12px 28px rgba(15,23,42,0.10);
+                padding: 8px 20px 16px;
+                display: none;
+            }
+            .nav-links.open { display: flex; }
+            .nav-links a {
+                padding: 13px 0; font-size: 15px;
+                border-bottom: 1px solid rgba(0,0,0,0.05);
+            }
+            .nav-links a.btn-nav {
+                margin-top: 12px; justify-content: center;
+                border-bottom: none; color: #fff !important;
+            }
+        }
         @media (max-width: 768px) {
-            .nav-links a:not(.btn-nav) { display: none; }
             .hero { min-height: auto; padding: 110px 20px 0; }
             .hero-sub .nowrap { white-space: normal; }
             .mockup-section { padding-bottom: 60px; }

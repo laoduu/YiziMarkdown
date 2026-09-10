@@ -18,7 +18,6 @@ YiziMarkdown 是一款简洁精致的跨平台 Markdown 编辑器，支持 Windo
 ### 打开文件
 
 - 按 Ctrl+O，支持 .md / .markdown / .txt 格式
-- 命令行打开：`YiziMarkdown.exe 文件路径.md`
 - 双击 .md 文件（需先在设置中关联）
 
 ### 保存文件
@@ -49,8 +48,8 @@ YiziMarkdown 是一款简洁精致的跨平台 Markdown 编辑器，支持 Windo
 工具栏右侧或标签栏右侧可切换五种模式：
 
 - **源码**：纯 Markdown 文本编辑
-- **实时模式**：所见即所得编辑，Markdown 标记自动隐藏，专注内容创作
 - **并排模式**：左侧编辑，右侧实时预览，支持大纲联动滚动
+- **实时模式**：所见即所得（WYSIWYG）编辑，Markdown 标记自动隐藏，专注内容创作，四种原创交互动画，引导注意力聚焦内容
 - **预览模式**：纯渲染预览，不可编辑
 - **演示模式**：全屏幻灯片播放（`Ctrl+Alt+P`）
 
@@ -104,12 +103,14 @@ YiziMarkdown 是一款简洁精致的跨平台 Markdown 编辑器，支持 Windo
 
 工具栏机器人按钮打开右侧 AI 聊天面板，与内置大模型对话：
 
-- **供应商**：支持 17 家大模型（OpenAI、Anthropic、Gemini、DeepSeek、通义千问、智谱 GLM、Kimi、豆包、Ollama 本地模型等），在 设置 → AI 中选择并配置密钥；「自定义服务」可选 OpenAI 兼容 / Anthropic 兼容协议，自填 Base URL、模型 ID 与密钥，本地端点密钥可留空
+- **供应商**：内置 18 家大模型 + 自定义服务 = 19 个选项，覆盖 OpenAI、Anthropic、Google Gemini、xAI、Mistral、Groq、DeepSeek、通义千问、智谱 GLM、Kimi、豆包（火山引擎）、硅基流动、MiniMax、小米 MiMo、美团 LongCat、OpenRouter、opencode-go、Ollama 本地模型等，在 设置 → AI 中选择并配置密钥；「自定义服务」可选 OpenAI 兼容 / Anthropic 兼容协议，自填 Base URL、模型 ID 与密钥，本地端点密钥可留空
 - **密钥安全**：API 密钥保存在系统钥匙串（OS keychain），设置页可一键保存、清除、验证
 - **流式回复**：回答实时流式输出，可随时停止；支持停止生成、清空对话
 - **思考过程**：DeepSeek / Qwen / GLM / Anthropic 等推理模型的思考内容以可折叠「思考过程」区块展示（默认收起），不影响正文阅读
 - **引用当前文档**：勾选「引用当前文档」后，把当前文档内容作为上下文发送给 AI；可在 设置 → AI 调整引用上限（64K~512K/不限）
+- **上下文轮数**：可在设置中配置 0~20 轮历史携带
 - **结果落盘**：每条回复下方有 复制、插入到文档（光标处）、创建新文档 三个操作
+- **面板状态持久化**：AI 面板的开关与待执行动作会被记住，关闭后再次打开保持状态
 
 #### AI 技能（Skill）
 
@@ -128,8 +129,13 @@ YiziMarkdown 是一款简洁精致的跨平台 Markdown 编辑器，支持 Windo
 | 演示稿提炼 | 把当前文档提炼为适合演示模式（幻灯片）的精简 Markdown 文稿 |
 | 文档摘要 | 输出一句话主旨 + 核心要点 + 关键结论 |
 | 润色改写 | 保持原意，修正语病并优化表达 |
+| 全文翻译 | 完整翻译为目标语言，保留专有名词与 Markdown 排版，代码原样保留 |
 
-**自定义技能**：在程序目录 `skills/` 中放入技能的 Markdown 提示词文件，并在 `skills.json` 清单中登记（字段：`id`、`name`、`summary`、`description`、`file`、`needsDoc`），重启后在技能菜单中即可看到。示例见内置的 `slides-outline.md`。
+**技能文件位置（v0.2.3 起）**：技能文件已从程序目录迁移到用户目录 `~/Documents/yizimarkdown/skills/`，方便自定义且**不会被版本更新覆盖**。首次启动新版本时，内置技能会自动同步到该目录。
+
+**自定义技能**：在 `~/Documents/yizimarkdown/skills/` 目录放入技能的 Markdown 提示词文件，并在 `skills.json` 清单中登记（字段：`id`、`name`、`summary`、`description`、`file`、`needsDoc`），重启后在技能菜单中即可看到。示例见内置的 `slides-outline.md`。
+
+**管理技能**：AI 聊天面板底部有「**管理技能**」按钮，一键打开技能目录并查看 `skill-guide.md` 定制指南。
 
 ### 多语言界面
 
@@ -158,6 +164,25 @@ YiziMarkdown 是一款简洁精致的跨平台 Markdown 编辑器，支持 Windo
 - 输入 `>` 后按空格，自动生成引用块
 - 输入 `` ` `` 自动配对
 - 输入 `**`、`*`、`~~`、`[` 等自动配对关闭
+
+### 标题折叠（v0.2.3 新增）
+
+长文档可以像 Obsidian 一样折叠章节：
+- 鼠标悬停标题时，左侧出现折叠图标，点击折叠该标题下的内容
+- 已折叠的标题**常显**展开图标，无需 hover
+- 快捷键：<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>[</kbd> 折叠当前标题，<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>]</kbd> 展开
+
+### 划词助手（v0.2.3 新增）
+
+选中一段文字，浮动操作栏立刻出现，可直接交给 AI 处理。可用操作：
+- **演示稿**：把选中内容提炼为演示文稿结构
+- **摘要**：提炼核心要点
+- **改写 / 润色**：优化表达，保持原意
+- **翻译**：翻译为目标语言
+- **复制**：复制到剪贴板
+- **添加到 AI 对话**：作为上下文送进右侧 AI 面板
+
+**与技能联动**：通过划词触发技能时，AI 只处理你选中的文本，输入框里会显示「文本胶囊 + 技能胶囊」，一目了然。
 
 ---
 
@@ -305,6 +330,8 @@ graph LR
 | F1 | 快捷键大全 |
 | F2 | 切换深浅模式 |
 | F3 | 循环切换视图 |
+| Ctrl+Shift+[ | 折叠当前标题 |
+| Ctrl+Shift+] | 展开当前标题 |
 | Ctrl+Alt+P | 演示模式（幻灯片） |
 | Ins | 斜杠菜单 |
 | F12 | 开发者工具 |
@@ -441,14 +468,17 @@ YiziMarkdown/
 │   ├── mint.css            # 薄荷冰沙
 │   ├── sunset.css          # 落日熔金
 │   └── typewriter.css      # 复古打字机
-├── skills/                 # AI 技能（Skill）
+├── skills/                 # 旧版技能目录（v0.2.3 起迁移至 ~/Documents/yizimarkdown/skills/）
 │   ├── skills.json         # 技能清单（名称/简介/提示词文件名）
 │   ├── slides-outline.md   # 演示稿提炼
 │   ├── doc-summary.md      # 文档摘要
-│   └── polish-writing.md   # 润色改写
+│   ├── polish-writing.md   # 润色改写
+│   └── translate-fulltext.md # 全文翻译
 └── templates/              # 文档模板
     └── default.md          # 默认模板
 ```
+
+> 提示：v0.2.3 起技能文件的真实存储位置是用户目录 `~/Documents/yizimarkdown/skills/`，自定义技能请放这里，避免版本更新时被覆盖。
 
 ---
 
@@ -475,8 +505,10 @@ A: 在各设置面板底部点击「恢复默认」按钮。
 **Q: 关联 .md 文件后图标没有变？**
 A: Windows 图标缓存可能延迟刷新，可尝试重启资源管理器或重启电脑。
 
-**Q: 命令行打开文件？**
-A: 在命令行中执行 `YiziMarkdown.exe 文件路径.md`，或创建快捷方式在目标后追加文件路径。
-
 **Q: 数据存储在哪里？**
-A: 编辑器状态（打开的文件、设置偏好）保存在程序所在目录。配置文件会自动创建。
+A: 数据分四个层面存放：
+
+1. **新建/未保存文件**：在编辑器内存在 localStorage 缓存，下次打开软件时自动恢复、自动加载（不依赖系统文件路径，重启后仍在）
+2. **配置文件**（主题、自动保存参数、快捷键绑定等）：同样存在 localStorage 缓存中
+3. **API 密钥**：保存在系统钥匙串（macOS Keychain / Windows 凭据管理器），**不明文暴露、不上传网络**——随时可在「设置 → AI」清除
+4. **技能文件（v0.2.3 起）**：从应用目录迁移至用户目录 `~/Documents/yizimarkdown/skills/`，**支持自定义**，升级软件**不会覆盖**

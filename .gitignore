@@ -35,3 +35,7 @@ tauri-dev.log.err
 
 # Build releases
 releases/
+
+# 发布临时产物与本地工作区记忆
+.release_tmp/
+.workbuddy/

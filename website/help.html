@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>帮助中心 - YiziMarkdown 使用文档（Markdown 编辑器 / AI 助手 / 演示模式）</title>
+    <meta name="description" content="YiziMarkdown 帮助中心：从下载安装、文档管理、五种视图模式、Markdown 与公式图表写作，到类 PPT 演示模式、AI 大模型助手、技能系统、主题外观、快捷键与常见问题，完整使用说明一站查阅。">
+    <meta name="keywords" content="YiziMarkdown,帮助中心,使用教程,Markdown编辑器,演示模式,AI助手,技能Skill,主题,快捷键,常见问题">
+    <meta name="author" content="YiziPaper">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://md.yizigpt.com/help.html">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="YiziMarkdown 帮助中心 - 完整使用文档">
+    <meta property="og:description" content="安装、编辑、演示、AI、主题、快捷键 —— 关于 YiziMarkdown 的一切用法，都在这里。">
+    <meta property="og:url" content="https://md.yizigpt.com/help.html">
+    <meta property="og:site_name" content="YiziMarkdown">
+    <meta property="og:locale" content="zh_CN">
+    <meta property="og:image" content="https://md.yizigpt.com/assets/index.webp">
+
+    <link rel="icon" type="image/png" href="assets/icon.png">
+    <link rel="shortcut icon" href="assets/favicon.ico">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/help.css">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "首页", "item": "https://md.yizigpt.com/" },
+            { "@type": "ListItem", "position": 2, "name": "帮助中心", "item": "https://md.yizigpt.com/help.html" }
+        ]
+    }
+    </script>
+</head>
+<body>
+
+<!-- 共用导航（由 site-chrome.js 渲染，与首页完全一致） -->
+<div id="site-nav"></div>
+<noscript>
+    <div style="padding: 88px 20px 0; text-align: center; font-size: 14px; color: #64748b;">
+        导航需要 JavaScript。请直接访问 <a href="index.html" style="color: #002FA7;">YiziMarkdown 首页</a>。
+    </div>
+</noscript>
+
+<!-- 页头 -->
+<header class="help-header">
+    <div class="help-header-inner">
+        <div class="help-crumb">
+            <a href="index.html">首页</a><span>›</span><a href="help.html">帮助中心</a>
+        </div>
+        <h1 class="help-title">帮助中心</h1>
+        <p class="help-subtitle">从安装到进阶，关于 YiziMarkdown 的一切用法。当前版本 v0.2.3。</p>
+        <div class="help-search">
+            <svg class="help-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <input type="text" class="help-search-input" id="helpSearch" placeholder="搜索帮助内容，例如「演示模式」「划词」「API 密钥」" autocomplete="off">
+            <span class="help-search-hint">/</span>
+            <div class="help-results" id="helpResults"></div>
+        </div>
+    </div>
+</header>
+
+<div class="help-layout">
+
+    <!-- 左侧章节导航（由 help.js 生成） -->
+    <aside class="help-sidebar" id="helpSidebar">
+        <nav id="helpNav"></nav>
+    </aside>
+
+    <!-- 正文 -->
+    <main class="help-content">
+
+        <!-- ========== 1. 快速上手 ========== -->
+        <section class="help-section" id="start" data-kw="安装 下载 启动 便携版 界面 上手 入门 解压 免安装">
+            <h2><a class="anchor" href="#start">#</a>快速上手</h2>
+            <p class="help-lead">免安装、解压即用。三分钟写完第一篇 Markdown。</p>
+
+            <div class="help-sub" id="start-install">
+                <h3>安装与启动</h3>
+                <p>YiziMarkdown 提供三种分发形式，按需选择：</p>
+                <div class="help-table-wrap">
+                    <table>
+                        <thead><tr><th>形式</th><th>适用</th><th>说明</th></tr></thead>
+                        <tbody>
+                            <tr><td>Windows 安装版</td><td>长期使用的主力机</td><td>标准安装向导，自动创建快捷方式与文件关联</td></tr>
+                            <tr><td>Windows 便携版</td><td>U 盘 / 临时电脑</td><td><strong>解压即用</strong>，配置与文档随目录带走，不留注册表</td></tr>
+                            <tr><td>macOS 通用版</td><td>Intel / Apple Silicon</td><td>Universal Binary 原生运行，无需 Rosetta</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="callout callout-tip">
+                    <span class="callout-icon">i</span>
+                    <p>macOS 首次打开若提示「无法验证开发者」，在「访达」中按住 Control 点击应用图标 → 选择「打开」即可。详见<a href="#faq">常见问题</a>。</p>
+                </div>
+            </div>
+
+            <div class="help-sub" id="start-overview">
+                <h3>界面总览</h3>
+                <figure class="help-figure">
+                    <div class="help-shot-ph" data-shot="editor-overview">
+                        <b>截图待补：编辑器主界面</b>
+                        建议 1600×1000，浅色主题，能看清工具栏、侧边栏大纲与状态栏
+                    </div>
+                </figure>
+                <ul>
+                    <li><strong>标签栏</strong>：多文件管理，像浏览器一样切换。右侧可切换演示模式与视图。</li>
+                    <li><strong>工具栏</strong>：格式化、表格、代码块、公式、图表、模板、导出、AI 助手入口。</li>
+                    <li><strong>侧边栏</strong>：自动生成的文档大纲，点击跳转（<kbd>Ctrl</kbd>+<kbd>\\</kbd> 开关）。</li>
+                    <li><strong>编辑区</strong>：基于 CodeMirror 6，支持实时预览与标记隐藏。</li>
+                    <li><strong>状态栏</strong>：字数、行列、视图模式、保存状态。</li>
+                    <li><strong>AI 面板</strong>：右侧抽屉，与大模型对话并调用技能。</li>
+                </ul>
+            </div>
+
+            <div class="help-sub" id="start-first">
+                <h3>5 分钟上手路径</h3>
+                <ol class="steps">
+                    <li>按 <kbd>Ctrl</kbd>+<kbd>N</kbd> 新建文档，写几个标题与段落。</li>
+                    <li>按 <kbd>F3</kbd> 循环切换视图，找到最舒服的写作模式（推荐先试「实时模式」）。</li>
+                    <li>输入 <code>/</code> 唤出斜杠菜单，快速插入列表、表格、代码块。</li>
+                    <li>按 <kbd>Ctrl</kbd>+<kbd>S</kbd> 保存为 <code>.md</code> 文件。</li>
+                    <li>按 <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd>，立刻把这篇笔记变成幻灯片。</li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- ========== 2. 文档管理 ========== -->
+        <section class="help-section" id="files" data-kw="新建 打开 保存 另存为 自动保存 导出 HTML 标签 首页 最近文件 文件关联 单实例">
+            <h2><a class="anchor" href="#files">#</a>文档管理</h2>
+            <p class="help-lead">新建、打开、保存、导出与多文件切换。</p>
+
+            <div class="help-sub" id="files-basic">
+                <h3>基本操作</h3>
+                <div class="help-table-wrap">
+                    <table>
+                        <thead><tr><th>操作</th><th>方式</th><th>说明</th></tr></thead>
+                        <tbody>
+                            <tr><td>新建</td><td><kbd>Ctrl</kbd>+<kbd>N</kbd></td><td>标签栏右侧 <strong>+</strong> 亦可；可在「设置 → 通用 → 默认模板」指定新建时套用的模板</td></tr>
+                            <tr><td>打开</td><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>支持 <code>.md</code> / <code>.markdown</code> / <code>.txt</code></td></tr>
+                            <tr><td>保存</td><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>新建文件首次保存自动弹出「另存为」</td></tr>
+                            <tr><td>另存为</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td><td>另存到新路径</td></tr>
+                            <tr><td>关闭</td><td><kbd>Ctrl</kbd>+<kbd>W</kbd></td><td>未保存时会弹确认框</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="help-sub" id="files-autosave">
+                <h3>自动保存</h3>
+                <p>在「设置 → 通用」开启，间隔可选 5~180 秒（默认 60 秒），仅在有未保存修改时触发。</p>
+            </div>
+
+            <div class="help-sub" id="files-export">
+                <h3>导出</h3>
+                <p>工具栏右侧导出按钮支持三种格式，也可直接用快捷键：</p>
+                <ul>
+                    <li><strong>HTML</strong>（<kbd>Ctrl</kbd>+<kbd>H</kbd>）：保留主题样式，可直接分享或发布</li>
+                    <li><strong>Markdown</strong>（<kbd>Ctrl</kbd>+<kbd>M</kbd>）：纯 Markdown 文本副本</li>
+                    <li><strong>纯文本</strong>：去除所有标记符号</li>
+                </ul>
+            </div>
+
+            <div class="help-sub" id="files-tabs">
+                <h3>标签栏与首页</h3>
+                <ul>
+                    <li>点击标签切换文件；<strong>双击</strong>或<strong>中键</strong>点击可关闭标签</li>
+                    <li>未保存的文件标签上显示主题色<strong>呼吸圆点</strong>，保存成功后变勾号，1.5 秒后消失</li>
+                    <li>关闭最后一个标签回到<strong>首页</strong>，展示最近打开的文件（名称、大小、修改时间）</li>
+                </ul>
+            </div>
+
+            <div class="help-sub" id="files-assoc">
+                <h3>单实例与文件关联</h3>
+                <ul>
+                    <li><strong>单实例</strong>：双击 <code>.md</code> 文件时不会开多个窗口，自动合并到已有实例并定位到该标签</li>
+                    <li><strong>文件关联</strong>：「设置 → 通用」一键设为系统默认 Markdown 编辑器，可随时取消</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- ========== 3. 编辑基础 ========== -->
+        <section class="help-section" id="edit" data-kw="视图 源码 实时 并排 预览 演示 工具栏 格式化 斜杠菜单 自动补全 搜索 替换 大纲 标题折叠 划词 划词助手 选中">
+            <h2><a class="anchor" href="#edit">#</a>编辑基础</h2>
+            <p class="help-lead">五种视图、工具栏、斜杠菜单与 v0.2.3 新增的划词助手、标题折叠。</p>
+
+            <div class="help-sub" id="edit-views">
+                <h3>五种视图模式</h3>
+                <figure class="help-figure">
+                    <div class="help-shot-ph" data-shot="view-modes">
+                        <b>截图待补：五种视图对比</b>
+                        建议横向对比图，或源码 / 实时 / 并排 各一张
+                    </div>
+                </figure>
+                <div class="help-table-wrap">
+                    <table>
+                        <colgroup>
+                            <col style="width:120px">
+                            <col>
+                            <col style="width:140px">
+                        </colgroup>
+                        <thead><tr><th>模式</th><th>特点</th><th>适合</th></tr></thead>
+                        <tbody>
+                            <tr><td>源码</td><td>纯 Markdown 文本编辑</td><td>精确控制标记</td></tr>
+                            <tr><td>并排模式</td><td>左编辑右预览，大纲与预览双向联动滚动</td><td>对照检查排版</td></tr>
+                            <tr><td>实时模式</td><td>所见即所得（WYSIWYG），Markdown 标记自动隐藏，光标进入时显现，四种原创交互动画，引导注意力聚焦内容</td><td>专注内容创作</td></tr>
+                            <tr><td>预览模式</td><td>纯渲染，不可编辑</td><td>通读校对</td></tr>
+                            <tr><td>演示模式</td><td>全屏幻灯片</td><td>汇报演示</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p>切换视图时会自动定位到当前编辑位置。按 <kbd>F3</kbd> 可循环切换。</p>
+            </div>
+
+            <div class="help-sub" id="edit-live">
+                <h3>实时模式动画</h3>
+                <p>实时模式下 <code>#</code>、<code>**</code>、<code>-</code> 等标记会在光标进入时平滑显现，离开时隐藏。四种效果可选：</p>
+                <div class="help-table-wrap">
+                    <table>
+                        <thead><tr><th>方案</th><th>效果</th></tr></thead>
+                        <tbody>
+                            <tr><td>聚焦（默认）</td><td>文字模糊后重新对焦</td></tr>
+                            <tr><td>闪光</td><td>文字闪过一束光</td></tr>
+                            <tr><td>辉光</td><td>模糊 + 闪光叠加</td></tr>
+                            <tr><td>涟漪</td><td>多波峰衰减，如水面波纹</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p>设置路径：设置 → 实时模式，可实时预览各方案效果。</p>
+            </div>
+
+            <div class="help-sub" id="edit-toolbar">
+                <h3>工具栏格式化</h3>
+                <p>选中文字后点击按钮即可应用。规则：粗体 / 斜体 / 删除线 / 行内代码会<strong>包裹</strong>选中内容；标题 / 列表 / 引用在<strong>行首添加前缀</strong>；链接 / 图片把选中文字填入显示文本。</p>
+                <div class="help-table-wrap">
+                    <table>
+                        <thead><tr><th>按钮</th><th>功能</th><th>快捷键</th></tr></thead>
+                        <tbody>
+                            <tr><td>粗体</td><td>加粗选中文字</td><td><kbd>Ctrl</kbd>+<kbd>B</kbd></td></tr>
+                            <tr><td>斜体</td><td>斜体选中文字</td><td><kbd>Ctrl</kbd>+<kbd>I</kbd></td></tr>
+                            <tr><td>删除线</td><td>添加删除线</td><td><kbd>Ctrl</kbd>+<kbd>-</kbd></td></tr>
+                            <tr><td>行内代码</td><td>包裹为行内代码</td><td><kbd>Ctrl</kbd>+<kbd>+</kbd></td></tr>
+                            <tr><td>标题</td><td>行首添加标题标记</td><td><kbd>Ctrl</kbd>+<kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd></td></tr>
+                            <tr><td>列表</td><td>行首添加列表标记</td><td><kbd>Ctrl</kbd>+<kbd>.</kbd> / <kbd>Ctrl</kbd>+<kbd>0</kbd></td></tr>
+                            <tr><td>引用</td><td>行首添加引用标记</td><td><kbd>Ctrl</kbd>+<kbd>'</kbd></td></tr>
+                            <tr><td>链接</td><td>包裹为链接语法</td><td><kbd>Ctrl</kbd>+<kbd>K</kbd></td></tr>
+                            <tr><td>图片</td><td>包裹为图片语法，支持网络 URL 与本地文件</td><td>—</td></tr>
+                            <tr><td>代码块</td><td>插入代码块模板</td><td><kbd>Ctrl</kbd>+<kbd>`</kbd></td></tr>
+                            <tr><td>分割线</td><td>插入水平分割线</td><td><kbd>Ctrl</kbd>+<kbd>L</kbd></td></tr>
+                            <tr><td>公式</td><td>选中文字包裹为行内公式</td><td>—</td></tr>
+                            <tr><td>图表</td><td>插入 Mermaid 代码块模板</td><td>—</td></tr>
+                            <tr><td>表格</td><td>打开 8×8 网格，点选插入</td><td><kbd>Ctrl</kbd>+<kbd>T</kbd></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="help-sub" id="edit-slash">
+                <h3>斜杠菜单与自动补全</h3>
+                <p>输入 <code>/</code> 或 <code>、</code> 唤出斜杠菜单（也可按 <kbd>Ins</kbd>），支持键盘上下选择、<kbd>Enter</kbd> 插入；继续输入字符会自动关闭。</p>
+                <p>编辑器还会在以下情况自动补全：输入 <code>#</code> / <code>-</code> / <code>*</code> / <code>&gt;</code> 后按空格自动生成对应结构；输入 <code>`</code>、<code>**</code>、<code>*</code>、<code>~~</code>、<code>[</code> 自动配对闭合。</p>
+            </div>
+
+            <div class="help-sub" id="edit-search">
+                <h3>搜索替换与大纲导航</h3>
+                <ul>
+                    <li><kbd>Ctrl</kbd>+<kbd>F</kbd> 打开搜索栏，输入关键词高亮匹配，点箭头逐个跳转</li>
+                    <li>输入替换内容后可「全部替换」</li>
+                    <li>侧边栏自动根据标题层级生成大纲，点击跳转；并排模式下与预览双向联动滚动</li>
+                </ul>
+            </div>
+
+            <div class="help-sub" id="edit-fold">
+                <h3>标题折叠（v0.2.3 新增）</h3>
+                <div class="callout callout-new">
+                    <span class="callout-icon">新</span>
+                    <p>长文档可以像 Obsidian 一样折叠章节了。</p>
+                </div>
+                <figure class="help-figure">
+                    <div class="help-shot-ph" data-shot="heading-fold">
+                        <b>截图待补：标题折叠效果</b>
+                        建议展示折叠图标 hover 态 + 已折叠状态（常显展开图标）
+                    </div>
+                </figure>
+                <ul>
+                    <li>鼠标悬停标题时左侧出现折叠图标，点击折叠该标题下的内容</li>
+                    <li>已折叠的标题<strong>常显</strong>展开图标，无需 hover</li>
+                    <li>快捷键：<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>[</kbd> 折叠，<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>]</kbd> 展开</li>
+                </ul>
+            </div>
+
+            <div class="help-sub" id="edit-selection">
+                <h3>划词助手（v0.2.3 新增）</h3>
+                <div class="callout callout-new">
+                    <span class="callout-icon">新</span>
+                    <p>选中一段文字，浮动操作栏立刻出现，可直接交给 AI 处理。</p>
+                </div>
+                <figure class="help-figure">
+                    <div class="help-shot-ph" data-shot="selection-toolbar">
+                        <b>截图待补：划词助手浮动工具栏</b>
+                        建议选中一段文字后截图，能看清工具栏上的操作按钮
+                    </div>
+                </figure>
+                <p>选中文本后可用的操作：</p>
+                <ul>
+                    <li><strong>演示稿</strong>：把选中内容提炼为演示文稿结构</li>
+                    <li><strong>摘要</strong>：提炼核心要点</li>
+                    <li><strong>改写 / 润色</strong>：优化表达，保持原意</li>
+                    <li><strong>翻译</strong>：翻译为目标语言</li>
+                    <li><strong>复制</strong>：复制到剪贴板</li>
+                    <li><strong>添加到 AI 对话</strong>：作为上下文送进右侧 AI 面板</li>
+                </ul>
+                <div class="callout callout-tip">
+                    <span class="callout-icon">i</span>
+                    <p><strong>与技能联动</strong>：通过划词触发技能时，AI 只处理你选中的文本，输入框里会显示「文本胶囊 + 技能胶囊」，一目了然。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== 4. 写作进阶 ========== -->
+        <section class="help-section" id="writing" data-kw="markdown 语法 表格 代码块 高亮 图片 链接 公式 katex mermaid 图表 HTML 渲染">
+            <h2><a class="anchor" href="#writing">#</a>写作进阶</h2>
+            <p class="help-lead">Markdown 语法速查，以及表格、代码、公式、图表、图片等增强能力。</p>
+
+            <div class="help-sub" id="writing-syntax">
+                <h3>Markdown 语法速查</h3>
+                <div class="help-table-wrap">
+                    <table>
+                        <thead><tr><th>效果</th><th>语法</th></tr></thead>
+                        <tbody>
+                            <tr><td>标题</td><td><code># 一级</code> ~ <code>###### 六级</code></td></tr>
+                            <tr><td>粗体 / 斜体</td><td><code>**粗体**</code> / <code>*斜体*</code></td></tr>
+                            <tr><td>删除线</td><td><code>~~删除线~~</code></td></tr>
+                            <tr><td>无序 / 有序列表</td><td><code>- 项目</code> / <code>1. 项目</code></td></tr>
+                            <tr><td>任务列表</td><td><code>- [x] 已完成</code> / <code>- [ ] 待办</code></td></tr>
+                            <tr><td>引用</td><td><code>&gt; 引用内容</code></td></tr>
+                            <tr><td>链接</td><td><code>[文字](https://example.com)</code></td></tr>
+                            <tr><td>图片</td><td><code>![说明](图片路径或URL)</code></td></tr>
+                            <tr><td>行内代码</td><td><code>`代码`</code></td></tr>
+                            <tr><td>代码块</td><td>围栏 <code>```语言</code> 包裹</td></tr>
+                            <tr><td>分割线</td><td><code>---</code>（单独成行）</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="help-sub" id="writing-table">
+                <h3>表格</h3>
+                <p>工具栏表格按钮或 <kbd>Ctrl</kbd>+<kbd>T</kbd> 打开 <strong>8×8 网格</strong>，鼠标移到目标位置点击即插入对应行列数的表格，无需手写分隔线。实时模式下表格渲染为真正的 HTML 表格，可点击单元格直接编辑。</p>
+            </div>
+
+            <div class="help-sub" id="writing-code">
+                <h3>代码块</h3>
+                <ul>
+                    <li>集成 highlight.js 语法高亮，头部显示<strong>语言标签</strong></li>
+                    <li>右上角支持<strong>一键复制</strong>与<strong>自动换行</strong>切换</li>
+                    <li>语言写在围栏后即可：<code>```python</code>、<code>```rust</code> 等</li>
+                </ul>
+            </div>
+
+            <div class="help-sub" id="writing-media">
+                <h3>图片与链接</h3>
+                <ul>
+                    <li><strong>本地图片</strong>：支持 jpg / png / gif / webp / svg / bmp，路径需为绝对路径（如 <code>C:\images\photo.png</code>）</li>
+                    <li><strong>网络图片</strong>：<code>http</code> / <code>https</code> 开头的 URL 直接显示</li>
+                    <li><strong>插入对话框</strong>：图片支持网络 URL 与本地文件两种方式，本地文件走系统原生文件选择器</li>
+                    <li><strong>链接跳转</strong>：预览中点击链接会用<strong>系统默认浏览器</strong>打开，不在应用内导航</li>
+                </ul>
+            </div>
+
+            <div class="help-sub" id="writing-math">
+                <h3>数学公式（KaTeX）</h3>
+                <ul>
+                    <li><strong>行内公式</strong>：用 <code>$...$</code> 包裹，如 <code>$E=mc^2$</code></li>
+                    <li><strong>块级公式</strong>：用 <code>$$...$$</code> 独占一行，居中渲染为独立公式块</li>
+                    <li>工具栏 <strong>Σ</strong> 按钮可把选中文字包裹为行内公式</li>
+                    <li>在「设置 → 插件」中可开关 KaTeX 插件</li>
+                </ul>
+            </div>
+
+            <div class="help-sub" id="writing-mermaid">
+                <h3>Mermaid 图表</h3>
+                <p>用代码描述即可生成可视化图表：</p>
+                <pre><code>graph LR
+    A[开始] --&gt; B{判断}
+    B --&gt;|是| C[执行]
+    B --&gt;|否| D[跳过]</code></pre>
+                <p>支持流程图（graph / flowchart）、时序图（sequenceDiagram）、甘特图（gantt）、类图（classDiagram）、饼图（pie）、状态图（stateDiagram）等。图表主题可在「设置 → 插件 → Mermaid 配置」切换（默认 / 深色 / 森林 / 中性）。</p>
+            </div>
+
+            <div class="help-sub" id="writing-html">
+                <h3>HTML 渲染</h3>
+                <p>预览模式（整页与并排）可渲染原始 HTML，包括表格、行内样式等。实时模式下块级 HTML 及单独成行的行内元素会渲染为真实内容，光标落上去自动还原为源码以便编辑。</p>
+            </div>
+        </section>
+
+        <!-- ========== 5. 演示模式 ========== -->
+        <section class="help-section" id="slideshow" data-kw="演示 幻灯片 PPT 全屏 分页 版式 layout align 备注 演讲者 滚轮 模板">
+            <h2><a class="anchor" href="#slideshow">#</a>演示模式（类 PPT）</h2>
+            <p class="help-lead">笔记一键变全屏幻灯片。<strong>不需要任何额外格式</strong>——按平时写 Markdown 的习惯写，版式自动推断，配色继承当前主题。</p>
+
+            <div class="help-sub" id="slideshow-enter">
+                <h3>进入与退出</h3>
+                <ul>
+                    <li>按 <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd>，或点击标签栏 / 工具栏的「演示」按钮</li>
+                    <li>进入后自动全屏，按 <kbd>Esc</kbd> 退出并返回编辑界面</li>
+                    <li>鼠标活动时右上角显示半透明退出按钮，1.5 秒无操作自动隐藏</li>
+                    <li>退出时自动还原进入前的窗口状态（全屏 / 最大化 / 普通）</li>
+                </ul>
+            </div>
+
+            <div class="help-sub" id="slideshow-page">
+                <h3>分页规则</h3>
+                <p>用<strong>单独成行的 <code>---</code></strong>（标准 Markdown 分割线）翻页：</p>
+                <pre><code># 第一页
+
+---
+
+# 第二页</code></pre>
+                <ul>
+                    <li><code>---</code> 必须单独成行（前后是空行）</li>
+                    <li>代码围栏内部的 <code>---</code> 属于代码内容，<strong>不会</strong>分页</li>
+                    <li>文档顶部的 front matter（首个 <code>--- ... ---</code> 块）自动忽略，不会成为一页</li>
+                </ul>
+            </div>
+
+            <div class="help-sub" id="slideshow-layout">
+                <h3>14 种自动版式</h3>
+                <figure class="help-figure">
+                    <div class="help-shot-ph" data-shot="slide-cover">
+                        <b>截图待补：演示模式封面页</b>
+                        建议 1600×900，展示居中大标题 + 渐变下划线
+                    </div>
+                </figure>
+                <p>引擎分析<strong>整页结构</strong>自动推断版式，无需任何标记：</p>
+                <div class="help-table-wrap">
+                    <table>
+                        <thead><tr><th>页面结构</th><th>自动版式</th><th>效果</th></tr></thead>
+                        <tbody>
+                            <tr><td><code># 一级标题</code> + 副标题段落</td><td>封面页</td><td>居中大标题 + 渐变下划线 + 作者/日期</td></tr>
+                            <tr><td><code>##</code> / <code>###</code> 单独成页</td><td>章节页</td><td>大号序号 + 居中标题</td></tr>
+                            <tr><td><code># 谢谢</code> / Thanks / Q&amp;A</td><td>结尾页</td><td>居中收尾</td></tr>
+                            <tr><td><code>## 目录</code> + 有序列表</td><td>目录页</td><td>大号数字双列网格</td></tr>
+                            <tr><td><code>## 标题</code> + 正文</td><td>内容页</td><td>标题左上 + 强调下划线</td></tr>
+                            <tr><td>标题 + 列表</td><td>列表页</td><td>标题左上 + 大号列表</td></tr>
+                            <tr><td>标题 + 表格</td><td>数据表页</td><td>表头主题色 + 斑马纹行</td></tr>
+                            <tr><td>标题 + 任务列表</td><td>路线图页</td><td>大号勾选框</td></tr>
+                            <tr><td>图片开头 + 文字</td><td>图文页</td><td>左图右文双栏</td></tr>
+                            <tr><td>图片单独成页</td><td>图片页</td><td>大图居中</td></tr>
+                            <tr><td><code>&gt; 引用</code> 开头</td><td>金句页</td><td>对角大引号 + 居中大字</td></tr>
+                            <tr><td>代码围栏开头</td><td>代码页</td><td>代码聚焦</td></tr>
+                            <tr><td><code>mermaid</code> 围栏开头</td><td>图表页</td><td>图表居中</td></tr>
+                            <tr><td>公式（<code>$$</code>）开头</td><td>公式页</td><td>公式居中</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <figure class="help-figure">
+                    <div class="help-shot-ph" data-shot="slide-content">
+                        <b>截图待补：演示模式内容页 / 列表页</b>
+                        与封面页风格呼应，展示正文版式
+                    </div>
+                </figure>
+            </div>
+
+            <div class="help-sub" id="slideshow-directive">
+                <h3>显式指令与装饰</h3>
+                <ul>
+                    <li><code>&lt;!-- layout: quote --&gt;</code> 强制指定版式</li>
+                    <li><code>&lt;!-- align: left|center|right --&gt;</code> 指定整页对齐</li>
+                    <li>左下角显示章节名 + 页码页脚，底部主题色进度条随翻页增长</li>
+                    <li>配色继承当前主题与明暗，标题颜色随主题变化——<strong>换主题，幻灯片同步换肤</strong></li>
+                    <li><strong>滚轮翻页</strong>：内容可滚动时先滚动内容，到上/下边界再翻页；翻页后短暂锁定防惯性连翻</li>
+                </ul>
+            </div>
+
+            <div class="help-sub" id="slideshow-notes">
+                <h3>演讲者备注</h3>
+                <p>在幻灯片任意位置用 HTML 注释写备注，播放时按 <kbd>S</kbd> 显示 / 隐藏：</p>
+                <pre><code>&lt;!-- notes: 这一页要强调的重点 --&gt;</code></pre>
+                <p>备注只显示在左下角面板，不会出现在正片画面。</p>
+            </div>
+
+            <div class="help-sub" id="slideshow-keys">
+                <h3>播放快捷键</h3>
+                <div class="help-table-wrap">
+                    <table>
+                        <thead><tr><th>按键</th><th>功能</th></tr></thead>
+                        <tbody>
+                            <tr><td><kbd>→</kbd> / <kbd>空格</kbd> / <kbd>PageDown</kbd> / <kbd>Enter</kbd></td><td>下一页</td></tr>
+                            <tr><td><kbd>←</kbd> / <kbd>PageUp</kbd> / <kbd>Backspace</kbd></td><td>上一页</td></tr>
+                            <tr><td><kbd>Home</kbd> / <kbd>End</kbd></td><td>首页 / 末页</td></tr>
+                            <tr><td><kbd>F</kbd></td><td>切换全屏</td></tr>
+                            <tr><td><kbd>S</kbd></td><td>显示 / 隐藏演讲者备注</td></tr>
+                            <tr><td><kbd>?</kbd></td><td>显示 / 隐藏帮助</td></tr>
+                            <tr><td><kbd>Esc</kbd></td><td>退出演示</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="callout callout-tip">
+                    <span class="callout-icon">i</span>
+                    <p>程序目录 <code>templates/Slide-Template.md</code> 是纯 Markdown 幻灯片示例，涵盖分页、公式、图表等语法。打开后按 <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd> 即可体验。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== 6. AI 助手 ========== -->
+        <section class="help-section" id="ai" data-kw="AI 大模型 聊天 面板 API 密钥 keychain 供应商 自定义服务 流式 思考过程 引用文档 上下文 停止">
+            <h2><a class="anchor" href="#ai">#</a>AI 大模型助手</h2>
+            <p class="help-lead">右侧聊天面板内置大模型。API 密钥存系统钥匙串，安全不落盘。</p>
+
+            <div class="help-sub" id="ai-setup">
+                <h3>配置步骤</h3>
+                <ol class="steps">
+                    <li>打开「设置 → AI」</li>
+                    <li>选择供应商（内置 18 家，或选「自定义服务」）</li>
+                    <li>填入 API 密钥，点击「验证」确认连通</li>
+                    <li>回到主界面，点击工具栏机器人图标打开 AI 面板即可对话</li>
+                </ol>
+                <figure class="help-figure">
+                    <div class="help-shot-ph" data-shot="settings-ai">
+                        <b>截图待补：设置 → AI 配置页</b>
+                        建议展示供应商下拉列表 + 密钥输入框
+                    </div>
+                </figure>
+            </div>
+
+            <div class="help-sub" id="ai-providers">
+                <h3>内置供应商</h3>
+                <p>共 <strong>18 家</strong> + 自定义服务 = 19 个选项，覆盖国内外主流与本地模型：</p>
+                <div class="help-table-wrap">
+                    <table>
+                        <thead><tr><th>类别</th><th>供应商</th></tr></thead>
+                        <tbody>
+                            <tr><td>海外</td><td>OpenAI、Anthropic、Google Gemini、xAI、Mistral、Groq</td></tr>
+                            <tr><td>国内</td><td>DeepSeek、通义千问、智谱 GLM、Kimi、豆包（火山引擎）、硅基流动、MiniMax、小米 MiMo、美团 LongCat</td></tr>
+                            <tr><td>聚合</td><td>OpenRouter、opencode-go</td></tr>
+                            <tr><td>本地</td><td>Ollama（完全免费、无需联网、密钥可留空）</td></tr>
+                            <tr><td>自定义</td><td>OpenAI 兼容 / Anthropic 兼容协议，自填 Base URL、模型 ID 与密钥</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="callout callout-tip">
+                    <span class="callout-icon">i</span>
+                    <p>软件本身免费开源，AI 调用费用由对应服务商收取；使用 Ollama 本地模型则<strong>完全免费</strong>。</p>
+                </div>
+            </div>
+
+            <div class="help-sub" id="ai-security">
+                <h3>密钥安全</h3>
+                <p>API 密钥保存在<strong>系统钥匙串</strong>（macOS Keychain / Windows 凭据管理器），绝不写入设置文件、不上传网络。设置页可一键保存、清除、验证。</p>
+                <div class="callout callout-warn">
+                    <span class="callout-icon">!</span>
+                    <p>密钥不随软件迁移。换电脑或重装系统后，需在新机器上重新配置一次。</p>
+                </div>
+            </div>
+
+            <div class="help-sub" id="ai-chat">
+                <h3>对话能力</h3>
+                <figure class="help-figure">
+                    <div class="help-shot-ph" data-shot="ai-panel">
+                        <b>截图待补：AI 聊天面板</b>
+                        建议展示一次完整对话（含思考过程折叠块与回复下方三个操作）
+                    </div>
+                </figure>
+                <ul>
+                    <li><strong>流式回复</strong>：回答实时输出，可随时停止生成</li>
+                    <li><strong>思考过程</strong>：DeepSeek / Qwen / GLM / Anthropic 等推理模型的 reasoning 以可折叠区块展示（默认收起）</li>
+                    <li><strong>引用当前文档</strong>：勾选后把当前文档作为上下文发送；可在「设置 → AI」调整引用上限（64K~512K / 不限）</li>
+                    <li><strong>上下文轮数</strong>：可配置 0~20 轮历史携带</li>
+                    <li><strong>结果落盘</strong>：每条回复下方有「复制」「插入到文档（光标处）」「创建新文档」三个操作</li>
+                    <li><strong>面板状态持久化</strong>：面板开关与待执行动作会被记住，关闭后重开保持状态</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- ========== 7. 技能系统 ========== -->
+        <section class="help-section" id="skills" data-kw="技能 Skill 提示词 演示稿提炼 文档摘要 润色改写 全文翻译 自定义 迁移 skills.json 管理技能">
+            <h2><a class="anchor" href="#skills">#</a>AI 技能（Skill）系统</h2>
+            <p class="help-lead">技能用于让 AI 按特定方式完成任务，提示词自动注入，一键调用。</p>
+
+            <div class="help-sub" id="skills-builtin">
+                <h3>内置技能</h3>
+                <div class="help-table-wrap">
+                    <table>
+                        <thead><tr><th>技能</th><th>说明</th><th>需要引用文档</th></tr></thead>
+                        <tbody>
+                            <tr><td>演示稿提炼</td><td>把当前文档提炼为适合演示模式的精简 Markdown：用 <code>---</code> 分页，每页一个要点</td><td>是</td></tr>
+                            <tr><td>文档摘要</td><td>输出一句话主旨 + 3~6 个核心要点 + 关键结论</td><td>是</td></tr>
+                            <tr><td>润色改写</td><td>修正语法与不通顺处、优化表达节奏，保持原意</td><td>否</td></tr>
+                            <tr><td>全文翻译</td><td>完整翻译为目标语言，保留专有名词与 Markdown 排版，代码原样保留</td><td>是</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="help-sub" id="skills-use">
+                <h3>调用步骤</h3>
+                <figure class="help-figure">
+                    <div class="help-shot-ph" data-shot="skills-menu">
+                        <b>截图待补：技能菜单展开状态</b>
+                        建议展示 ⚡ 按钮展开后的技能列表（名称 + 一句话简介）
+                    </div>
+                </figure>
+                <ol class="steps">
+                    <li>点击输入框上方的 <strong>⚡ 闪电按钮</strong>，弹出技能菜单（鼠标悬停可展开详细介绍）</li>
+                    <li>点击选中一个技能，会以<strong>胶囊标签</strong>插入输入框光标处，与文字混排</li>
+                    <li>直接输入内容并发送（也可不输入文字直接发送），技能提示词自动注入 AI 上下文</li>
+                    <li>取消技能：把光标移到标签上退格删除，或悬停标签点击出现的 <strong>✕</strong></li>
+                    <li>带 ⚡ 的技能（如「演示稿提炼」）会<strong>自动勾选并锁定</strong>「引用当前文档」，删除技能后恢复手动勾选</li>
+                </ol>
+            </div>
+
+            <div class="help-sub" id="skills-custom">
+                <h3>自定义技能</h3>
+                <div class="callout callout-new">
+                    <span class="callout-icon">新</span>
+                    <p>v0.2.3 起技能文件迁移到用户目录 <code>~/Documents/yizimarkdown/skills/</code>，方便自定义且<strong>不会被版本更新覆盖</strong>。</p>
+                </div>
+                <p>AI 面板底部的<strong>「管理技能」</strong>按钮可直接打开技能目录并查看 <code>skill-guide.md</code> 定制指南。新增技能只需两步：</p>
+                <ol class="steps">
+                    <li>在技能目录放入技能的 Markdown 提示词文件，例如 <code>my-skill.md</code></li>
+                    <li>在 <code>skills.json</code> 清单中登记（见下表字段），保存后重启软件</li>
+                </ol>
+                <div class="help-table-wrap">
+                    <table>
+                        <thead><tr><th>字段</th><th>说明</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>id</code></td><td>唯一标识，如 <code>slides-outline</code></td></tr>
+                            <tr><td><code>name</code></td><td>技能名称，显示在菜单中</td></tr>
+                            <tr><td><code>summary</code></td><td>一句话简介</td></tr>
+                            <tr><td><code>description</code></td><td>详细介绍，鼠标悬停时展开</td></tr>
+                            <tr><td><code>file</code></td><td>提示词文件名</td></tr>
+                            <tr><td><code>needsDoc</code></td><td>是否需要引用当前文档（true / false）</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p>内置技能也会同步到该目录，可以基于内置技能修改提示词来创建自己的版本。首次启动新版本时自动同步。</p>
+            </div>
+        </section>
+
+        <!-- ========== 8. 外观与主题 ========== -->
+        <section class="help-section" id="appearance" data-kw="主题 深色 暗色 亮色 外观 字体 字号 行高 自定义 CSS user.css themes F2">
+            <h2><a class="anchor" href="#appearance">#</a>外观与主题</h2>
+            <p class="help-lead">内置 15 套主题，每套均支持亮色与深色双模式。</p>
+
+            <div class="help-sub" id="appearance-themes">
+                <h3>主题一览</h3>
+                <div class="theme-shot-grid">
+                    <div class="theme-shot"><img src="screenshots/academic-blue.png" alt="学术蓝" loading="lazy"><span>学术蓝（默认）</span></div>
+                    <div class="theme-shot"><img src="screenshots/vibrant-orange.png" alt="活力橙" loading="lazy"><span>活力橙</span></div>
+                    <div class="theme-shot"><img src="screenshots/tech.png" alt="科技感" loading="lazy"><span>科技感</span></div>
+                    <div class="theme-shot"><img src="screenshots/minimal.png" alt="极简风" loading="lazy"><span>极简风</span></div>
+                    <div class="theme-shot"><img src="screenshots/magazine.png" alt="杂志感" loading="lazy"><span>杂志感</span></div>
+                    <div class="theme-shot"><img src="screenshots/nature.png" alt="自然风" loading="lazy"><span>自然风</span></div>
+                    <div class="theme-shot"><img src="screenshots/liquidglass.png" alt="液态玻璃" loading="lazy"><span>液态玻璃</span></div>
+                    <div class="theme-shot"><img src="screenshots/lychee.png" alt="荔枝红" loading="lazy"><span>荔枝红</span></div>
+                    <div class="theme-shot"><img src="screenshots/violet.png" alt="紫罗兰" loading="lazy"><span>紫罗兰</span></div>
+                    <div class="theme-shot"><img src="screenshots/cyberpunk.png" alt="赛博朋克" loading="lazy"><span>赛博朋克</span></div>
+                    <div class="theme-shot"><img src="screenshots/facebook.png" alt="Facebook" loading="lazy"><span>Facebook</span></div>
+                    <div class="theme-shot"><img src="screenshots/matrix.png" alt="黑客帝国" loading="lazy"><span>黑客帝国</span></div>
+                    <div class="theme-shot"><img src="screenshots/mint.png" alt="薄荷冰沙" loading="lazy"><span>薄荷冰沙</span></div>
+                    <div class="theme-shot"><img src="screenshots/sunset.png" alt="落日熔金" loading="lazy"><span>落日熔金</span></div>
+                    <div class="theme-shot"><img src="screenshots/typewriter.png" alt="复古打字机" loading="lazy"><span>复古打字机</span></div>
+                </div>
+                <p>在「设置 → 外观」中可切换主题、编辑主题名称、查看色板预览。按 <kbd>F2</kbd> 可快速切换深色 / 亮色模式。</p>
+            </div>
+
+            <div class="help-sub" id="appearance-font">
+                <h3>字体与排版</h3>
+                <p>在「设置 → 编辑器」中，可分别为<strong>源码</strong>与<strong>预览模式</strong>设置字体、字号（12~32px）与行高（1.2~3.0）。支持搜索系统已安装字体，也可手动输入 CSS <code>font-family</code>。</p>
+            </div>
+
+            <div class="help-sub" id="appearance-custom">
+                <h3>自定义主题与 CSS</h3>
+                <ul>
+                    <li><strong>自定义主题</strong>：在程序目录 <code>themes/</code> 放入 <code>.css</code> 文件，重启后自动识别。CSS 需用 <code>.editor-content</code> 前缀限定范围，避免影响设置面板</li>
+                    <li><strong>自定义 CSS</strong>：在「设置 → 外观 → 自定义 CSS」中编辑，或直接改程序目录 <code>user.css</code>。它加载在所有主题之后，<strong>优先级最高</strong></li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- ========== 9. 设置详解 ========== -->
+        <section class="help-section" id="settings" data-kw="设置 通用 外观 编辑器 AI 快捷键 插件 模板 关于 自动保存 语言">
+            <h2><a class="anchor" href="#settings">#</a>设置详解</h2>
+            <p class="help-lead">设置面板共 8 个分类，覆盖软件全部可配置项。</p>
+
+            <div class="help-sub" id="settings-list">
+                <div class="help-table-wrap">
+                    <table>
+                        <thead><tr><th>分类</th><th>主要能力</th></tr></thead>
+                        <tbody>
+                            <tr><td>通用</td><td>界面语言（15 种）、自动保存间隔、文件关联、默认模板</td></tr>
+                            <tr><td>外观</td><td>主题选择与管理、深色模式、自定义 CSS</td></tr>
+                            <tr><td>编辑器</td><td>源码 / 预览字体字号行高、实时模式动画、拼写检查</td></tr>
+                            <tr><td>AI</td><td>供应商与模型、API 密钥、上下文轮数、引用上限</td></tr>
+                            <tr><td>快捷键</td><td>可视化配置、按键录制、冲突检测、恢复默认</td></tr>
+                            <tr><td>插件</td><td>KaTeX 公式开关、Mermaid 图表主题与其他渲染插件</td></tr>
+                            <tr><td>模板</td><td>新建 / 编辑 / 删除文档模板，指定默认模板</td></tr>
+                            <tr><td>关于</td><td>版本信息、开源许可、相关链接</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p>每个设置面板底部都有<strong>「恢复默认」</strong>按钮，可单独还原该分类。</p>
+            </div>
+
+            <div class="help-sub" id="settings-lang">
+                <h3>界面语言</h3>
+                <p>支持 15 种：简体中文（默认）、繁體中文、English、日本語、한국어、Deutsch、Français、Español、Português、Italiano、Polski、Nederlands、Türkçe、Svenska、Українська。在「设置 → 通用 → 界面语言」切换，即时生效，无需重启。</p>
+            </div>
+
+            <div class="help-sub" id="settings-templates">
+                <h3>文档模板</h3>
+                <ul>
+                    <li><strong>从模板新建</strong>：点击工具栏「新建」旁的「从模板新建」，下拉选择模板</li>
+                    <li><strong>默认模板</strong>：在「设置 → 通用 → 默认模板」指定后，<kbd>Ctrl</kbd>+<kbd>N</kbd> 自动套用该结构</li>
+                    <li><strong>模板管理</strong>：在「设置 → 模板」中新建、编辑、删除</li>
+                </ul>
+                <p>也可直接把 <code>.md</code> 文件放进程序目录 <code>templates/</code>。</p>
+            </div>
+        </section>
+
+        <!-- ========== 10. 快捷键 ========== -->
+        <section class="help-section" id="shortcuts" data-kw="快捷键 F1 F2 F3 Ctrl 自定义 冲突检测 录制">
+            <h2><a class="anchor" href="#shortcuts">#</a>快捷键大全</h2>
+            <p class="help-lead">按 <kbd>F1</kbd> 可随时唤出速查面板；所有快捷键均可在「设置 → 快捷键」自定义。</p>
+
+            <div class="help-sub" id="shortcuts-all">
+                <div class="help-table-wrap">
+                    <table>
+                        <thead><tr><th>快捷键</th><th>功能</th><th>快捷键</th><th>功能</th></tr></thead>
+                        <tbody>
+                            <tr><td><kbd>Ctrl</kbd>+<kbd>N</kbd></td><td>新建文件</td><td><kbd>Ctrl</kbd>+<kbd>B</kbd></td><td>粗体</td></tr>
+                            <tr><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>打开文件</td><td><kbd>Ctrl</kbd>+<kbd>I</kbd></td><td>斜体</td></tr>
+                            <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>保存文件</td><td><kbd>Ctrl</kbd>+<kbd>-</kbd></td><td>删除线</td></tr>
+                            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td><td>另存为</td><td><kbd>Ctrl</kbd>+<kbd>+</kbd></td><td>行内代码</td></tr>
+                            <tr><td><kbd>Ctrl</kbd>+<kbd>W</kbd></td><td>关闭标签</td><td><kbd>Ctrl</kbd>+<kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd></td><td>一/二/三级标题</td></tr>
+                            <tr><td><kbd>Ctrl</kbd>+<kbd>H</kbd></td><td>导出 HTML</td><td><kbd>Ctrl</kbd>+<kbd>.</kbd></td><td>无序列表</td></tr>
+                            <tr><td><kbd>Ctrl</kbd>+<kbd>M</kbd></td><td>导出 Markdown</td><td><kbd>Ctrl</kbd>+<kbd>0</kbd></td><td>有序列表</td></tr>
+                            <tr><td><kbd>Ctrl</kbd>+<kbd>F</kbd></td><td>搜索</td><td><kbd>Ctrl</kbd>+<kbd>'</kbd></td><td>引用</td></tr>
+                            <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>撤销</td><td><kbd>Ctrl</kbd>+<kbd>K</kbd></td><td>链接</td></tr>
+                            <tr><td><kbd>Ctrl</kbd>+<kbd>Y</kbd></td><td>重做</td><td><kbd>Ctrl</kbd>+<kbd>`</kbd></td><td>代码块</td></tr>
+                            <tr><td><kbd>Ctrl</kbd>+<kbd>\\</kbd></td><td>切换侧边栏</td><td><kbd>Ctrl</kbd>+<kbd>T</kbd></td><td>插入表格</td></tr>
+                            <tr><td><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd></td><td>演示模式</td><td><kbd>Ctrl</kbd>+<kbd>L</kbd></td><td>分割线</td></tr>
+                            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>[</kbd></td><td>折叠标题</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>]</kbd></td><td>展开标题</td></tr>
+                            <tr><td><kbd>F1</kbd></td><td>快捷键大全</td><td><kbd>Ins</kbd></td><td>斜杠菜单</td></tr>
+                            <tr><td><kbd>F2</kbd></td><td>切换深浅模式</td><td><kbd>F3</kbd></td><td>循环切换视图</td></tr>
+                            <tr><td><kbd>F12</kbd></td><td>开发者工具</td><td><kbd>/</kbd> 或 <kbd>、</kbd></td><td>斜杠菜单</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p>快捷键配置支持<strong>可视化面板、按键录制与冲突检测</strong>，改错了可一键恢复默认。配置文件保存在程序目录 <code>keybindings.json</code>。</p>
+            </div>
+        </section>
+
+        <!-- ========== 11. 常见问题 ========== -->
+        <section class="help-section" id="faq" data-kw="常见问题 FAQ 无法验证开发者 钥匙串 白屏 图片不显示 图标 数据 迁移 升级 崩溃">
+            <h2><a class="anchor" href="#faq">#</a>常见问题</h2>
+            <p class="help-lead">遇到问题先查这里。</p>
+
+            <div class="help-sub" id="faq-macos">
+                <h3>macOS 打开时提示「无法验证开发者」，怎么办？</h3>
+                <p>这是 Gatekeeper 对未公证应用的正常拦截。YiziMarkdown 采用 ad-hoc 签名免费分发，首次打开请：在「访达」中<strong>按住 Control 点击</strong>（或触控板双指轻点）应用图标 → 选择「打开」→ 再点一次「打开」。也可在终端执行 <code>xattr -dr com.apple.quarantine /Applications/YiziMarkdown.app</code> 解除隔离标记。</p>
+            </div>
+
+            <div class="help-sub" id="faq-keychain">
+                <h3>保存 AI 密钥时弹出「想要访问您的钥匙串」并要求密码授权，正常吗？</h3>
+                <p>正常，这是 macOS 安全机制。密钥通过系统钥匙串加密存储，不写入设置文件、不上传网络。首次访问需输入 Mac 登录密码或使用 Touch ID，点击「始终允许」后不再提示。</p>
+            </div>
+
+            <div class="help-sub" id="faq-aipay">
+                <h3>AI 聊天需要付费吗？</h3>
+                <p>软件免费开源。AI 调用费用由你选择的服务商收取；使用 Ollama 本地模型则完全免费、无需联网。</p>
+            </div>
+
+            <div class="help-sub" id="faq-migrate">
+                <h3>换电脑或重装系统后，文档和 AI 密钥会丢吗？</h3>
+                <p><strong>文档不会丢</strong>：内容就是标准 <code>.md</code> 文件，放任意位置都能打开。<strong>AI 密钥不迁移</strong>：它只存在本机钥匙串，需在新机器重新配置一次。</p>
+            </div>
+
+            <div class="help-sub" id="faq-skill-move">
+                <h3>v0.2.3 技能目录迁移后，自定义技能怎么办？</h3>
+                <p>技能文件已迁至 <code>~/Documents/yizimarkdown/skills/</code>。已有的自定义技能只要放在该目录下即可继续使用；内置技能在首次启动新版本时自动同步过去。</p>
+            </div>
+
+            <div class="help-sub" id="faq-theme">
+                <h3>添加的自定义主题没有出现？</h3>
+                <p>确认文件放在程序目录 <code>themes/</code> 下、扩展名为 <code>.css</code>，然后<strong>重启程序</strong>。CSS 内部记得用 <code>.editor-content</code> 前缀限定范围。</p>
+            </div>
+
+            <div class="help-sub" id="faq-img">
+                <h3>预览中的图片不显示怎么办？</h3>
+                <p>本地图片支持 jpg / png / gif / webp / svg / bmp，路径需为<strong>绝对路径</strong>；网络图片以 <code>http</code> / <code>https</code> 开头即可正常显示。</p>
+            </div>
+
+            <div class="help-sub" id="faq-icon">
+                <h3>关联 .md 文件后图标没变？</h3>
+                <p>Windows 图标缓存可能延迟刷新，尝试重启资源管理器或重启电脑。</p>
+            </div>
+
+            <div class="help-sub" id="faq-reset">
+                <h3>如何恢复默认设置？</h3>
+                <p>在各设置面板底部点击「恢复默认」按钮，按分类还原。</p>
+            </div>
+
+            <div class="help-sub" id="faq-where">
+                <h3>数据存储在哪？</h3>
+                <p>数据分四个层面存放：</p>
+                <ol class="help-layer-list">
+                    <li><strong>新建/未保存文件</strong>：在编辑器内存在 localStorage 缓存，下次打开软件时自动恢复、自动加载（不依赖系统文件路径，重启后仍在）</li>
+                    <li><strong>配置文件</strong>（主题、自动保存参数、快捷键绑定等）：同样存在 localStorage 缓存中</li>
+                    <li><strong>API 密钥</strong>：保存在系统钥匙串（macOS Keychain / Windows 凭据管理器），<strong>不明文暴露、不上传网络</strong>——随时可在「设置 → AI」清除</li>
+                    <li><strong>技能文件（v0.2.3 起）</strong>：从应用目录迁移至用户目录 <code>~/Documents/yizimarkdown/skills/</code>，<strong>支持自定义</strong>，升级软件<strong>不会覆盖</strong></li>
+                </ol>
+            </div>
+
+            <div class="help-sub" id="faq-punct">
+                <h3>中文标点需要按两次？</h3>
+                <p>已在 v0.1.2 修复，请升级到最新版本。</p>
+            </div>
+        </section>
+
+        <!-- ========== 12. 附录 ========== -->
+        <section class="help-section" id="appendix" data-kw="附录 目录结构 文件说明 反馈 issue 开源 更新 升级">
+            <h2><a class="anchor" href="#appendix">#</a>附录</h2>
+
+            <div class="help-sub" id="appendix-structure">
+                <h3>程序目录结构</h3>
+                <pre><code>YiziMarkdown/
+├── YiziMarkdown.exe        # 主程序
+├── readme.md               # 项目说明
+├── help.md                 # 帮助文档（软件内可查看）
+├── welcome.md              # 欢迎文档
+├── changelog.md            # 开发日志
+├── user.css                # 用户自定义样式（优先级最高）
+├── keybindings.json        # 快捷键配置
+├── md-icon.ico             # Markdown 文件关联图标
+├── themes/                 # 主题 CSS（放入 .css 即可扩展）
+├── templates/              # 文档模板（含 Slide-Template.md）
+└── skills/                 # AI 技能提示词与 skills.json 清单</code></pre>
+                <p>v0.2.3 起，用户级技能目录为 <code>~/Documents/yizimarkdown/skills/</code>。</p>
+            </div>
+
+            <div class="help-sub" id="appendix-support">
+                <h3>获取帮助</h3>
+                <ul>
+                    <li>软件内：按 <kbd>F1</kbd> 查快捷键，或打开 <code>help.md</code></li>
+                    <li><a href="https://github.com/laoduu/YiziMarkdown/issues" target="_blank">GitHub Issues</a>：提交 Bug 与功能建议</li>
+                    <li><a href="https://github.com/laoduu/YiziMarkdown/releases" target="_blank">Releases</a>：查看与下载历史版本</li>
+                    <li>更新记录见<a href="index.html#changelog">首页「更新」板块</a></li>
+                </ul>
+            </div>
+        </section>
+
+    </main>
+
+</div>
+
+<button class="help-fab" id="helpFab">目录</button>
+
+<div id="site-footer"></div>
+
+<script src="assets/js/site-chrome.js"></script>
+<script src="assets/js/icons.js"></script>
+<script src="assets/js/help.js"></script>
+
+</body>
+</html>

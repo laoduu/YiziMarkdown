@@ -1,6 +1,4 @@
-// Nav scroll
-    const nav = document.getElementById('nav');
-    window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 10));
+// Nav scroll 已移至 site-chrome.js（导航为全站共用组件）
 
     // ===== Theme Stack =====
     const themes = [
