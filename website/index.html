@@ -329,122 +329,203 @@
         </div>
         <div class="changelog-content" id="changelogContent">
             <div class="changelog-panel active" data-version="0.2.3">
-                <div class="changelog-date">2026.09.09</div>
-                <ul class="changelog-list">
-                    <li><span class="changelog-tag new">新增</span><strong>划词助手</strong>：选中文本后显示浮动操作栏，支持演示稿、摘要、改写、翻译、复制、添加到 AI 对话</li>
-                    <li><span class="changelog-tag new">新增</span><strong>划词 + AI 技能联动</strong>：触发技能时 AI 只处理选中文本，输入区显示文本胶囊和技能胶囊</li>
-                    <li><span class="changelog-tag new">新增</span><strong>标题折叠</strong>：Obsidian 风格 hover 折叠图标，已折叠标题常显展开图标；快捷键 Ctrl+Shift+[ / ]</li>
-                    <li><span class="changelog-tag new">新增</span><strong>多 AI 供应商</strong>：新增小米 MiMo（mimo-v2.5）和美团 LongCat（LongCat-2.0），i18n 全语言覆盖</li>
-                    <li><span class="changelog-tag new">新增</span><strong>技能存储迁移</strong>：迁移至 ~/Documents/yizimarkdown/skills/，支持用户自定义，启动时自动同步</li>
-                    <li><span class="changelog-tag new">新增</span><strong>技能定制指南</strong>：AI 面板底部「管理技能」按钮直接打开 skill-guide.md 详细文档</li>
-                    <li><span class="changelog-tag new">新增</span><strong>AI 面板状态持久化</strong>：面板开关和待执行动作持久化，关闭后重开保持状态</li>
-                    <li><span class="changelog-tag improve">优化</span>划词工具栏 15 套主题亮暗模式适配、绝对定位浮层不挤压标题文字</li>
-                    <li><span class="changelog-tag fix">修复</span>实时模式下 --- 分割线未渲染为水平线</li>
-                </ul>
+                <div class="changelog-card">
+                    <div class="changelog-card-head">
+                        <div class="changelog-head-left">
+                            <span class="changelog-version">v0.2.3</span>
+                            <span class="changelog-badge">最新</span>
+                        </div>
+                        <span class="changelog-date">2026.09.09</span>
+                    </div>
+                    <div class="changelog-divider"></div>
+                    <ul class="changelog-list">    
+                        <li><span class="changelog-tag new">新增</span><strong>划词助手</strong>：选中文本后显示浮动操作栏，支持演示稿、摘要、改写、翻译、复制、添加到 AI 对话</li>
+                        <li><span class="changelog-tag new">新增</span><strong>划词 + AI 技能联动</strong>：触发技能时 AI 只处理选中文本，输入区显示文本胶囊和技能胶囊</li>
+                        <li><span class="changelog-tag new">新增</span><strong>标题折叠</strong>：Obsidian 风格 hover 折叠图标，已折叠标题常显展开图标；快捷键 Ctrl+Shift+[ / ]</li>
+                        <li><span class="changelog-tag new">新增</span><strong>多 AI 供应商</strong>：新增小米 MiMo（mimo-v2.5）和美团 LongCat（LongCat-2.0），i18n 全语言覆盖</li>
+                        <li><span class="changelog-tag new">新增</span><strong>技能存储迁移</strong>：迁移至 ~/Documents/yizimarkdown/skills/，支持用户自定义，启动时自动同步</li>
+                        <li><span class="changelog-tag new">新增</span><strong>技能定制指南</strong>：AI 面板底部「管理技能」按钮直接打开 skill-guide.md 详细文档</li>
+                        <li><span class="changelog-tag new">新增</span><strong>AI 面板状态持久化</strong>：面板开关和待执行动作持久化，关闭后重开保持状态</li>
+                        <li><span class="changelog-tag improve">优化</span>划词工具栏 15 套主题亮暗模式适配、绝对定位浮层不挤压标题文字</li>
+                        <li><span class="changelog-tag fix">修复</span>实时模式下 --- 分割线未渲染为水平线</li>
+                    </ul>
+                </div>
             </div>
             <div class="changelog-panel" data-version="0.2.2">
-                <div class="changelog-date">2026.09.08</div>
-                <ul class="changelog-list">
-                    <li><span class="changelog-tag new">新增</span><strong>代码块增强</strong>：集成 highlight.js 语法高亮，头部显示语言标签，支持一键复制与自动换行切换</li>
-                    <li><span class="changelog-tag new">新增</span><strong>链接/图片插入对话框</strong>：图片支持网络 URL 与本地文件两种方式，本地文件走 Tauri 原生文件选择器</li>
-                    <li><span class="changelog-tag new">新增</span><strong>工具栏交互重构</strong>：导出/表格/代码块/模板菜单改鼠标悬浮展开（100ms 防抖），窄窗口自动折叠格式工具栏</li>
-                    <li><span class="changelog-tag new">新增</span><strong>AI 增强</strong>：上下文轮数可配置（0-20 轮），供应商名称随界面语言本地化，切换供应商自动保存并恢复配置</li>
-                    <li><span class="changelog-tag new">新增</span><strong>演示模式改进</strong>：鼠标活动时显示半透明退出按钮、退出后还原全屏/最大化窗口状态、预览自动过滤 YAML frontmatter</li>
-                    <li><span class="changelog-tag improve">优化</span>液态玻璃主题透明度与光效增强、标签栏分隔线、AI 聊天面板宽度可拖拽、技能菜单悬浮介绍面板</li>
-                    <li><span class="changelog-tag fix">修复</span>AI 上下文注入顺序（技能提示词移入对话历史之后）、已安装版技能加载失败、思考内容流式显示与自动滚动、Frontmatter 前导空行容错等问题</li>
-                </ul>
+                <div class="changelog-card">
+                    <div class="changelog-card-head">
+                        <div class="changelog-head-left">
+                            <span class="changelog-version">v0.2.2</span>
+                        </div>
+                        <span class="changelog-date">2026.09.08</span>
+                    </div>
+                    <div class="changelog-divider"></div>
+                    <ul class="changelog-list">    
+                        <li><span class="changelog-tag new">新增</span><strong>代码块增强</strong>：集成 highlight.js 语法高亮，头部显示语言标签，支持一键复制与自动换行切换</li>
+                        <li><span class="changelog-tag new">新增</span><strong>链接/图片插入对话框</strong>：图片支持网络 URL 与本地文件两种方式，本地文件走 Tauri 原生文件选择器</li>
+                        <li><span class="changelog-tag new">新增</span><strong>工具栏交互重构</strong>：导出/表格/代码块/模板菜单改鼠标悬浮展开（100ms 防抖），窄窗口自动折叠格式工具栏</li>
+                        <li><span class="changelog-tag new">新增</span><strong>AI 增强</strong>：上下文轮数可配置（0-20 轮），供应商名称随界面语言本地化，切换供应商自动保存并恢复配置</li>
+                        <li><span class="changelog-tag new">新增</span><strong>演示模式改进</strong>：鼠标活动时显示半透明退出按钮、退出后还原全屏/最大化窗口状态、预览自动过滤 YAML frontmatter</li>
+                        <li><span class="changelog-tag improve">优化</span>液态玻璃主题透明度与光效增强、标签栏分隔线、AI 聊天面板宽度可拖拽、技能菜单悬浮介绍面板</li>
+                        <li><span class="changelog-tag fix">修复</span>AI 上下文注入顺序（技能提示词移入对话历史之后）、已安装版技能加载失败、思考内容流式显示与自动滚动、Frontmatter 前导空行容错等问题</li>
+                    </ul>
+                </div>
             </div>
             <div class="changelog-panel" data-version="0.2.1">
-                <div class="changelog-date">2026.09.05</div>
-                <ul class="changelog-list">
-                    <li><span class="changelog-tag new">新增</span><strong>AI 大模型接入</strong>：侧边聊天面板，支持 OpenAI / Anthropic / Ollama 三种协议，17 家供应商目录，流式 SSE 输出、协作式取消，密钥存 OS keychain 不落盘</li>
-                    <li><span class="changelog-tag new">新增</span><strong>AI 技能（Skill）系统</strong>：<code>skills/</code> 目录承载技能清单与提示词，内置「演示稿提炼」「文档摘要」「润色改写」，技能标签插入输入框、提示词自动注入，用户可自由扩展</li>
-                    <li><span class="changelog-tag new">新增</span><strong>自定义服务</strong>：OpenAI 兼容 / Anthropic 兼容协议二选一，自填 Base URL、模型 ID 与密钥，可接任意第三方大模型，本地端点密钥可留空</li>
-                    <li><span class="changelog-tag new">新增</span><strong>思考过程展示</strong>：DeepSeek / Qwen / GLM / Anthropic 推理模型的 reasoning 内容以可折叠区块呈现</li>
-                    <li><span class="changelog-tag new">新增</span><strong>15 种界面语言</strong>：自研轻量 i18n 引擎，简繁中文、英日韩、德法西葡等，全组件文案随语言切换</li>
-                    <li><span class="changelog-tag improve">优化</span>AI 设置页布局统一对齐、密钥输入框加长并支持显隐、验证诊断显示协议与请求 URL</li>
-                    <li><span class="changelog-tag fix">修复</span>AI 长回复被 10 秒兜底误杀截断、流式中文乱码缺字、Anthropic 兼容网关 401、CRLF 行尾文档大纲无法提取、赛博朋克主题状态栏主题色丢失等问题</li>
-                </ul>
+                <div class="changelog-card">
+                    <div class="changelog-card-head">
+                        <div class="changelog-head-left">
+                            <span class="changelog-version">v0.2.1</span>
+                        </div>
+                        <span class="changelog-date">2026.09.05</span>
+                    </div>
+                    <div class="changelog-divider"></div>
+                    <ul class="changelog-list">    
+                        <li><span class="changelog-tag new">新增</span><strong>AI 大模型接入</strong>：侧边聊天面板，支持 OpenAI / Anthropic / Ollama 三种协议，17 家供应商目录，流式 SSE 输出、协作式取消，密钥存 OS keychain 不落盘</li>
+                        <li><span class="changelog-tag new">新增</span><strong>AI 技能（Skill）系统</strong>：<code>skills/</code> 目录承载技能清单与提示词，内置「演示稿提炼」「文档摘要」「润色改写」，技能标签插入输入框、提示词自动注入，用户可自由扩展</li>
+                        <li><span class="changelog-tag new">新增</span><strong>自定义服务</strong>：OpenAI 兼容 / Anthropic 兼容协议二选一，自填 Base URL、模型 ID 与密钥，可接任意第三方大模型，本地端点密钥可留空</li>
+                        <li><span class="changelog-tag new">新增</span><strong>思考过程展示</strong>：DeepSeek / Qwen / GLM / Anthropic 推理模型的 reasoning 内容以可折叠区块呈现</li>
+                        <li><span class="changelog-tag new">新增</span><strong>15 种界面语言</strong>：自研轻量 i18n 引擎，简繁中文、英日韩、德法西葡等，全组件文案随语言切换</li>
+                        <li><span class="changelog-tag improve">优化</span>AI 设置页布局统一对齐、密钥输入框加长并支持显隐、验证诊断显示协议与请求 URL</li>
+                        <li><span class="changelog-tag fix">修复</span>AI 长回复被 10 秒兜底误杀截断、流式中文乱码缺字、Anthropic 兼容网关 401、CRLF 行尾文档大纲无法提取、赛博朋克主题状态栏主题色丢失等问题</li>
+                    </ul>
+                </div>
             </div>
             <div class="changelog-panel" data-version="0.1.9">
-                <div class="changelog-date">2026.08.11</div>
-                <ul class="changelog-list">
-                    <li><span class="changelog-tag new">新增</span>演示模式重构：纯 Markdown 自动版式，<code>---</code> 分页，引擎按内容结构自动选版式（封面/内容/图片/引用/代码/图表）</li>
-                    <li><span class="changelog-tag new">新增</span>类 PPT 演示能力：笔记一键变全屏幻灯片，支持主题换肤、演讲备注（<code>Ctrl+Alt+P</code>）</li>
-                    <li><span class="changelog-tag new">新增</span>主题标题颜色精确继承：15 套主题全部支持 <code>--editor-h1/h2/h3</code> 标题配色</li>
-                    <li><span class="changelog-tag new">新增</span>模板功能完善：工具栏「从模板新建」下拉，可选模板快速创建文档</li>
-                    <li><span class="changelog-tag fix">修复</span>默认模板误把文件名当文档内容、无序/有序列表宽度不一致、最大化窗口进入全屏黑条与 F 键切换失灵</li>
-                    <li><span class="changelog-tag improve">优化</span>全屏切换（HTML5 Fullscreen）、居中排版、大引号引用页、行内代码标签强化</li>
-                </ul>
+                <div class="changelog-card">
+                    <div class="changelog-card-head">
+                        <div class="changelog-head-left">
+                            <span class="changelog-version">v0.1.9</span>
+                        </div>
+                        <span class="changelog-date">2026.08.11</span>
+                    </div>
+                    <div class="changelog-divider"></div>
+                    <ul class="changelog-list">    
+                        <li><span class="changelog-tag new">新增</span>演示模式重构：纯 Markdown 自动版式，<code>---</code> 分页，引擎按内容结构自动选版式（封面/内容/图片/引用/代码/图表）</li>
+                        <li><span class="changelog-tag new">新增</span>类 PPT 演示能力：笔记一键变全屏幻灯片，支持主题换肤、演讲备注（<code>Ctrl+Alt+P</code>）</li>
+                        <li><span class="changelog-tag new">新增</span>主题标题颜色精确继承：15 套主题全部支持 <code>--editor-h1/h2/h3</code> 标题配色</li>
+                        <li><span class="changelog-tag new">新增</span>模板功能完善：工具栏「从模板新建」下拉，可选模板快速创建文档</li>
+                        <li><span class="changelog-tag fix">修复</span>默认模板误把文件名当文档内容、无序/有序列表宽度不一致、最大化窗口进入全屏黑条与 F 键切换失灵</li>
+                        <li><span class="changelog-tag improve">优化</span>全屏切换（HTML5 Fullscreen）、居中排版、大引号引用页、行内代码标签强化</li>
+                    </ul>
+                </div>
             </div>
             <div class="changelog-panel" data-version="0.1.8">
-                <div class="changelog-date">2026.08.07</div>
-                <ul class="changelog-list">
-                    <li><span class="changelog-tag new">新增</span>斜杠菜单输入触发：输入 <code>/</code> 或 <code>、</code> 自动唤起，继续输入任意字符自动关闭</li>
-                    <li><span class="changelog-tag new">新增</span>HTML 渲染支持：预览模式（整页与并排）可渲染原始 HTML（表格、行内样式等）</li>
-                    <li><span class="changelog-tag new">新增</span>实时模式 HTML 渲染：块级 HTML 及单独成行的行内元素渲染为真实内容，光标落上还原源码编辑</li>
-                    <li><span class="changelog-tag new">新增</span>超链接外部打开：预览中点击链接改为系统默认浏览器打开，不再应用内导航</li>
-                    <li><span class="changelog-tag platform">macOS</span>macOS 版本正式发布：通用二进制安装包（Universal Binary），Intel 与 Apple Silicon 均原生运行，无需 Rosetta</li>
-                    <li><span class="changelog-tag platform">macOS</span>原生全屏、一键设为默认 Markdown 编辑器、系统字体获取（system_profiler）</li>
-                    <li><span class="changelog-tag fix">修复</span>中文输入法下 / 无法唤起斜杠菜单、触发时插件崩溃、继续输入菜单不消失等问题</li>
-                    <li><span class="changelog-tag fix">修复</span>macOS 启动白屏、Mermaid 图表在 macOS 12 无法渲染、打包后主题资源缺失</li>
-                </ul>
+                <div class="changelog-card">
+                    <div class="changelog-card-head">
+                        <div class="changelog-head-left">
+                            <span class="changelog-version">v0.1.8</span>
+                        </div>
+                        <span class="changelog-date">2026.08.07</span>
+                    </div>
+                    <div class="changelog-divider"></div>
+                    <ul class="changelog-list">    
+                        <li><span class="changelog-tag new">新增</span>斜杠菜单输入触发：输入 <code>/</code> 或 <code>、</code> 自动唤起，继续输入任意字符自动关闭</li>
+                        <li><span class="changelog-tag new">新增</span>HTML 渲染支持：预览模式（整页与并排）可渲染原始 HTML（表格、行内样式等）</li>
+                        <li><span class="changelog-tag new">新增</span>实时模式 HTML 渲染：块级 HTML 及单独成行的行内元素渲染为真实内容，光标落上还原源码编辑</li>
+                        <li><span class="changelog-tag new">新增</span>超链接外部打开：预览中点击链接改为系统默认浏览器打开，不再应用内导航</li>
+                        <li><span class="changelog-tag platform">macOS</span>macOS 版本正式发布：通用二进制安装包（Universal Binary），Intel 与 Apple Silicon 均原生运行，无需 Rosetta</li>
+                        <li><span class="changelog-tag platform">macOS</span>原生全屏、一键设为默认 Markdown 编辑器、系统字体获取（system_profiler）</li>
+                        <li><span class="changelog-tag fix">修复</span>中文输入法下 / 无法唤起斜杠菜单、触发时插件崩溃、继续输入菜单不消失等问题</li>
+                        <li><span class="changelog-tag fix">修复</span>macOS 启动白屏、Mermaid 图表在 macOS 12 无法渲染、打包后主题资源缺失</li>
+                    </ul>
+                </div>
             </div>
             <div class="changelog-panel" data-version="0.1.7">
-                <div class="changelog-date">2026.06.22</div>
-                <ul class="changelog-list">
-                    <li><span class="changelog-tag new">新增</span>斜杠菜单重构：Notion 风格全图标网格布局，16 个选项统一为图标+标签卡片</li>
-                    <li><span class="changelog-tag new">新增</span>双击标签关闭文档</li>
-                    <li><span class="changelog-tag fix">修复</span>实时模式任务列表不渲染 checkbox，改为原生 checkbox 元素，效果与预览模式一致</li>
-                    <li><span class="changelog-tag fix">修复</span>预览模式任务列表 checkbox 样式缺失</li>
-                    <li><span class="changelog-tag fix">修复</span>双击已关联 .md 文件时窗口不切到前台</li>
-                    <li><span class="changelog-tag fix">修复</span>从网页粘贴内容丢失 Markdown 格式</li>
-                </ul>
+                <div class="changelog-card">
+                    <div class="changelog-card-head">
+                        <div class="changelog-head-left">
+                            <span class="changelog-version">v0.1.7</span>
+                        </div>
+                        <span class="changelog-date">2026.06.22</span>
+                    </div>
+                    <div class="changelog-divider"></div>
+                    <ul class="changelog-list">    
+                        <li><span class="changelog-tag new">新增</span>斜杠菜单重构：Notion 风格全图标网格布局，16 个选项统一为图标+标签卡片</li>
+                        <li><span class="changelog-tag new">新增</span>双击标签关闭文档</li>
+                        <li><span class="changelog-tag fix">修复</span>实时模式任务列表不渲染 checkbox，改为原生 checkbox 元素，效果与预览模式一致</li>
+                        <li><span class="changelog-tag fix">修复</span>预览模式任务列表 checkbox 样式缺失</li>
+                        <li><span class="changelog-tag fix">修复</span>双击已关联 .md 文件时窗口不切到前台</li>
+                        <li><span class="changelog-tag fix">修复</span>从网页粘贴内容丢失 Markdown 格式</li>
+                    </ul>
+                </div>
             </div>
             <div class="changelog-panel" data-version="0.1.6">
-                <div class="changelog-date">2026.06.18</div>
-                <ul class="changelog-list">
-                    <li><span class="changelog-tag new">新增</span>单实例多标签：双击 .md 或文件关联打开时合并到已有实例，已打开的文件自动切换定位</li>
-                    <li><span class="changelog-tag new">新增</span>F1 快捷键大全面板（3列卡片网格），F2 深浅切换，F3 视图循环，Ins 斜杠菜单</li>
-                    <li><span class="changelog-tag fix">修复</span>Ctrl+F 同时弹出 CM6 内置英文搜索面板的问题</li>
-                    <li><span class="changelog-tag fix">修复</span>液态玻璃主题：长行内代码换行模糊、切换后下拉菜单无法调出、列表中代码高亮不按主题色</li>
-                    <li><span class="changelog-tag improve">优化</span>版本号统一为 0.1.6，设置-外观恢复「自定义 CSS」选项</li>
-                </ul>
+                <div class="changelog-card">
+                    <div class="changelog-card-head">
+                        <div class="changelog-head-left">
+                            <span class="changelog-version">v0.1.6</span>
+                        </div>
+                        <span class="changelog-date">2026.06.18</span>
+                    </div>
+                    <div class="changelog-divider"></div>
+                    <ul class="changelog-list">    
+                        <li><span class="changelog-tag new">新增</span>单实例多标签：双击 .md 或文件关联打开时合并到已有实例，已打开的文件自动切换定位</li>
+                        <li><span class="changelog-tag new">新增</span>F1 快捷键大全面板（3列卡片网格），F2 深浅切换，F3 视图循环，Ins 斜杠菜单</li>
+                        <li><span class="changelog-tag fix">修复</span>Ctrl+F 同时弹出 CM6 内置英文搜索面板的问题</li>
+                        <li><span class="changelog-tag fix">修复</span>液态玻璃主题：长行内代码换行模糊、切换后下拉菜单无法调出、列表中代码高亮不按主题色</li>
+                        <li><span class="changelog-tag improve">优化</span>版本号统一为 0.1.6，设置-外观恢复「自定义 CSS」选项</li>
+                    </ul>
+                </div>
             </div>
             <div class="changelog-panel" data-version="0.1.5">
-                <div class="changelog-date">2026.06.17</div>
-                <ul class="changelog-list">
-                    <li><span class="changelog-tag new">新增</span>主题管理系统，theme.json动态管理14套主题元信息，支持编辑名称、内联色板预览</li>
-                    <li><span class="changelog-tag new">新增</span>7套新主题：液态玻璃、荔枝红、紫罗兰、赛博朋克、Facebook、黑客帝国、薄荷冰沙、落日熔金</li>
-                    <li><span class="changelog-tag new">新增</span>液态玻璃主题：玻璃材质视觉体系，毛玻璃、折射光线、玻璃胶囊效果</li>
-                    <li><span class="changelog-tag new">新增</span>黑客帝国/落日熔金/复古打字机/赛博朋克四套主题亮色模式</li>
-                    <li><span class="changelog-tag new">新增</span>MiSans优先字体栈，自动适配各平台系统字体，历史用户自动迁移</li>
-                    <li><span class="changelog-tag improve">优化</span>所有主题暗色模式全覆盖，h1/h2/h3/code/table/strong等元素全部适配</li>
-                    <li><span class="changelog-tag improve">优化</span>快捷键系统扩展到28个，可视化配置面板支持录制、冲突检测、恢复默认</li>
-                    <li><span class="changelog-tag improve">优化</span>深浅模式双向切换，修复闭包bug；视图循环顺序与页面按钮对齐</li>
-                    <li><span class="changelog-tag fix">修复</span>表格选择器、公式、Mermaid渲染等诸多问题</li>
-                </ul>
+                <div class="changelog-card">
+                    <div class="changelog-card-head">
+                        <div class="changelog-head-left">
+                            <span class="changelog-version">v0.1.5</span>
+                        </div>
+                        <span class="changelog-date">2026.06.17</span>
+                    </div>
+                    <div class="changelog-divider"></div>
+                    <ul class="changelog-list">    
+                        <li><span class="changelog-tag new">新增</span>主题管理系统，theme.json动态管理14套主题元信息，支持编辑名称、内联色板预览</li>
+                        <li><span class="changelog-tag new">新增</span>7套新主题：液态玻璃、荔枝红、紫罗兰、赛博朋克、Facebook、黑客帝国、薄荷冰沙、落日熔金</li>
+                        <li><span class="changelog-tag new">新增</span>液态玻璃主题：玻璃材质视觉体系，毛玻璃、折射光线、玻璃胶囊效果</li>
+                        <li><span class="changelog-tag new">新增</span>黑客帝国/落日熔金/复古打字机/赛博朋克四套主题亮色模式</li>
+                        <li><span class="changelog-tag new">新增</span>MiSans优先字体栈，自动适配各平台系统字体，历史用户自动迁移</li>
+                        <li><span class="changelog-tag improve">优化</span>所有主题暗色模式全覆盖，h1/h2/h3/code/table/strong等元素全部适配</li>
+                        <li><span class="changelog-tag improve">优化</span>快捷键系统扩展到28个，可视化配置面板支持录制、冲突检测、恢复默认</li>
+                        <li><span class="changelog-tag improve">优化</span>深浅模式双向切换，修复闭包bug；视图循环顺序与页面按钮对齐</li>
+                        <li><span class="changelog-tag fix">修复</span>表格选择器、公式、Mermaid渲染等诸多问题</li>
+                    </ul>
+                </div>
             </div>
             <div class="changelog-panel" data-version="0.1.4">
-                <div class="changelog-date">2026.06.15</div>
-                <ul class="changelog-list">
-                    <li><span class="changelog-tag new">新增</span>实时编辑模式（WYSIWYG），Markdown标记自动隐藏，光标进入时显示</li>
-                    <li><span class="changelog-tag new">新增</span>4种实时模式动画效果：聚焦、闪光、辉光、涟漪，支持配置选择</li>
-                    <li><span class="changelog-tag new">新增</span>实时模式表格渲染为HTML表格，点击单元格直接编辑</li>
-                    <li><span class="changelog-tag improve">优化</span>行内代码背景对比度提升，圆角增大到5px，文字统一为主题色</li>
-                    <li><span class="changelog-tag improve">优化</span>撤销/重做、拼写检查开关、同步滚动机制修复</li>
-                    <li><span class="changelog-tag improve">优化</span>新增荔枝红、紫罗兰两套主题</li>
-                </ul>
+                <div class="changelog-card">
+                    <div class="changelog-card-head">
+                        <div class="changelog-head-left">
+                            <span class="changelog-version">v0.1.4</span>
+                        </div>
+                        <span class="changelog-date">2026.06.15</span>
+                    </div>
+                    <div class="changelog-divider"></div>
+                    <ul class="changelog-list">    
+                        <li><span class="changelog-tag new">新增</span>实时编辑模式（WYSIWYG），Markdown标记自动隐藏，光标进入时显示</li>
+                        <li><span class="changelog-tag new">新增</span>4种实时模式动画效果：聚焦、闪光、辉光、涟漪，支持配置选择</li>
+                        <li><span class="changelog-tag new">新增</span>实时模式表格渲染为HTML表格，点击单元格直接编辑</li>
+                        <li><span class="changelog-tag improve">优化</span>行内代码背景对比度提升，圆角增大到5px，文字统一为主题色</li>
+                        <li><span class="changelog-tag improve">优化</span>撤销/重做、拼写检查开关、同步滚动机制修复</li>
+                        <li><span class="changelog-tag improve">优化</span>新增荔枝红、紫罗兰两套主题</li>
+                    </ul>
+                </div>
             </div>
             <div class="changelog-panel" data-version="0.1.3">
-                <div class="changelog-date">2026.06.10</div>
-                <ul class="changelog-list">
-                    <li><span class="changelog-tag new">新增</span>导出按钮主题色适配，导出菜单fixed定位修复</li>
-                    <li><span class="changelog-tag new">新增</span>系统保存对话框，替换浏览器原生下载</li>
-                    <li><span class="changelog-tag improve">优化</span>同步滚动精度重写，并排模式下大纲点击跳转精准</li>
-                    <li><span class="changelog-tag improve">优化</span>行内代码对比度提升，文字统一为主题色</li>
-                    <li><span class="changelog-tag fix">修复</span>新打开文件小圆点误触发、搜索替换面板关闭按钮无效等问题</li>
-                </ul>
+                <div class="changelog-card">
+                    <div class="changelog-card-head">
+                        <div class="changelog-head-left">
+                            <span class="changelog-version">v0.1.3</span>
+                        </div>
+                        <span class="changelog-date">2026.06.10</span>
+                    </div>
+                    <div class="changelog-divider"></div>
+                    <ul class="changelog-list">    
+                        <li><span class="changelog-tag new">新增</span>导出按钮主题色适配，导出菜单fixed定位修复</li>
+                        <li><span class="changelog-tag new">新增</span>系统保存对话框，替换浏览器原生下载</li>
+                        <li><span class="changelog-tag improve">优化</span>同步滚动精度重写，并排模式下大纲点击跳转精准</li>
+                        <li><span class="changelog-tag improve">优化</span>行内代码对比度提升，文字统一为主题色</li>
+                        <li><span class="changelog-tag fix">修复</span>新打开文件小圆点误触发、搜索替换面板关闭按钮无效等问题</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>

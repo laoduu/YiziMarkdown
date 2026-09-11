@@ -12,22 +12,10 @@
 }
 /* 与首页 hero 一致：内容居中、限宽，保证整站观感统一 */
 .help-header-inner { max-width: 820px; margin: 0 auto; }
-.help-crumb {
-    font-size: 13px; color: var(--gray); margin-bottom: 14px;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-}
-.help-crumb a { color: var(--gray); text-decoration: none; }
-.help-crumb a:hover { color: var(--blue); }
-.help-crumb span { color: #cbd5e1; }
 .help-title {
     font-size: clamp(27px, 4vw, 38px); font-weight: 800;
     letter-spacing: -0.02em; color: var(--dark); line-height: 1.25;
 }
-.help-subtitle {
-    margin: 12px auto 0; max-width: 620px;
-    font-size: 15px; color: var(--gray); line-height: 1.75;
-}
-
 /* ===== 搜索 ===== */
 .help-search { position: relative; margin: 26px auto 0; max-width: 540px; }
 .help-search-input {
@@ -224,7 +212,8 @@ kbd {
 /* 配图 */
 .help-figure { margin: 22px 0 26px; }
 .help-figure img {
-    display: block; width: 100%; border-radius: 12px;
+    display: block; margin: 0 auto; max-width: 100%; height: auto;
+    border-radius: 12px;
     border: 1px solid #e2e8f0; background: #f8fafc;
 }
 .help-figure figcaption {
