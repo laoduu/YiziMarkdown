@@ -1,11 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { 
-  FileText,
   FilePlus2,
   SaveAll, 
   FolderOpen, 
   Save,
-  FileUp, 
   Sun, 
   Moon, 
   PanelLeftClose,
@@ -33,15 +31,15 @@ import {
   Pi,
   FunctionSquare,
   CheckSquare,
-  FileDown,
   FileText as FileTextIcon,
-  FileCode,
   Palette,
   Check,
   Presentation,
   Bot,
   ChevronsLeft,
   ChevronsRight,
+  Download,
+  LayoutTemplate,
 } from 'lucide-react'
 import WindowControls from './WindowControls'
 import { useSettingsStore } from '../stores/settingsStore'
@@ -58,7 +56,7 @@ interface ToolbarProps {
   onToggleSidebar: () => void
   onToggleDark: () => void
   onInsertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'link') => void
-  onExport: (format: 'html' | 'md' | 'txt') => void
+  onExport: (format: 'html' | 'md' | 'txt' | 'docx' | 'pdf') => void
   onSearch: () => void
   onSettings: () => void
   onPresent: () => void
@@ -182,7 +180,7 @@ export default function Toolbar({
       {/* 左侧：品牌 + 格式按钮，允许溢出裁剪 */}
       <div className="flex items-center gap-px overflow-hidden min-w-0 flex-1">
         <span className="text-[15px] font-extrabold tracking-tight text-[var(--editor-accent)] select-none mr-1.5 shrink-0">YiziMarkdown</span>
-        <ToolbarButton icon={<FileText size={16} />} tooltip={t('toolbar.newFile')} onClick={onNew} accent />
+        <ToolbarButton icon={<FilePlus2 size={16} />} tooltip={t('toolbar.newFile')} onClick={onNew} accent />
         <div 
           className="relative" 
           ref={templateBtnRef}
@@ -204,7 +202,7 @@ export default function Toolbar({
           }}
         >
           <ToolbarButton 
-            icon={<FilePlus2 size={16} />} 
+            icon={<LayoutTemplate size={16} />} 
             tooltip={t('toolbar.newFromTemplate')} 
             onClick={() => {}}
             accent
@@ -260,7 +258,7 @@ export default function Toolbar({
           }}
         >
           <ToolbarButton 
-            icon={<FileUp size={16} />} 
+            icon={<Download size={16} />} 
             tooltip={t('toolbar.export')} 
             onClick={() => {}}
             accent
@@ -281,19 +279,29 @@ export default function Toolbar({
               }}
             >
               <ExportMenuItem 
-                icon={<FileCode size={14} />} 
+                icon={<FormatBadge letter="H" />} 
                 label={t('toolbar.exportHtml')} 
                 onClick={() => { onExport('html'); setShowExportMenu(false); }} 
               />
               <ExportMenuItem 
-                icon={<FileTextIcon size={14} />} 
+                icon={<FormatBadge letter="M" />} 
                 label={t('toolbar.exportMd')} 
                 onClick={() => { onExport('md'); setShowExportMenu(false); }} 
               />
               <ExportMenuItem 
-                icon={<FileDown size={14} />} 
+                icon={<FormatBadge letter="T" />} 
                 label={t('toolbar.exportTxt')} 
                 onClick={() => { onExport('txt'); setShowExportMenu(false); }} 
+              />
+              <ExportMenuItem 
+                icon={<FormatBadge letter="W" />} 
+                label={t('toolbar.exportDocx')} 
+                onClick={() => { onExport('docx'); setShowExportMenu(false); }} 
+              />
+              <ExportMenuItem 
+                icon={<FormatBadge letter="P" />} 
+                label={t('toolbar.exportPdf')} 
+                onClick={() => { onExport('pdf'); setShowExportMenu(false); }} 
               />
             </div>
           )}
@@ -619,6 +627,19 @@ function generateTableMd(rows: number, cols: number, t: (key: string, params?: R
     '| ' + Array.from({length: cols}, () => t('toolbar.content')).join(' | ') + ' |'
   ).join('\n')
   return '\n' + header + '\n' + sep + '\n' + bodyRows + '\n'
+}
+
+/** 导出格式字母徽标：无衬线大字（SVG text），标准字形、大字号小尺寸清晰；currentColor 跟随主题 */
+function FormatBadge({ letter }: { letter: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+      <text
+        x="12" y="12" textAnchor="middle" dominantBaseline="central"
+        fontFamily="'Arial','Helvetica','Segoe UI',system-ui,sans-serif"
+        fontSize="19" fontWeight={800} fill="currentColor"
+      >{letter}</text>
+    </svg>
+  )
 }
 
 function ExportMenuItem({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {

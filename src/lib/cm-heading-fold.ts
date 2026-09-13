@@ -2,40 +2,63 @@ import { ViewPlugin, EditorView, Decoration, DecorationSet, ViewUpdate } from '@
 import { syntaxTree, toggleFold, foldedRanges } from '@codemirror/language'
 import { RangeSetBuilder } from '@codemirror/state'
 
-function isHeadingLine(view: EditorView, lineNo: number): boolean {
+/** 返回指定行号的标题层级（1-6），非标题行返回 0（支持 ATX 与 Setext 标题） */
+function headingLevelAtLine(view: EditorView, lineNo: number): number {
   const tree = syntaxTree(view.state)
-  let found = false
+  let level = 0
   tree.iterate({
     enter(node) {
-      if (
-        node.name === 'ATXHeading1' ||
-        node.name === 'ATXHeading2' ||
-        node.name === 'ATXHeading3' ||
-        node.name === 'ATXHeading4' ||
-        node.name === 'ATXHeading5' ||
-        node.name === 'ATXHeading6'
-      ) {
-        if (view.state.doc.lineAt(node.from).number === lineNo) {
-          found = true
-          return false
-        }
+      if (level) return false
+      const name = node.name
+      const m =
+        name === 'ATXHeading1' || name === 'SetextHeading1' ? 1
+        : name === 'ATXHeading2' || name === 'SetextHeading2' ? 2
+        : name === 'ATXHeading3' ? 3
+        : name === 'ATXHeading4' ? 4
+        : name === 'ATXHeading5' ? 5
+        : name === 'ATXHeading6' ? 6
+        : 0
+      if (m && view.state.doc.lineAt(node.from).number === lineNo) {
+        level = m
+        return false
       }
     },
   })
-  return found
+  return level
 }
 
-const svgRight = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 3L5 7L8 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
-const svgDown = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 2L7 5L3 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
-
-const INDICATOR_SIZE = 22
+const INDICATOR_MIN_WIDTH = 22
+const INDICATOR_HEIGHT = 20
 const INDICATOR_GAP = 2
+
+/** 折叠状态下的高亮样式（Obsidian 风格：层级标签常显并强调） */
+function applyFoldedStyle(el: HTMLDivElement) {
+  el.style.color = 'var(--editor-accent)'
+  el.style.borderColor = 'var(--editor-accent)'
+  el.style.backgroundColor = 'color-mix(in srgb, var(--editor-accent) 10%, transparent)'
+}
+
+/** 未折叠的默认样式（hover 时出现的细微标记） */
+function applyDefaultStyle(el: HTMLDivElement) {
+  el.style.color = 'var(--sidebar-text)'
+  el.style.borderColor = 'var(--editor-border)'
+  el.style.backgroundColor = 'transparent'
+}
+
+/** 鼠标悬停在标记上时的强调样式 */
+function applyHoverStyle(el: HTMLDivElement) {
+  el.style.color = 'var(--editor-accent)'
+  el.style.borderColor = 'var(--editor-accent)'
+  el.style.backgroundColor = 'var(--editor-hover)'
+}
 
 class HeadingFoldView {
   decorations: DecorationSet
   private indicators: Map<number, HTMLDivElement> = new Map()
   private editorView: EditorView
   private mouseLine = -1
+  private scrollRaf = 0
+  private positionRaf = 0
 
   constructor(view: EditorView) {
     this.editorView = view
@@ -46,12 +69,18 @@ class HeadingFoldView {
   destroy() {
     this.indicators.forEach((el) => el.remove())
     this.indicators.clear()
+    this.editorView.scrollDOM.removeEventListener('scroll', this.onScroll)
+    if (this.scrollRaf) cancelAnimationFrame(this.scrollRaf)
+    if (this.positionRaf) cancelAnimationFrame(this.positionRaf)
   }
 
   update(update: ViewUpdate) {
     if (update.docChanged || update.selectionSet) {
       this.decorations = this.buildDecorations(update.view)
       this.refreshIndicators()
+    } else if (update.geometryChanged) {
+      // 窗口缩放 / 字体变化等几何变化：延迟到布局稳定后重定位
+      this.schedulePositioning()
     }
   }
 
@@ -63,7 +92,7 @@ class HeadingFoldView {
         return
       }
       const lineNo = this.editorView.state.doc.lineAt(pos).number
-      if (isHeadingLine(this.editorView, lineNo)) {
+      if (headingLevelAtLine(this.editorView, lineNo) > 0) {
         this.setMouseLine(lineNo)
       } else {
         this.setMouseLine(-1)
@@ -73,6 +102,35 @@ class HeadingFoldView {
     this.editorView.dom.addEventListener('mouseleave', () => {
       this.setMouseLine(-1)
     })
+
+    // 滚动时重定位：指示器是绝对定位浮层，坐标必须跟随内容
+    this.editorView.scrollDOM.addEventListener('scroll', this.onScroll, { passive: true })
+  }
+
+  /** 滚动（rAF 节流）后重定位所有可见指示器，保持与标题锁定 */
+  private onScroll = () => {
+    if (this.scrollRaf) return
+    this.scrollRaf = requestAnimationFrame(() => {
+      this.scrollRaf = 0
+      this.repositionVisible()
+    })
+  }
+
+  /** 延迟到下一帧再定位：coordsAtPos 不能在 update 事务中同步调用（否则插件崩溃被禁用） */
+  private schedulePositioning() {
+    if (this.positionRaf) return
+    this.positionRaf = requestAnimationFrame(() => {
+      this.positionRaf = 0
+      this.repositionVisible()
+    })
+  }
+
+  private repositionVisible() {
+    for (const [lineNo, el] of this.indicators) {
+      if (el.style.visibility === 'hidden') continue
+      const positioned = this.positionIndicator(el, lineNo)
+      if (!positioned) el.style.visibility = 'hidden'
+    }
   }
 
   private setMouseLine(lineNo: number) {
@@ -97,7 +155,7 @@ class HeadingFoldView {
       const startLine = doc.lineAt(from).number
       const endLine = doc.lineAt(to).number
       for (let i = startLine; i <= endLine; i++) {
-        if (isHeadingLine(view, i)) visible.add(i)
+        if (headingLevelAtLine(view, i) > 0) visible.add(i)
       }
     }
 
@@ -109,6 +167,8 @@ class HeadingFoldView {
     }
 
     for (const lineNo of visible) {
+      const level = headingLevelAtLine(view, lineNo)
+      if (level === 0) continue
       const isFold = folded.has(lineNo)
       const isHover = lineNo === this.mouseLine
       const shouldShow = isFold || isHover
@@ -128,10 +188,17 @@ class HeadingFoldView {
         view.dom.appendChild(el)
       }
 
-      this.positionIndicator(el, lineNo, isFold)
-      el.innerHTML = isFold ? svgDown : svgRight
+      // 层级标签（Obsidian 风格）：H1-H6；定位延迟到下一帧（coordsAtPos 不能在 update 中调用）
+      el.textContent = `H${level}`
+      el.dataset.folded = isFold ? '1' : '0'
+      if (isFold) {
+        applyFoldedStyle(el)
+      } else {
+        applyDefaultStyle(el)
+      }
       el.style.visibility = 'visible'
     }
+    this.schedulePositioning()
   }
 
   private createIndicator(lineNo: number): HTMLDivElement {
@@ -139,23 +206,30 @@ class HeadingFoldView {
     el.className = 'cm-heading-fold-indicator'
     el.style.cssText = `
       position: absolute;
-      width: ${INDICATOR_SIZE}px; height: ${INDICATOR_SIZE}px;
+      min-width: ${INDICATOR_MIN_WIDTH}px; height: ${INDICATOR_HEIGHT}px;
+      padding: 0 5px;
       display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
-      color: var(--editor-border);
+      font-size: 10px; font-weight: 600; line-height: 1;
+      border: 1px solid var(--editor-border);
       border-radius: 4px;
-      transition: color 0.15s, background-color 0.15s;
+      cursor: pointer;
+      user-select: none;
       pointer-events: auto;
       z-index: 10;
       visibility: hidden;
+      box-sizing: border-box;
     `
     el.addEventListener('mouseenter', () => {
-      el.style.color = 'var(--editor-accent)'
-      el.style.backgroundColor = 'var(--editor-hover)'
+      // 折叠状态常显高亮，悬停不覆盖
+      if (el.dataset.folded === '1') return
+      applyHoverStyle(el)
     })
     el.addEventListener('mouseleave', () => {
-      el.style.color = 'var(--editor-border)'
-      el.style.backgroundColor = 'transparent'
+      if (el.dataset.folded === '1') {
+        applyFoldedStyle(el)
+      } else {
+        applyDefaultStyle(el)
+      }
     })
     el.addEventListener('click', (e) => {
       e.preventDefault()
@@ -167,18 +241,20 @@ class HeadingFoldView {
     return el
   }
 
-  private positionIndicator(el: HTMLDivElement, lineNo: number, _isFold: boolean) {
+  /** 返回是否定位成功；标题滚出视口（coordsAtPos 为 null）时返回 false */
+  private positionIndicator(el: HTMLDivElement, lineNo: number): boolean {
     const view = this.editorView
     const line = view.state.doc.line(lineNo)
     const coords = view.coordsAtPos(line.from, -1)
-    if (!coords) return
+    if (!coords) return false
 
     const editorRect = view.dom.getBoundingClientRect()
-    const top = coords.top - editorRect.top + (coords.bottom - coords.top - INDICATOR_SIZE) / 2
-    const left = coords.left - editorRect.left - INDICATOR_SIZE - INDICATOR_GAP
+    const top = coords.top - editorRect.top + (coords.bottom - coords.top - INDICATOR_HEIGHT) / 2
+    const left = coords.left - editorRect.left - el.offsetWidth - INDICATOR_GAP
 
     el.style.top = `${top}px`
     el.style.left = `${left}px`
+    return true
   }
 
   private buildDecorations(_view: EditorView): DecorationSet {

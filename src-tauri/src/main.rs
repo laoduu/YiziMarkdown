@@ -13,6 +13,10 @@ use std::os::windows::process::CommandExt;
 mod ai_keystore;
 mod ai_proxy;
 
+// 导出 DOCX / PDF
+mod docx_export;
+mod pdf_export;
+
 use ai_proxy::{ai_cancel, ai_chat, ai_clear_key, ai_has_key, ai_set_key, ai_verify_key};
 
 
@@ -303,31 +307,29 @@ fn get_app_root() -> Result<PathBuf, String> {
     Ok(exe.parent().unwrap_or(Path::new(".")).to_path_buf())
 }
 
-/// 获取用户文档中的 skills 目录：~/Documents/yizimarkdown/skills/
-/// Windows: C:\Users\<user>\Documents\yizimarkdown\skills\
-/// macOS:   /Users/<user>/Documents/yizimarkdown\skills\
-fn get_user_skills_dir() -> Result<PathBuf, String> {
+/// 获取用户文档中的配置目录：~/Documents/yizimarkdown/（包含 skills/ 等用户配置）
+/// Windows: C:\Users\<user>\Documents\yizimarkdown\
+/// macOS:   /Users/<user>/Documents/yizimarkdown\
+fn get_user_config_dir() -> Result<PathBuf, String> {
     #[cfg(target_os = "windows")]
     {
         if let Ok(profile) = std::env::var("USERPROFILE") {
-            return Ok(PathBuf::from(profile)
-                .join("Documents")
-                .join("yizimarkdown")
-                .join("skills"));
+            return Ok(PathBuf::from(profile).join("Documents").join("yizimarkdown"));
         }
     }
     #[cfg(target_os = "macos")]
     {
         if let Ok(home) = std::env::var("HOME") {
-            return Ok(PathBuf::from(home)
-                .join("Documents")
-                .join("yizimarkdown")
-                .join("skills"));
+            return Ok(PathBuf::from(home).join("Documents").join("yizimarkdown"));
         }
     }
-    // fallback：应用根目录下的 skills/
-    let root = get_app_root()?;
-    Ok(root.join("skills"))
+    // fallback：应用根目录
+    get_app_root()
+}
+
+/// 获取用户文档中的 skills 目录：~/Documents/yizimarkdown/skills/
+fn get_user_skills_dir() -> Result<PathBuf, String> {
+    Ok(get_user_config_dir()?.join("skills"))
 }
 
 /// 确保应用根目录下的子目录和默认文件存在
@@ -507,6 +509,7 @@ fn get_config_dir() -> Result<serde_json::Value, String> {
 
     serde_json::json!({
         "appDir": root.to_string_lossy(),
+        "userConfigDir": get_user_config_dir()?.to_string_lossy(),
         "themesDir": root.join("themes").to_string_lossy(),
         "templatesDir": root.join("templates").to_string_lossy(),
         "userCssPath": root.join("user.css").to_string_lossy(),
@@ -1123,11 +1126,151 @@ fn read_image_base64(path: String) -> Result<String, String> {
     Ok(format!("data:{};base64,{}", mime, b64))
 }
 
+// ===== 导出 DOCX / PDF =====
+
+/// 设置窗口 1px 系统边框颜色（Windows 11 `DWMWA_BORDER_COLOR`），跟随当前主题背景。
+/// 非 Windows / 非法颜色 / Win10 及以下：静默忽略。
+#[tauri::command]
+fn set_window_border_color(window: tauri::WebviewWindow, color: String) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        use windows::Win32::Foundation::HWND;
+        use windows::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_BORDER_COLOR};
+
+        let hex = color.trim_start_matches('#');
+        if hex.len() != 6 {
+            return Ok(());
+        }
+        let r = u32::from_str_radix(&hex[0..2], 16).map_err(|_| "invalid color")?;
+        let g = u32::from_str_radix(&hex[2..4], 16).map_err(|_| "invalid color")?;
+        let b = u32::from_str_radix(&hex[4..6], 16).map_err(|_| "invalid color")?;
+        // COLORREF 为 0x00BBGGRR（BGR 序）
+        let colorref: u32 = (b << 16) | (g << 8) | r;
+        let hwnd: HWND = window.hwnd().map_err(|e| e.to_string())?;
+        unsafe {
+            DwmSetWindowAttribute(
+                hwnd,
+                DWMWA_BORDER_COLOR,
+                &colorref as *const u32 as *const std::ffi::c_void,
+                std::mem::size_of::<u32>() as u32,
+            )
+            .map_err(|e| format!("DwmSetWindowAttribute failed: {}", e))?;
+        }
+    }
+    Ok(())
+}
+
+/// 将 md 中的网络图片（http/https）下载为 data URL，供 DOCX 嵌入。
+/// 仅处理 docx 生成器支持的格式（png/jpg/jpeg/gif/bmp）；本地路径图保持原样由后端直接读取。
+async fn download_md_images(md: &str) -> String {
+    let mut out = String::with_capacity(md.len());
+    let mut search_from = 0;
+    while let Some(rel) = md[search_from..].find("![") {
+        let start = search_from + rel;
+        out.push_str(&md[search_from..start]);
+        // 找 ]( 定位 URL 起点
+        if let Some(close) = md[start + 2..].find("](") {
+            let url_start = start + 2 + close + 2;
+            let rest = &md[url_start..];
+            let url_end = rest
+                .find(|c| c == ')' || c == ' ' || c == '\n' || c == '\t' || c == '<')
+                .unwrap_or(rest.len());
+            let url = &rest[..url_end];
+            let is_http = url.starts_with("http://") || url.starts_with("https://");
+            let ext = url
+                .split('?')
+                .next()
+                .unwrap_or("")
+                .rsplit('.')
+                .next()
+                .unwrap_or("")
+                .to_lowercase();
+            let supported = matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "gif" | "bmp" | "webp");
+            if is_http && supported {
+                let mime = match ext.as_str() {
+                    "jpg" | "jpeg" => "image/jpeg",
+                    "png" => "image/png",
+                    "gif" => "image/gif",
+                    "webp" => "image/webp",
+                    _ => "image/bmp",
+                };
+                let mut new_url = url.to_string();
+                if let Ok(resp) = reqwest::get(url).await {
+                    if let Ok(bytes) = resp.bytes().await {
+                        use base64::Engine as _;
+                        let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+                        new_url = format!("data:{};base64,{}", mime, b64);
+                    }
+                }
+                out.push_str(&md[start..url_start]);
+                out.push_str(&new_url);
+                search_from = url_start + url_end;
+                continue;
+            }
+        }
+        // 不是可下载的网络图片：原样保留这一小段
+        out.push_str("![");
+        search_from = start + 2;
+    }
+    out.push_str(&md[search_from..]);
+    out
+}
+
+/// 生成并写入 .docx（前端已通过 save_file_dialog 选好路径）
+#[tauri::command]
+async fn export_docx(path: String, md: String, base_dir: Option<String>, theme: docx_export::DocxTheme) -> Result<(), String> {
+    // 网络图片下载为 data URL；本地图片由生成器按路径读取
+    let md = download_md_images(&md).await;
+    let base = base_dir.map(std::path::PathBuf::from);
+    let bytes = docx_export::markdown_to_docx(&md, theme, base)?;
+    std::fs::write(&path, &bytes).map_err(|e| format!("Failed to write docx: {}", e))
+}
+
+/// 导出 PDF 用的 HTML 共享状态（自定义协议 yiziexport 按请求返回当前内容）
+struct ExportHtmlState(pub std::sync::Mutex<String>);
+
+/// 静默导出 .pdf（WebView2 PrintToPdf，Windows）
+/// async：窗口创建/打印投递到主线程后立即返回，避免阻塞主线程导致死锁
+#[tauri::command]
+async fn export_pdf(app: tauri::AppHandle, html: String, path: String) -> Result<(), String> {
+    eprintln!("[pdf_export] command start, html len={}", html.len());
+    {
+        let state = app.state::<ExportHtmlState>();
+        *state.0.lock().unwrap() = html;
+    }
+    let rx = pdf_export::start_export(&app, path)?;
+    match tokio::time::timeout(std::time::Duration::from_secs(30), rx).await {
+        Ok(Ok(r)) => {
+            eprintln!("[pdf_export] command done, ok={}", r.is_ok());
+            r
+        }
+        Ok(Err(_)) => {
+            let _ = app.get_webview_window("pdf-export").map(|w| w.close());
+            Err("export window closed unexpectedly".to_string())
+        }
+        Err(_) => {
+            eprintln!("[pdf_export] TIMED OUT: on_page_load 未触发或打印回调未到达");
+            let _ = app.get_webview_window("pdf-export").map(|w| w.close());
+            Err("PDF export timed out".to_string())
+        }
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        // PDF 导出：隐藏窗口通过 yiziexport 自定义协议加载内联 HTML（WebView2 不支持直接导航 data: URL）
+        .manage(ExportHtmlState(std::sync::Mutex::new(String::new())))
+        .register_uri_scheme_protocol("yiziexport", |ctx, _request| {
+            let state = ctx.app_handle().state::<ExportHtmlState>();
+            let html = state.0.lock().unwrap().clone();
+            tauri::http::Response::builder()
+                .header(tauri::http::header::CONTENT_TYPE, "text/html; charset=utf-8")
+                .body(html.into_bytes())
+                .unwrap()
+        })
         .invoke_handler(tauri::generate_handler![
             read_file,
             save_file,
@@ -1162,6 +1305,8 @@ fn main() {
             disassociate_md_files,
             is_md_associated,
             get_cli_open_file, get_file_meta, read_image_base64,
+            export_docx, export_pdf,
+            set_window_border_color,
             ai_set_key,
             ai_has_key,
             ai_clear_key,

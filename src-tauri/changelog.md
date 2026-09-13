@@ -1,5 +1,82 @@
 # YiziMarkdown 开发日志
 
+## v0.2.4
+
+**光标可见性优化**
+
+- **主题色 I-beam 光标**：编辑区鼠标竖线跟随当前主题色（动态 SVG，明暗适配描边），提供「纤细（原生样式）/ 加粗（高可见度）」两档
+- **块状插入光标**：加粗档下插入光标为主题色半透明块，输入位置一目了然
+- **点击涟漪反馈**：编辑区点击扩散 1px 细线三圈涟漪（默认开启）
+- **全站主题色箭头**：非编辑区基础光标改为主题色箭头，文本输入/链接/按钮语义不变
+- **设置项**：设置 → 编辑器 → 光标（样式选择 + 涟漪开关）
+
+**导出 DOCX / PDF / HTML**
+
+- **DOCX**：Rust 后端生成（pulldown-cmark → 手写 OOXML），Word 原生语义（标题/列表/表格/代码块/引用/任务列表），主题色跟随；本地图片按路径嵌入、网络图片（png/jpg/gif/bmp/webp）自动下载嵌入、按原图比例排版
+- **PDF**：WebView2 `PrintToPdf` 静默打印，隐藏窗口 + 自定义协议加载纯文档 HTML，与预览还原度一致，支持多页分页
+- **HTML**：导出为自包含文档，内联主题/KaTeX/用户 CSS，与预览显示一致
+- **本地图片渲染修复**：markdown-it 将 Windows 路径反斜杠编码为 `%5C` 导致本地图不显示 → 解析入口还原编码
+
+**标题折叠（Obsidian 风格）**
+
+- **H 层级标签替代三角符号**：折叠指示器改为 `H1`–`H6` 层级标签（药丸形），悬停标题行显示，点击折叠，折叠后常显并以主题色高亮
+- **滚动锁定**：折叠标签绝对定位浮层跟随标题滚动（scrollDOM 监听 + rAF 节流重定位），滚出视口跟随滚走、滚回自动恢复
+
+**窗口边框跟随主题（Windows 11）**
+
+- 无边框窗口被 Windows DWM 画的 1px 强调色外框（本机默认 `#0078D4`，系统强调色而非应用代码）改为跟随当前主题背景色：`DwmSetWindowAttribute` + `DWMWA_BORDER_COLOR`，主题/明暗切换同步；Win10 自动忽略
+
+**DOCX 排版还原度增强**
+
+- **嵌套列表修复**：`- 外层` + `  - 内层` 不再塌陷成同一段落，嵌套列表独立成段、层级正确（行内渲染曾吞掉块级起始）
+- **多级列表**：numbering 扩到三级（有序 `1. / 1.2. / 1.2.3.`，无序 `• / ◦ / ▪`），`ilvl` 随嵌套深度
+- **bullet 字体回退**：无序符号加 Symbol 字体（Word/pandoc 标准），避免字体缺失时显示方框
+- **加粗/斜体**：补充 `<w:bCs/>` / `<w:iCs/>` complex-script 变体
+
+**设置面板整体优化**
+
+- **全即时生效**：通用/编辑器移除「保存」按钮，所有设置改动即生效并自动持久化（zustand persist）；AI 面板 model/baseUrl/prompt 由 onBlur 改为即时保存；「恢复默认」即时生效；快捷键面板保留保存式（写 keybindings.json + 冲突校验）
+- **布局统一**：各设置页左列固定 160px、右侧控件（下拉/滑条/输入框）等宽对齐（将 AI 页的固定列布局泛化为全面板规则）
+- **配置目录双项显示**：通用设置显示「程序运行位置」与「用户配置存储位置」（`~/Documents/yizimarkdown/`，新增 Rust `get_user_config_dir`）
+- **涟漪反馈默认勾选**：persist 升至 v3 对存量存档强制默认开启；修复「恢复默认」后涟漪被取消的问题（DEFAULTS_EDITOR 漏改）
+
+**图标可识别性优化**
+
+- **新建文档 / 从模板新建分工**：新建 `FilePlus2`、从模板新建 `LayoutTemplate`，不再混淆
+- **导出主按钮**：`FileUp` → `Download`（导出语义清晰）
+- **导出菜单格式徽标**：5 种格式改为无衬线大字字母（H / M / T / W / P，SVG text 19px@24 视口、weight 800、currentColor 跟随主题），小尺寸可读性优先
+- **TXT 文案**：「导出为纯文本」→「导出 TXT 纯文本」（15 语言）
+
+**本地图片**
+
+- **支持 `file:///D:\...` 形式**：图片解析入口兼容 file:/// 前缀路径（浏览器禁止直接加载，转为 Tauri 读取）
+
+**踩坑记录（重点）**
+
+1. **`invokeTauri` 静默吞错**：命令 Err 被吞导致"假成功" toast → 导出改用 `invokeTauriOrThrow` 如实报错
+2. **同步命令 + `recv_timeout` 主线程死锁**：`export_pdf` 同步命令阻塞主线程 30s、UI 冻结 → 改 async 命令 + tokio oneshot + timeout
+3. **wry 不支持 data URL 导航**：`WebviewWindowBuilder` 加载 data URL 页面永不加载 → 改用 tauri 自定义协议
+4. **PrintToPdf 提交后立即关窗**：打印被取消、回调永不触发 → 回调内关窗 + 超时兜底
+5. **`html,body{overflow:hidden}` 锁死打印视口**：PDF 只出一页 / HTML 无法滚动 → 导出样式解除锁定
+6. **serde camelCase/snake_case 不匹配**：`monoFont` vs `mono_font` → `#[serde(rename_all = "camelCase")]`
+7. **`PrintToPdf` 在 `ICoreWebView2_7`**：版本化接口需 `cast`；tokio `oneshot::Sender` 不可 Clone → `Arc<Mutex<Option<_>>>`
+8. **CM6 `update()` 中同步调用 `coordsAtPos` 导致插件崩溃**：折叠指示器定位在 update 事务里测坐标 → `CodeMirror plugin crashed` 插件被禁用、标签滚动冻住 → 全部定位延迟到 `requestAnimationFrame`
+9. **DOCX 嵌套列表塌陷**：行内渲染吞掉块级起始，内层项与外层项并成一段 → peek 边界检测 + level 区分 End 归属，docx-preview 真实渲染验证
+10. **1px 系统边框是 Windows 强调色**：无边框窗口被 DWM 画 1px 强调色边框（AccentColor=#0078D4），与应用无关 → DWMWA_BORDER_COLOR 染色跟随主题
+11. **设置面板保存式/即时式混存**：通用/编辑器要「保存」、外观/实时即时、AI 用 onBlur，且 persist 已自动持久化、「保存」冗余 → 全面板改即时生效，仅保留有副作用的操作（快捷键/API Key/CSS/模板）
+12. **设置布局左列不定宽**：`max-width:55%` 只限上限，右列控件宽度随 label 长短变化 → 固定左列 160px（泛化 AI 页规则），Playwright 实测各页控件等宽
+13. **SVG text 字母小字号发糊**：字母徽标手绘 path 几何不标准、text 字号过小发糊 → 改用无衬线字体大字（19px@24、weight 800、明确字体族）
+14. **涟漪「恢复默认」漏改**：store 默认值已改 true，但 DEFAULTS_EDITOR 仍 false，点恢复默认后涟漪被取消 → 同步为 true + persist v3 强制存量开启
+15. **配置目录语义错误**：显示的是程序运行目录（appDir），用户配置实际存于 `~/Documents/yizimarkdown/` → 新增 `get_user_config_dir` 并双项显示
+
+**技术改进**
+
+- `themeCursor.ts` 统一生成三档主题色光标，MutationObserver 监听主题 CSS 异步注入重算
+- 新增 Rust 依赖：`pulldown-cmark`、`zip`、`webview2-com`、`windows-core`（安装包增量约 1MB）
+- 手写 PNG/JPEG/GIF/BMP/WebP 头部尺寸解析，零新依赖，DOCX 图片按比例嵌入
+- 单测：DOCX 生成、serde 契约、图片头解析、本地图端到端嵌入、嵌套列表层级
+- 折叠滚动锁定与 DOCX 排版用 Playwright + Edge / docx-preview 真实浏览器验证（加粗 fontWeight 700、嵌套拆段）
+
 ## v0.2.3
 
 **划词助手 + AI 深度集成**

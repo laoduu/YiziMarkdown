@@ -17,6 +17,10 @@ export interface SettingsState {
   wordWrap: boolean
   spellCheck: boolean
 
+  // 光标
+  cursorStyle: 'text' | 'bold'
+  mouseSpotlight: boolean
+
   // 预览模式排版
   previewFontSize: number
   previewLineHeight: number
@@ -81,6 +85,10 @@ export const useSettingsStore = create<SettingsState>()(
       wordWrap: true,
       spellCheck: false,
 
+      // 光标
+      cursorStyle: 'bold',
+      mouseSpotlight: true,
+
       // 外观
       currentTheme: 'academic',
       isDark: false,
@@ -116,7 +124,8 @@ export const useSettingsStore = create<SettingsState>()(
     {
       name: 'yizimarkdown-settings',
       // v1: 自动保存间隔范围改为 5s~180s（旧数据越界需迁移）
-      version: 1,
+      // v2/v3: 涟漪反馈默认开启
+      version: 3,
       migrate: (persisted: unknown) => {
         // 自动迁移旧字体栈到 MiSans 方案
         const oldFont = "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
@@ -130,6 +139,8 @@ export const useSettingsStore = create<SettingsState>()(
           if (typeof iv !== 'number' || iv < 5000 || iv > 180000) {
             state.autoSaveInterval = 60000
           }
+          // v2/v3：涟漪反馈默认开启（新功能默认值统一为开启；v3 对存量已关闭的存档再强制一次）
+          state.mouseSpotlight = true
         }
         return state
       },

@@ -34,6 +34,7 @@ const DEFAULTS_EDITOR = {
   previewFontFamily: "'MiSans', 'Mi Sans', system-ui, -apple-system, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif",
   fontSize: 20, lineHeight: 2.0, previewFontSize: 20, previewLineHeight: 2.0,
   showLineNumbers: true, wordWrap: true,
+  cursorStyle: 'bold' as const, mouseSpotlight: true,
 }
 
 interface SettingsModalProps {
@@ -90,40 +91,30 @@ function FooterBar({ hasChanges, onSave, onRestore }: { hasChanges: boolean; onS
   )
 }
 
-// ===================== 通用设置 =====================
+// ===================== 通用设置（改动即时生效并自动保存） =====================
 function GeneralSettings() {
   const store = useSettingsStore()
   const { t } = useI18n()
-  const [local, setLocal] = useState({ autoSave: store.autoSave, autoSaveInterval: store.autoSaveInterval, defaultTemplate: store.defaultTemplate })
-  const [configDir, setConfigDir] = useState('')
+  const [dirs, setDirs] = useState<{ appDir?: string; userConfigDir?: string }>({})
   const [templates, setTemplates] = useState<string[]>([])
   const [isDefaultEditor, setIsDefaultEditor] = useState(false)
   const [associating, setAssociating] = useState(false)
-  const initialized = useRef(false)
 
   const currentLang = store.language
 
   useEffect(() => {
-    if (!initialized.current) {
-      setLocal({ autoSave: store.autoSave, autoSaveInterval: store.autoSaveInterval, defaultTemplate: store.defaultTemplate })
-      initialized.current = true
-    }
-  }, [store])
-
-  useEffect(() => {
-    invokeTauri<Record<string, string>>('get_config_dir').then((dirs) => {
-      if (dirs) {
-        setConfigDir(dirs.appDir || '')
+    invokeTauri<Record<string, string>>('get_config_dir').then((d) => {
+      if (d) {
+        setDirs({ appDir: d.appDir, userConfigDir: d.userConfigDir })
         invokeTauri<string[]>('list_templates').then((l) => setTemplates(l || []))
       }
     })
     invokeTauri<boolean>('is_md_associated').then((v) => setIsDefaultEditor(v || false))
   }, [])
 
-  const hasChanges = local.autoSave !== store.autoSave || local.autoSaveInterval !== store.autoSaveInterval || local.defaultTemplate !== store.defaultTemplate
-
-  const handleSave = () => { store.updateSettings(local) }
-  const handleRestore = () => { setLocal({ ...DEFAULTS_GENERAL }) }
+  const handleRestore = () => {
+    store.updateSettings({ ...DEFAULTS_GENERAL })
+  }
 
   const handleAssociateChange = async (checked: boolean) => {
     setAssociating(true)
@@ -142,6 +133,7 @@ function GeneralSettings() {
   return (
     <>
       <div className="settings-content-scroll">
+        <div className="px-5 py-2 text-[11px] text-[var(--sidebar-text)]">{t('settings.instantSaveHint')}</div>
         <div className="space-y-4">
           <Section title={t('settings.language')}>
             <Row label={t('settings.language')} hint={t('settings.languageHint')}>
@@ -168,7 +160,7 @@ function GeneralSettings() {
           </Section>
           <Section title={t('settings.startup')}>
             <Row label={t('settings.defaultTemplate')}>
-              <select value={local.defaultTemplate} onChange={(e) => setLocal({ ...local, defaultTemplate: e.target.value })} className="settings-select">
+              <select value={store.defaultTemplate} onChange={(e) => store.setField('defaultTemplate', e.target.value)} className="settings-select">
                 <option value="">{t('common.none')}</option>
                 {templates.map((t) => <option key={t} value={t}>{t.replace(/\.\w+$/, '')}</option>)}
               </select>
@@ -177,28 +169,37 @@ function GeneralSettings() {
           <Section title={t('settings.saving')}>
             <Row label={t('settings.autoSave')}>
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={local.autoSave} onChange={(e) => setLocal({ ...local, autoSave: e.target.checked })} className="settings-checkbox" />
+                <input type="checkbox" checked={store.autoSave} onChange={(e) => store.setField('autoSave', e.target.checked)} className="settings-checkbox" />
                 <span className="text-xs text-[var(--editor-text)]">{t('settings.autoSave')}</span>
               </label>
             </Row>
-            <Row label={t('settings.saveInterval', { n: local.autoSaveInterval / 1000 })}>
+            <Row label={t('settings.saveInterval', { n: store.autoSaveInterval / 1000 })}>
               <div className="w-full">
-                <input type="range" min="5000" max="180000" step="1000" value={local.autoSaveInterval} onChange={(e) => setLocal({ ...local, autoSaveInterval: Number(e.target.value) })} className="settings-range" />
+                <input type="range" min="5000" max="180000" step="1000" value={store.autoSaveInterval} onChange={(e) => store.setField('autoSaveInterval', Number(e.target.value))} className="settings-range" />
                 <div className="flex justify-between text-[11px] text-[var(--sidebar-text)] mt-0.5"><span>{t('settings.secMin')}</span><span>{t('settings.secMax')}</span></div>
               </div>
             </Row>
           </Section>
           <Section title={t('settings.configDir')}>
-            {configDir && (
-              <div className="px-4 py-2 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg">
-                <p className="text-[11px] text-[var(--sidebar-text)] mb-1">{t('settings.configDirHint')}</p>
-                <p className="text-xs text-[var(--editor-text)] font-mono break-all">{configDir}</p>
+            {(dirs.appDir || dirs.userConfigDir) && (
+              <div className="px-4 py-2 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg space-y-2">
+                <p className="text-[11px] text-[var(--sidebar-text)]">{t('settings.configDirHint')}</p>
+                <div>
+                  <p className="text-[11px] text-[var(--sidebar-text)]">{t('settings.appRunDir')}</p>
+                  <p className="text-xs text-[var(--editor-text)] font-mono break-all">{dirs.appDir}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-[var(--sidebar-text)]">{t('settings.userConfigDirLabel')}</p>
+                  <p className="text-xs text-[var(--editor-text)] font-mono break-all">{dirs.userConfigDir}</p>
+                </div>
               </div>
             )}
           </Section>
         </div>
       </div>
-      <FooterBar hasChanges={hasChanges} onSave={handleSave} onRestore={handleRestore} />
+      <div className="settings-footer-bar">
+        <button onClick={handleRestore} className="settings-btn-secondary">{t('common.restoreDefault')}</button>
+      </div>
     </>
   )
 }
@@ -502,56 +503,88 @@ function AnimationDemo({ mode }: { mode: string }) {
   )
 }
 
-// ===================== 编辑器设置 =====================
+// ===================== 编辑器设置（改动即时生效并自动保存） =====================
 function EditorSettings() {
   const { t } = useI18n()
   const store = useSettingsStore()
-  const [local, setLocal] = useState({
-    fontFamily: store.fontFamily, previewFontFamily: store.previewFontFamily,
-    fontSize: store.fontSize, lineHeight: store.lineHeight,
-    previewFontSize: store.previewFontSize, previewLineHeight: store.previewLineHeight,
-    showLineNumbers: store.showLineNumbers, wordWrap: store.wordWrap,
-    liveAnimationMode: store.liveAnimationMode,
-  })
   const [systemFonts, setSystemFonts] = useState(fallbackFonts)
   const [fontsLoaded, setFontsLoaded] = useState(false)
   const [fontFilter, setFontFilter] = useState('')
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
-  const initialized = useRef(false)
-
-  useEffect(() => {
-    if (!initialized.current) {
-      setLocal({
-        fontFamily: store.fontFamily, previewFontFamily: store.previewFontFamily,
-        fontSize: store.fontSize, lineHeight: store.lineHeight,
-        previewFontSize: store.previewFontSize, previewLineHeight: store.previewLineHeight,
-        showLineNumbers: store.showLineNumbers, wordWrap: store.wordWrap,
-        liveAnimationMode: store.liveAnimationMode,
-      })
-      initialized.current = true
-    }
-  }, [store])
 
   useEffect(() => {
     invokeTauri<string[]>('get_system_fonts').then((f) => { if (f && f.length > 0) setSystemFonts(f); setFontsLoaded(true) })
   }, [])
 
-  const hasChanges = local.fontFamily !== store.fontFamily || local.previewFontFamily !== store.previewFontFamily
-    || local.fontSize !== store.fontSize || local.lineHeight !== store.lineHeight
-    || local.previewFontSize !== store.previewFontSize || local.previewLineHeight !== store.previewLineHeight
-    || local.showLineNumbers !== store.showLineNumbers || local.wordWrap !== store.wordWrap
-    || local.liveAnimationMode !== store.liveAnimationMode
-  const handleSave = () => { store.updateSettings(local) }
-  const handleRestore = () => { setLocal({ ...DEFAULTS_EDITOR }) }
+  const handleRestore = () => {
+    store.updateSettings({ ...DEFAULTS_EDITOR })
+  }
 
   const filtered = fontFilter ? systemFonts.filter(f => f.toLowerCase().includes(fontFilter.toLowerCase())) : systemFonts
-  const cur = mode === 'edit' ? local.fontFamily : local.previewFontFamily
-  const setFont = (v: string) => setLocal({ ...local, [mode === 'edit' ? 'fontFamily' : 'previewFontFamily']: v })
+  const cur = mode === 'edit' ? store.fontFamily : store.previewFontFamily
+  const setFont = (v: string) => store.setField(mode === 'edit' ? 'fontFamily' : 'previewFontFamily', v)
 
   return (
     <>
       <div className="settings-content-scroll">
+        <div className="px-5 py-2 text-[11px] text-[var(--sidebar-text)]">{t('settings.instantSaveHint')}</div>
         <div className="space-y-4">
+          <Section title={t('settings.sourceLayout')}>
+            <Row label={t('settings.fontSize', { n: store.fontSize })}>
+              <div className="w-full">
+                <input type="range" min="12" max="32" value={store.fontSize} onChange={(e) => store.setField('fontSize', Number(e.target.value))} className="settings-range" />
+                <div className="flex justify-between text-[11px] text-[var(--sidebar-text)] mt-0.5"><span>12px</span><span>32px</span></div>
+              </div>
+            </Row>
+            <Row label={t('settings.lineHeight', { n: store.lineHeight })}>
+              <div className="w-full">
+                <input type="range" min="1.2" max="3.0" step="0.1" value={store.lineHeight} onChange={(e) => store.setField('lineHeight', Number(e.target.value))} className="settings-range" />
+                <div className="flex justify-between text-[11px] text-[var(--sidebar-text)] mt-0.5"><span>1.2</span><span>3.0</span></div>
+              </div>
+            </Row>
+          </Section>
+          <Section title={t('settings.cursor')}>
+            <Row label={t('settings.cursorStyle')}>
+              <select className="settings-select" value={store.cursorStyle}
+                onChange={(e) => store.setField('cursorStyle', e.target.value as 'text' | 'bold')}>
+                <option value="bold">{t('settings.cursorStyleBold')}</option>
+                <option value="text">{t('settings.cursorStyleText')}</option>
+              </select>
+            </Row>
+            <Row label={t('settings.mouseSpotlight')} hint={t('settings.mouseSpotlightHint')}>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={store.mouseSpotlight}
+                  onChange={(e) => store.setField('mouseSpotlight', e.target.checked)} className="settings-checkbox" />
+              </label>
+            </Row>
+          </Section>
+          <Section title={t('settings.previewLayout')}>
+            <Row label={t('settings.fontSize', { n: store.previewFontSize })}>
+              <div className="w-full">
+                <input type="range" min="12" max="32" value={store.previewFontSize} onChange={(e) => store.setField('previewFontSize', Number(e.target.value))} className="settings-range" />
+                <div className="flex justify-between text-[11px] text-[var(--sidebar-text)] mt-0.5"><span>12px</span><span>32px</span></div>
+              </div>
+            </Row>
+            <Row label={t('settings.lineHeight', { n: store.previewLineHeight })}>
+              <div className="w-full">
+                <input type="range" min="1.2" max="3.0" step="0.1" value={store.previewLineHeight} onChange={(e) => store.setField('previewLineHeight', Number(e.target.value))} className="settings-range" />
+                <div className="flex justify-between text-[11px] text-[var(--sidebar-text)] mt-0.5"><span>1.2</span><span>3.0</span></div>
+              </div>
+            </Row>
+          </Section>
+          <Section title={t('settings.display')}>
+            <Row label={t('settings.showLineNumbers')}>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={store.showLineNumbers} onChange={(e) => store.setField('showLineNumbers', e.target.checked)} className="settings-checkbox" />
+              </label>
+            </Row>
+            <Row label={t('settings.wordWrap')}>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={store.wordWrap} onChange={(e) => store.setField('wordWrap', e.target.checked)} className="settings-checkbox" />
+              </label>
+            </Row>
+          </Section>
+          
           <Section title={t('settings.font')}>
             <div className="flex gap-2 mb-2">
               {(['edit', 'preview'] as const).map((m) => (
@@ -600,58 +633,19 @@ function EditorSettings() {
             </div>
             <input type="text" value={cur} onChange={(e) => setFont(e.target.value)} placeholder={t('settings.manualFont')} className="settings-input mt-1.5" />
           </Section>
-          <Section title={t('settings.sourceLayout')}>
-            <Row label={t('settings.fontSize', { n: local.fontSize })}>
-              <div className="w-full">
-                <input type="range" min="12" max="32" value={local.fontSize} onChange={(e) => setLocal({ ...local, fontSize: Number(e.target.value) })} className="settings-range" />
-                <div className="flex justify-between text-[11px] text-[var(--sidebar-text)] mt-0.5"><span>12px</span><span>32px</span></div>
-              </div>
-            </Row>
-            <Row label={t('settings.lineHeight', { n: local.lineHeight })}>
-              <div className="w-full">
-                <input type="range" min="1.2" max="3.0" step="0.1" value={local.lineHeight} onChange={(e) => setLocal({ ...local, lineHeight: Number(e.target.value) })} className="settings-range" />
-                <div className="flex justify-between text-[11px] text-[var(--sidebar-text)] mt-0.5"><span>1.2</span><span>3.0</span></div>
-              </div>
-            </Row>
-          </Section>
-          <Section title={t('settings.previewLayout')}>
-            <Row label={t('settings.fontSize', { n: local.previewFontSize })}>
-              <div className="w-full">
-                <input type="range" min="12" max="32" value={local.previewFontSize} onChange={(e) => setLocal({ ...local, previewFontSize: Number(e.target.value) })} className="settings-range" />
-                <div className="flex justify-between text-[11px] text-[var(--sidebar-text)] mt-0.5"><span>12px</span><span>32px</span></div>
-              </div>
-            </Row>
-            <Row label={t('settings.lineHeight', { n: local.previewLineHeight })}>
-              <div className="w-full">
-                <input type="range" min="1.2" max="3.0" step="0.1" value={local.previewLineHeight} onChange={(e) => setLocal({ ...local, previewLineHeight: Number(e.target.value) })} className="settings-range" />
-                <div className="flex justify-between text-[11px] text-[var(--sidebar-text)] mt-0.5"><span>1.2</span><span>3.0</span></div>
-              </div>
-            </Row>
-          </Section>
-          <Section title={t('settings.display')}>
-            <Row label={t('settings.showLineNumbers')}>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={local.showLineNumbers} onChange={(e) => setLocal({ ...local, showLineNumbers: e.target.checked })} className="settings-checkbox" />
-              </label>
-            </Row>
-            <Row label={t('settings.wordWrap')}>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={local.wordWrap} onChange={(e) => setLocal({ ...local, wordWrap: e.target.checked })} className="settings-checkbox" />
-              </label>
-            </Row>
-          </Section>
-          
           <Section title={t('settings.preview')}>
-            <div className="p-3 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg text-[var(--editor-text)]" style={{ fontFamily: local.fontFamily, fontSize: `${local.fontSize}px`, lineHeight: local.lineHeight }}>
+            <div className="p-3 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg text-[var(--editor-text)]" style={{ fontFamily: store.fontFamily, fontSize: `${store.fontSize}px`, lineHeight: store.lineHeight }}>
               <div className="text-[11px] text-[var(--sidebar-text)] mb-1">{t('settings.sourceMode')}</div>
               <div style={{ fontFamily: "'Consolas', monospace", background: 'var(--editor-bg)', padding: '6px', borderRadius: '4px', fontSize: '12px' }}>function hello() {'{'}<br/>&nbsp;&nbsp;console.log("Hello, YiziMarkdown!");<br/>{'}'}</div>
               <div className="mt-2 text-[11px] text-[var(--sidebar-text)] mb-1">{t('settings.previewMode')}</div>
-              <div style={{ fontFamily: local.previewFontFamily, fontSize: `${local.previewFontSize}px`, lineHeight: local.previewLineHeight }}><h3 style={{ fontWeight: 600, margin: '0.3em 0 0.2em' }}>{t('settings.headingSample')}</h3><p>{t('settings.sampleText')}</p></div>
+              <div style={{ fontFamily: store.previewFontFamily, fontSize: `${store.previewFontSize}px`, lineHeight: store.previewLineHeight }}><h3 style={{ fontWeight: 600, margin: '0.3em 0 0.2em' }}>{t('settings.headingSample')}</h3><p>{t('settings.sampleText')}</p></div>
             </div>
           </Section>
         </div>
       </div>
-      <FooterBar hasChanges={hasChanges} onSave={handleSave} onRestore={handleRestore} />
+      <div className="settings-footer-bar">
+        <button onClick={handleRestore} className="settings-btn-secondary">{t('common.restoreDefault')}</button>
+      </div>
     </>
   )
 }
@@ -1198,15 +1192,15 @@ function AISettings() {
     invokeTauri<boolean>('ai_has_key', { provider: store.aiProvider }).then((v) => setHasKey(v || false))
   }, [store.aiProvider])
 
-  const saveModel = () => {
-    store.setField('aiModel', model)
-    store.setField('aiBaseUrl', baseUrl)
-    store.setField('aiSystemPrompt', systemPrompt)
+  const saveModel = (m: string, b: string, p: string) => {
+    store.setField('aiModel', m)
+    store.setField('aiBaseUrl', b)
+    store.setField('aiSystemPrompt', p)
     // 更新当前供应商的缓存
     const newConfigs = { ...store.aiProviderConfigs }
     newConfigs[store.aiProvider] = {
-      model: model || providerById(store.aiProvider)?.defaultModel || '',
-      baseUrl: baseUrl || '',
+      model: m || providerById(store.aiProvider)?.defaultModel || '',
+      baseUrl: b || '',
       apiFormat: store.aiApiFormat,
     }
     store.setField('aiProviderConfigs', newConfigs)
@@ -1290,8 +1284,7 @@ function AISettings() {
                 <input
                   type="text"
                   value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  onBlur={saveModel}
+                  onChange={(e) => { setModel(e.target.value); saveModel(e.target.value, baseUrl, systemPrompt) }}
                   placeholder={t('settings.aiModelPlaceholder')}
                   className="settings-input"
                   style={{ width: '100%' }}
@@ -1305,8 +1298,7 @@ function AISettings() {
               <input
                 type="text"
                 value={baseUrl}
-                onChange={(e) => setBaseUrl(e.target.value)}
-                onBlur={saveModel}
+                onChange={(e) => { setBaseUrl(e.target.value); saveModel(model, e.target.value, systemPrompt) }}
                 placeholder={provider?.defaultBaseUrl || ''}
                 className="settings-input"
                 style={{ width: '100%' }}
@@ -1315,8 +1307,7 @@ function AISettings() {
             <Row label={t('settings.aiSystemPrompt')} hint={t('settings.aiSystemPromptHint')}>
               <textarea
                 value={systemPrompt}
-                onChange={(e) => setSystemPrompt(e.target.value)}
-                onBlur={saveModel}
+                onChange={(e) => { setSystemPrompt(e.target.value); saveModel(model, baseUrl, e.target.value) }}
                 rows={2}
                 className="settings-textarea"
                 style={{ width: '100%' }}

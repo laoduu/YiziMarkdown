@@ -64,8 +64,22 @@ body {
   font-family: var(--font-sans);
   background-color: var(--editor-bg);
   color: var(--editor-text);
+  cursor: var(--cursor-arrow, default);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* 主题箭头只作用于基础/默认光标；文本输入区保持 I-beam、链接保持手型 */
+input[type='text'],
+input[type='number'],
+input[type='search'],
+input[type='password'],
+textarea,
+[contenteditable='true'] {
+  cursor: text;
+}
+a {
+  cursor: pointer;
 }
 
 /* ===== 布局 ===== */
@@ -285,6 +299,42 @@ body {
 }
 
 /* ===== 编辑器核心 ===== */
+
+/* ===== 鼠标光标可见性 ===== */
+/* 主题色 I-beam：--cursor-standard（标准档 16×24）/ --cursor-bold（加粗档 16×30，加高）由 JS
+   读取当前主题 --editor-cursor 动态生成（明暗适配描边色），两档都应用主题色 */
+.cm-editor-container[data-cursor='bold'],
+.cm-editor-container[data-cursor='bold'] .cm-content {
+  cursor: var(--cursor-bold, text);
+}
+.cm-editor-container[data-cursor='text'],
+.cm-editor-container[data-cursor='text'] .cm-content {
+  cursor: var(--cursor-standard, var(--cursor-bold, text));
+}
+
+/* 点击涟漪：细线三圈，依次扩散（sonar 效果） */
+.editor-click-ripple {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 50%;
+  border: 1px solid var(--editor-accent);
+  pointer-events: none;
+  z-index: 2147483641;
+  opacity: 0;
+  animation: editor-ripple 0.6s ease-out forwards;
+  animation-delay: var(--delay, 0s);
+}
+.editor-click-ripple.r1 { --from: 0.25; --to: 2.2; --delay: 0s; }
+.editor-click-ripple.r2 { --from: 0.4; --to: 3.4; --delay: 0.08s; }
+.editor-click-ripple.r3 { --from: 0.55; --to: 4.6; --delay: 0.16s; }
+@keyframes editor-ripple {
+  from { transform: scale(var(--from, 0.25)); opacity: 0.6; }
+  to { transform: scale(var(--to, 2.2)); opacity: 0; }
+}
 
 /* ===== 滚动条 ===== */
 ::-webkit-scrollbar {
@@ -1095,10 +1145,10 @@ body {
   margin-bottom: 6px;
 }
 
-/* 设置行 */
+/* 设置行：左列标签/提示固定 160px，右列控件统一弹性宽度，各页对齐一致（下拉/滑条等宽） */
 .settings-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   padding: 3px 0;
@@ -1107,26 +1157,18 @@ body {
 .settings-row:last-child {
   border-bottom: none;
 }
-/* 左侧标签/提示列：限宽 + 提示文字允许换行，避免长 hint 挤掉右侧控件 */
+/* 左侧标签/提示列：固定宽度 + 顶部对齐，提示文字允许换行 */
 .settings-row > div:first-child {
-  max-width: 55%;
+  flex: 0 0 160px;
+  padding-top: 8px;
   min-width: 0;
 }
 .settings-row > div:first-child p {
   word-break: break-word;
   line-height: 1.4;
 }
-
-/* AI 设置页：左列固定宽度，右列控件左缘/宽度对齐；label 与输入框上沿对齐 */
-.ai-settings .settings-row {
-  align-items: flex-start;
-}
-.ai-settings .settings-row > div:first-child {
-  flex: 0 0 160px;
-  padding-top: 8px;
-}
-/* 右列允许收缩：长错误/提示文本（无空格 JSON、URL）换行，不撑宽整行 */
-.ai-settings .settings-row > div:last-child {
+/* 右列控件：允许收缩，长提示/错误文本换行不撑宽整行 */
+.settings-row > div:last-child {
   min-width: 0;
   max-width: 100%;
 }

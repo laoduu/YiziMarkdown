@@ -420,7 +420,7 @@ function stripHtml(html: string): string {
 }
 
 
-function buildEditorTheme(isDark: boolean, fontFamily: string, fontSize: string, lineHeight: string): Extension {
+function buildEditorTheme(isDark: boolean, fontFamily: string, fontSize: string, lineHeight: string, cursorStyle: 'text' | 'bold'): Extension {
   return EditorView.theme({
     '&.cm-editor': {
       height: '100%',
@@ -441,6 +441,15 @@ function buildEditorTheme(isDark: boolean, fontFamily: string, fontSize: string,
       color: 'var(--editor-text)',
       fontFamily: `var(--font-mono, ${fontFamily})`,
     },
+    // 加粗模式：插入光标改为块状（主题色半透明，文字透出）
+    ...(cursorStyle === 'bold' ? {
+      '.cm-cursor': {
+        borderLeft: 'none',
+        width: '0.6ch',
+        background: 'color-mix(in srgb, var(--editor-cursor) 45%, transparent)',
+        marginLeft: '0',
+      },
+    } : {}),
     '.cm-line': {
       padding: '2px 0',
       lineHeight: 'var(--line-height, 1.8)',
@@ -525,7 +534,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [searchMatches, setSearchMatches] = useState<number>(0)
   const [searchIndex, setSearchIndex] = useState<number>(-1)
-  const { fontFamily, fontSize, lineHeight, currentTheme, isDark, showLineNumbers, wordWrap, spellCheck, liveAnimationMode, enabledPlugins, pluginConfigs } = useSettingsStore()
+  const { fontFamily, fontSize, lineHeight, currentTheme, isDark, showLineNumbers, wordWrap, spellCheck, liveAnimationMode, cursorStyle, mouseSpotlight, enabledPlugins, pluginConfigs } = useSettingsStore()
   const viewMode = externalViewMode ?? 'preview'
   const [slashMenuVisible, setSlashMenuVisible] = useState(false)
   const [slashMenuCoords, setSlashMenuCoords] = useState({ left: 0, bottom: 0 })
@@ -969,7 +978,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         richCompartment.of(viewMode === 'live' ? liveEditExtension() : []),
         history(),
         lineWrappingCompartment.of(wordWrap ? EditorView.lineWrapping : []),
-        themeCompartment.of(buildEditorTheme(isDark, fontFamily, String(fontSize), String(lineHeight))),
+        themeCompartment.of(buildEditorTheme(isDark, fontFamily, String(fontSize), String(lineHeight), cursorStyle)),
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         drawSelection(),
         indentOnInput(),
@@ -1089,9 +1098,9 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     const view = viewRef.current
     if (!view) return
     view.dispatch({
-      effects: themeCompartment.reconfigure(buildEditorTheme(isDark, fontFamily, String(fontSize), String(lineHeight)))
+      effects: themeCompartment.reconfigure(buildEditorTheme(isDark, fontFamily, String(fontSize), String(lineHeight), cursorStyle))
     })
-  }, [isDark, fontFamily, fontSize, lineHeight, themeCompartment])
+  }, [isDark, fontFamily, fontSize, lineHeight, cursorStyle, themeCompartment])
 
   // spellCheck 设置变更时动态 reconfigure
   useEffect(() => {
@@ -1101,6 +1110,36 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       effects: spellCheckCompartment.reconfigure(EditorView.contentAttributes.of({ spellcheck: spellCheck ? 'true' : 'false' }))
     })
   }, [spellCheck, spellCheckCompartment])
+
+  // ---- 点击涟漪：点击编辑区时在点击处扩散三圈细线（sonar 效果） ----
+  useEffect(() => {
+    if (!mouseSpotlight || viewMode === 'preview') return
+    const container = editorRef.current
+    if (!container) return
+
+    const ripples: HTMLDivElement[] = []
+    const onPointerDown = (e: PointerEvent) => {
+      for (let i = 1; i <= 3; i++) {
+        const ripple = document.createElement('div')
+        ripple.className = `editor-click-ripple r${i}`
+        ripple.style.left = `${e.clientX}px`
+        ripple.style.top = `${e.clientY}px`
+        document.body.appendChild(ripple)
+        ripples.push(ripple)
+        ripple.addEventListener('animationend', () => {
+          ripple.remove()
+          const idx = ripples.indexOf(ripple)
+          if (idx >= 0) ripples.splice(idx, 1)
+        })
+      }
+    }
+
+    container.addEventListener('pointerdown', onPointerDown)
+    return () => {
+      container.removeEventListener('pointerdown', onPointerDown)
+      for (const r of ripples) r.remove()
+    }
+  }, [mouseSpotlight, viewMode])
 
   // Toggle line numbers based on settings
   useEffect(() => {
@@ -1342,7 +1381,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     <div className="editor-container h-full flex flex-col">
       <div className="flex-1 overflow-hidden flex">
         {/* 编辑器面板：永远挂载，用flex比例控制显隐 */}
-        <div ref={editorRef} data-animation={liveAnimationMode} className="cm-editor-container" style={{ flex: viewMode === 'split' ? '1 1 0%' : (viewMode === 'edit' || viewMode === 'live') ? '1 1 100%' : '0 0 0%', minHeight: 0, overflow: viewMode === 'preview' ? 'hidden' : 'visible', width: viewMode === 'preview' ? 0 : undefined, pointerEvents: viewMode === 'preview' ? 'none' : 'auto' }} />
+        <div ref={editorRef} data-animation={liveAnimationMode} data-cursor={cursorStyle} className="cm-editor-container" style={{ flex: viewMode === 'split' ? '1 1 0%' : (viewMode === 'edit' || viewMode === 'live') ? '1 1 100%' : '0 0 0%', minHeight: 0, overflow: viewMode === 'preview' ? 'hidden' : 'visible', width: viewMode === 'preview' ? 0 : undefined, pointerEvents: viewMode === 'preview' ? 'none' : 'auto' }} />
         {/* 分割线 */}
         {viewMode === 'split' && <div style={{ width: 1, flexShrink: 0, background: 'var(--editor-border)' }} />}
         {/* 斜杠菜单 */}

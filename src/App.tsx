@@ -9,12 +9,16 @@ import HomePage from './components/HomePage'
 import Slideshow from './components/Slideshow'
 import AIChatPanel from './components/AIChatPanel'
 import { PanelLeftClose, PanelLeft } from 'lucide-react'
-import { invokeTauri } from './lib/tauri'
+import { invokeTauri, invokeTauriOrThrow } from './lib/tauri'
 import { useSettingsStore } from './stores/settingsStore'
 import { loadKeybindings, resolveAction, getKeybindingsMap, formatKey, SHORTCUT_ACTIONS } from './lib/keybindings'
 import { useEditorStore } from './stores/editorStore'
 import { loadPlugin, unloadPlugin } from './plugins/registry'
 import { useI18n } from './i18n'
+import { refreshThemeCursorVars } from './lib/themeCursor'
+// 导出 PDF 用的内联样式（globals.css 已包含 Tailwind prose / 编辑器排版；KaTeX 样式保证公式还原）
+import globalsCss from './styles/globals.css?inline'
+import katexCss from 'katex/dist/katex.min.css?inline'
 
 // 打开文件对话框 - Tauri 环境用 Rust 命令，浏览器降级用 HTML input
 const openFileDialog = async (): Promise<{ name: string; content: string; filePath?: string } | null> => {
@@ -67,7 +71,7 @@ const openFileDialog = async (): Promise<{ name: string; content: string; filePa
 
 function App() {
   const { t } = useI18n()
-  const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, enabledPlugins, pluginConfigs, setField, aiPanelOpen, updateSettings } = useSettingsStore()
+  const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, enabledPlugins, pluginConfigs, setField, aiPanelOpen, updateSettings, userThemeEnabled, userThemeName } = useSettingsStore()
   const {
     activeTabId, currentTab,
     openFile, openNewFile, closeTab, switchTab,
@@ -400,6 +404,23 @@ function App() {
     }
   }, [currentTheme, isDark])
 
+  // 主题色光标：主题 CSS 为异步注入，注入完成（或主题/明暗变化）后重算 arrow/standard/bold 三档；
+  // 顺带把窗口 1px 系统边框（Windows 11 DWMWA_BORDER_COLOR）同步为主题背景色
+  useEffect(() => {
+    let raf = 0
+    const refresh = () => {
+      raf = 0
+      refreshThemeCursorVars()
+      const bg = getComputedStyle(document.documentElement).getPropertyValue('--editor-bg').trim()
+      if (bg) invokeTauri('set_window_border_color', { color: bg })
+    }
+    const schedule = () => { if (!raf) raf = requestAnimationFrame(refresh) }
+    schedule()
+    const observer = new MutationObserver(schedule)
+    observer.observe(document.head, { childList: true, subtree: true, characterData: true })
+    return () => { cancelAnimationFrame(raf); observer.disconnect() }
+  }, [currentTheme, isDark, userThemeEnabled, userThemeName])
+
   // 同步 <html lang>（i18n）
   const uiLang = useSettingsStore((s) => s.language)
   useEffect(() => {
@@ -520,46 +541,38 @@ function App() {
     openNewFile(text)
   }, [openNewFile])
 
-  const handleExport = useCallback(async (format: 'html' | 'md' | 'txt') => {
+  // 组装独立文档 HTML：内联全部样式（主题/用户/KaTeX/基础排版），与预览还原度一致。
+  // print=true 时附加打印样式（PDF 用）：解除 globals.css 的 html,body{height:100%;overflow:hidden}
+  // （否则 WebView2 打印时文档高度被锁死在视口、只出一页），并去掉预览的留白/限宽。
+  const buildExportHtml = useCallback((opts?: { print?: boolean }): string => {
+    const themeCss = document.getElementById('yizimarkdown-theme-css')?.textContent || ''
+    const userCss = document.getElementById('yizimarkdown-user-css')?.textContent || ''
+    const previewHtml = document.querySelector('.editor-content')?.innerHTML || ''
+    const themeClass = `theme-${currentTheme}${isDark ? ' dark' : ''}`
+    // globals.css 的 html,body{height:100%;overflow:hidden} 是应用 UI 用的；
+    // 独立导出文件必须解除，否则文档锁死在视口高度、无法滚动
+    const extraCss = opts?.print
+      ? '@page{margin:18mm}html,body{height:auto!important;overflow:visible!important}body{background:#fff}.editor-content{padding:0!important;max-width:none!important;margin:0!important}'
+      : 'html,body{height:auto!important;overflow:visible!important}'
+    return `<!DOCTYPE html><html class="${themeClass}"><head><meta charset="utf-8"><style>${globalsCss}</style><style>${katexCss}</style><style>${themeCss}</style><style>${userCss}</style>${extraCss ? `<style>${extraCss}</style>` : ''}</head><body class="${themeClass}"><div class="editor-content prose prose-lg max-w-none theme-${currentTheme}">${previewHtml}</div></body></html>`
+  }, [currentTheme, isDark])
+
+  const handleExport = useCallback(async (format: 'html' | 'md' | 'txt' | 'docx' | 'pdf') => {
     const tab = currentTab()
     if (!tab) return
 
-    let output = ''
     let baseName = 'document'
     let ext = 'txt'
-
     if (tab.filePath) {
       baseName = tab.filePath.split('\\').pop()?.replace(/\.[^/.]+$/, '') || 'document'
     }
-    
+
     switch (format) {
-      case 'html':
-        const previewElement = document.querySelector('.editor-content')
-        output = previewElement?.innerHTML || tab.content
-        ext = 'html'
-        break
-      case 'md':
-        output = tab.content
-        ext = 'md'
-        break
-      case 'txt':
-        output = tab.content
-          .replace(/^#{1,6}\s/gm, '')
-          .replace(/\*\*\*(.+?)\*\*\*/g, '$1')
-          .replace(/\*\*(.+?)\*\*/g, '$1')
-          .replace(/\*(.+?)\*/g, '$1')
-          .replace(/~~(.+?)~~/g, '$1')
-          .replace(/`([^`]+)`/g, '$1')
-          .replace(/```[\s\S]*?```/g, '')
-          .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-          .replace(/!\[([^\]]*)\]\([^)]+\)/g, '')
-          .replace(/^[-*+]\s/gm, '')
-          .replace(/^\d+\.\s/gm, '')
-          .replace(/^>\s/gm, '')
-          .replace(/\|/g, '')
-          .replace(/---/g, '')
-        ext = 'txt'
-        break
+      case 'html': ext = 'html'; break
+      case 'md': ext = 'md'; break
+      case 'txt': ext = 'txt'; break
+      case 'docx': ext = 'docx'; break
+      case 'pdf': ext = 'pdf'; break
     }
 
     // 弹出保存文件对话框
@@ -570,14 +583,56 @@ function App() {
 
     if (!savedPath) return  // 用户取消
 
-    // 写入文件
     try {
-      await invokeTauri('save_file', { path: savedPath, content: output })
+      if (format === 'docx') {
+        // 相对图片以 md 所在目录为基准解析
+        const lastSep = tab.filePath ? Math.max(tab.filePath.lastIndexOf('\\'), tab.filePath.lastIndexOf('/')) : -1
+        const baseDir = tab.filePath && lastSep >= 0 ? tab.filePath.substring(0, lastSep) : null
+        const cs = getComputedStyle(document.documentElement)
+        const accent = (cs.getPropertyValue('--editor-cursor') || '').trim() || (isDark ? '#8ab4f8' : '#0066cc')
+        const text = (cs.getPropertyValue('--editor-text') || '').trim() || '#333333'
+        const mono = (cs.getPropertyValue('--font-mono') || '').trim() || 'Consolas'
+        // 用 invokeTauriOrThrow：导出失败必须抛错显示，不能吞错假装成功
+        await invokeTauriOrThrow('export_docx', {
+          path: savedPath,
+          md: tab.content,
+          baseDir,
+          theme: { accent, text, font: previewFontFamily, monoFont: mono },
+        })
+      } else if (format === 'pdf') {
+        await invokeTauriOrThrow('export_pdf', { path: savedPath, html: buildExportHtml({ print: true }) })
+      } else {
+        let output = ''
+        if (format === 'html') {
+          // 完整独立 HTML：内联主题/用户/KaTeX 样式，与预览显示一致
+          output = buildExportHtml()
+        } else if (format === 'md') {
+          output = tab.content
+        } else {
+          output = tab.content
+            .replace(/^#{1,6}\s/gm, '')
+            .replace(/\*\*\*(.+?)\*\*\*/g, '$1')
+            .replace(/\*\*(.+?)\*\*/g, '$1')
+            .replace(/\*(.+?)\*/g, '$1')
+            .replace(/~~(.+?)~~/g, '$1')
+            .replace(/`([^`]+)`/g, '$1')
+            .replace(/```[\s\S]*?```/g, '')
+            .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+            .replace(/!\[([^\]]*)\]\([^)]+\)/g, '')
+            .replace(/^[-*+]\s/gm, '')
+            .replace(/^\d+\.\s/gm, '')
+            .replace(/^>\s/gm, '')
+            .replace(/\|/g, '')
+            .replace(/---/g, '')
+        }
+        await invokeTauri('save_file', { path: savedPath, content: output })
+      }
       showToast(t('app.exported', { name: savedPath.split('\\').pop() || 'file' }))
-    } catch {
+    } catch (e) {
+      console.error('[export] failed:', e)
       showToast(t('app.exportFailed'))
     }
-  }, [currentTab, showToast])
+  }, [currentTab, showToast, buildExportHtml, previewFontFamily, isDark])
 
   const handleFolderChange = useCallback((folderPath: string) => {
     setCurrentFolder(folderPath)
