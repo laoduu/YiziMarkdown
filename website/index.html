@@ -46,7 +46,7 @@
         "license": "https://github.com/laoduu/YiziMarkdown/blob/main/LICENSE",
         "programmingLanguage": ["TypeScript", "Rust"],
         "screenshot": "https://md.yizigpt.com/assets/index.webp",
-        "version": "0.2.3",
+        "version": "0.2.4",
         "author": {
             "@type": "Organization",
             "name": "YiziPaper",
@@ -63,11 +63,11 @@
 <!-- Hero -->
 <section class="hero">
     <div class="hero-content">
-        <div class="hero-badge"><span class="dot"></span> V0.2.3 · 划词助手 · 标题折叠 · AI 技能联动</div>
+        <div class="hero-badge"><span class="dot"></span> V0.2.4 · Word/PDF 导出 · 光标可见性 · 模板持久化</div>
         <h1>既<span style="color: var(--orange);">好看</span>，又<span class="highlight">彪悍</span></h1>
         <p class="hero-sub">一款 AI 加持的跨平台 Markdown 编辑器<br><span class="nowrap">内置大模型助手与类 PPT 演示模式，写作、提炼、汇报一站搞定</span></p>
         <div class="hero-actions">
-            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.2.3/YiziMarkdown_0.2.3_x64-setup.exe" target="_blank" class="btn-primary">
+            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.2.4/YiziMarkdown_0.2.4_x64-setup.exe" target="_blank" class="btn-primary">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.55 10.5 4.5v6.8H3V5.55zm0 12.9 7.5-1.05v-6.3H3v7.35zM11.5 4.3 21 3v8.3h-9.5V4.3zm0 15.4 9.5-1.3V12.7h-9.5v7z"/></svg>
                 Windows 版下载
             </a>
@@ -75,7 +75,7 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 12.54c-.03-3.04 2.48-4.5 2.6-4.57-1.42-2.07-3.62-2.36-4.4-2.39-1.88-.19-3.66 1.1-4.62 1.1-.95 0-2.43-1.08-4-1.05-2.05.03-3.95 1.2-5 3.04-2.14 3.7-.55 9.17 1.53 12.18 1.02 1.46 2.23 3.1 3.83 3.04 1.53-.06 2.11-.99 3.96-.99 1.85 0 2.37.99 4 .96 1.65-.03 2.7-1.49 3.71-2.95 1.17-1.71 1.65-3.37 1.68-3.45-.04-.02-3.22-1.24-3.29-4.92zM14.4 4.2c.85-1.03 1.42-2.46 1.26-3.89-1.22.05-2.7.81-3.58 1.84-.79.91-1.47 2.36-1.29 3.76 1.36.1 2.76-.69 3.61-1.71z"/></svg>
                 macOS 版下载
             </a>
-            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.2.3/YiziMarkdown_0.2.3_x64-portable.zip" target="_blank" class="btn-secondary">
+            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.2.4/YiziMarkdown_0.2.4_x64-portable.zip" target="_blank" class="btn-secondary">
                 <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 7l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                 便携版（解压即用）
             </a>
@@ -316,7 +316,8 @@
     </div>
     <div class="changelog-container">
         <div class="changelog-tabs" id="changelogTabs">
-            <button class="changelog-tab active" data-version="0.2.3">v0.2.3</button>
+            <button class="changelog-tab active" data-version="0.2.4">v0.2.4</button>
+            <button class="changelog-tab" data-version="0.2.3">v0.2.3</button>
             <button class="changelog-tab" data-version="0.2.2">v0.2.2</button>
             <button class="changelog-tab" data-version="0.2.1">v0.2.1</button>
             <button class="changelog-tab" data-version="0.1.9">v0.1.9</button>
@@ -328,12 +329,37 @@
             <button class="changelog-tab" data-version="0.1.3">v0.1.3</button>
         </div>
         <div class="changelog-content" id="changelogContent">
-            <div class="changelog-panel active" data-version="0.2.3">
+            <div class="changelog-panel active" data-version="0.2.4">
+                <div class="changelog-card">
+                    <div class="changelog-card-head">
+                        <div class="changelog-head-left">
+                            <span class="changelog-version">v0.2.4</span>
+                            <span class="changelog-badge">最新</span>
+                        </div>
+                        <span class="changelog-date">2026.09.15</span>
+                    </div>
+                    <div class="changelog-divider"></div>
+                    <ul class="changelog-list">
+                        <li><span class="changelog-tag new">新增</span><strong>导出 Word（DOCX）</strong>：Word 原生语义（标题/列表/表格/代码块/引用），表格样式对齐预览</li>
+                        <li><span class="changelog-tag new">新增</span><strong>导出 PDF</strong>：静默打印，与预览还原度一致，长文自动分页</li>
+                        <li><span class="changelog-tag new">新增</span><strong>导出 HTML</strong>：自包含文档，内联主题与用户 CSS</li>
+                        <li><span class="changelog-tag new">新增</span><strong>光标可见性体系</strong>：主题色 I-beam、块状插入光标、点击涟漪、全站主题箭头</li>
+                        <li><span class="changelog-tag new">新增</span><strong>标题折叠</strong>：H 层级标签替代三角，标签跟随滚动锁定</li>
+                        <li><span class="changelog-tag new">新增</span><strong>文档模板持久化</strong>：迁至 ~/Documents/yizimarkdown/templates/，重装不丢</li>
+                        <li><span class="changelog-tag new">新增</span><strong>窗口边框跟随主题</strong>：Win11 的 1px 系统外框不再固定蓝色</li>
+                        <li><span class="changelog-tag improve">优化</span><strong>DOCX 还原度</strong>：列表加粗开头不再丢内容、表格对齐预览、支持 HTML &lt;img&gt; 与 width</li>
+                        <li><span class="changelog-tag improve">优化</span><strong>设置面板</strong>：全即时生效、布局统一、配置目录双项显示</li>
+                        <li><span class="changelog-tag improve">优化</span><strong>导出菜单图标</strong>：改为 H/M/T/W/P 字母徽标</li>
+                        <li><span class="changelog-tag fix">修复</span>本地图片不显示（Windows 路径反斜杠编码问题）</li>
+                        <li><span class="changelog-tag fix">修复</span>标题折叠标签滚动冻结（CM6 update 内测坐标致插件被禁用）</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="changelog-panel" data-version="0.2.3">
                 <div class="changelog-card">
                     <div class="changelog-card-head">
                         <div class="changelog-head-left">
                             <span class="changelog-version">v0.2.3</span>
-                            <span class="changelog-badge">最新</span>
                         </div>
                         <span class="changelog-date">2026.09.09</span>
                     </div>
@@ -561,6 +587,10 @@
             <p class="faq-a">v0.2.3 起，技能文件从应用目录迁移至用户目录 <code>~/Documents/yizimarkdown/skills/</code>，方便用户自定义且不会被版本更新覆盖。首次启动新版本时，内置技能会自动同步到用户目录，已有的自定义技能只要放在该目录下即可继续使用。AI 聊天面板底部的「管理技能」按钮可直接打开技能目录并查看定制指南。</p>
         </div>
         <div class="faq-item">
+            <h3 class="faq-q">v0.2.4 起文档模板存在哪里？卸载重装会丢吗？</h3>
+            <p class="faq-a">v0.2.4 起，文档模板也从应用目录迁移至用户目录 <code>~/Documents/yizimarkdown/templates/</code>，卸载、重装、升级都不会丢失；内置模板会在首次启动时自动同步到该目录，且只补齐缺失文件、不会覆盖你自己的模板。你也可以直接在「设置 → 模板」中新建或编辑模板，保存后工具栏的「从模板新建」菜单会即时刷新。</p>
+        </div>
+        <div class="faq-item">
             <h3 class="faq-q">如何自定义 AI 技能（Skill）？</h3>
             <p class="faq-a">打开 <code>~/Documents/yizimarkdown/skills/</code> 目录，参考 <code>skill-guide.md</code> 定制指南编写新的技能 JSON 文件。每个技能包含名称、摘要、提示词模板等字段，保存后重启软件即可在 AI 聊天面板的技能菜单中看到新技能。内置技能也会同步到此目录，你可以基于内置技能修改提示词来创建自己的版本。</p>
         </div>
@@ -574,7 +604,7 @@
         <p>免费、开源、便携。下载解压，即刻开始你的 Markdown 写作之旅。</p>
         <a href="https://github.com/laoduu/YiziMarkdown/releases" target="_blank" class="btn-cta">
             <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 7l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            立即下载 v0.2.3
+            立即下载 v0.2.4
         </a>
     </div>
 </section>

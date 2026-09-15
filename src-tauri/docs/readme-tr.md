@@ -94,7 +94,7 @@ WYSIWYG modu için son derece şık bir deneyim yarattık; ayrıca PPT benzeri h
 - **Şablondan yeni oluşturma**: Araç çubuğundaki "Şablondan yeni oluştur" açılır menüsü, seçilen şablona göre yeni belge oluşturmak için Markdown yapısını kullanır; ayrıca Ayarlar → Genel'de varsayılan şablonu ayarlayabilir, ardından `Ctrl+N` ile otomatik olarak uygulanır
 - **Kaydetme / Otomatik kaydetme**: Manuel kaydetme + yapılandırılabilir aralıklarla otomatik kaydetme (5~180 saniye, varsayılan 60 saniye)
 - **Farklı kaydetme**: Yeni dosya kaydedilirken otomatik olarak "Farklı kaydet" iletişim kutusu açılır
-- **Dışa aktarma**: HTML / Markdown / Düz metin olmak üzere üç format
+- **Dışa aktarma**: HTML / Markdown / Düz metin / Word (DOCX) / PDF olmak üzere beş format; DOCX yerel Word semantiğini (listeler/tablolar/kod blokları/alıntılar/görev listeleri) kullanır, tablo stilleri önizlemeyle uyumludur, resimler yerel yolları, ağ resimlerini ve HTML `<img>` etiketlerini destekler (genişlik `width` özniteliğiyle ayarlanabilir); PDF önizlemeyle birebir aynıdır ve otomatik sayfalanır
 - **.md dosya ilişkilendirmesi**: Ayarlardan tek tıkla sistem varsayılanı Markdown düzenleyicisi olarak ayarlanır, .md çift tıklanarak doğrudan açılır (Windows kayıt defteri / macOS LaunchServices)
 
 ### Görünüm Özelleştirme
@@ -107,7 +107,7 @@ WYSIWYG modu için son derece şık bir deneyim yarattık; ayrıca PPT benzeri h
 
 ### Diğer
 
-- **Belge şablonları**: `templates/` dizinine `.md` dosyaları koyarak, yeni oluştururken seçilebilir
+- **Belge şablonları**: şablonlar kullanıcı dizini `~/Documents/yizimarkdown/templates/` içinde saklanır; kullanmak için `.md` dosyalarını koymanız yeterlidir (Ayarlar → Şablonlar bölümünden de oluşturup düzenleyebilirsiniz, menü anında yenilenir); yerleşik şablonlar ilk başlatmada otomatik olarak bu dizine eşitlenir, yükseltme/yeniden kurulum şablonlarınızın üzerine yazmaz
 - **Kısayol tuşu sistemi**: Görsel kısayol tuşu yapılandırma paneli, 30 eylem için özelleştirilmiş bağlama, tuş kaydetme, çakışma algılama ve varsayılanlara geri dönme desteği
 - **Ayarlar paneli**: Genel, görünüm, düzenleyici, gerçek zamanlı mod, yapay zeka, eklentiler, kısayol tuşları, şablonlar, hakkında vb. çoklu sekme sayfaları, ayarlar anında önizleme
 
@@ -183,7 +183,7 @@ YiziMarkdown/
 │   ├── slides-outline.md   # Sunum özetleme
 │   ├── doc-summary.md      # Belge özeti
 │   └── polish-writing.md   # Yazıyı geliştirme
-└── templates/              # Belge şablonları
+└── templates/              # Yerleşik şablonlar (ilk başlatmada kullanıcı dizinine eşitlenir)
     └── default.md          # Varsayılan şablon
 ```
 

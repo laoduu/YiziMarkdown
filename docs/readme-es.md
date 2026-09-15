@@ -96,7 +96,7 @@ Creamos una experiencia extremadamente elegante para el modo WYSIWYG; además, s
 - **Crear desde plantilla**: Menú desplegable "Crear desde plantilla" en la barra de herramientas; crea un nuevo documento según la estructura Markdown de la plantilla seleccionada; también se puede establecer una plantilla predeterminada en Configuración → General, y luego `Ctrl+N` la aplica automáticamente
 - **Guardar / autoguardado**: Guardado manual + autoguardado configurable por intervalo (5~180 segundos, predeterminado 60 segundos)
 - **Guardar como**: Al guardar archivos nuevos aparece automáticamente el diálogo de guardar como
-- **Exportar**: Tres formatos: HTML / Markdown / texto plano
+- **Exportar**: Cinco formatos: HTML / Markdown / texto plano / Word (DOCX) / PDF; DOCX usa la semántica nativa de Word (listas/tablas/bloques de código/citas/listas de tareas), los estilos de tabla coinciden con la vista previa, las imágenes admiten rutas locales, imágenes web y etiquetas HTML `<img>` (el ancho se controla con el atributo `width`); el PDF coincide con la vista previa y pagina automáticamente
 - **Asociación de archivos .md**: Configurar con un clic como editor Markdown predeterminado del sistema; hacer doble clic en .md para abrir directamente (registro de Windows / macOS LaunchServices)
 
 ### Personalización de apariencia
@@ -109,7 +109,7 @@ Creamos una experiencia extremadamente elegante para el modo WYSIWYG; además, s
 
 ### Otros
 
-- **Plantillas de documentos**: Coloca archivos `.md` en el directorio `templates/`; se pueden seleccionar al crear nuevos documentos
+- **Plantillas de documentos**: las plantillas se guardan en el directorio de usuario `~/Documents/yizimarkdown/templates/`; solo tienes que colocar archivos `.md` para usarlas (también puedes crearlas/editarlas en Ajustes → Plantillas, el menú se actualiza al instante); las plantillas integradas se sincronizan allí automáticamente en el primer inicio, actualizar/reinstalar no sobrescribirá tus plantillas
 - **Sistema de atajos de teclado**: Panel de configuración visual de atajos, soporta personalización de 30 acciones, grabación de teclas, detección de conflictos y restauración de valores predeterminados
 - **Panel de configuración**: Múltiples pestañas: General, Apariencia, Editor, Modo en tiempo real, AI, Plugins, Atajos de teclado, Plantillas, Acerca de; vista previa en tiempo real de los ajustes
 
@@ -186,7 +186,7 @@ YiziMarkdown/
 │   ├── slides-outline.md   # Extracción de presentaciones
 │   ├── doc-summary.md      # Resumen de documentos
 │   └── polish-writing.md   # Pulir/redactar
-└── templates/              # Plantillas de documentos
+└── templates/              # Plantillas integradas (sincronizadas al directorio de usuario en el primer inicio)
     └── default.md          # Plantilla predeterminada
 ```
 

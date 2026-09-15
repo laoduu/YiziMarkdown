@@ -95,7 +95,7 @@ Nous avons créé une expérience extrêmement élégante pour le mode WYSIWYG ;
 - **Nouveau à partir d'un modèle** : menu déroulant « Nouveau à partir d'un modèle » dans la barre d'outils, création d'un nouveau document selon la structure Markdown du modèle sélectionné ; possibilité de définir un modèle par défaut dans Paramètres → Général, puis `Ctrl+N` l'appliquera automatiquement
 - **Sauvegarde / Sauvegarde automatique** : sauvegarde manuelle + sauvegarde automatique configurable par intervalle (5~180 secondes, par défaut 60 secondes)
 - **Enregistrer sous** : la boîte de dialogue « Enregistrer sous » s'affiche automatiquement lors de la première sauvegarde d'un nouveau fichier
-- **Export** : trois formats - HTML / Markdown / Texte brut
+- **Export** : cinq formats — HTML / Markdown / texte brut / Word (DOCX) / PDF ; DOCX utilise la sémantique native de Word (listes/tableaux/blocs de code/citations/listes de tâches), les styles de tableau correspondent à l'aperçu, les images prennent en charge les chemins locaux, les images web et les balises HTML `<img>` (largeur réglable via l'attribut `width`) ; le PDF correspond à l'aperçu avec pagination automatique
 - **Association de fichiers .md** : configuration en un clic comme éditeur Markdown par défaut du système, double-clic sur .md pour ouvrir directement (registre Windows / LaunchServices macOS)
 
 ### Personnalisation de l'apparence
@@ -108,7 +108,7 @@ Nous avons créé une expérience extrêmement élégante pour le mode WYSIWYG ;
 
 ### Autres
 
-- **Modèles de document** : placez des fichiers `.md` dans le répertoire `templates/`, disponibles lors de la création
+- **Modèles de document** : les modèles sont stockés dans le répertoire utilisateur `~/Documents/yizimarkdown/templates/` ; il suffit d'y placer des fichiers `.md` (vous pouvez aussi les créer/modifier dans Paramètres → Modèles, le menu est actualisé immédiatement) ; les modèles intégrés y sont synchronisés automatiquement au premier lancement, une mise à jour/réinstallation n'écrasera pas vos modèles
 - **Système de raccourcis clavier** : panneau de configuration visuel des raccourcis, support de 30 actions personnalisables, enregistrement de touches, détection de conflits et restauration par défaut
 - **Panneau de paramètres** : plusieurs onglets - Général, Apparence, Éditeur, Mode temps réel, IA, Plugins, Raccourcis clavier, Modèles, À propos, etc., aperçu en temps réel des paramètres
 
@@ -185,7 +185,7 @@ YiziMarkdown/
 │   ├── slides-outline.md   # Synthèse de présentation
 │   ├── doc-summary.md      # Résumé de document
 │   └── polish-writing.md   # Enrichissement et réécriture
-└── templates/              # Modèles de documents
+└── templates/              # Modèles intégrés (synchronisés dans le répertoire utilisateur au premier lancement)
     └── default.md          # Modèle par défaut
 ```
 

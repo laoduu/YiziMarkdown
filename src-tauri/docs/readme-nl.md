@@ -95,7 +95,7 @@ We hebben een uiterst elegante ervaring gecreëerd voor de WYSIWYG-modus. Tegeli
 - **Nieuw vanuit sjabloon**: Werkbalk "Nieuw vanuit sjabloon" dropdownmenu maakt een nieuw document aan op basis van het geselecteerde Markdown-sjabloon; ook in te stellen als standaardsjabloon via Instellingen → Algemeen, waarna `Ctrl+N` automatisch het sjabloon toepast
 - **Opslaan / automatisch opslaan**: Handmatig opslaan + configureerbaar automatisch opslaan (5–180 seconden, standaard 60 seconden)
 - **Opslaan als**: Nieuwe bestanden openen automatisch het "Opslaan als"-dialoogvenster bij het opslaan
-- **Exporteren**: Drie formaten — HTML / Markdown / platte tekst
+- **Exporteren**: Vijf formaten — HTML / Markdown / platte tekst / Word (DOCX) / PDF; DOCX gebruikt native Word-semantiek (lijsten/tabellen/codeblokken/citaten/takenlijsten), tabelstijlen komen overeen met de voorvertoning, afbeeldingen ondersteunen lokale paden, webafbeeldingen en HTML-`<img>`-tags (breedte regelbaar via het `width`-attribuut); PDF komt overeen met de voorvertoning en pagineert automatisch
 - **.md-bestandskoppeling**: Stel met één klik in als standaard Markdown-editor; dubbelklik op .md om direct te openen (Windows register / macOS LaunchServices)
 
 ### Uiterlijk aanpassen
@@ -108,7 +108,7 @@ We hebben een uiterst elegante ervaring gecreëerd voor de WYSIWYG-modus. Tegeli
 
 ### Overig
 
-- **Documentsjablonen**: Plaats `.md`-bestanden in de `templates/`-map; bij het aanmaken van een nieuw document kun je een sjabloon selecteren
+- **Documentsjablonen**: sjablonen staan in de gebruikersmap `~/Documents/yizimarkdown/templates/`; plaats gewoon `.md`-bestanden om ze te gebruiken (je kunt ze ook aanmaken/bewerken via Instellingen → Sjablonen, het menu wordt direct vernieuwd); ingebouwde sjablonen worden bij de eerste start automatisch daarheen gesynchroniseerd, upgraden/herinstalleren overschrijft je sjablonen niet
 - **Sneltoetsensysteem**: Visueel sneltoetsconfiguratiepaneel met ondersteuning voor aangepaste binding van 30 acties, toetsopname, conflictdetectie en herstel naar standaardwaarden
 - **Instellingenpaneel**: Meerdere tabbladen — Algemeen, Uiterlijk, Editor, Realtime-modus, AI, Plug-ins, Sneltoetsen, Sjablonen, Over; instellingen worden direct weergegeven
 
@@ -185,7 +185,7 @@ YiziMarkdown/
 │   ├── slides-outline.md   # Presentatie samenvatten
 │   ├── doc-summary.md      # Documentsamenvatting
 │   └── polish-writing.md   # Schrijven polijsten
-└── templates/              # Documentsjablonen
+└── templates/              # Ingebouwde sjablonen (bij eerste start naar de gebruikersmap gesynchroniseerd)
     └── default.md          # Standaardsjabloon
 ```
 

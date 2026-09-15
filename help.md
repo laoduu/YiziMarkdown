@@ -34,10 +34,13 @@ YiziMarkdown 是一款简洁精致的跨平台 Markdown 编辑器，支持 Windo
 
 ### 导出
 
-工具栏右侧导出按钮，支持三种格式：
-- HTML（保留样式）
-- Markdown（纯文本）
-- 纯文本（去除所有格式）
+工具栏右侧导出按钮，支持五种格式：
+
+- **Word 文档（DOCX）**：Word 原生语义（标题/列表/表格/代码块/引用/任务列表），表格与表头样式对齐预览；图片支持本地路径、网络图片（含无扩展名图床 URL）与 HTML `<img>` 标签，可用 `width` 属性控制宽度
+- **PDF**：与预览还原度一致，长文档自动分页（Windows）
+- **HTML**：保留样式，导出为自包含文档
+- **Markdown**（纯文本）
+- **纯文本**（去除所有格式）
 
 ---
 
@@ -134,6 +137,8 @@ YiziMarkdown 是一款简洁精致的跨平台 Markdown 编辑器，支持 Windo
 **技能文件位置（v0.2.3 起）**：技能文件已从程序目录迁移到用户目录 `~/Documents/yizimarkdown/skills/`，方便自定义且**不会被版本更新覆盖**。首次启动新版本时，内置技能会自动同步到该目录。
 
 **自定义技能**：在 `~/Documents/yizimarkdown/skills/` 目录放入技能的 Markdown 提示词文件，并在 `skills.json` 清单中登记（字段：`id`、`name`、`summary`、`description`、`file`、`needsDoc`），重启后在技能菜单中即可看到。示例见内置的 `slides-outline.md`。
+
+**模板文件位置（v0.2.4 起）**：文档模板同样存放在用户目录 `~/Documents/yizimarkdown/templates/`，详见「文档模板」章节。
 
 **管理技能**：AI 聊天面板底部有「**管理技能**」按钮，一键打开技能目录并查看 `skill-guide.md` 定制指南。
 
@@ -296,7 +301,7 @@ graph LR
 
 ### 演示模板
 
-程序目录 `templates/` 下的 `Slide-Template.md` 是一个纯 Markdown 的幻灯片示例，涵盖分页、公式、图表等语法。可直接打开后按 `Ctrl+Alt+P` 播放体验，也可作为新幻灯片的起点。
+用户目录 `~/Documents/yizimarkdown/templates/` 下的 `Slide-Template.md` 是一个纯 Markdown 的幻灯片示例，涵盖分页、公式、图表等语法。可直接打开后按 `Ctrl+Alt+P` 播放体验，也可作为新幻灯片的起点。
 
 ## 快捷键
 
@@ -428,11 +433,13 @@ graph LR
 
 ### 文档模板
 
-在程序目录下的 `templates/` 文件夹放入 `.md` 文件，即可作为文档模板。
+模板存放在用户目录 `~/Documents/yizimarkdown/templates/`，放入 `.md` 文件即可作为文档模板。
+
+> 提示：模板位置与技能一样在用户文档目录下（v0.2.4 起），**卸载/重装/升级都不会丢失**，也不要求程序目录可写。程序目录下的 `templates/` 仅作为内置模板来源，首次启动会自动同步到用户目录——只补齐缺失文件，**不会覆盖你已有的模板**。
 
 - **从模板新建**：点击工具栏「新建」右侧的「从模板新建」按钮，在下拉菜单中选择模板，即以该模板的 Markdown 结构创建新文档
 - **默认模板**：在 设置 → 通用 → 默认模板 中选择模板后，按 `Ctrl+N` 新建文件时会自动套用该模板的结构
-- **模板管理**：在 设置 → 模板 中可新建、编辑、删除模板
+- **模板管理**：在 设置 → 模板 中可新建、编辑模板；保存后工具栏菜单会即时刷新，无需重启程序
 
 > 提示：默认模板直接决定「新建（Ctrl+N）」的文档结构；若未设置，则新建空白文档。
 
@@ -468,17 +475,17 @@ YiziMarkdown/
 │   ├── mint.css            # 薄荷冰沙
 │   ├── sunset.css          # 落日熔金
 │   └── typewriter.css      # 复古打字机
-├── skills/                 # 旧版技能目录（v0.2.3 起迁移至 ~/Documents/yizimarkdown/skills/）
+├── skills/                 # 内置技能（v0.2.3 起同步至 ~/Documents/yizimarkdown/skills/）
 │   ├── skills.json         # 技能清单（名称/简介/提示词文件名）
 │   ├── slides-outline.md   # 演示稿提炼
 │   ├── doc-summary.md      # 文档摘要
 │   ├── polish-writing.md   # 润色改写
 │   └── translate-fulltext.md # 全文翻译
-└── templates/              # 文档模板
+└── templates/              # 内置模板（v0.2.4 起同步至 ~/Documents/yizimarkdown/templates/）
     └── default.md          # 默认模板
 ```
 
-> 提示：v0.2.3 起技能文件的真实存储位置是用户目录 `~/Documents/yizimarkdown/skills/`，自定义技能请放这里，避免版本更新时被覆盖。
+> 提示：v0.2.3 起技能、v0.2.4 起文档模板的真实存储位置都在用户目录：`~/Documents/yizimarkdown/skills/` 与 `~/Documents/yizimarkdown/templates/`，自定义内容请放这里，升级/重装不会被覆盖。
 
 ---
 
@@ -512,3 +519,4 @@ A: 数据分四个层面存放：
 2. **配置文件**（主题、自动保存参数、快捷键绑定等）：同样存在 localStorage 缓存中
 3. **API 密钥**：保存在系统钥匙串（macOS Keychain / Windows 凭据管理器），**不明文暴露、不上传网络**——随时可在「设置 → AI」清除
 4. **技能文件（v0.2.3 起）**：从应用目录迁移至用户目录 `~/Documents/yizimarkdown/skills/`，**支持自定义**，升级软件**不会覆盖**
+5. **文档模板（v0.2.4 起）**：与技能同理，存放在用户目录 `~/Documents/yizimarkdown/templates/`，**支持自定义**，升级/卸载/重装**不会丢失**

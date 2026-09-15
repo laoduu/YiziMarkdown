@@ -94,7 +94,7 @@ Wir haben für den What-You-See-Is-What-You-Get-Modus ein äußerst eleganten An
 - **Aus Vorlage neu**: Dropdown-Menü „Aus Vorlage neu" in der Symbolleiste erstellt neue Dokumente basierend auf der Markdown-Struktur der ausgewählten Vorlage. Standardvorlage kann unter Einstellungen → Allgemein eingestellt werden. Danach erstellt `Ctrl+N` automatisch aus der Vorlage
 - **Speichern / Automatisch speichern**: Manuelles Speichern + automatisches Speichern mit konfigurierbarem Intervall (5~180 Sekunden, Standard 60 Sekunden)
 - **Speichern unter**: Beim Speichern neuer Dateien erscheint automatisch der „Speichern unter"-Dialog
-- **Exportieren**: Drei Formate: HTML / Markdown / Reiner Text
+- **Exportieren**: Fünf Formate: HTML / Markdown / reiner Text / Word (DOCX) / PDF; DOCX nutzt die native Word-Semantik (Listen/Tabellen/Codeblöcke/Zitate/Aufgabenlisten), Tabellenstile entsprechen der Vorschau, Bilder unterstützen lokale Pfade, Netzwerkbilder und HTML-`<img>`-Tags (Breite über das `width`-Attribut steuerbar); PDF entspricht der Vorschau und paginiert automatisch
 - **.md-Dateizuordnung**: In den Einstellungen mit einem Klick als Standard-Markdown-Editor festlegen. Doppelklick auf .md öffnet die Datei direkt (Windows-Registry / macOS LaunchServices)
 
 ### Anpassung
@@ -107,7 +107,7 @@ Wir haben für den What-You-See-Is-What-You-Get-Modus ein äußerst eleganten An
 
 ### Sonstiges
 
-- **Dokumentenvorlagen**: `.md`-Dateien in das `templates/`-Verzeichnis legen, die beim Erstellen ausgewählt werden können
+- **Dokumentenvorlagen**: Vorlagen liegen im Benutzerverzeichnis `~/Documents/yizimarkdown/templates/`; legen Sie einfach `.md`-Dateien hinein (Sie können sie auch unter Einstellungen → Vorlagen erstellen/bearbeiten, das Menü wird sofort aktualisiert); integrierte Vorlagen werden beim ersten Start automatisch dorthin synchronisiert, ein Upgrade/eine Neuinstallation überschreibt Ihre Vorlagen nicht
 - **Tastaturkürzel-System**: Visuelles Tastaturkürzel-Konfigurationspanel. Unterstützt benutzerdefinierte Zuordnung für 30 Aktionen, Tastenaufnahme, Konflikterkennung und Zurücksetzen auf Standard
 - **Einstellungspanel**: Allgemein, Aussehen, Editor, Live-Modus, KI, Plugins, Tastaturkürzel, Vorlagen, Über usw. Einstellungen werden sofort in der Vorschau angezeigt
 
@@ -184,7 +184,7 @@ YiziMarkdown/
 │   ├── slides-outline.md   # Präsentationszusammenfassung
 │   ├── doc-summary.md      # Dokumentenübersicht
 │   └── polish-writing.md   # Textpolitur
-└── templates/              # Dokumentenvorlagen
+└── templates/              # Integrierte Vorlagen (beim ersten Start in das Benutzerverzeichnis synchronisiert)
     └── default.md          # Standardvorlage
 ```
 

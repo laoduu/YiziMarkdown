@@ -93,7 +93,7 @@ Criamos uma experiência extremamente elegante para o modo WYSIWYG (o que você 
 - **Criar a partir de modelo**: Menu suspensa «Criar a partir de modelo» na barra de ferramentas, cria novo documento com base na estrutura Markdown do modelo selecionado; também é possível definir um modelo padrão em Configurações → Geral, e `Ctrl+N` o aplica automaticamente
 - **Salvar / Salvamento automático**: Salvamento manual + salvamento automático com intervalo configurável (5~180 segundos, padrão 60 segundos)
 - **Salvar como**: Arquivos novos abrem automaticamente o diálogo «Salvar como» ao salvar
-- **Exportar**: Três formatos — HTML / Markdown / Texto puro
+- **Exportar**: Cinco formatos — HTML / Markdown / texto simples / Word (DOCX) / PDF; DOCX usa a semântica nativa do Word (listas/tabelas/blocos de código/citações/listas de tarefas), os estilos de tabela correspondem à pré-visualização, as imagens suportam caminhos locais, imagens da web e tags HTML `<img>` (largura controlável pelo atributo `width`); o PDF corresponde à pré-visualização com paginação automática
 - **Associação de arquivos .md**: Configuração com um clique para definir como editor Markdown padrão do sistema; clique duplo em .md abre diretamente (Registro do Windows / LaunchServices do macOS)
 
 ### Personalização de Aparência
@@ -106,7 +106,7 @@ Criamos uma experiência extremamente elegante para o modo WYSIWYG (o que você 
 
 ### Outros
 
-- **Templates de documento**: Coloque arquivos `.md` no diretório `templates/`, disponíveis ao criar novos documentos
+- **Templates de documento**: os modelos são armazenados no diretório do usuário `~/Documents/yizimarkdown/templates/`; basta colocar arquivos `.md` para usá-los (também pode criá-los/editá-los em Configurações → Modelos, o menu é atualizado imediatamente); os modelos internos são sincronizados ali automaticamente na primeira inicialização, atualizar/reinstalar não substituirá seus modelos
 - **Sistema de atalhos**: Painel de configuração visual de atalhos, com suporte a personalização de 30 ações, gravação de teclas, detecção de conflitos e restauração de padrões
 - **Painel de configurações**: Múltiplas abas — Geral, Aparência, Editor, Modo em tempo real, AI, Plugins, Atalhos, Templates, Sobre — com visualização instantânea das alterações
 
@@ -183,7 +183,7 @@ YiziMarkdown/
 │   ├── slides-outline.md   # Extração de apresentação
 │   ├── doc-summary.md      # Resumo de documento
 │   └── polish-writing.md   # Revisão e reescrita
-└── templates/              # Templates de documento
+└── templates/              # Modelos internos (sincronizados no diretório do usuário na primeira inicialização)
     └── default.md          # Modelo padrão
 ```
 

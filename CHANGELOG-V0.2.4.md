@@ -67,6 +67,27 @@
 
 - **支持 `file:///D:\...` 形式**：图片解析入口兼容 file:/// 前缀路径（浏览器禁止直接加载本地 file://，转为 Tauri 读取）
 
+### 导出 DOCX 列表与表格还原（修复）
+
+- **列表项加粗开头修复**：无序/有序列表项以 `**加粗小标题**` 开头时整项内容丢失（只剩一个空项目符号）→ 子事件先分类再分发，内联起始标签交行内渲染，不再被当块级事件丢弃
+- **松散列表续段修复**：列表项第 2 段起退回 `Normal`（丢失列表缩进）、后续列表项丢编号 → 改为「谁消费 Start 谁消费配对 End」+ 闭合标签精确匹配，续段用 `ListParagraph` + 对齐缩进
+- **空列表项**：保留编号/项目符号，不再整个项目消失
+- **表格对齐预览样式**：整表 100% 宽、网格线用主题 `--editor-border`（原硬编码灰）、表头行主题 `--editor-surface` 底色 + 加粗 + 跨页重复、单元格紧凑间距 + 顶对齐、支持 GFM 列对齐
+
+### 导出 DOCX 图片增强
+
+- **HTML `<img>` 标签**：块级与行内 `<img src="...">` 均可嵌入（此前行内被直接丢弃、块级被当纯文本）；图片与文字混排时不丢文字
+- **`width` 属性生效**：支持无单位 / `px` / `pt` / `%`；按预览语义忽略 `height`（预览 CSS `height:auto` 覆盖高度属性），始终保留宽高比不变形
+- **网络图修复**：不再依赖 URL 扩展名（无扩展名/带缩放参数的图床 URL 此前被跳过）、支持引用式图片、按响应内容魔数判定类型、带浏览器 UA、失败留日志不再静默丢图
+- **混排与比例**：图片与文字混排的 HTML 块保留文字；超宽图仍受 6in 上限约束
+
+### 文档模板持久化
+
+- **模板迁移到用户目录**：`templates/` 从安装目录迁至 `~/Documents/yizimarkdown/templates/`（与 v0.2.3 技能同理），卸载/重装/升级不丢，且不再受安装目录无写权限限制
+- **启动自动同步**：内置模板在首次启动或应用版本变化时同步到用户目录，**只补缺失、绝不覆盖**用户已有/已改的模板；用 `templates.json` 记录已同步版本，用户删掉的内置模板不会被反复塞回
+- **模板管理走用户目录**：设置 → 模板 的新建/编辑经新增的 `write_template` 命令写入用户目录
+- **菜单即时刷新**：工具栏「从模板新建」每次打开菜单重新读取列表，新建模板后无需重启
+
 ## 踩坑记录
 
 1. **`invokeTauri` 静默吞错导致"假成功"**：导出命令返回 Err 被包装器 catch 后返回 `null`，前端无条件弹成功 toast → 导出改用 `invokeTauriOrThrow`，真实错误如实上报
@@ -87,6 +108,13 @@
 16. **SVG text 字母小字号发糊 / 手绘 path 几何不标准**：字母徽标手绘 path 的 M/W 尖、P 尾巴比例影响识别，text 字号过小发糊 → 改用无衬线字体大字（19px@24 视口、weight 800、明确字体族）
 17. **涟漪「恢复默认」漏改**：store 默认值已改 true，但 `DEFAULTS_EDITOR` 仍 false，点恢复默认后涟漪被取消 → 同步为 true + persist v3 强制存量开启
 18. **配置目录语义错误**：显示的是程序运行目录（appDir），用户配置实际存于 `~/Documents/yizimarkdown/` → 新增 `get_user_config_dir` 并双项显示
+19. **紧凑列表项没有 `Paragraph` 包裹**：`- **加粗小标题** 正常文本` 的行内事件直挂在 `Item` 之下，`Tag::Item` 分发却把 `Start(Strong)` 当块级事件消费后丢弃（块级渲染器对内联标签无匹配臂）→ 加粗内容消失、事件流错位、`End(Strong)` 被误当 `End(Item)`、整项内容被吞掉 → 子事件先分类再分发，内联起始不消费
+20. **`render_inlines` 的 level=0 不消费配对 `End` 反噬外层**：消费 `Start(Paragraph)` 后 `End(Paragraph)` 残留，外层误把它当 `End(Item)`/`End(List)` → 松散列表续段退成 `Normal`、后续列表项丢编号 → 「谁消费 Start 谁消费配对 End」+ 闭合标签精确匹配
+21. **网络图被扩展名白名单拦在门外**：先按 URL 扩展名决定是否下载，而大量图床/CDN 的 URL 无扩展名或带缩放参数（实测 unsplash `?w=800` 返回 `image/jpeg`）→ 根本不发请求、导出无图 → 改为解析器采集 URL + 魔数判定类型
+22. **行内 HTML 图片被静默丢弃**：行内渲染没有 `InlineHtml` 分支（行内 `<img>` 直接消失），块级 `Html` 则把标签当纯文本写进文档 → 两处都接上图片渲染，并按预览语义处理 `width`
+23. **CSS 颜色 ≠ OOXML 颜色**：OOXML 只接受 6 位 hex，而主题变量格式不一（`rgba()`、`#rgb`、**不带 `#` 的裸 hex**）→ 颜色归一化最初只认带 `#` 的形式，导致表格边框/表头底色整套静默回退默认灰（被单测抓到）
+24. **文档模板写在安装目录**：设置 → 模板 的新建/编辑把路径拼成应用目录 → 卸载/重装即丢失，装在 Program Files 时还可能无写权限 → 迁移到用户文档目录 + 新增 `write_template` 命令
+25. **常驻组件的文件列表会过期**：`Toolbar` 常驻挂载，模板列表只在挂载时读一次 → 设置里新建模板后菜单要重启才显示 → 改为「打开菜单时重新读取」
 
 ## 技术改进
 
@@ -97,3 +125,7 @@
 - **设置持久化迁移**：persist 升至 v3，`mouseSpotlight` 存量强制默认开启；新增 Rust `get_user_config_dir()`（`~/Documents/yizimarkdown/`）供设置面板展示
 - **图标组件**：`FormatBadge` 无衬线大字字母徽标（SVG text，currentColor 跟随主题，与 lucide 同参）
 - **真实浏览器验证**：Playwright + Edge（channel: msedge）复现折叠滚动问题并验证修复；docx-preview 渲染生成的 docx 断言加粗（fontWeight 700）、斜体、嵌套列表拆段（列表符号需 Word 查看，docx-preview 不支持 numbering）
+- **DOCX 主题扩展**：`DocxTheme` 新增 `border` / `surface`（前端传 `--editor-border` / `--editor-surface`）；`css_color_to_hex` 把 `#rgb` / 裸 hex / `rgb()` / `rgba()`（alpha 按白底合成）统一为 OOXML 6 位 hex
+- **DOCX 远程图两段式**：pulldown-cmark 采集图片 URL → 下载为 `RemoteImages`（url → data URL）映射 → 生成器按 `dest_url` 查表嵌入，一套逻辑覆盖行内式 / 引用式 / HTML 标签三种写法
+- **模板同步机制**：`copy_missing` 递归复制（含模板内 `images/` 相对图片）+ `templates.json` 版本门控；`get_dev_project_root()` 统一 dev 资源定位（兼容 `target/debug/deps` 的测试二进制）
+- **单测扩至 22 项**：新增表格保真、HTML 图片（块级/行内/混排）、`width` 尺寸与宽高比、颜色归一化、模板同步端到端（播种 / 不覆盖 / 升级不覆盖 / 路径穿越）

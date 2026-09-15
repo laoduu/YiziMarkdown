@@ -94,7 +94,7 @@ We have created an extremely elegant experience for WYSIWYG mode; it also suppor
 - **Create from template**: Toolbar "Create from template" dropdown menu, creates new document based on selected template's Markdown structure; also can set default template in Settings → General, then `Ctrl+N` automatically applies
 - **Save / Auto-save**: Manual save + configurable interval auto-save (5~180 seconds, default 60 seconds)
 - **Save as**: Automatically pops up save-as dialog when saving new files
-- **Export**: HTML / Markdown / Plain text three formats
+- **Export**: Five formats: HTML / Markdown / plain text / Word (DOCX) / PDF; DOCX uses native Word semantics (lists/tables/code blocks/quotes/task lists), table styles match the preview, images support local paths, web images and HTML `<img>` tags (width can be controlled with the `width` attribute); PDF matches the preview with automatic pagination
 - **.md file association**: One-click set as system default Markdown editor in settings, double-click .md to open directly (Windows registry / macOS LaunchServices)
 
 ### Appearance Customization
@@ -107,7 +107,7 @@ We have created an extremely elegant experience for WYSIWYG mode; it also suppor
 
 ### Others
 
-- **Document templates**: Put `.md` files in `templates/` directory, can be selected when creating new
+- **Document templates**: Templates are stored in the user directory `~/Documents/yizimarkdown/templates/`, just drop in `.md` files to use them (you can also create/edit them under Settings → Templates, the menu refreshes immediately); built-in templates sync there automatically on first launch, upgrading/reinstalling won't overwrite your templates
 - **Shortcut key system**: Visual shortcut key configuration panel, supports custom binding for 30 actions, key recording, conflict detection, and restore defaults
 - **Settings panel**: General, Appearance, Editor, Real-time mode, AI, Plugins, Shortcut keys, Templates, About and other tabs, settings take effect immediately
 
@@ -184,7 +184,7 @@ YiziMarkdown/
 │   ├── slides-outline.md   # Presentation Outline
 │   ├── doc-summary.md      # Document Summary
 │   └── polish-writing.md   # Polish Writing
-└── templates/              # Document templates
+└── templates/              # Built-in templates (synced to the user directory on first launch)
     └── default.md          # Default template
 ```
 

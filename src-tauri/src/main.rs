@@ -332,13 +332,45 @@ fn get_user_skills_dir() -> Result<PathBuf, String> {
     Ok(get_user_config_dir()?.join("skills"))
 }
 
+/// 获取用户文档中的模板目录：~/Documents/yizimarkdown/templates/
+/// 与 skills 同理——放在用户文档下，卸载/重装不会丢用户模板
+fn get_user_templates_dir() -> Result<PathBuf, String> {
+    Ok(get_user_config_dir()?.join("templates"))
+}
+
+/// dev 模式（exe 位于 <project>/src-tauri/target/...，含 target/debug/deps 的测试二进制）
+/// 下返回项目根目录；安装版返回 None
+fn get_dev_project_root() -> Option<PathBuf> {
+    let mut cur = get_app_root().ok()?;
+    for _ in 0..4 {
+        if cur.file_name().and_then(|n| n.to_str()) == Some("target") {
+            let src_tauri = cur.parent()?;
+            if src_tauri.file_name().and_then(|n| n.to_str()) == Some("src-tauri") {
+                return src_tauri.parent().map(Path::to_path_buf);
+            }
+        }
+        cur = cur.parent()?.to_path_buf();
+    }
+    None
+}
+
+/// 内置模板来源目录：dev 用项目里的 src-tauri/templates（exe 旁的 templates 只是空壳），
+/// 安装版用应用目录下的 templates（由 tauri 把 templates/ 作为资源打包进来）
+fn get_builtin_templates_dir() -> Result<PathBuf, String> {
+    if let Some(project) = get_dev_project_root() {
+        let dev = project.join("src-tauri").join("templates");
+        if dev.is_dir() {
+            return Ok(dev);
+        }
+    }
+    Ok(get_app_root()?.join("templates"))
+}
+
 /// 确保应用根目录下的子目录和默认文件存在
 fn ensure_app_structure(root: &Path) -> Result<(), String> {
-    // 子目录（skills 已迁移至用户文档目录，不再在应用目录创建）
-    for subdir in &["themes", "templates"] {
-        fs::create_dir_all(root.join(subdir))
-            .map_err(|e| format!("Failed to create {} dir: {}", subdir, e))?;
-    }
+    // 子目录（skills / templates 已迁移到用户文档目录，不再在应用目录创建）
+    fs::create_dir_all(root.join("themes"))
+        .map_err(|e| format!("Failed to create themes dir: {}", e))?;
 
     // 默认 user.css
     let user_css = root.join("user.css");
@@ -352,13 +384,6 @@ fn ensure_app_structure(root: &Path) -> Result<(), String> {
     if !kb.exists() {
         fs::write(&kb, DEFAULT_KEYBINDINGS)
             .map_err(|e| format!("Failed to create keybindings.json: {}", e))?;
-    }
-
-    // 默认模板
-    let tmpl = root.join("templates").join("default.md");
-    if !tmpl.exists() {
-        fs::write(&tmpl, "# 标题\n\n在这里开始写作...\n")
-            .map_err(|e| format!("Failed to create default template: {}", e))?;
     }
 
     Ok(())
@@ -462,6 +487,57 @@ fn sync_builtin_skills() -> Result<(), String> {
     Ok(())
 }
 
+/// 递归复制：只写目标中不存在的文件，绝不覆盖用户已有/已修改的内容
+fn copy_missing(src: &Path, dst: &Path) -> Result<(), String> {
+    fs::create_dir_all(dst).map_err(|e| format!("Failed to create {}: {}", dst.display(), e))?;
+    let entries = fs::read_dir(src).map_err(|e| format!("Failed to read {}: {}", src.display(), e))?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let target = dst.join(entry.file_name());
+        if path.is_dir() {
+            copy_missing(&path, &target)?;
+        } else if !target.exists() {
+            fs::copy(&path, &target)
+                .map_err(|e| format!("Failed to copy {}: {}", path.display(), e))?;
+        }
+    }
+    Ok(())
+}
+
+/// 将内置模板同步到用户文档目录（~/Documents/yizimarkdown/templates/），
+/// 使模板与 skills 一样不受卸载/重装影响。
+/// - 仅在「首次运行」或「应用版本变化」时同步（用 templates.json 记录已同步的版本）
+/// - 同步只补齐缺失文件，不覆盖用户已有模板（用户改过的内置模板也保留）
+/// - 用户主动删除的内置模板，在下一次版本更新前不会被重新塞回
+fn sync_builtin_templates() -> Result<(), String> {
+    let builtin_dir = get_builtin_templates_dir()?;
+    if !builtin_dir.is_dir() {
+        return Ok(()); // 资源未解包（如未打包运行），跳过
+    }
+    let user_dir = get_user_templates_dir()?;
+    fs::create_dir_all(&user_dir)
+        .map_err(|e| format!("Failed to create user templates dir: {}", e))?;
+
+    let current = env!("CARGO_PKG_VERSION");
+    let marker = user_dir.join("templates.json");
+    let synced = fs::read_to_string(&marker)
+        .ok()
+        .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+        .and_then(|v| v["syncedVersion"].as_str().map(|s| s.to_string()));
+    if synced.as_deref() == Some(current) {
+        return Ok(()); // 本版本已同步过
+    }
+
+    copy_missing(&builtin_dir, &user_dir)?;
+
+    let _ = fs::write(
+        &marker,
+        serde_json::to_string_pretty(&serde_json::json!({ "syncedVersion": current }))
+            .unwrap_or_default(),
+    );
+    Ok(())
+}
+
 const DEFAULT_USER_CSS: &str = r#"/* YiziMarkdown 用户自定义样式 */
 /* 此文件中的样式会加载在所有主题之后，优先级最高 */
 /* 你可以在这里微调字号、行距、隐藏元素等 */
@@ -511,7 +587,8 @@ fn get_config_dir() -> Result<serde_json::Value, String> {
         "appDir": root.to_string_lossy(),
         "userConfigDir": get_user_config_dir()?.to_string_lossy(),
         "themesDir": root.join("themes").to_string_lossy(),
-        "templatesDir": root.join("templates").to_string_lossy(),
+        // 模板已迁到用户文档目录（模板内的相对图片路径以此为基准）
+        "templatesDir": get_user_templates_dir()?.to_string_lossy(),
         "userCssPath": root.join("user.css").to_string_lossy(),
         "keybindingsPath": root.join("keybindings.json").to_string_lossy(),
     })
@@ -698,37 +775,61 @@ fn open_url(url: String) -> Result<(), String> {
 
 // ===== 模板管理 =====
 
+/// 只接受文件名，防止路径穿越
+fn safe_file_name(name: &str) -> Result<String, String> {
+    let clean = Path::new(name)
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .ok_or_else(|| "Invalid template name".to_string())?;
+    if clean.is_empty() || clean.starts_with('.') {
+        return Err("Invalid template name".to_string());
+    }
+    Ok(clean)
+}
+
+/// 列出模板：用户文档目录优先（卸载/重装后仍保留），缺失时回退到内置模板目录
 #[tauri::command]
 fn list_templates() -> Result<Vec<String>, String> {
-    let root = get_app_root()?;
-    let dir = root.join("templates");
-    if !dir.exists() {
+    let user_dir = get_user_templates_dir()?;
+    let dir = if user_dir.is_dir() {
+        user_dir
+    } else {
+        get_builtin_templates_dir()?
+    };
+    if !dir.is_dir() {
         return Ok(vec![]);
     }
 
-    let mut templates: Vec<String> = Vec::new();
-    let entries = fs::read_dir(&dir)
-        .map_err(|e| format!("Failed to read templates dir: {}", e))?;
-
-    for entry in entries.flatten() {
-        let name = entry.file_name().to_string_lossy().to_string();
-        if name.ends_with(".md") || name.ends_with(".markdown") {
-            templates.push(name);
-        }
-    }
+    let mut templates: Vec<String> = fs::read_dir(&dir)
+        .map_err(|e| format!("Failed to read templates dir: {}", e))?
+        .flatten()
+        .map(|e| e.file_name().to_string_lossy().to_string())
+        .filter(|n| n.ends_with(".md") || n.ends_with(".markdown"))
+        .collect();
     templates.sort();
     Ok(templates)
 }
 
 #[tauri::command]
 fn read_template(name: String) -> Result<String, String> {
-    let root = get_app_root()?;
-    let path = root.join("templates").join(&name);
-    if !path.exists() {
-        return Err(format!("Template not found: {}", name));
+    let clean = safe_file_name(&name)?;
+    for dir in [get_user_templates_dir()?, get_builtin_templates_dir()?] {
+        let path = dir.join(&clean);
+        if path.is_file() {
+            return fs::read_to_string(&path)
+                .map_err(|e| format!("Failed to read template: {}", e));
+        }
     }
-    fs::read_to_string(&path)
-        .map_err(|e| format!("Failed to read template: {}", e))
+    Err(format!("Template not found: {}", clean))
+}
+
+/// 新建/编辑模板：一律写入用户文档目录（卸载重装不丢），不再写安装目录
+#[tauri::command]
+fn write_template(name: String, content: String) -> Result<(), String> {
+    let clean = safe_file_name(&name)?;
+    let dir = get_user_templates_dir()?;
+    fs::create_dir_all(&dir).map_err(|e| format!("Failed to create templates dir: {}", e))?;
+    fs::write(dir.join(&clean), content).map_err(|e| format!("Failed to write template: {}", e))
 }
 
 // ===== AI Skills 技能 =====
@@ -745,17 +846,12 @@ fn list_skills() -> Result<String, String> {
                 .map_err(|e| format!("Failed to read skills.json: {}", e));
         }
     }
-    // 开发模式 fallback：exe 在 target/debug/，技能文件在项目根目录
-    let root = get_app_root()?;
-    if let Some(exe_dir) = root.parent() {
-        if let Some(src_tauri_dir) = exe_dir.parent() {
-            if let Some(project_root) = src_tauri_dir.parent() {
-                let dev_path = project_root.join("skills").join("skills.json");
-                if dev_path.exists() {
-                    return fs::read_to_string(&dev_path)
-                        .map_err(|e| format!("Failed to read skills.json: {}", e));
-                }
-            }
+    // 开发模式 fallback：技能文件在项目根目录
+    if let Some(project_root) = get_dev_project_root() {
+        let dev_path = project_root.join("skills").join("skills.json");
+        if dev_path.exists() {
+            return fs::read_to_string(&dev_path)
+                .map_err(|e| format!("Failed to read skills.json: {}", e));
         }
     }
     Ok(r#"{"version":1,"skills":[]}"#.to_string())
@@ -779,17 +875,12 @@ fn read_skill_file(file_name: String) -> Result<String, String> {
                 .map_err(|e| format!("Failed to read skill file: {}", e));
         }
     }
-    // 开发模式 fallback：exe 在 target/debug/，技能文件在项目根目录
-    let root = get_app_root()?;
-    if let Some(exe_dir) = root.parent() {
-        if let Some(src_tauri_dir) = exe_dir.parent() {
-            if let Some(project_root) = src_tauri_dir.parent() {
-                let dev_path = project_root.join("skills").join(&clean);
-                if dev_path.exists() {
-                    return fs::read_to_string(&dev_path)
-                        .map_err(|e| format!("Failed to read skill file: {}", e));
-                }
-            }
+    // 开发模式 fallback：技能文件在项目根目录
+    if let Some(project_root) = get_dev_project_root() {
+        let dev_path = project_root.join("skills").join(&clean);
+        if dev_path.exists() {
+            return fs::read_to_string(&dev_path)
+                .map_err(|e| format!("Failed to read skill file: {}", e));
         }
     }
     Err(format!("Skill file not found: {}", clean))
@@ -804,14 +895,10 @@ fn get_skill_guide_path() -> Result<String, String> {
         return Ok(path.to_string_lossy().to_string());
     }
     // 开发模式 fallback
-    if let Some(exe_dir) = root.parent() {
-        if let Some(src_tauri_dir) = exe_dir.parent() {
-            if let Some(project_root) = src_tauri_dir.parent() {
-                let dev_path = project_root.join("skill-guide.md");
-                if dev_path.exists() {
-                    return Ok(dev_path.to_string_lossy().to_string());
-                }
-            }
+    if let Some(project_root) = get_dev_project_root() {
+        let dev_path = project_root.join("skill-guide.md");
+        if dev_path.exists() {
+            return Ok(dev_path.to_string_lossy().to_string());
         }
     }
     Err("skill-guide.md not found".to_string())
@@ -1160,69 +1247,120 @@ fn set_window_border_color(window: tauri::WebviewWindow, color: String) -> Resul
     Ok(())
 }
 
-/// 将 md 中的网络图片（http/https）下载为 data URL，供 DOCX 嵌入。
-/// 仅处理 docx 生成器支持的格式（png/jpg/jpeg/gif/bmp）；本地路径图保持原样由后端直接读取。
-async fn download_md_images(md: &str) -> String {
-    let mut out = String::with_capacity(md.len());
-    let mut search_from = 0;
-    while let Some(rel) = md[search_from..].find("![") {
-        let start = search_from + rel;
-        out.push_str(&md[search_from..start]);
-        // 找 ]( 定位 URL 起点
-        if let Some(close) = md[start + 2..].find("](") {
-            let url_start = start + 2 + close + 2;
-            let rest = &md[url_start..];
-            let url_end = rest
-                .find(|c| c == ')' || c == ' ' || c == '\n' || c == '\t' || c == '<')
-                .unwrap_or(rest.len());
-            let url = &rest[..url_end];
-            let is_http = url.starts_with("http://") || url.starts_with("https://");
-            let ext = url
-                .split('?')
-                .next()
-                .unwrap_or("")
-                .rsplit('.')
-                .next()
-                .unwrap_or("")
-                .to_lowercase();
-            let supported = matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "gif" | "bmp" | "webp");
-            if is_http && supported {
-                let mime = match ext.as_str() {
-                    "jpg" | "jpeg" => "image/jpeg",
-                    "png" => "image/png",
-                    "gif" => "image/gif",
-                    "webp" => "image/webp",
-                    _ => "image/bmp",
-                };
-                let mut new_url = url.to_string();
-                if let Ok(resp) = reqwest::get(url).await {
-                    if let Ok(bytes) = resp.bytes().await {
-                        use base64::Engine as _;
-                        let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
-                        new_url = format!("data:{};base64,{}", mime, b64);
-                    }
-                }
-                out.push_str(&md[start..url_start]);
-                out.push_str(&new_url);
-                search_from = url_start + url_end;
-                continue;
+/// 从图片二进制头部识别图片类型（与 docx_export::image_dimensions 支持的格式一致）
+fn sniff_image_mime(b: &[u8]) -> Option<&'static str> {
+    if b.starts_with(b"\x89PNG\r\n\x1a\n") {
+        Some("image/png")
+    } else if b.starts_with(b"\xFF\xD8\xFF") {
+        Some("image/jpeg")
+    } else if b.starts_with(b"GIF87a") || b.starts_with(b"GIF89a") {
+        Some("image/gif")
+    } else if b.starts_with(b"BM") {
+        Some("image/bmp")
+    } else if b.len() >= 12 && &b[..4] == b"RIFF" && &b[8..12] == b"WEBP" {
+        Some("image/webp")
+    } else {
+        None
+    }
+}
+
+/// 用 pulldown-cmark 解析出 md 中所有网络图片 URL（去重）。
+/// 相比手工扫描原始文本，这里天然覆盖引用式 `![a][id]`（解析后 dest_url 相同）、
+/// 括号平衡（如 `File_(1).png`）与转义，且拿到的字符串与生成器解析结果逐字一致。
+fn collect_network_image_urls(md: &str) -> Vec<String> {
+    use pulldown_cmark::{Event, Options, Parser, Tag};
+    let mut urls: Vec<String> = Vec::new();
+    for ev in Parser::new_ext(md, Options::all()) {
+        // Markdown 语法图片与 HTML 标签图片（<img src="…">）都要收集
+        let candidates: Vec<String> = match ev {
+            Event::Start(Tag::Image { dest_url, .. }) => vec![dest_url.to_string()],
+            Event::Html(h) | Event::InlineHtml(h) => docx_export::extract_img_srcs(&h),
+            _ => Vec::new(),
+        };
+        for url in candidates {
+            if (url.starts_with("http://") || url.starts_with("https://")) && !urls.contains(&url) {
+                urls.push(url);
             }
         }
-        // 不是可下载的网络图片：原样保留这一小段
-        out.push_str("![");
-        search_from = start + 2;
     }
-    out.push_str(&md[search_from..]);
-    out
+    urls
+}
+
+/// 下载单张网络图片并编码为 data URL。非图片响应（403/404 的 HTML 错误页等）返回 None。
+async fn fetch_image_data_url(client: &reqwest::Client, url: &str) -> Option<String> {
+    let resp = client.get(url).send().await.ok()?;
+    if !resp.status().is_success() {
+        return None;
+    }
+    let ctype = resp
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .split(';')
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_lowercase();
+    let bytes = resp.bytes().await.ok()?;
+    // 优先文件头魔数：URL 无扩展名或服务端 MIME 不准时仍能正确识别
+    let mime = sniff_image_mime(&bytes).map(str::to_string).or_else(|| {
+        matches!(
+            ctype.as_str(),
+            "image/png" | "image/jpeg" | "image/gif" | "image/bmp" | "image/webp"
+        )
+        .then(|| ctype.clone())
+    })?;
+    use base64::Engine as _;
+    let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+    Some(format!("data:{};base64,{}", mime, b64))
+}
+
+/// 将 md 中的网络图片（http/https）下载为 data URL，供 DOCX 嵌入。
+/// **不依赖 URL 扩展名**——大量图床/CDN 的图片 URL 无扩展名或带缩放查询参数；
+/// 统一尝试下载，按响应内容判定真实类型，避免把错误页当图片嵌入。
+/// 本地路径图保持原样，由 docx 生成器直接读取。
+/// 下载 md 中所有网络图片，返回「URL → data URL」映射，供 DOCX 生成器查表嵌入。
+/// **不依赖 URL 扩展名**——大量图床/CDN 的图片 URL 无扩展名或带缩放查询参数；
+/// 统一尝试下载，按响应内容判定真实类型，避免把 403/404 的错误页当图片嵌入。
+async fn download_remote_images(md: &str) -> docx_export::RemoteImages {
+    use std::collections::HashMap;
+    let urls = collect_network_image_urls(md);
+    let mut map: HashMap<String, String> = HashMap::new();
+    if urls.is_empty() {
+        return map;
+    }
+    let client = match reqwest::Client::builder()
+        // 部分图床/站点拒绝无 UA 的请求；带浏览器 UA 避免 403
+        .user_agent(concat!(
+            "Mozilla/5.0 (compatible; YiziMarkdown/",
+            env!("CARGO_PKG_VERSION"),
+            ")"
+        ))
+        .timeout(std::time::Duration::from_secs(20))
+        .build()
+    {
+        Ok(c) => c,
+        Err(_) => return map,
+    };
+    for url in urls {
+        match fetch_image_data_url(&client, &url).await {
+            Some(data_url) => {
+                map.insert(url, data_url);
+            }
+            None => eprintln!("[docx_export] 网络图片下载失败或非图片，已跳过: {}", url),
+        }
+    }
+    map
 }
 
 /// 生成并写入 .docx（前端已通过 save_file_dialog 选好路径）
 #[tauri::command]
 async fn export_docx(path: String, md: String, base_dir: Option<String>, theme: docx_export::DocxTheme) -> Result<(), String> {
-    // 网络图片下载为 data URL；本地图片由生成器按路径读取
-    let md = download_md_images(&md).await;
+    // 网络图片预先下载为 data URL 映射；本地图片由生成器按路径读取
+    let remote = download_remote_images(&md).await;
     let base = base_dir.map(std::path::PathBuf::from);
-    let bytes = docx_export::markdown_to_docx(&md, theme, base)?;
+    let bytes = docx_export::markdown_to_docx(&md, theme, base, remote)?;
     std::fs::write(&path, &bytes).map_err(|e| format!("Failed to write docx: {}", e))
 }
 
@@ -1296,6 +1434,7 @@ fn main() {
             open_url,
             list_templates,
             read_template,
+            write_template,
             list_skills,
             read_skill_file,
             get_skill_guide_path,
@@ -1356,6 +1495,9 @@ fn main() {
             // 将内置技能同步到用户文档目录（~/Documents/yizimarkdown/skills/）
             let _ = sync_builtin_skills();
 
+            // 将内置模板同步到用户文档目录（~/Documents/yizimarkdown/templates/）
+            let _ = sync_builtin_templates();
+
             // 注册 .md 文件图标（覆盖MSI安装后缺失DefaultIcon的问题）
             #[cfg(target_os = "windows")]
             register_md_file_icon();
@@ -1371,4 +1513,137 @@ fn main() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sniffs_supported_image_headers() {
+        assert_eq!(sniff_image_mime(b"\x89PNG\r\n\x1a\n\x00\x00"), Some("image/png"));
+        assert_eq!(sniff_image_mime(&[0xFFu8, 0xD8, 0xFF, 0xE0]), Some("image/jpeg"));
+        assert_eq!(sniff_image_mime(b"GIF89a...."), Some("image/gif"));
+        assert_eq!(sniff_image_mime(b"BM\x00\x00"), Some("image/bmp"));
+        let mut webp = b"RIFF\x00\x00\x00\x00WEBP".to_vec();
+        webp.extend_from_slice(b"VP8 ");
+        assert_eq!(sniff_image_mime(&webp), Some("image/webp"));
+        // 非图片（403/404 的 HTML 错误页）不得被误识别为图片
+        assert_eq!(sniff_image_mime(b"<!DOCTYPE html><html>"), None);
+        assert_eq!(sniff_image_mime(b""), None);
+    }
+
+    #[test]
+    fn sync_builtin_templates_seeds_user_dir_without_overwriting() {
+        // 用临时 USERPROFILE 重定向用户目录，避免污染真实的 ~/Documents
+        let tmp = std::env::temp_dir().join("yizimd-templates-sync-test");
+        let _ = fs::remove_dir_all(&tmp);
+        std::env::set_var("USERPROFILE", &tmp);
+        std::env::set_var("HOME", &tmp);
+
+        let user_dir = get_user_templates_dir().unwrap();
+        assert!(user_dir.starts_with(&tmp), "用户模板目录未指向临时目录: {:?}", user_dir);
+
+        // 首次同步：内置模板被复制到用户文档目录
+        sync_builtin_templates().unwrap();
+        let seeded = list_templates().unwrap();
+        assert!(seeded.contains(&"default.md".to_string()), "内置模板未同步: {:?}", seeded);
+        assert!(seeded.contains(&"Slide-Template.md".to_string()), "内置模板未同步: {:?}", seeded);
+        // 子目录（模板内的相对图片 images/）也要一并复制，否则模板里的图渲染不出来
+        let img_dir = user_dir.join("images");
+        assert!(img_dir.is_dir(), "模板 images/ 子目录未复制");
+        assert!(
+            fs::read_dir(&img_dir).unwrap().flatten().next().is_some(),
+            "模板 images/ 为空"
+        );
+
+        // 用户改过的内置模板：本版本内不再触碰
+        let edited = "我的自定义内容\n";
+        write_template("default.md".to_string(), edited.to_string()).unwrap();
+        sync_builtin_templates().unwrap();
+        assert_eq!(read_template("default.md".to_string()).unwrap(), edited, "用户模板被覆盖");
+
+        // 模拟版本升级强制重新同步：仍不得覆盖用户已有文件
+        fs::write(user_dir.join("templates.json"), r#"{"syncedVersion":"0.0.0"}"#).unwrap();
+        sync_builtin_templates().unwrap();
+        assert_eq!(read_template("default.md".to_string()).unwrap(), edited, "版本升级时覆盖了用户模板");
+
+        // 用户自建模板始终保留
+        write_template("mine.md".to_string(), "自定义\n".to_string()).unwrap();
+        sync_builtin_templates().unwrap();
+        assert_eq!(read_template("mine.md".to_string()).unwrap(), "自定义\n");
+
+        // 路径穿越：`..` 被拒；`../evil.md` 收敛到模板目录内，不得逃逸
+        assert!(write_template("..".to_string(), "x".to_string()).is_err());
+        write_template("../evil.md".to_string(), "x".to_string()).unwrap();
+        assert!(!tmp.join("evil.md").exists(), "路径穿越未被阻断");
+        assert!(user_dir.join("evil.md").exists(), "文件名未收敛到模板目录");
+
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn collects_inline_and_reference_style_network_images() {
+        let md = concat!(
+            "![a](https://cdn.example/a.png)\n\n",
+            "![b][ref]\n\n",
+            "[ref]: https://cdn.example/b.webp\n\n",
+            "<img src=\"https://cdn.example/c.jpg\">\n\n",
+            "![local](D:\\pics\\c.png)\n\n",
+            "![dup](https://cdn.example/a.png)\n",
+        );
+        // 行内式 + 引用式 + HTML 标签都收集；本地路径排除；重复 URL 去重
+        assert_eq!(
+            collect_network_image_urls(md),
+            vec![
+                "https://cdn.example/a.png".to_string(),
+                "https://cdn.example/b.webp".to_string(),
+                "https://cdn.example/c.jpg".to_string(),
+            ]
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "需要网络：真实下载无扩展名图床图片并落盘 docx"]
+    async fn export_docx_embeds_network_images() {
+        // 覆盖三种形态：无扩展名+缩放参数的行内式 URL、引用式图片、HTML <img> 标签
+        let md = concat!(
+            "![inline](https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800)\n\n",
+            "![ref][pic]\n\n",
+            "[pic]: https://raw.githubusercontent.com/github/explore/main/topics/rust/rust.png\n\n",
+            "<img src=\"https://www.baidu.com/img/PCtm_d9c8750bed0b3c7d089fa7d55720d6cf.png\" alt=\"html\">\n",
+        );
+        let dir = std::env::temp_dir().join("yizimd-net-image-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let out = dir.join("net-image.docx");
+        let _ = std::fs::remove_file(&out);
+
+        export_docx(
+            out.to_string_lossy().to_string(),
+            md.to_string(),
+            None,
+            docx_export::DocxTheme {
+                accent: "0066CC".into(),
+                text: "333333".into(),
+                font: "MiSans".into(),
+                mono_font: "Consolas".into(),
+                border: "D5E2FF".into(),
+                surface: "F0F7FF".into(),
+            },
+        )
+        .await
+        .expect("export_docx");
+
+        let bytes = std::fs::read(&out).expect("read docx");
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(&bytes)).expect("valid zip");
+        let names: Vec<String> = (0..zip.len())
+            .map(|i| zip.by_index(i).unwrap().name().to_string())
+            .collect();
+        let media = names.iter().filter(|n| n.starts_with("word/media/image")).count();
+        assert_eq!(media, 3, "应嵌入 3 张网络图（行内式 + 引用式 + HTML 标签），包内条目: {:?}", names);
+        let mut doc = String::new();
+        use std::io::Read as _;
+        zip.by_name("word/document.xml").unwrap().read_to_string(&mut doc).unwrap();
+        assert_eq!(doc.matches("rIdImg").count(), 3, "document.xml 图片引用数不对: {}", doc);
+    }
 }

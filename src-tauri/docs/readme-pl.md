@@ -93,7 +93,7 @@ Stworzyliśmy niezwykle eleganckie doświadczenie w trybie edycji WYSIWYG. Ponad
 - **Tworzenie z szablonu**: menu rozwijane „Utwórz z szablonu" na pasku narzędzi; tworzenie nowego dokumentu na podstawie wybranego szablonu Markdown;也可以 w Ustawienia → Ogólne ustawić domyślny szablon; potem `Ctrl+N` automatycznie go zastosuje
 - **Zapis / automatyczny zapis**: ręczny zapis + automatyczny zapis w konfigurowalnych odstępach (5~180 s, domyślnie 60 s)
 - **Zapis jako**: automatyczne otwieranie okna „Zapis jako" przy zapisie nowego pliku
-- **Eksport**: trzy formaty - HTML / Markdown / tekst plain
+- **Eksport**: pięć formatów - HTML / Markdown / zwykły tekst / Word (DOCX) / PDF; DOCX używa natywnej semantyki Worda (listy/tabele/bloki kodu/cytaty/listy zadań), style tabel zgodne z podglądem, obrazy obsługują ścieżki lokalne, obrazy sieciowe i tagi HTML `<img>` (szerokość można ustawić atrybutem `width`); PDF odwzorowuje podgląd i automatycznie dzieli na strony
 - **Powiązanie .md**: jednym kliknięciem ustaw edytor Markdown jako domyślny w systemie; kliknięcie dwukrotne .md otwiera bezpośrednio (rejestr Windows / LaunchServices macOS)
 
 ### Personalizacja wyglądu
@@ -106,7 +106,7 @@ Stworzyliśmy niezwykle eleganckie doświadczenie w trybie edycji WYSIWYG. Ponad
 
 ### Inne
 
-- **Szablony dokumentów**: umieść pliki `.md` w katalogu `templates/`, aby wybrać je przy tworzeniu nowego dokumentu
+- **Szablony dokumentów**: szablony są przechowywane w katalogu użytkownika `~/Documents/yizimarkdown/templates/`; wystarczy umieścić w nim pliki `.md` (możesz je też tworzyć/edytować w Ustawienia → Szablony, menu odświeża się natychmiast); wbudowane szablony są automatycznie synchronizowane tam przy pierwszym uruchomieniu, aktualizacja/ponowna instalacja nie nadpisze Twoich szablonów
 - **System skrótów klawiszowych**: wizualny panel konfiguracji skrótów; obsługa 30 akcji z własnymi przypisaniami, nagrywaniem klawiszy, wykrywaniem konfliktów i przywracaniem ustawień domyślnych
 - **Panel ustawień**: zakładki Ogólne, Wygląd, Edytor, Tryb na żywo, AI, Wtyczki, Skróty, Szablony, O programie; natychmiastowy podgląd zmian
 
@@ -183,7 +183,7 @@ YiziMarkdown/
 │   ├── slides-outline.md   # Ekstrakcja prezentacji
 │   ├── doc-summary.md      # Podsumowanie dokumentu
 │   └── polish-writing.md   # Korekta i przeredagowanie
-└── templates/              # Szablony dokumentów
+└── templates/              # Wbudowane szablony (synchronizowane do katalogu użytkownika przy pierwszym uruchomieniu)
     └── default.md          # Domyślny szablon
 ```
 

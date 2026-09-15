@@ -592,12 +592,15 @@ function App() {
         const accent = (cs.getPropertyValue('--editor-cursor') || '').trim() || (isDark ? '#8ab4f8' : '#0066cc')
         const text = (cs.getPropertyValue('--editor-text') || '').trim() || '#333333'
         const mono = (cs.getPropertyValue('--font-mono') || '').trim() || 'Consolas'
+        // 表格样式对齐预览：表头底色 --editor-surface、网格线 --editor-border
+        const surface = (cs.getPropertyValue('--editor-surface') || '').trim() || '#f5f5f5'
+        const border = (cs.getPropertyValue('--editor-border') || '').trim() || '#dddddd'
         // 用 invokeTauriOrThrow：导出失败必须抛错显示，不能吞错假装成功
         await invokeTauriOrThrow('export_docx', {
           path: savedPath,
           md: tab.content,
           baseDir,
-          theme: { accent, text, font: previewFontFamily, monoFont: mono },
+          theme: { accent, text, font: previewFontFamily, monoFont: mono, surface, border },
         })
       } else if (format === 'pdf') {
         await invokeTauriOrThrow('export_pdf', { path: savedPath, html: buildExportHtml({ print: true }) })

@@ -94,7 +94,7 @@ Abbiamo creato un'esperienza estremamente elegante per la modalità WYSIWYG; sup
 - **Crea da modello**: Menu a tendina "Crea da modello" barra strumenti, crea nuovo documento basato sulla struttura Markdown del modello selezionato; puoi anche impostare il modello predefinito in Impostazioni → Generale, poi `Ctrl+N` lo applica automaticamente
 - **Salva / Salvataggio automatico**: Salvataggio manuale + salvataggio automatico con intervallo configurabile (5~180 secondi, predefinito 60 secondi)
 - **Salva con nome**: Mostra automaticamente la finestra di dialogo salva con nome quando salvi nuovi file
-- **Esporta**: Tre formati HTML / Markdown / Testo semplice
+- **Esporta**: Cinque formati: HTML / Markdown / testo semplice / Word (DOCX) / PDF; DOCX usa la semantica nativa di Word (elenchi/tabelle/blocchi di codice/citazioni/elenchi di attività), gli stili delle tabelle corrispondono all'anteprima, le immagini supportano percorsi locali, immagini web e tag HTML `<img>` (larghezza controllabile con l'attributo `width`); il PDF corrisponde all'anteprima con paginazione automatica
 - **Associazione file .md**: Impostalo come editor Markdown predefinito del sistema con un clic nelle impostazioni, doppio clic su .md per aprire direttamente (registro Windows / macOS LaunchServices)
 
 ### Personalizzazione aspetto
@@ -107,7 +107,7 @@ Abbiamo creato un'esperienza estremamente elegante per la modalità WYSIWYG; sup
 
 ### Altri
 
-- **Modelli documento**: Inserisci file `.md` nella directory `templates/`, selezionabili quando crei nuovi documenti
+- **Modelli documento**: i modelli sono salvati nella directory utente `~/Documents/yizimarkdown/templates/`; basta inserire file `.md` (puoi anche crearli/modificarli in Impostazioni → Modelli, il menu si aggiorna subito); i modelli integrati vengono sincronizzati lì automaticamente al primo avvio, aggiornare/reinstallare non sovrascriverà i tuoi modelli
 - **Sistema scorciatoie**: Pannello configurazione visuale scorciatoie, supporta associazione personalizzata per 30 azioni, registrazione tasti, rilevamento conflitti e ripristino predefiniti
 - **Pannello impostazioni**: Schede Generale, Aspetto, Editor, Modalità in tempo reale, AI, Plugin, Scorciatoie, Modelli, Info e altre, le impostazioni hanno effetto immediato
 
@@ -184,7 +184,7 @@ YiziMarkdown/
 │   ├── slides-outline.md   # Estrazione presentazione
 │   ├── doc-summary.md      # Riassunto documento
 │   └── polish-writing.md   # Miglioramento scrittura
-└── templates/              # Modelli documento
+└── templates/              # Modelli integrati (sincronizzati nella directory utente al primo avvio)
     └── default.md          # Modello predefinito
 ```
 

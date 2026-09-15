@@ -94,7 +94,7 @@ Vi har skapat en extremt elegant upplevelse för WYSIWYG-läge; det stöder ocks
 - **Skapa från mall**: Verktygsfältet "Skapa från mall" dropdown-meny, skapar nytt dokument baserat på vald malls Markdown-struktur; kan också ställa in standardmall i Inställningar → Allmänt, sedan `Ctrl+N` tillämpar automatiskt
 - **Spara / Automatisk sparning**: Manuell sparning + konfigurerbar intervall automatisk sparning (5~180 sekunder, standard 60 sekunder)
 - **Spara som**: Visar automatiskt dialogruta för spara som vid sparning av nya filer
-- **Exportera**: HTML / Markdown / Ren text tre format
+- **Exportera**: Fem format: HTML / Markdown / ren text / Word (DOCX) / PDF; DOCX använder Words inbyggda semantik (listor/tabeller/kodblock/citat/uppgiftslistor), tabellstilar matchar förhandsvisningen, bilder stöder lokala sökvägar, webbilder och HTML-`<img>`-taggar (bredd kan styras med `width`-attributet); PDF matchar förhandsvisningen med automatisk paginering
 - **.md-fil association**: Enklicksställ in som systemstandard Markdown-redigeringsprogram i inställningar, dubbelklicka på .md för att öppna direkt (Windows-register / macOS LaunchServices)
 
 ### Utseendeanpassning
@@ -107,7 +107,7 @@ Vi har skapat en extremt elegant upplevelse för WYSIWYG-läge; det stöder ocks
 
 ### Övrigt
 
-- **Dokumentmallar**: Lägg till `.md`-filer i `templates/`-katalogen, kan väljas vid skapande av ny
+- **Dokumentmallar**: mallar lagras i användarkatalogen `~/Documents/yizimarkdown/templates/`; lägg bara till `.md`-filer för att använda dem (du kan även skapa/redigera dem under Inställningar → Mallar, menyn uppdateras direkt); inbyggda mallar synkroniseras dit automatiskt vid första start, uppgradering/ominstallation skriver inte över dina mallar
 - **Genvägssystem**: Visuellt genvägspanel, stöder anpassad bindning för 30 åtgärder, tangentinspelning, konfliktupptäckning och återställning till standard
 - **Inställningspanelen**: Allmänt, Utseende, Redigerare, Realtidsläge, AI, Tillägg, Genvägar, Mallar, Om och andra flikar, inställningar träder i kraft omedelbart
 
@@ -184,7 +184,7 @@ YiziMarkdown/
 │   ├── slides-outline.md   # Presentation Outlining
 │   ├── doc-summary.md      # Dokumentsammanfattning
 │   └── polish-writing.md   # Skrivpolering
-└── templates/              # Dokumentmallar
+└── templates/              # Inbyggda mallar (synkroniseras till användarkatalogen vid första start)
     └── default.md          # Standardmall
 ```
 

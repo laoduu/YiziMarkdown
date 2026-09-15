@@ -51,6 +51,26 @@
 
 - **支持 `file:///D:\...` 形式**：图片解析入口兼容 file:/// 前缀路径（浏览器禁止直接加载，转为 Tauri 读取）
 
+**DOCX 列表与表格还原（用户实测反馈驱动）**
+
+- **列表项加粗开头修复**：无序/有序列表项以 `**加粗小标题**` 开头时整项内容丢失（只剩一个空项目符号）——紧凑列表项没有 `Paragraph` 包裹，`Tag::Item` 分发把内联起始标签当块级事件消费后丢弃，事件流错位后 `End(Strong)` 又被误当 `End(Item)` 提前终止；改为子事件先分类（EndItem/Para/Inline/Block/Other）再分发，内联起始交行内渲染
+- **松散列表续段修复**：列表项第 2 段起退回 `Normal` 样式（丢失列表缩进）、后续列表项丢编号——`render_inlines` 的 level=0 不消费配对 `End(Paragraph)`，外层把 `End(Paragraph)` 误当 `End(Item)`/`End(List)`；改为「谁消费 Start 谁消费配对 End」，Item/List/BlockQuote 只认自己的闭合标签
+- **续段与空项**：续段用 `ListParagraph` + `w:ind left=(ilvl+1)*720` 对齐文本；空列表项保留编号/项目符号
+- **表格对齐预览样式**：整表 100% 宽、网格线用主题 `--editor-border`（原硬编码灰 `BFBFBF`）、表头行主题 `--editor-surface` 底色 + 加粗 + 跨页重复（`w:tblHeader`）、单元格紧凑间距（覆盖 Normal 的段后距/行距）+ 顶对齐、支持 GFM 列对齐（`:--:` → `w:jc`）
+
+**DOCX 图片增强**
+
+- **HTML `<img>` 标签支持**：块级 `<img src="...">` 与行内嵌在段落里的 `<img>` 都能嵌入（此前行内 HTML 被直接丢弃、块级被当纯文本把标签打进文档）；图片与文字混排的 HTML 块会保留文字，不丢内容
+- **`width` 属性生效**：`width="600"` / `600px` / `300pt` / `50%` 决定导出宽度；按预览语义**忽略 `height`**（预览 CSS 的 `height:auto` 会覆盖 HTML 高度属性），因此始终保留宽高比、不会拉变形
+- **网络图修复**：不再依赖 URL 扩展名（无扩展名/带缩放参数的图床 URL 此前被直接跳过）、支持引用式 `![a][id]`、按响应内容魔数判定类型（避免把 403/404 的 HTML 当图片嵌入）、带浏览器 UA 规避 403、失败写日志不再静默丢图
+
+**文档模板持久化**
+
+- **模板迁移到用户目录**：模板从安装目录迁至 `~/Documents/yizimarkdown/templates/`（与 v0.2.3 技能同理），卸载/重装/升级都不丢，也不再受安装目录无写权限限制
+- **启动自动同步**：内置模板在首次启动或应用版本变化时同步到用户目录，**只补缺失、绝不覆盖**用户已有/已改的模板；用 `templates.json` 记录已同步版本，用户删掉的内置模板不会被反复塞回
+- **模板面板改写**：设置 → 模板 的新建/编辑改走新增的 `write_template` 命令写入用户目录（此前直接拼安装目录路径）
+- **菜单即时刷新**：工具栏「从模板新建」在每次打开菜单时重新读取列表，设置里新建模板后无需重启即可使用
+
 **踩坑记录（重点）**
 
 1. **`invokeTauri` 静默吞错**：命令 Err 被吞导致"假成功" toast → 导出改用 `invokeTauriOrThrow` 如实报错
@@ -68,11 +88,22 @@
 13. **SVG text 字母小字号发糊**：字母徽标手绘 path 几何不标准、text 字号过小发糊 → 改用无衬线字体大字（19px@24、weight 800、明确字体族）
 14. **涟漪「恢复默认」漏改**：store 默认值已改 true，但 DEFAULTS_EDITOR 仍 false，点恢复默认后涟漪被取消 → 同步为 true + persist v3 强制存量开启
 15. **配置目录语义错误**：显示的是程序运行目录（appDir），用户配置实际存于 `~/Documents/yizimarkdown/` → 新增 `get_user_config_dir` 并双项显示
+16. **紧凑列表项没有 `Paragraph` 包裹**：`- **加粗小标题** 正常文本` 的行内事件直挂在 `Item` 之下，`Tag::Item` 分发却把 `Start(Strong)` 当块级事件消费后丢弃（`render_block_event` 对内联标签无匹配臂）→ 加粗内容消失、事件流错位、`End(Strong)` 被误当 `End(Item)`、整项内容被吞掉 → 子事件先分类再分发，内联起始不消费
+17. **`render_inlines` 的 level=0 不消费配对 `End` 反噬外层**：消费 `Start(Paragraph)` 后 `End(Paragraph)` 残留，外层误把它当 `End(Item)`/`End(List)` → 松散列表续段退成 `Normal`、后续列表项丢编号 → 「谁消费 Start 谁消费配对 End」+ 闭合标签精确匹配（`End(TagEnd::Item)`）
+18. **网络图被扩展名白名单拦在门外**：`download_md_images` 先按 URL 扩展名判断是否下载，而大量图床/CDN 的 URL 无扩展名或带缩放参数（实测 unsplash `?w=800` 返回 `image/jpeg`）→ 根本不发请求、导出无图 → 改为解析器采集 URL + 按响应内容魔数判定类型 + 浏览器 UA + 状态码校验
+19. **行内 HTML 图片被静默丢弃**：`render_inlines` 没有 `Event::InlineHtml` 分支（行内 `<img>` 直接消失），块级 `Event::Html` 则把标签当纯文本写进文档 → 两处都接上图片渲染，并按预览语义处理 `width`
+20. **CSS 颜色 ≠ OOXML 颜色**：OOXML 只接受 6 位 hex，而主题变量格式不一（`rgba()`、`#rgb`、**不带 `#` 的裸 hex**）→ 颜色归一化最初只认带 `#` 的形式，导致 `border`/`surface` 整套静默回退默认灰（被单测抓到）
+21. **文档模板写在安装目录**：设置 → 模板 的新建/编辑直接把路径拼成 `${appDir}\templates\...` 写安装目录 → 卸载/重装即丢失，装在 Program Files 时还可能无写权限 → 迁到用户文档目录 + 新增 `write_template` 命令
+22. **常驻组件的文件列表会过期**：`Toolbar` 常驻挂载，模板列表只在挂载时读一次 → 设置里新建模板后菜单要重启才显示 → 改为「打开菜单时重新读取」
 
 **技术改进**
 
 - `themeCursor.ts` 统一生成三档主题色光标，MutationObserver 监听主题 CSS 异步注入重算
 - 新增 Rust 依赖：`pulldown-cmark`、`zip`、`webview2-com`、`windows-core`（安装包增量约 1MB）
+- `DocxTheme` 新增 `border` / `surface` 主题字段（前端传 `--editor-border` / `--editor-surface`）+ `css_color_to_hex` 把 `#rgb` / 裸 hex / `rgb()` / `rgba()`（alpha 按白底合成）统一成 OOXML 6 位 hex
+- 远程图改为两段式：「解析器采集图片 URL → 下载为 `RemoteImages` 映射 → 生成器按 `dest_url` 查表嵌入」，一套逻辑覆盖行内式/引用式/HTML 标签三种写法，且与生成器解析结果逐字一致
+- 模板同步：`copy_missing` 递归复制（含模板内 `images/` 相对图片目录）+ `templates.json` 版本门控；`get_dev_project_root()` 统一 dev 资源定位（兼容 `target/debug/deps` 的测试二进制），skills 的 3 处 dev fallback 一并复用
+- 单测扩到 22 项：表格保真（边框色/表头底色/跨页重复/列对齐/紧凑间距）、HTML 图片（块级/行内/混排）、`width` 尺寸与宽高比、颜色归一化、模板同步端到端（播种/不覆盖/升级不覆盖/路径穿越）
 - 手写 PNG/JPEG/GIF/BMP/WebP 头部尺寸解析，零新依赖，DOCX 图片按比例嵌入
 - 单测：DOCX 生成、serde 契约、图片头解析、本地图端到端嵌入、嵌套列表层级
 - 折叠滚动锁定与 DOCX 排版用 Playwright + Edge / docx-preview 真实浏览器验证（加粗 fontWeight 700、嵌套拆段）
@@ -92,8 +123,9 @@
 
 **划词工具栏主题适配**
 
-- **专属 CSS 变量**：每个主题定义 `--toolbar-bg` / `--toolbar-text` / `--toolbar-border` / `--toolbar-hover` / `--toolbar-accent`，暗色模式不覆盖，工具栏始终亮色
+- **专属 CSS 变量**：每个主题定义 `--sel-toolbar-bg` / `--sel-toolbar-text` / `--sel-toolbar-border` / `--sel-toolbar-hover` / `--sel-toolbar-accent`，暗色模式不覆盖，工具栏始终亮色
 - **两套主题文件同步**：`src/assets/themes/` 和 `src-tauri/themes/` 同步更新
+- **顶部工具栏恢复主题适配**：`.toolbar` 背景改用 `--editor-surface`，正确跟随明暗切换
 
 **踩坑记录（重点）**
 
@@ -104,6 +136,8 @@
 5. **两套主题文件不同步**：`src/assets/themes/` vs `src-tauri/themes/` 运行时只加载后者 → 必须同步修改
 6. **foldGutter 挤压标题文字**：`foldGutter()` 永久占据 gutter 空间 → 改用绝对定位 ViewPlugin
 7. **Decoration.widget 挤压标题文字**：widget 在内容流中占空间 → 改用 `position: absolute` 脱离文档流
+8. **`--toolbar-*` 变量名冲突**：划词工具栏和顶部工具栏共用 `--toolbar-*` 变量，暗色模式下顶部工具栏也被锁定亮色 → 划词工具栏改用 `--sel-toolbar-*` 专属变量
+9. **PowerShell `Set-Content` 破坏 UTF-8 编码**：批量重命名 CSS 变量时 `Set-Content` 默认用系统 ANSI 编码写回，中文注释变乱码 → 改用 `[System.IO.File]::WriteAllBytes` + `Encoding.UTF8`
 
 **标题折叠（Obsidian 风格）**
 

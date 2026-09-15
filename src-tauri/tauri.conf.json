@@ -54,7 +54,11 @@
     "windows": {
       "nsis": {
         "installerHooks": "installer.nsh",
-        "displayLanguageSelector": false
+        "displayLanguageSelector": false,
+        "languages": ["SimpChinese", "English"]
+      },
+      "wix": {
+        "language": "zh-CN"
       }
     },
     "fileAssociations": [

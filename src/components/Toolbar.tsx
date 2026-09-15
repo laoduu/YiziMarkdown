@@ -143,6 +143,17 @@ export default function Toolbar({
     load()
   }, [])
 
+  // 模板列表：设置面板里新建模板后菜单需即时可见，故每次打开菜单都重新读取
+  // （同时也能拾取用户直接在模板目录里手动增删的文件）
+  const refreshTemplates = useCallback(async () => {
+    const tauri = (window as any).__TAURI_INTERNALS__
+    if (!tauri || typeof tauri.invoke !== 'function') return
+    try {
+      const tmpl = (await tauri.invoke('list_templates')) as string[]
+      if (tmpl) setTemplates(tmpl)
+    } catch {}
+  }, [])
+
   // 空白处双击最大化/还原
   const handleDoubleClick = useCallback(async () => {
     const win = getTauriWindow()
@@ -194,6 +205,7 @@ export default function Toolbar({
               setTemplateMenuPos({ top: rect.bottom + 4, left: rect.left })
             }
             setShowTemplateMenu(true)
+            refreshTemplates()
           }}
           onMouseLeave={() => {
             templateHideTimerRef.current = setTimeout(() => {

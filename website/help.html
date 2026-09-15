@@ -146,9 +146,11 @@
             </div>
 
             <div class="help-sub" id="files-export">
-                <h3>导出</h3>
-                <p>工具栏右侧导出按钮支持三种格式，也可直接用快捷键：</p>
+                <h3>导出（v0.2.4 新增 Word / PDF）</h3>
+                <p>工具栏右侧导出按钮支持五种格式：</p>
                 <ul>
+                    <li><strong>Word 文档（DOCX）</strong>：Word 原生语义（标题 / 列表 / 表格 / 代码块 / 引用 / 任务列表），表格与表头样式对齐预览；图片支持本地路径、网络图片与 HTML <code>&lt;img&gt;</code> 标签，可用 <code>width</code> 属性控制宽度</li>
+                    <li><strong>PDF</strong>：与预览还原度一致，长文档自动分页（Windows）</li>
                     <li><strong>HTML</strong>（<kbd>Ctrl</kbd>+<kbd>H</kbd>）：保留主题样式，可直接分享或发布</li>
                     <li><strong>Markdown</strong>（<kbd>Ctrl</kbd>+<kbd>M</kbd>）：纯 Markdown 文本副本</li>
                     <li><strong>纯文本</strong>：去除所有标记符号</li>
@@ -474,7 +476,7 @@
                 </div>
                 <div class="callout callout-tip">
                     <span class="callout-icon">i</span>
-                    <p>程序目录 <code>templates/Slide-Template.md</code> 是纯 Markdown 幻灯片示例，涵盖分页、公式、图表等语法。打开后按 <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd> 即可体验。</p>
+                    <p>用户目录 <code>~/Documents/yizimarkdown/templates/Slide-Template.md</code> 是纯 Markdown 幻灯片示例，涵盖分页、公式、图表等语法。打开后按 <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd> 即可体验。</p>
                 </div>
             </div>
         </section>
@@ -680,9 +682,9 @@
                 <ul>
                     <li><strong>从模板新建</strong>：点击工具栏「新建」旁的「从模板新建」，下拉选择模板</li>
                     <li><strong>默认模板</strong>：在「设置 → 通用 → 默认模板」指定后，<kbd>Ctrl</kbd>+<kbd>N</kbd> 自动套用该结构</li>
-                    <li><strong>模板管理</strong>：在「设置 → 模板」中新建、编辑、删除</li>
+                    <li><strong>模板管理</strong>：在「设置 → 模板」中新建、编辑模板；保存后工具栏菜单即时刷新，无需重启</li>
                 </ul>
-                <p>也可直接把 <code>.md</code> 文件放进程序目录 <code>templates/</code>。</p>
+                <p>模板存放在<strong>用户目录</strong> <code>~/Documents/yizimarkdown/templates/</code>，把 <code>.md</code> 文件放进去即可使用（v0.2.4 起，卸载 / 重装 / 升级都不会丢失）。</p>
             </div>
         </section>
 
@@ -749,6 +751,11 @@
                 <p>技能文件已迁至 <code>~/Documents/yizimarkdown/skills/</code>。已有的自定义技能只要放在该目录下即可继续使用；内置技能在首次启动新版本时自动同步过去。</p>
             </div>
 
+            <div class="help-sub" id="faq-template-move">
+                <h3>v0.2.4 起文档模板存在哪里？卸载重装会丢吗？</h3>
+                <p>文档模板也从应用目录迁至用户目录 <code>~/Documents/yizimarkdown/templates/</code>，卸载、重装、升级都<strong>不会丢失</strong>。内置模板会在首次启动时自动同步到该目录，且只补齐缺失文件、<strong>不会覆盖你自己的模板</strong>；你也可以在「设置 → 模板」中直接新建或编辑。</p>
+            </div>
+
             <div class="help-sub" id="faq-theme">
                 <h3>添加的自定义主题没有出现？</h3>
                 <p>确认文件放在程序目录 <code>themes/</code> 下、扩展名为 <code>.css</code>，然后<strong>重启程序</strong>。CSS 内部记得用 <code>.editor-content</code> 前缀限定范围。</p>
@@ -771,12 +778,13 @@
 
             <div class="help-sub" id="faq-where">
                 <h3>数据存储在哪？</h3>
-                <p>数据分四个层面存放：</p>
+                <p>数据分五个层面存放：</p>
                 <ol class="help-layer-list">
                     <li><strong>新建/未保存文件</strong>：在编辑器内存在 localStorage 缓存，下次打开软件时自动恢复、自动加载（不依赖系统文件路径，重启后仍在）</li>
                     <li><strong>配置文件</strong>（主题、自动保存参数、快捷键绑定等）：同样存在 localStorage 缓存中</li>
                     <li><strong>API 密钥</strong>：保存在系统钥匙串（macOS Keychain / Windows 凭据管理器），<strong>不明文暴露、不上传网络</strong>——随时可在「设置 → AI」清除</li>
                     <li><strong>技能文件（v0.2.3 起）</strong>：从应用目录迁移至用户目录 <code>~/Documents/yizimarkdown/skills/</code>，<strong>支持自定义</strong>，升级软件<strong>不会覆盖</strong></li>
+                    <li><strong>文档模板（v0.2.4 起）</strong>：与技能同理，存放在用户目录 <code>~/Documents/yizimarkdown/templates/</code>，<strong>支持自定义</strong>，升级 / 卸载 / 重装<strong>不会丢失</strong></li>
                 </ol>
             </div>
 
@@ -802,9 +810,9 @@
 ├── keybindings.json        # 快捷键配置
 ├── md-icon.ico             # Markdown 文件关联图标
 ├── themes/                 # 主题 CSS（放入 .css 即可扩展）
-├── templates/              # 文档模板（含 Slide-Template.md）
-└── skills/                 # AI 技能提示词与 skills.json 清单</code></pre>
-                <p>v0.2.3 起，用户级技能目录为 <code>~/Documents/yizimarkdown/skills/</code>。</p>
+├── templates/              # 内置模板（首启同步至用户目录）
+└── skills/                 # 内置技能（首启同步至用户目录）</code></pre>
+                <p>v0.2.3 起技能、v0.2.4 起文档模板的真实存储位置都在用户目录：<code>~/Documents/yizimarkdown/skills/</code> 与 <code>~/Documents/yizimarkdown/templates/</code>，自定义内容请放这里，升级 / 重装不会被覆盖。</p>
             </div>
 
             <div class="help-sub" id="appendix-support">

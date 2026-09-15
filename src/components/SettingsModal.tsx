@@ -795,7 +795,6 @@ function ShortcutsSettings() {
 
 function TemplatesSettings() {
   const { t } = useI18n()
-  const [tDir, setTDir] = useState('')
   const [templates, setTemplates] = useState<string[]>([])
   const [selected, setSelected] = useState<string | null>(null)
   const [tContent, setTContent] = useState('')
@@ -805,14 +804,17 @@ function TemplatesSettings() {
 
   const refresh = useCallback(async () => { const l = await invokeTauri<string[]>('list_templates'); setTemplates(l || []) }, [])
 
-  useEffect(() => { invokeTauri<Record<string, string>>('get_config_dir').then((d) => { if (d) setTDir(d.appDir || ''); refresh() }) }, [refresh])
+  useEffect(() => { refresh() }, [refresh])
 
   const load = async (name: string) => { const c = await invokeTauri<string>('read_template', { name }); if (c) { setTContent(c); setSelected(name); setEditing(false) } }
   const handleNew = () => { setEditContent('# 新模板\n\n'); setEditName('new-template.md'); setEditing(true) }
   const handleEdit = () => { setEditContent(tContent); setEditName(selected || ''); setEditing(true) }
   const handleSave = async () => {
-    const n = editName.endsWith('.md') ? editName : `${editName}.md`
-    await invokeTauri('save_file', { path: `${tDir}\\templates\\${n}`, content: editContent })
+    const name = editName.trim()
+    if (!name) return
+    const n = name.endsWith('.md') ? name : `${name}.md`
+    // 写入用户文档目录（~/Documents/yizimarkdown/templates/），卸载重装不丢
+    await invokeTauri('write_template', { name: n, content: editContent })
     await refresh(); setSelected(n); setTContent(editContent); setEditing(false)
   }
 
