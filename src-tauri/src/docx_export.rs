@@ -88,15 +88,96 @@ fn esc(s: &str) -> String {
     out
 }
 
-/// 从 CSS font-family 栈提取第一个族名（去掉引号）
-fn first_family(stack: &str) -> String {
-    let s = stack.trim();
-    if let Some(start) = s.find('\'') {
-        if let Some(end) = s[start + 1..].find('\'') {
-            return s[start + 1..start + 1 + end].to_string();
+/// 按逗号切分 CSS font-family 栈，尊重单/双引号（引号内的逗号不切分）
+fn split_font_stack(stack: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut cur = String::new();
+    let mut quote: Option<char> = None;
+    for c in stack.chars() {
+        match c {
+            '\'' | '"' => {
+                if quote == Some(c) {
+                    quote = None;
+                } else if quote.is_none() {
+                    quote = Some(c);
+                }
+                cur.push(c);
+            }
+            ',' if quote.is_none() => out.push(std::mem::take(&mut cur)),
+            _ => cur.push(c),
         }
     }
-    s.split(',').next().unwrap_or("").trim().trim_matches('"').to_string()
+    out.push(cur);
+    out
+}
+
+/// CSS 通用族 / 系统关键字 → 具体字体名。
+/// 这些字符串**不是字体名**，原样写进 `w:rFonts` 会被 Word 当成缺失字体，必须先映射。
+fn css_generic_to_font(name: &str) -> String {
+    match name.to_ascii_lowercase().as_str() {
+        "system-ui" | "-apple-system" | "blinkmacsystemfont" | "ui-sans-serif" | "sans-serif" => {
+            "Microsoft YaHei".to_string()
+        }
+        "serif" | "ui-serif" => "SimSun".to_string(),
+        "monospace" | "ui-monospace" => "Consolas".to_string(),
+        _ => name.to_string(),
+    }
+}
+
+/// 从 CSS font-family 栈提取**第一个族名**（去引号），并把 CSS 关键字映射为具体字体名。
+/// `'MiSans', 'Mi Sans', system-ui, …` → `MiSans`；`system-ui, 'MiSans'` → `Microsoft YaHei`
+fn first_family(stack: &str) -> String {
+    for raw in split_font_stack(stack) {
+        let name = raw.trim().trim_matches(|c| c == '\'' || c == '"').trim();
+        if !name.is_empty() {
+            return css_generic_to_font(name);
+        }
+    }
+    "Microsoft YaHei".to_string()
+}
+
+/// 字体名是否属中日韩字体（决定 fontTable 的 `w:charset`：86=GB2312 / 00=ANSI）
+fn is_cjk_family(name: &str) -> bool {
+    const CJK: &[&str] = &[
+        "misans", "yahei", "pingfang", "noto sans sc", "noto sans tc", "source han", "simsun",
+        "simhei", "harmonyos", "hiragino", "heiti", "songti", "kaiti",
+        "宋体", "微软雅黑", "苹方", "思源",
+    ];
+    let lower = name.to_ascii_lowercase();
+    CJK.iter().any(|k| lower.contains(k))
+}
+
+/// 生成 `word/fontTable.xml`：给用到的字体各挂一份**替代名清单**（`w:altName`）。
+///
+/// 依据 ISO/IEC 29500-1：主名称找不到时，应用**应依次尝试 `altName` 列表（逗号分隔）并取第一个命中的**，
+/// 且优先于「按字体度量自动替换」。**装有该字体时本部件完全不被读取 → 输出与改动前一致。**
+fn font_table_xml(theme: &DocxTheme) -> String {
+    let mut s = String::from(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:fonts xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">",
+    );
+    let charset = |f: &str| if is_cjk_family(f) { "86" } else { "00" };
+    // 正文字体：一条链同时覆盖 Windows / macOS / Linux 与拉丁兜底
+    s.push_str(&format!(
+        "<w:font w:name=\"{}\"><w:altName w:val=\"Microsoft YaHei, PingFang SC, Noto Sans SC, Segoe UI, Arial\"/><w:charset w:val=\"{}\"/><w:family w:val=\"swiss\"/><w:pitch w:val=\"variable\"/></w:font>",
+        esc(&theme.font),
+        charset(&theme.font)
+    ));
+    // 等宽字体（与正文同名则跳过——fontTable 以 name 为键，不可重复）
+    if !theme.mono_font.eq_ignore_ascii_case(&theme.font) {
+        s.push_str(&format!(
+            "<w:font w:name=\"{}\"><w:altName w:val=\"Cascadia Mono, Consolas, Courier New, DejaVu Sans Mono\"/><w:charset w:val=\"{}\"/><w:family w:val=\"modern\"/><w:pitch w:val=\"fixed\"/></w:font>",
+            esc(&theme.mono_font),
+            charset(&theme.mono_font)
+        ));
+    }
+    // numbering.xml 里无序列表符号硬编码用 Symbol，一并挂替代名
+    if !theme.font.eq_ignore_ascii_case("Symbol") && !theme.mono_font.eq_ignore_ascii_case("Symbol") {
+        s.push_str(
+            "<w:font w:name=\"Symbol\"><w:altName w:val=\"Wingdings, Segoe UI Symbol, Arial Unicode MS\"/><w:charset w:val=\"02\"/><w:family w:val=\"decorative\"/><w:pitch w:val=\"variable\"/></w:font>",
+        );
+    }
+    s.push_str("</w:fonts>");
+    s
 }
 
 /// HTML 实体反转义（覆盖导出关心的常见实体）
@@ -417,7 +498,7 @@ impl DocxBuilder {
         }
         if mono {
             let f = esc(&self.theme.mono_font);
-            rpr.push_str(&format!("<w:rFonts w:ascii=\"{}\" w:hAnsi=\"{}\" w:cs=\"{}\"/>", f, f, f));
+            rpr.push_str(&format!("<w:rFonts w:ascii=\"{}\" w:hAnsi=\"{}\" w:eastAsia=\"{}\" w:cs=\"{}\"/>", f, f, f, f));
         }
         if let Some(c) = color {
             rpr.push_str(&format!("<w:color w:val=\"{}\"/>", esc(c)));
@@ -432,8 +513,8 @@ impl DocxBuilder {
     fn code_run(&self, text: &str) -> String {
         let f = esc(&self.theme.mono_font);
         format!(
-            "<w:r><w:rPr><w:rFonts w:ascii=\"{}\" w:hAnsi=\"{}\" w:cs=\"{}\"/><w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"F2F2F2\"/></w:rPr><w:t xml:space=\"preserve\">{}</w:t></w:r>",
-            f, f, f, esc(text)
+            "<w:r><w:rPr><w:rFonts w:ascii=\"{}\" w:hAnsi=\"{}\" w:eastAsia=\"{}\" w:cs=\"{}\"/><w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"F2F2F2\"/></w:rPr><w:t xml:space=\"preserve\">{}</w:t></w:r>",
+            f, f, f, f, esc(text)
         )
     }
 
@@ -915,7 +996,7 @@ fn content_types(exts: &[String]) -> String {
         };
         s.push_str(&format!("<Default Extension=\"{}\" ContentType=\"{}\"/>", ext, mime));
     }
-    s.push_str("<Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/><Override PartName=\"/word/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml\"/><Override PartName=\"/word/numbering.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml\"/></Types>");
+    s.push_str("<Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/><Override PartName=\"/word/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml\"/><Override PartName=\"/word/numbering.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml\"/><Override PartName=\"/word/fontTable.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml\"/></Types>");
     s
 }
 
@@ -940,8 +1021,8 @@ fn styles_xml(theme: &DocxTheme) -> String {
     for (i, sz) in sizes.iter().enumerate() {
         let lv = i + 1;
         s.push_str(&format!(
-            "<w:style w:type=\"paragraph\" w:styleId=\"Heading{}\"><w:name w:val=\"heading {}\"/><w:basedOn w:val=\"Normal\"/><w:next w:val=\"Normal\"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before=\"360\" w:after=\"160\"/><w:outlineLvl w:val=\"{}\"/></w:pPr><w:rPr><w:b/><w:rFonts w:ascii=\"{}\" w:hAnsi=\"{}\" w:eastAsia=\"{}\"/><w:sz w:val=\"{}\"/><w:szCs w:val=\"{}\"/><w:color w:val=\"{}\"/></w:rPr></w:style>",
-            lv, lv, i, esc(font), esc(font), esc(font), sz, sz, esc(accent)
+            "<w:style w:type=\"paragraph\" w:styleId=\"Heading{}\"><w:name w:val=\"heading {}\"/><w:basedOn w:val=\"Normal\"/><w:next w:val=\"Normal\"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before=\"360\" w:after=\"160\"/><w:outlineLvl w:val=\"{}\"/></w:pPr><w:rPr><w:b/><w:rFonts w:ascii=\"{}\" w:hAnsi=\"{}\" w:eastAsia=\"{}\" w:cs=\"{}\"/><w:sz w:val=\"{}\"/><w:szCs w:val=\"{}\"/><w:color w:val=\"{}\"/></w:rPr></w:style>",
+            lv, lv, i, esc(font), esc(font), esc(font), esc(font), sz, sz, esc(accent)
         ));
     }
     // 列表段落
@@ -950,8 +1031,8 @@ fn styles_xml(theme: &DocxTheme) -> String {
     );
     // 代码块
     s.push_str(&format!(
-        "<w:style w:type=\"paragraph\" w:styleId=\"CodeBlock\"><w:name w:val=\"Code Block\"/><w:basedOn w:val=\"Normal\"/><w:pPr><w:spacing w:after=\"0\" w:line=\"300\" w:lineRule=\"auto\"/><w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"F5F5F5\"/><w:ind w:left=\"120\"/></w:pPr><w:rPr><w:rFonts w:ascii=\"{}\" w:hAnsi=\"{}\" w:cs=\"{}\"/><w:sz w:val=\"20\"/></w:rPr></w:style>",
-        esc(mono), esc(mono), esc(mono)
+        "<w:style w:type=\"paragraph\" w:styleId=\"CodeBlock\"><w:name w:val=\"Code Block\"/><w:basedOn w:val=\"Normal\"/><w:pPr><w:spacing w:after=\"0\" w:line=\"300\" w:lineRule=\"auto\"/><w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"F5F5F5\"/><w:ind w:left=\"120\"/></w:pPr><w:rPr><w:rFonts w:ascii=\"{}\" w:hAnsi=\"{}\" w:eastAsia=\"{}\" w:cs=\"{}\"/><w:sz w:val=\"20\"/></w:rPr></w:style>",
+        esc(mono), esc(mono), esc(mono), esc(mono)
     ));
     // 引用
     s.push_str(&format!(
@@ -1017,7 +1098,7 @@ pub fn markdown_to_docx(md: &str, theme: DocxTheme, base_dir: Option<std::path::
     );
 
     let doc_rels = format!(
-        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rIdStyles\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/><Relationship Id=\"rIdNumbering\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering\" Target=\"numbering.xml\"/>{}</Relationships>",
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rIdStyles\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/><Relationship Id=\"rIdNumbering\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering\" Target=\"numbering.xml\"/><Relationship Id=\"rIdFontTable\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable\" Target=\"fontTable.xml\"/>{}</Relationships>",
         builder.rels
     );
 
@@ -1038,6 +1119,7 @@ pub fn markdown_to_docx(md: &str, theme: DocxTheme, base_dir: Option<std::path::
         add("word/_rels/document.xml.rels", doc_rels.as_bytes())?;
         add("word/styles.xml", styles_xml(&builder.theme).as_bytes())?;
         add("word/numbering.xml", numbering_xml().as_bytes())?;
+        add("word/fontTable.xml", font_table_xml(&builder.theme).as_bytes())?;
         for img in &builder.images {
             add(&format!("word/media/image{}.{}", img.id, img.ext), &img.data)?;
         }
@@ -1499,6 +1581,163 @@ mod tests {
         let doc2 = xml_of(&mixed);
         assert_eq!(doc2.matches("<w:drawing>").count(), 1, "混排块图片未嵌入: {}", doc2);
         assert!(doc2.contains("说明文字"), "混排块文字丢失: {}", doc2);
+    }
+
+    /// 测试用主题（默认即 MiSans + Consolas）
+    fn test_theme() -> DocxTheme {
+        DocxTheme {
+            accent: "0066CC".into(),
+            text: "333333".into(),
+            font: "MiSans".into(),
+            mono_font: "Consolas".into(),
+            border: "D5E2FF".into(),
+            surface: "F0F7FF".into(),
+        }
+    }
+
+    /// 用指定主题生成 docx 并取出某个部件的内容
+    fn docx_part(md: &str, theme: DocxTheme, part: &str) -> String {
+        let bytes = markdown_to_docx(md, theme, None, RemoteImages::new()).expect("generate docx");
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(&bytes)).expect("valid zip");
+        let mut s = String::new();
+        zip.by_name(part).unwrap().read_to_string(&mut s).unwrap();
+        s
+    }
+
+    /// 用指定主题生成 docx 并列出包内所有部件名
+    fn docx_parts(md: &str, theme: DocxTheme) -> Vec<String> {
+        let bytes = markdown_to_docx(md, theme, None, RemoteImages::new()).expect("generate docx");
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(&bytes)).expect("valid zip");
+        (0..zip.len()).map(|i| zip.by_index(i).unwrap().name().to_string()).collect()
+    }
+
+    #[test]
+    fn first_family_takes_first_family_and_maps_css_keywords() {
+        // 默认预览字体栈 → MiSans
+        assert_eq!(
+            first_family("'MiSans', 'Mi Sans', system-ui, -apple-system, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif"),
+            "MiSans"
+        );
+        assert_eq!(first_family("MiSans, sans-serif"), "MiSans");
+        // 回归：旧实现取「第一个带引号的族」而非「第一个族」
+        assert_eq!(first_family("system-ui, 'MiSans'"), "Microsoft YaHei");
+        assert_eq!(first_family("Inter, 'Microsoft YaHei', sans-serif"), "Inter");
+        // 双引号 / 引号内空格 / 前后空白
+        assert_eq!(first_family("\"Mi Sans\", x"), "Mi Sans");
+        assert_eq!(first_family("  Inter  , x"), "Inter");
+        // CSS 关键字与通用族必须映射为具体字体名（绝不能原样透传）
+        assert_eq!(first_family("sans-serif"), "Microsoft YaHei");
+        assert_eq!(first_family("-apple-system, sans-serif"), "Microsoft YaHei");
+        assert_eq!(first_family("serif"), "SimSun");
+        assert_eq!(first_family("monospace"), "Consolas");
+        // 兜底：空串 / 只有逗号
+        assert_eq!(first_family(""), "Microsoft YaHei");
+        assert_eq!(first_family(", ,"), "Microsoft YaHei");
+    }
+
+    #[test]
+    fn font_table_declares_alt_names_for_substitution() {
+        let ft = font_table_xml(&test_theme());
+        assert!(ft.contains("<w:font w:name=\"MiSans\">"), "{}", ft);
+        assert!(
+            ft.contains("<w:altName w:val=\"Microsoft YaHei, PingFang SC, Noto Sans SC, Segoe UI, Arial\"/>"),
+            "正文替代名链缺失: {}", ft
+        );
+        // MiSans 属中日韩字体 → charset 86
+        assert!(ft.contains("<w:charset w:val=\"86\"/>"), "{}", ft);
+        // 等宽字体（Consolas 非中日韩 → charset 00）
+        assert!(ft.contains("<w:font w:name=\"Consolas\">"), "{}", ft);
+        assert!(
+            ft.contains("<w:altName w:val=\"Cascadia Mono, Consolas, Courier New, DejaVu Sans Mono\"/>"),
+            "等宽替代名链缺失: {}", ft
+        );
+        assert!(ft.contains("<w:charset w:val=\"00\"/>"), "{}", ft);
+        // 项目符号用的 Symbol
+        assert!(ft.contains("<w:font w:name=\"Symbol\">"), "{}", ft);
+
+        // 子元素顺序须遵循 ECMA-376 CT_Font：altName → charset → family → pitch
+        let rest = &ft[ft.find("<w:font w:name=\"MiSans\">").unwrap()..];
+        let body = &rest[..rest.find("</w:font>").unwrap()];
+        let pos = |n: &str| body.find(n).unwrap_or_else(|| panic!("{} 缺失于 {}", n, body));
+        assert!(
+            pos("<w:altName") < pos("<w:charset") && pos("<w:charset") < pos("<w:family") && pos("<w:family") < pos("<w:pitch"),
+            "CT_Font 子元素顺序错误: {}", body
+        );
+    }
+
+    #[test]
+    fn font_table_skips_duplicate_when_mono_equals_body() {
+        let theme = DocxTheme { mono_font: "MiSans".into(), ..test_theme() };
+        let ft = font_table_xml(&theme);
+        assert_eq!(
+            ft.matches("<w:font w:name=\"MiSans\">").count(),
+            1,
+            "fontTable 以 name 为键，同名不可重复: {}", ft
+        );
+    }
+
+    #[test]
+    fn docx_includes_font_table_part_and_rel() {
+        let names = docx_parts("正文\n", test_theme());
+        assert!(names.iter().any(|n| n == "word/fontTable.xml"), "缺少 fontTable 部件: {:?}", names);
+
+        let ct = docx_part("正文\n", test_theme(), "[Content_Types].xml");
+        assert!(ct.contains("PartName=\"/word/fontTable.xml\""), "{}", ct);
+        assert!(ct.contains("wordprocessingml.fontTable+xml"), "{}", ct);
+
+        let rels = docx_part("正文\n", test_theme(), "word/_rels/document.xml.rels");
+        assert!(rels.contains("relationships/fontTable"), "{}", rels);
+        assert!(rels.contains("Target=\"fontTable.xml\""), "{}", rels);
+    }
+
+    #[test]
+    fn css_keywords_never_reach_ooxml_and_eastasia_is_filled() {
+        // 栈首是 CSS 关键字、等宽也是关键字 → 必须落成具体字体名
+        let theme = DocxTheme {
+            font: "system-ui, 'MiSans', sans-serif".into(),
+            mono_font: "monospace".into(),
+            ..test_theme()
+        };
+        let styles = docx_part("正文\n", theme, "word/styles.xml");
+        assert!(styles.contains("w:ascii=\"Microsoft YaHei\""), "关键字未映射: {}", styles);
+        assert!(
+            !styles.contains("system-ui") && !styles.contains("sans-serif"),
+            "CSS 关键字被写进 docx: {}", styles
+        );
+        assert!(
+            styles.contains("<w:rFonts w:ascii=\"Consolas\" w:hAnsi=\"Consolas\" w:eastAsia=\"Consolas\" w:cs=\"Consolas\"/>"),
+            "CodeBlock 缺 eastAsia: {}", styles
+        );
+
+        // 行内代码 run 也要带 eastAsia
+        let doc = docx_part("`code`\n", test_theme(), "word/document.xml");
+        assert!(doc.contains("w:eastAsia=\"Consolas\""), "行内代码缺 eastAsia: {}", doc);
+    }
+
+    /// 手动运行：产出一份「字体故意不存在」的 docx，用于在装有 MiSans 的机器上也能验证降级。
+    ///
+    /// 因为本机装了 MiSans 时 altName 根本不会被读取（主名称直接命中），所以要验证降级必须用一个
+    /// **保证不存在的字体名** 去触发 Word 的替换路径；此文件里的中文若呈现为微软雅黑（而非随机
+    /// 替换），即证明 altName 生效。
+    ///
+    /// `cargo test write_font_fallback_probe -- --ignored --nocapture`
+    #[test]
+    #[ignore = "手动运行，产出 target/font-fallback-probe.docx 供在 Word 中验证字体降级"]
+    fn write_font_fallback_probe() {
+        let theme = DocxTheme {
+            accent: "0066CC".into(),
+            text: "333333".into(),
+            font: "NoSuchFont-Probe-DoNotInstall".into(),
+            mono_font: "NoSuchMono-Probe-DoNotInstall".into(),
+            border: "D5E2FF".into(),
+            surface: "F0F7FF".into(),
+        };
+        let md = "# 字体降级验证\n\n中文正文与 Latin text 混排。\n\n- **加粗小标题**：正常文本\n- 第二项\n\n> 引用中文内容\n\n| 列 | 值 |\n|---|---|\n| 甲 | 1 |\n\n`inline code 中文`\n\n```rust\nfn main() { println!(\"中文\"); }\n```\n";
+        let bytes = markdown_to_docx(md, theme, None, RemoteImages::new()).expect("generate docx");
+        let out = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("target/font-fallback-probe.docx");
+        std::fs::write(&out, &bytes).expect("write docx");
+        println!("已导出: {}", out.display());
+        println!("预期：Word 打开后中文为微软雅黑（altName 生效），而不是随机度量替换");
     }
 
     /// 手动运行：把仓库根 README.md 导出为 docx 供人工在 Word 中核对

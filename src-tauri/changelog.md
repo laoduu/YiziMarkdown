@@ -1,5 +1,33 @@
 # YiziMarkdown 开发日志
 
+## v0.2.5
+
+**文件对话框死锁修复（macOS 实测）**
+
+- **同步命令 + blocking 对话框 = 主线程死锁**：`save_file_dialog` / `pick_and_read_file` / `pick_image_file` 是同步 Tauri 命令（运行在主线程），其内部 `blocking_save_file` / `blocking_pick_file` 会 `recv()` 阻塞主线程 → macOS 上保存面板一弹出就冻结、全应用转圈无法保存，**另存为 / 导出 DOCX / 导出 PDF / 插入图片 / 打开文件全部受影响**；改为 **async 命令 + `tauri::async_runtime::spawn_blocking`**，让对话框跑在阻塞线程池
+- 与 v0.2.4 的 `export_pdf` 主线程死锁**同源**（同步命令里做阻塞等待），属同一类错误
+
+**DOCX 导出字体降级机制**
+
+- **新增 `word/fontTable.xml`**：为所用字体声明 `w:altName` 替代名链——正文 `Microsoft YaHei → PingFang SC → Noto Sans SC → Segoe UI → Arial`；等宽 `Cascadia Mono → Consolas → Courier New → DejaVu Sans Mono`；项目符号 `Wingdings → Segoe UI Symbol → Arial Unicode MS`；并按 `is_cjk_family()` 写 `w:charset`（86/00/02）、`w:family`、`w:pitch`，子元素顺序遵循 ECMA-376 `CT_Font`
+- **接线**：`[Content_Types].xml` 加 Override + `document.xml.rels` 加 `rIdFontTable` + 打包 `word/fontTable.xml`（部件数 6 → 7）
+- **`first_family()` 重写**：修两个缺陷——原实现取 CSS 栈里「第一个**带引号**的族」而非第一个族（`system-ui, 'MiSans'` 错取成 MiSans、`Inter, 'Microsoft YaHei'` 错取成微软雅黑）；且会把 `system-ui` / `sans-serif` 这类**非字体名**原样写进 `w:rFonts` → 新增引号感知切分 `split_font_stack()` + 关键字映射 `css_generic_to_font()`（→ `Microsoft YaHei` / `SimSun` / `Consolas`），空栈兜底 `Microsoft YaHei`
+- **补齐脚本字体属性**：CodeBlock 样式与 `run()`/`code_run()` 的 mono 分支补 `w:eastAsia`，标题补 `w:cs`（默认 body==mono==MiSans 时是 no-op）
+- **装有该字体时输出不变**：`w:altName` 只在主名称找不到时被读取 → 已装 MiSans 的机器导出结果与之前一致（已验证：样本 docx 里 `w:rFonts` 只出现 MiSans / Consolas，无任何替换名）
+
+**踩坑记录（重点）**
+
+1. **`w:altName` 在 WPS 下不被采纳**：按 ISO/IEC 29500-1 声明替代名链后，**WPS 打开仍提示「没有字体」并要求手动替换**，没有降级为微软雅黑——规范原文用的是 "should"（建议）而非强制 → **教训：规范里存在某机制 ≠ 实现会使用；投入前必须先让用户用探针实测**。WPS（国内主力环境）真正需要的是「字体内嵌」，本次未做（体积 / 字形子集化 / 字体授权待定）
+2. **本机装了字体就测不出降级**：主名称命中时 `altName` 不会被读取 → 降级路径在开发机上永远不触发 → 必须另造一份**使用不存在字体名**的探针 docx（已固化为 `#[ignore]` 测试 `write_font_fallback_probe`，产出 `target/font-fallback-probe.docx`）
+3. **同步命令里调 blocking 对话框 = 主线程死锁**（macOS 实测）：保存面板弹出即冻结、全应用转圈；`blocking_save_file` / `blocking_pick_file` 内部 `recv()` 阻塞主线程 → async 命令 + `spawn_blocking`
+4. **CSS 通用族不是字体名**：`system-ui` / `-apple-system` / `BlinkMacSystemFont` / `sans-serif` / `serif` / `monospace` 原样进 `w:rFonts` 会被当成缺失字体 → 必须先映射为具体字体名
+
+**技术改进**
+
+- 手写 OOXML 部件 6 → 7（新增 `word/fontTable.xml`）：`content_types()` 加 Override、`doc_rels` 加 `fontTable` 关系；fontTable 以字体名为键，等宽与正文同名时跳过重复条目
+- 单测扩到 **27 项**（新增 5 项：`first_family` 用例表 / fontTable 内容与 `CT_Font` 顺序 / 同名去重 / 部件+rels 接线 / CSS 关键字不得进 OOXML 且 `eastAsia` 已补）+ 1 个手动探针测试；dev 构建零警告
+- 官网：macOS 下载链接更新至 v0.2.4（补上对话框死锁修复后的产物）
+
 ## v0.2.4
 
 **光标可见性优化**
