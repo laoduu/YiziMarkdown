@@ -49,27 +49,32 @@ fn save_file(path: String, content: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn save_file_dialog(app: tauri::AppHandle, file_name: Option<String>, extensions: Option<Vec<String>>) -> Result<Option<String>, String> {
+async fn save_file_dialog(app: tauri::AppHandle, file_name: Option<String>, extensions: Option<Vec<String>>) -> Result<Option<String>, String> {
     use tauri_plugin_dialog::DialogExt;
-    let dialog = app.dialog().file();
-    let dialog = dialog.set_file_name(file_name.unwrap_or_else(|| "untitled.md".to_string()));
-    let dialog = if let Some(exts) = extensions {
-        if exts.is_empty() {
-            dialog
+    // blocking_save_file 绝不能在主线程调用（同步命令跑在主线程，会死锁卡死整个应用，
+    // 典型症状：保存面板弹出后冻结、光标转圈无法保存）。必须在阻塞线程池执行。
+    tauri::async_runtime::spawn_blocking(move || {
+        let dialog = app.dialog().file();
+        let dialog = dialog.set_file_name(file_name.unwrap_or_else(|| "untitled.md".to_string()));
+        let dialog = if let Some(exts) = extensions {
+            if exts.is_empty() {
+                dialog
+            } else {
+                let ext_list: Vec<&str> = exts.iter().map(|s| s.as_str()).collect();
+                dialog.add_filter("指定格式", &ext_list)
+            }
         } else {
-            let ext_list: Vec<&str> = exts.iter().map(|s| s.as_str()).collect();
-            dialog.add_filter("指定格式", &ext_list)
+            dialog
+                .add_filter("Markdown", &["md", "markdown"])
+                .add_filter("Text", &["txt"])
+        };
+        match dialog.blocking_save_file() {
+            Some(path) => Ok(Some(path.into_path().map_err(|e| e.to_string())?.to_string_lossy().to_string())),
+            None => Ok(None),
         }
-    } else {
-        dialog
-            .add_filter("Markdown", &["md", "markdown"])
-            .add_filter("Text", &["txt"])
-    };
-    match dialog.blocking_save_file()
-    {
-        Some(path) => Ok(Some(path.into_path().map_err(|e| e.to_string())?.to_string_lossy().to_string())),
-        None => Ok(None),
-    }
+    })
+    .await
+    .map_err(|e| format!("Dialog task failed: {}", e))?
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -198,37 +203,47 @@ fn get_system_fonts() -> Result<Vec<String>, String> {
 // ===== 文件选择对话框 =====
 
 #[tauri::command]
-fn pick_and_read_file(app: tauri::AppHandle) -> Result<FileReadResult, String> {
+async fn pick_and_read_file(app: tauri::AppHandle) -> Result<FileReadResult, String> {
     use tauri_plugin_dialog::DialogExt;
-    
-    let result = app.dialog()
-        .file()
-        .add_filter("Markdown", &["md", "markdown", "txt"])
-        .blocking_pick_file()
-        .ok_or_else(|| "User cancelled".to_string())?;
-    
-    let file_path = result.into_path()
-        .map_err(|e| format!("Invalid file path: {}", e))?
-        .to_string_lossy()
-        .to_string();
-    let content = fs::read_to_string(&file_path)
-        .map_err(|e| format!("Failed to read file: {}", e))?;
-    
-    Ok(FileReadResult { content, path: file_path })
+
+    // 同 save_file_dialog：blocking_pick_file 不能在主线程调用
+    tauri::async_runtime::spawn_blocking(move || {
+        let result = app.dialog()
+            .file()
+            .add_filter("Markdown", &["md", "markdown", "txt"])
+            .blocking_pick_file()
+            .ok_or_else(|| "User cancelled".to_string())?;
+
+        let file_path = result.into_path()
+            .map_err(|e| format!("Invalid file path: {}", e))?
+            .to_string_lossy()
+            .to_string();
+        let content = fs::read_to_string(&file_path)
+            .map_err(|e| format!("Failed to read file: {}", e))?;
+
+        Ok(FileReadResult { content, path: file_path })
+    })
+    .await
+    .map_err(|e| format!("Dialog task failed: {}", e))?
 }
 
 #[tauri::command]
-fn pick_image_file(app: tauri::AppHandle) -> Result<Option<String>, String> {
+async fn pick_image_file(app: tauri::AppHandle) -> Result<Option<String>, String> {
     use tauri_plugin_dialog::DialogExt;
-    
-    let result = app.dialog()
-        .file()
-        .add_filter("Images", &["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"])
-        .blocking_pick_file()
-        .and_then(|p| p.into_path().ok())
-        .map(|p| p.to_string_lossy().to_string());
-    
-    Ok(result)
+
+    // 同 save_file_dialog：blocking_pick_file 不能在主线程调用
+    tauri::async_runtime::spawn_blocking(move || {
+        let result = app.dialog()
+            .file()
+            .add_filter("Images", &["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"])
+            .blocking_pick_file()
+            .and_then(|p| p.into_path().ok())
+            .map(|p| p.to_string_lossy().to_string());
+
+        Ok(result)
+    })
+    .await
+    .map_err(|e| format!("Dialog task failed: {}", e))?
 }
 
 /// 注册 .md 文件关联的默认图标（仅写 HKCU，无需管理员权限）
