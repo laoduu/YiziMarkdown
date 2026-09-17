@@ -10,11 +10,15 @@ import Slideshow from './components/Slideshow'
 import AIChatPanel from './components/AIChatPanel'
 import { PanelLeftClose, PanelLeft } from 'lucide-react'
 import { invokeTauri, invokeTauriOrThrow } from './lib/tauri'
+import { openRemote, save as saveToCloud, notifyRemoteDirChanged } from './lib/webdav'
+import { parentPath, joinPath, baseName, canonicalRemotePath } from './lib/remotePath'
+import { saveActiveTab, markConflictResolved, dirOf } from './lib/saveRouter'
+import Dialog from './components/Dialog'
 import { useSettingsStore } from './stores/settingsStore'
 import { loadKeybindings, resolveAction, getKeybindingsMap, formatKey, SHORTCUT_ACTIONS } from './lib/keybindings'
 import { useEditorStore } from './stores/editorStore'
 import { loadPlugin, unloadPlugin } from './plugins/registry'
-import { useI18n } from './i18n'
+import { useI18n, translate, getCurrentLang } from './i18n'
 import { refreshThemeCursorVars } from './lib/themeCursor'
 // 导出 PDF 用的内联样式（globals.css 已包含 Tailwind prose / 编辑器排版；KaTeX 样式保证公式还原）
 import globalsCss from './styles/globals.css?inline'
@@ -74,8 +78,8 @@ function App() {
   const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, enabledPlugins, pluginConfigs, setField, aiPanelOpen, updateSettings, userThemeEnabled, userThemeName } = useSettingsStore()
   const {
     activeTabId, currentTab,
-    openFile, openNewFile, closeTab, switchTab,
-    updateContent, markAsSaved, updateTabName, updateTabFilePath,
+    openFile, openRemoteFile, openNewFile, closeTab, switchTab,
+    updateContent, markTabSaved, updateTabName, updateTabFilePath,
   } = useEditorStore()
   const [sidebarVisible, setSidebarVisible] = useState(true)
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 })
@@ -86,6 +90,12 @@ function App() {
   const [showShortcutsPanel, setShowShortcutsPanel] = useState(false)
   const [isSlideshow, setIsSlideshow] = useState(false)
   const [currentFolder, setCurrentFolder] = useState<string | null>(null)
+  /** 远程冲突待用户决策 */
+  const [conflict, setConflict] = useState<{ tabId: string; name: string; remotePath: string } | null>(null)
+  /** 另存到云端的路径输入 */
+  const [cloudSave, setCloudSave] = useState<{ tabId: string; path: string } | null>(null)
+  const [cloudSaveBusy, setCloudSaveBusy] = useState(false)
+  const [cloudSaveError, setCloudSaveError] = useState<string | null>(null)
   const editorRef = useRef<EditorRef>(null)
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const startupDone = useRef(false)
@@ -155,11 +165,21 @@ function App() {
     const { autoSave, autoSaveInterval } = useSettingsStore.getState()
     if (!autoSave) return
     
-    autoSaveTimerRef.current = setTimeout(() => {
+    autoSaveTimerRef.current = setTimeout(async () => {
       const tab = useEditorStore.getState().currentTab()
-      if (tab?.filePath) {
-        invokeTauri('save_file', { path: tab.filePath, content: tab.content })
-        useEditorStore.getState().markAsSaved()
+      if (!tab?.filePath) return
+      // 注意：不能用组件作用域的 t()（每次渲染都会重建，加进依赖会让防抖永不触发），
+      // 这里用模块级 translate + 当前语言，闭包稳定。
+      const tr = (key: string, params?: Record<string, string | number>) =>
+        translate(getCurrentLang(), key, params)
+      const result = await saveActiveTab(tab, { auto: true })
+      if (result.ok) {
+        if (result.imagesFailed > 0) showToast(tr('cloud.imagesFailed', { count: result.imagesFailed }))
+      } else if (result.conflict) {
+        // 自动保存遇冲突不弹窗打断输入，提示用户手动保存以决策
+        showToast(tr('cloud.conflictAutoHint'))
+      } else if (result.error && result.error !== 'in-flight' && result.error !== 'no-path') {
+        showToast(tr('cloud.saveFailed', { msg: result.error }))
       }
     }, autoSaveInterval)
     
@@ -381,9 +401,10 @@ function App() {
   }, []) // eslint-disable-line
 
   // 切换activeTab时更新currentFolder
+  // 云端文档的 filePath 是本地缓存镜像，不能让它把本地文件树带进缓存目录
   useEffect(() => {
     const tab = currentTab()
-    if (tab?.filePath) {
+    if (tab?.filePath && !tab.remote) {
       const lastSep = Math.max(tab.filePath.lastIndexOf('\\'), tab.filePath.lastIndexOf('/'))
       if (lastSep > 0) setCurrentFolder(tab.filePath.substring(0, lastSep))
     }
@@ -462,35 +483,53 @@ function App() {
     const tab = currentTab()
     if (!tab) return
 
-    if (tab.filePath) {
-      await invokeTauri('save_file', { path: tab.filePath, content: tab.content })
-      markAsSaved()
-      showToast(t('app.saved'))
-    } else {
+    if (!tab.filePath) {
       // 无文件名 → 触发另存为
       await handleSaveAs()
+      return
     }
-  }, [currentTab, markAsSaved, showToast])
+
+    const result = await saveActiveTab(tab)
+    if (result.ok) {
+      showToast(tab.remote ? t('cloud.savedToCloud', { name: tab.name }) : t('app.saved'))
+      if (result.imagesFailed > 0) {
+        showToast(t('cloud.imagesFailed', { count: result.imagesFailed }))
+      }
+    } else if (result.conflict && tab.remote) {
+      // 交由用户决策，绝不静默覆盖服务器上的版本
+      setConflict({ tabId: tab.id, name: tab.name, remotePath: tab.remote.path })
+    } else if (result.error) {
+      showToast(t('cloud.saveFailed', { msg: result.error }))
+    }
+  }, [currentTab, showToast, t])
 
   const handleSaveAs = useCallback(async () => {
     const tab = currentTab()
     if (!tab) return
 
     const tauri = (window as any).__TAURI_INTERNALS__
-    if (tauri && typeof tauri.invoke === 'function') {
-      try {
-        const filePath = await tauri.invoke('save_file_dialog') as string | null
-        if (filePath) {
-          await invokeTauri('save_file', { path: filePath, content: tab.content })
-          const name = filePath.split('\\').pop() || filePath
-          updateTabName(tab.id, name)
-          updateTabFilePath(tab.id, filePath)
-          markAsSaved()
-          showToast(t('app.savedAs', { name }))
-        }
-      } catch {}
+    if (!tauri || typeof tauri.invoke !== 'function') return
+    try {
+      const filePath = await tauri.invoke('save_file_dialog') as string | null
+      if (!filePath) return  // 用户取消
+      // 用 OrThrow：写盘失败必须让用户看到，不能静默当作已保存
+      await invokeTauriOrThrow<void>('save_file', { path: filePath, content: tab.content })
+      const name = filePath.split('\\').pop() || filePath
+      updateTabName(tab.id, name)
+      updateTabFilePath(tab.id, filePath)
+      // 另存为本地文件 = 存一份本地副本：解除远程关联，
+      // 否则后续 Ctrl+S 会继续去改云端那份，与用户意图不符
+      if (tab.remote) {
+        markConflictResolved(tab.remote.path)
+        useEditorStore.getState().setTabRemote(tab.id, undefined)
+      }
+      markTabSaved(tab.id)
+      showToast(t('app.savedAs', { name }))
+    } catch (e) {
+      console.error('[save-as] failed:', e)
+      showToast(t('cloud.saveFailed', { msg: e instanceof Error ? e.message : String(e) }))
     }
-  }, [currentTab, updateTabName, updateTabFilePath, markAsSaved, showToast])
+  }, [currentTab, updateTabName, updateTabFilePath, markTabSaved, showToast, t])
 
   // 从首页打开最近文件
   const handleOpenRecent = useCallback(async (filePath: string) => {
@@ -499,6 +538,153 @@ function App() {
       openFile(filePath, result.content)
     }
   }, [openFile])
+
+  /**
+   * 打开云端文档：正文与相对引用的图片都镜像到本地缓存，再按普通 tab 打开。
+   * @param opts.reload 冲突弹窗的「放弃本地修改并重新加载」—— 无条件用服务器内容覆盖
+   */
+  const handleOpenRemote = useCallback(async (remotePath: string, opts?: { reload?: boolean }) => {
+    const { webdavBaseUrl } = useSettingsStore.getState()
+    if (!webdavBaseUrl) return
+    const name = remotePath.split('/').pop() || remotePath
+    showToast(t('cloud.opening', { name }))
+    try {
+      const result = await openRemote(webdavBaseUrl, remotePath)
+      openRemoteFile(
+        result.cachePath,
+        result.content,
+        { path: remotePath, etag: result.etag },
+        { forceReload: opts?.reload }
+      )
+      if (result.imagesFailed > 0) {
+        showToast(t('cloud.imagesFailed', { count: result.imagesFailed }))
+      }
+    } catch (e) {
+      console.error('[webdav] open failed:', e)
+      showToast(t('cloud.openFailed', { name }))
+    }
+  }, [openRemoteFile, showToast, t])
+
+  /** 冲突处理：用本地版本覆盖服务器 */
+  const handleConflictOverwrite = useCallback(async () => {
+    if (!conflict) return
+    const tab = useEditorStore.getState().tabs.find(t => t.id === conflict.tabId)
+    setConflict(null)
+    if (!tab) return
+    markConflictResolved(conflict.remotePath)
+    // 清掉 ETag 再存：不带 If-Match 即无条件覆盖
+    useEditorStore.getState().setTabRemote(tab.id, { path: conflict.remotePath, etag: null })
+    const result = await saveActiveTab({ ...tab, remote: { path: conflict.remotePath, etag: null } })
+    if (result.ok) {
+      showToast(t('cloud.savedToCloud', { name: tab.name }))
+    } else if (result.error) {
+      showToast(t('cloud.saveFailed', { msg: result.error }))
+    }
+  }, [conflict, showToast, t])
+
+  /** 冲突处理：放弃本地修改，重新从服务器加载 */
+  const handleConflictReload = useCallback(async () => {
+    if (!conflict) return
+    const remotePath = conflict.remotePath
+    setConflict(null)
+    markConflictResolved(remotePath)
+    // reload: 用户已明确选择放弃本地修改，强制用服务器内容覆盖
+    await handleOpenRemote(remotePath, { reload: true })
+  }, [conflict, handleOpenRemote])
+
+  /** 保存到云端：把当前文档（含相对引用的图片）上传到云端 */
+  const handleSaveToCloud = useCallback(() => {
+    const tab = currentTab()
+    if (!tab) return
+    const { webdavBaseUrl, webdavLastPath } = useSettingsStore.getState()
+    if (!webdavBaseUrl) {
+      setSettingsDefaultTab('cloud')
+      setIsSettingsOpen(true)
+      return
+    }
+    // 已经是云端文档 → 默认路径就填它当前的远程路径（再按一次回车 = 保存回原处）
+    // 否则用当前浏览的云端目录 + 文件名
+    // 注意必须用 joinPath：webdavLastPath 来自目录条目、带结尾斜杠（/Notes/），
+    // 朴素拼接会得到 /Notes//doc.md，导致 tab 记的远程路径与云端列表不一致
+    const existing = tab.remote?.path ? canonicalRemotePath(tab.remote.path) : null
+    const name = tab.filePath ? (tab.filePath.split(/[\\/]/).pop() || 'untitled.md') : 'untitled.md'
+    setCloudSaveError(null)
+    setCloudSave({
+      tabId: tab.id,
+      path: existing ?? joinPath(webdavLastPath || '/', name),
+    })
+  }, [currentTab])
+
+  const runCloudSave = useCallback(async () => {
+    if (!cloudSave) return
+    const store = useEditorStore.getState()
+    const tab = store.tabs.find(t => t.id === cloudSave.tabId)
+    if (!tab) { setCloudSave(null); return }
+    const baseUrl = useSettingsStore.getState().webdavBaseUrl
+    // 规范化用户手输的路径：折叠重复斜杠、消解 ./..，
+    // 否则 tab 上记的远程身份会与云端列表返回的路径不一致，再次打开就会多开一个 tab
+    const remotePath = canonicalRemotePath(cloudSave.path)
+    if (!remotePath || remotePath === '/') {
+      setCloudSaveError(t('cloud.invalidPath'))
+      return
+    }
+
+    // 目标就是本 tab 已在的远程文件 → 这是「保存」而不是「另存」：
+    // 用已有 ETag 走更新（If-Match，带冲突检测），而不是新建（If-None-Match）。
+    // 否则支持 If-None-Match 的服务器会把"保存到原处"误报成"文件已存在"。
+    const sameTarget = tab.remote
+      ? (canonicalRemotePath(tab.remote.path) ?? tab.remote.path) === remotePath
+      : false
+
+    setCloudSaveBusy(true)
+    setCloudSaveError(null)
+    try {
+      const result = await saveToCloud(
+        baseUrl,
+        remotePath,
+        tab.content,
+        sameTarget ? (tab.remote?.etag ?? null) : null,
+        !sameTarget,
+        tab.filePath ? dirOf(tab.filePath) : null
+      )
+      if (result.conflict) {
+        if (sameTarget) {
+          // 远程被改过：走统一的冲突决策弹窗，而不是当成路径错误
+          setCloudSave(null)
+          setConflict({ tabId: tab.id, name: tab.name, remotePath })
+        } else {
+          setCloudSaveError(t('cloud.alreadyExists', { name: remotePath }))
+        }
+        setCloudSaveBusy(false)
+        return
+      }
+
+      // 下载镜像以取得 cachePath 与最新 ETag（相对引用的图片也一并镜像到本地缓存）
+      const opened = await openRemote(baseUrl, remotePath)
+
+      // **就地**把当前 tab 转成云端文档 —— 不新建、更不关闭：
+      // 「保存」不等于「关闭」，用户的 tab 必须留着（也顺带保住滚动位置与撤销历史）
+      store.updateTabName(tab.id, baseName(remotePath))
+      store.updateTabFilePath(tab.id, opened.cachePath)
+      store.setTabRemote(tab.id, { path: remotePath, etag: opened.etag })
+      store.markTabSaved(tab.id)
+
+      // 通知云端浏览器：该目录多了一个文件，若正在浏览就自动刷新
+      notifyRemoteDirChanged(parentPath(remotePath))
+      showToast(
+        sameTarget
+          ? t('cloud.savedToCloud', { name: baseName(remotePath) })
+          : t('cloud.uploaded', { name: baseName(remotePath) })
+      )
+      if (result.imagesFailed) {
+        showToast(t('cloud.imagesFailed', { count: result.imagesFailed }))
+      }
+      setCloudSave(null)
+    } catch (e) {
+      setCloudSaveError(e instanceof Error ? e.message : String(e))
+    }
+    setCloudSaveBusy(false)
+  }, [cloudSave, showToast, t])
 
   const handleFileSelect = useCallback(async (path: string) => {
     const result = await invokeTauri<{ content: string; path: string }>('read_file', { path })
@@ -676,6 +862,7 @@ function App() {
         onToggleDark={() => setField('isDark', !isDark)}
         onInsertMarkdown={handleInsertMarkdown}
         onSaveAs={handleSaveAs}
+        onSaveToCloud={handleSaveToCloud}
         onExport={(format) => { handleExport(format) }}
         onSearch={handleSearchToggle}
         onSettings={handleSettings}
@@ -697,6 +884,9 @@ function App() {
           onFileSelect={handleFileSelect}
           onFolderChange={handleFolderChange}
           onNavigateToLine={handleNavigateToLine}
+          isRemote={!!tab?.remote}
+          onOpenRemote={handleOpenRemote}
+          onRequestSettings={() => { setSettingsDefaultTab('cloud'); setIsSettingsOpen(true) }}
           activeHeadingId={useEditorStore(s => s.activeHeadingId)}
         />
         
@@ -768,6 +958,59 @@ function App() {
         onClose={() => setIsSettingsOpen(false)}
         defaultTab={settingsDefaultTab as any}
       />
+
+      {/* 远程冲突：绝不静默覆盖，交由用户决策 */}
+      <Dialog
+        open={conflict !== null}
+        onClose={() => setConflict(null)}
+        title={t('cloud.conflictTitle')}
+        width={380}
+      >
+        <p className="text-[13px] text-[var(--editor-text)] mb-2">
+          {t('cloud.conflictBody', { name: conflict?.name ?? '' })}
+        </p>
+        <p className="text-[11px] text-[var(--sidebar-text)] mb-3">{t('cloud.conflictHint')}</p>
+        <div className="flex flex-col gap-2">
+          <button onClick={handleConflictOverwrite} className="settings-btn-primary">
+            {t('cloud.conflictOverwrite')}
+          </button>
+          <button onClick={handleConflictReload} className="settings-btn-secondary">
+            {t('cloud.conflictReload')}
+          </button>
+        </div>
+      </Dialog>
+
+      {/* 另存到云端：输入远程路径 */}
+      <Dialog
+        open={cloudSave !== null}
+        onClose={() => setCloudSave(null)}
+        title={t('cloud.saveToCloudTitle')}
+        width={380}
+      >
+        <label className="text-[12px] text-[var(--editor-text)] block mb-1">{t('cloud.pathLabel')}</label>
+        <input
+          autoFocus
+          value={cloudSave?.path ?? ''}
+          onChange={(e) => setCloudSave((s) => (s ? { ...s, path: e.target.value } : s))}
+          onKeyDown={(e) => { if (e.key === 'Enter') runCloudSave() }}
+          placeholder="/Notes/文档.md"
+          className="settings-input w-full mb-2"
+          style={{ fontFamily: 'var(--font-mono)' }}
+        />
+        <p className="text-[11px] text-[var(--sidebar-text)] mb-2">{t('cloud.saveToCloudHint')}</p>
+        {cloudSaveError && <p className="text-[11px] text-red-500 mb-2 break-words">{cloudSaveError}</p>}
+        <div className="flex justify-end gap-2">
+          <button onClick={() => setCloudSave(null)} className="settings-btn-secondary">{t('cloud.cancel')}</button>
+          <button
+            onClick={runCloudSave}
+            disabled={cloudSaveBusy || !cloudSave?.path.trim()}
+            className="settings-btn-primary"
+            style={cloudSaveBusy || !cloudSave?.path.trim() ? { opacity: 0.5 } : undefined}
+          >
+            {cloudSaveBusy ? t('cloud.saving') : t('cloud.upload')}
+          </button>
+        </div>
+      </Dialog>
       
 
       

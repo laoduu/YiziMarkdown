@@ -97,6 +97,14 @@ Wir haben für den What-You-See-Is-What-You-Get-Modus ein äußerst eleganten An
 - **Exportieren**: Fünf Formate: HTML / Markdown / reiner Text / Word (DOCX) / PDF; DOCX nutzt die native Word-Semantik (Listen/Tabellen/Codeblöcke/Zitate/Aufgabenlisten), Tabellenstile entsprechen der Vorschau, Bilder unterstützen lokale Pfade, Netzwerkbilder und HTML-`<img>`-Tags (Breite über das `width`-Attribut steuerbar); PDF entspricht der Vorschau und paginiert automatisch
 - **.md-Dateizuordnung**: In den Einstellungen mit einem Klick als Standard-Markdown-Editor festlegen. Doppelklick auf .md öffnet die Datei direkt (Windows-Registry / macOS LaunchServices)
 
+### Cloud-Speicher (WebDAV)
+
+- **Cloud-Dateibrowser**: Im Seitenleisten-Tab „Cloud“ den WebDAV-Serverbaum durchsuchen — Dokumente öffnen, Ordner anlegen, umbenennen, löschen
+- **In der Cloud speichern**: Ein lokales Dokument mit einem Klick hochladen (über relative Pfade referenzierte Bilder werden unter Beibehaltung der Ordnerstruktur mit hochgeladen); bei Cloud-Dokumenten schreibt `Ctrl+S` direkt auf den Server zurück
+- **Konfliktschutz**: Vor dem Speichern wird das ETag des Servers verglichen; wurde die Datei auf einem anderen Gerät geändert, fragt ein Dialog nach Überschreiben oder Neuladen — niemals stilles Überschreiben
+- **Sichere Zugangsdaten**: Benutzername und Passwort liegen im Schlüsselspeicher des Betriebssystems (Windows-Anmeldeinformationsverwaltung / macOS Schlüsselbund), nie in Konfigurationsdateien
+- **Kompatibilität**: Unterstützt Standard-WebDAV-Dienste wie Nutstore, Nextcloud und Synology (ein anwendungsspezifisches Passwort wird empfohlen)
+
 ### Anpassung
 
 - **Fünfzehn integrierte Themen**: Academic Blue (Standard), Vibrant Orange, Tech, Minimal, Magazine, Nature, Liquid Glass, Lychee Red, Violet, Cyberpunk, Facebook, Matrix, Mint, Sunset, Typewriter – jedes mit heller und dunkler Farbgebung
@@ -109,7 +117,7 @@ Wir haben für den What-You-See-Is-What-You-Get-Modus ein äußerst eleganten An
 
 - **Dokumentenvorlagen**: Vorlagen liegen im Benutzerverzeichnis `~/Documents/yizimarkdown/templates/`; legen Sie einfach `.md`-Dateien hinein (Sie können sie auch unter Einstellungen → Vorlagen erstellen/bearbeiten, das Menü wird sofort aktualisiert); integrierte Vorlagen werden beim ersten Start automatisch dorthin synchronisiert, ein Upgrade/eine Neuinstallation überschreibt Ihre Vorlagen nicht
 - **Tastaturkürzel-System**: Visuelles Tastaturkürzel-Konfigurationspanel. Unterstützt benutzerdefinierte Zuordnung für 30 Aktionen, Tastenaufnahme, Konflikterkennung und Zurücksetzen auf Standard
-- **Einstellungspanel**: Allgemein, Aussehen, Editor, Live-Modus, KI, Plugins, Tastaturkürzel, Vorlagen, Über usw. Einstellungen werden sofort in der Vorschau angezeigt
+- **Einstellungspanel**: Allgemein, Aussehen, Editor, Live-Modus, KI, Cloud, Plugins, Tastaturkürzel, Vorlagen, Über usw. Einstellungen werden sofort in der Vorschau angezeigt
 
 ---
 

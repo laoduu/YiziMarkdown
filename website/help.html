@@ -607,7 +607,74 @@
             </div>
         </section>
 
-        <!-- ========== 8. 外观与主题 ========== -->
+        <!-- ========== 8. 云端存储 ========== -->
+        <section class="help-section" id="cloud" data-kw="云端 WebDAV 坚果云 Nextcloud 群晖 同步 服务器 凭据 密码 应用专用密码 冲突 ETag 上传 下载 缓存 云盘">
+            <h2><a class="anchor" href="#cloud">#</a>云端存储（WebDAV）</h2>
+            <p class="help-lead">v0.3.0 新增：把文档直接读写到 WebDAV 服务器，多台设备共用同一份笔记。</p>
+
+            <div class="help-sub" id="cloud-setup">
+                <h3>配置服务器</h3>
+                <p>打开「设置 → 云端存储」：</p>
+                <div class="help-table-wrap">
+                    <table>
+                        <thead><tr><th>项目</th><th>说明</th></tr></thead>
+                        <tbody>
+                            <tr><td>服务器地址</td><td>WebDAV 根地址，需包含完整路径。坚果云：<code>https://dav.jianguoyun.com/dav/</code>；Nextcloud：<code>https://你的域名/remote.php/dav/files/用户名/</code></td></tr>
+                            <tr><td>用户名 / 密码</td><td>填好后点「保存凭据」。多数服务需要<strong>应用专用密码</strong>而非登录密码：坚果云在「账户信息 → 安全选项 → 添加应用」生成，Nextcloud 在「设置 → 安全 → 应用密码」生成</td></tr>
+                            <tr><td>起始目录</td><td>云端浏览器打开时进入的目录，默认服务器根目录</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="callout callout-tip">
+                    <span class="callout-icon">i</span>
+                    <p>用户名与密码保存在系统凭据库（Windows 凭据管理器 / macOS 钥匙串），<strong>不写入任何配置文件</strong>，也不进入浏览器存储。填好后点「测试连接」确认可用。</p>
+                </div>
+            </div>
+
+            <div class="help-sub" id="cloud-browse">
+                <h3>浏览云端文件</h3>
+                <ul>
+                    <li>侧边栏切换到<strong>「云端」</strong>标签页，点击文件夹进入，顶部面包屑可回上级</li>
+                    <li>点击文档直接打开；正文与文档中<strong>相对引用</strong>的图片会一并下载到本地缓存</li>
+                    <li>悬停行尾的 <code>⋯</code> 或右键，可<strong>新建文件夹 / 重命名 / 删除</strong>（删除不可撤销，删文件夹会一并删除其中内容）</li>
+                    <li>右上角 <code>⟳</code> 手动刷新；保存到云端后若正浏览该目录，列表会自动刷新</li>
+                </ul>
+            </div>
+
+            <div class="help-sub" id="cloud-save">
+                <h3>保存到云端</h3>
+                <ul>
+                    <li><strong>上传本地文档</strong>：点工具栏「保存到云端」，确认云端路径后上传；文档中相对引用的图片会一并上传并保持目录结构</li>
+                    <li><strong>保存云端文档</strong>：直接 <kbd>Ctrl</kbd>+<kbd>S</kbd>，写回它原本的远程位置</li>
+                    <li><strong>另存到其他云端位置</strong>：同样是「保存到云端」，把路径改成新的即可</li>
+                </ul>
+                <p>保存云端文档时是「先写本地缓存、再上传服务器」，<strong>两步都成功才会标记为已保存</strong>；任一步失败都会保持未保存状态并提示。</p>
+            </div>
+
+            <div class="help-sub" id="cloud-conflict">
+                <h3>冲突保护</h3>
+                <p>打开云端文档时会记录服务器的 ETag。若保存前发现该文件已被其他设备修改，会弹窗让你选择：</p>
+                <ul>
+                    <li><strong>覆盖服务器版本</strong>：用本地内容覆盖服务器</li>
+                    <li><strong>放弃本地修改并重新加载</strong>：丢弃本地编辑，重新拉取服务器版本</li>
+                </ul>
+                <div class="callout callout-warn">
+                    <span class="callout-icon">!</span>
+                    <p>绝不会静默覆盖。自动保存遇到冲突时会暂停并提示，按 <kbd>Ctrl</kbd>+<kbd>S</kbd> 手动处理。</p>
+                </div>
+            </div>
+
+            <div class="help-sub" id="cloud-notes">
+                <h3>注意事项</h3>
+                <ul>
+                    <li>需要服务端支持 WebDAV。若提示需要 <strong>Digest 认证</strong>，请改用应用专用密码（本程序只支持 Basic 认证）</li>
+                    <li>只有<strong>相对路径</strong>的图片会随文档同步；绝对路径（<code>D:\pics\a.png</code>、<code>/home/me/a.png</code>）、<code>file://</code>、网络图片与 <code>data:</code> 都不会上传</li>
+                    <li>云端文档在本地保留一份缓存（<code>~/Documents/yizimarkdown/webdav/</code>）用于图片渲染与导出；删除它不影响云端数据，下次打开会自动重新下载</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- ========== 9. 外观与主题 ========== -->
         <section class="help-section" id="appearance" data-kw="主题 深色 暗色 亮色 外观 字体 字号 行高 自定义 CSS user.css themes F2">
             <h2><a class="anchor" href="#appearance">#</a>外观与主题</h2>
             <p class="help-lead">内置 15 套主题，每套均支持亮色与深色双模式。</p>
@@ -648,10 +715,10 @@
             </div>
         </section>
 
-        <!-- ========== 9. 设置详解 ========== -->
-        <section class="help-section" id="settings" data-kw="设置 通用 外观 编辑器 AI 快捷键 插件 模板 关于 自动保存 语言">
+        <!-- ========== 10. 设置详解 ========== -->
+        <section class="help-section" id="settings" data-kw="设置 通用 外观 编辑器 AI 云端 快捷键 插件 模板 关于 自动保存 语言">
             <h2><a class="anchor" href="#settings">#</a>设置详解</h2>
-            <p class="help-lead">设置面板共 8 个分类，覆盖软件全部可配置项。</p>
+            <p class="help-lead">设置面板共 9 个分类，覆盖软件全部可配置项。</p>
 
             <div class="help-sub" id="settings-list">
                 <div class="help-table-wrap">
@@ -662,6 +729,7 @@
                             <tr><td>外观</td><td>主题选择与管理、深色模式、自定义 CSS</td></tr>
                             <tr><td>编辑器</td><td>源码 / 预览字体字号行高、实时模式动画、拼写检查</td></tr>
                             <tr><td>AI</td><td>供应商与模型、API 密钥、上下文轮数、引用上限</td></tr>
+                            <tr><td>云端存储</td><td>WebDAV 服务器地址、凭据（存系统凭据库）、起始目录、测试连接</td></tr>
                             <tr><td>快捷键</td><td>可视化配置、按键录制、冲突检测、恢复默认</td></tr>
                             <tr><td>插件</td><td>KaTeX 公式开关、Mermaid 图表主题与其他渲染插件</td></tr>
                             <tr><td>模板</td><td>新建 / 编辑 / 删除文档模板，指定默认模板</td></tr>
@@ -688,7 +756,7 @@
             </div>
         </section>
 
-        <!-- ========== 10. 快捷键 ========== -->
+        <!-- ========== 11. 快捷键 ========== -->
         <section class="help-section" id="shortcuts" data-kw="快捷键 F1 F2 F3 Ctrl 自定义 冲突检测 录制">
             <h2><a class="anchor" href="#shortcuts">#</a>快捷键大全</h2>
             <p class="help-lead">按 <kbd>F1</kbd> 可随时唤出速查面板；所有快捷键均可在「设置 → 快捷键」自定义。</p>
@@ -721,7 +789,7 @@
             </div>
         </section>
 
-        <!-- ========== 11. 常见问题 ========== -->
+        <!-- ========== 12. 常见问题 ========== -->
         <section class="help-section" id="faq" data-kw="常见问题 FAQ 无法验证开发者 钥匙串 白屏 图片不显示 图标 数据 迁移 升级 崩溃">
             <h2><a class="anchor" href="#faq">#</a>常见问题</h2>
             <p class="help-lead">遇到问题先查这里。</p>
@@ -778,14 +846,31 @@
 
             <div class="help-sub" id="faq-where">
                 <h3>数据存储在哪？</h3>
-                <p>数据分五个层面存放：</p>
+                <p>数据分七个层面存放：</p>
                 <ol class="help-layer-list">
                     <li><strong>新建/未保存文件</strong>：在编辑器内存在 localStorage 缓存，下次打开软件时自动恢复、自动加载（不依赖系统文件路径，重启后仍在）</li>
                     <li><strong>配置文件</strong>（主题、自动保存参数、快捷键绑定等）：同样存在 localStorage 缓存中</li>
                     <li><strong>API 密钥</strong>：保存在系统钥匙串（macOS Keychain / Windows 凭据管理器），<strong>不明文暴露、不上传网络</strong>——随时可在「设置 → AI」清除</li>
                     <li><strong>技能文件（v0.2.3 起）</strong>：从应用目录迁移至用户目录 <code>~/Documents/yizimarkdown/skills/</code>，<strong>支持自定义</strong>，升级软件<strong>不会覆盖</strong></li>
                     <li><strong>文档模板（v0.2.4 起）</strong>：与技能同理，存放在用户目录 <code>~/Documents/yizimarkdown/templates/</code>，<strong>支持自定义</strong>，升级 / 卸载 / 重装<strong>不会丢失</strong></li>
+                    <li><strong>WebDAV 凭据（v0.3.0 起）</strong>：与 API 密钥同理，保存在系统凭据库（Windows 凭据管理器 / macOS 钥匙串），<strong>不写入任何配置文件</strong>；随时可在「设置 → 云端存储」清除</li>
+                    <li><strong>云端文档缓存（v0.3.0 起）</strong>：存放在 <code>~/Documents/yizimarkdown/webdav/</code>，仅用于图片渲染与导出。它是<strong>派生物</strong>，删除不影响云端数据，下次打开会自动重新下载</li>
                 </ol>
+            </div>
+
+            <div class="help-sub" id="faq-cloud-conflict">
+                <h3>云端文档改了会丢吗？多台设备同时改怎么办？</h3>
+                <p>打开云端文档时会记录服务器的 ETag；保存前若发现文件已被其他设备修改，会弹窗让你选择「覆盖服务器版本」或「放弃本地修改并重新加载」，<strong>不会静默覆盖</strong>。自动保存遇到冲突会暂停并提示，按 <kbd>Ctrl</kbd>+<kbd>S</kbd> 手动处理。</p>
+            </div>
+
+            <div class="help-sub" id="faq-cloud-images">
+                <h3>为什么云端文档里的图片没有一起上传？</h3>
+                <p>只有<strong>相对路径</strong>的图片（如 <code>images/a.png</code>、<code>../assets/x.png</code>）会随文档同步，并保持目录结构。绝对路径（<code>D:\pics\a.png</code>、<code>/home/me/a.png</code>）、<code>file://</code>、网络图片与 <code>data:</code> 都不会上传——这是为了避免把你本机其他位置的文件传到服务器。</p>
+            </div>
+
+            <div class="help-sub" id="faq-cloud-auth">
+                <h3>云端测试连接提示「需要 Digest 认证」或用户名密码错误？</h3>
+                <p>本程序只支持 Basic 认证，且多数 WebDAV 服务（坚果云、开启两步验证的 Nextcloud）<strong>不接受登录密码</strong>，必须使用<strong>应用专用密码</strong>：坚果云在「账户信息 → 安全选项 → 添加应用」生成，Nextcloud 在「设置 → 安全 → 应用密码」生成。另外请确认服务器地址包含完整路径，例如坚果云是 <code>https://dav.jianguoyun.com/dav/</code>（注意结尾的 <code>/dav/</code>）。</p>
             </div>
 
             <div class="help-sub" id="faq-punct">
@@ -794,7 +879,7 @@
             </div>
         </section>
 
-        <!-- ========== 12. 附录 ========== -->
+        <!-- ========== 13. 附录 ========== -->
         <section class="help-section" id="appendix" data-kw="附录 目录结构 文件说明 反馈 issue 开源 更新 升级">
             <h2><a class="anchor" href="#appendix">#</a>附录</h2>
 

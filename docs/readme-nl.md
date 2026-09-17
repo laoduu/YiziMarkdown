@@ -98,6 +98,14 @@ We hebben een uiterst elegante ervaring gecreëerd voor de WYSIWYG-modus. Tegeli
 - **Exporteren**: Vijf formaten — HTML / Markdown / platte tekst / Word (DOCX) / PDF; DOCX gebruikt native Word-semantiek (lijsten/tabellen/codeblokken/citaten/takenlijsten), tabelstijlen komen overeen met de voorvertoning, afbeeldingen ondersteunen lokale paden, webafbeeldingen en HTML-`<img>`-tags (breedte regelbaar via het `width`-attribuut); PDF komt overeen met de voorvertoning en pagineert automatisch
 - **.md-bestandskoppeling**: Stel met één klik in als standaard Markdown-editor; dubbelklik op .md om direct te openen (Windows register / macOS LaunchServices)
 
+### Cloudopslag (WebDAV)
+
+- **Cloud-bestandsbrowser**: blader in het tabblad ‘Cloud’ in de zijbalk door de WebDAV-serverstructuur — documenten openen, mappen aanmaken, hernoemen, verwijderen
+- **Opslaan in de cloud**: upload een lokaal document met één klik (via relatieve paden verwezen afbeeldingen worden mee geüpload met behoud van de mapstructuur); bij clouddocumenten schrijft `Ctrl+S` direct terug naar de server
+- **Conflictbescherming**: vergelijkt vóór het opslaan de ETag van de server; is het bestand op een ander apparaat gewijzigd, dan kun je in een dialoog overschrijven of opnieuw laden — nooit stilzwijgend overschrijven
+- **Veilige inloggegevens**: gebruikersnaam en wachtwoord gaan naar de sleutelhanger van het besturingssysteem (Windows Verificatiebeheer / macOS Sleutelhanger), nooit naar configuratiebestanden
+- **Compatibiliteit**: werkt met standaard WebDAV-diensten zoals Nutstore, Nextcloud en Synology (een app-specifiek wachtwoord wordt aanbevolen)
+
 ### Uiterlijk aanpassen
 
 - **Vijftien ingebouwde thema's**: Academisch blauw (standaard), Levendig oranje, Tech-look, Minimalistisch, Magazine-look, Natureel, Vloeibaar glas, Lychee-rood, Violet, Cyberpunk, Facebook, Matrix, Mint-smoothie, Zonsondergang-goud, Retro typemachine — elk met lichte en donkere kleurenschema's
@@ -110,7 +118,7 @@ We hebben een uiterst elegante ervaring gecreëerd voor de WYSIWYG-modus. Tegeli
 
 - **Documentsjablonen**: sjablonen staan in de gebruikersmap `~/Documents/yizimarkdown/templates/`; plaats gewoon `.md`-bestanden om ze te gebruiken (je kunt ze ook aanmaken/bewerken via Instellingen → Sjablonen, het menu wordt direct vernieuwd); ingebouwde sjablonen worden bij de eerste start automatisch daarheen gesynchroniseerd, upgraden/herinstalleren overschrijft je sjablonen niet
 - **Sneltoetsensysteem**: Visueel sneltoetsconfiguratiepaneel met ondersteuning voor aangepaste binding van 30 acties, toetsopname, conflictdetectie en herstel naar standaardwaarden
-- **Instellingenpaneel**: Meerdere tabbladen — Algemeen, Uiterlijk, Editor, Realtime-modus, AI, Plug-ins, Sneltoetsen, Sjablonen, Over; instellingen worden direct weergegeven
+- **Instellingenpaneel**: Meerdere tabbladen — Algemeen, Uiterlijk, Editor, Realtime-modus, AI, Cloud, Plug-ins, Sneltoetsen, Sjablonen, Over; instellingen worden direct weergegeven
 
 ---
 

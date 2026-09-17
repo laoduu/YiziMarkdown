@@ -1,9 +1,23 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { canonicalRemotePath } from '../lib/remotePath'
 
 export type SaveStatus = 'saved' | 'unsaved' | 'just-saved'
 
 export type ViewMode = 'edit' | 'live' | 'split' | 'preview'
+
+/**
+ * 远程身份。存在即表示该 tab 是云端文档：
+ * `filePath` 指向本地缓存镜像，真正保存要额外 PUT 到 `path`。
+ * 注意：**必须同步加入 `partialize`**，否则重启后远程身份丢失，
+ * Ctrl+S 会只写本地缓存而让用户误以为已存到云端。
+ */
+export interface RemoteRef {
+  /** 相对配置根目录的远程路径，如 `/Notes/foo.md` */
+  path: string
+  /** 打开时的 ETag，用于保存时的冲突检测（服务器不提供时为 null） */
+  etag: string | null
+}
 
 export interface FileTab {
   id: string
@@ -13,6 +27,7 @@ export interface FileTab {
   isSaved: boolean
   saveStatus: SaveStatus
   viewMode: ViewMode
+  remote?: RemoteRef
 }
 
 interface EditorState {
@@ -25,6 +40,12 @@ interface EditorState {
   currentFilePath: () => string | null
 
   openFile: (filePath: string, content: string) => string
+  openRemoteFile: (
+    cachePath: string,
+    content: string,
+    remote: RemoteRef,
+    opts?: { forceReload?: boolean }
+  ) => string
   openNewFile: (content?: string) => string
   closeTab: (tabId: string) => void
   forceCloseTab: (tabId: string) => void
@@ -32,9 +53,13 @@ interface EditorState {
   updateContent: (content: string) => void
   updateViewMode: (viewMode: ViewMode) => void
   markAsSaved: () => void
+  /** 按 tab id 标记已保存（保存流程可能不在该 tab 处于激活态时完成） */
+  markTabSaved: (tabId: string) => void
   clearJustSaved: (tabId: string) => void
   updateTabName: (tabId: string, name: string) => void
   updateTabFilePath: (tabId: string, filePath: string) => void
+  /** 更新远程身份（保存成功后刷新 ETag；另存为本地副本时传 undefined 解除远程关联） */
+  setTabRemote: (tabId: string, remote: RemoteRef | undefined) => void
   addRecentFile: (filePath: string) => void
   removeRecentFile: (filePath: string) => void
   setActiveHeadingId: (id: string | null) => void
@@ -84,6 +109,46 @@ export const useEditorStore = create<EditorState>()(
         const newTab: FileTab = { id, name, filePath, content, isSaved: true, saveStatus: 'saved', viewMode: 'preview' }
         set({ tabs: [...tabs, newTab], activeTabId: id })
         get().addRecentFile(filePath)
+        return id
+      },
+
+      /**
+       * 打开云端文档。`cachePath` 是本地镜像路径，`remote` 是远程身份。
+       * 与 `openFile` 的区别：按远程路径去重（缓存路径会随服务器地址变化）、
+       * 且**不写入 recentFiles**（缓存路径对本机"最近文件"毫无意义）。
+       *
+       * @param opts.forceReload 强制用服务器内容覆盖（冲突弹窗的「放弃本地修改并重新加载」）
+       */
+      openRemoteFile: (cachePath, content, remote, opts) => {
+        const { tabs } = get()
+        // 按规范化后的远程路径去重：路径可能来自用户输入、字符串拼接或服务器 href，
+        // 写法不一定一致（`/Notes//a.md` vs `/Notes/a.md`）。不规范化会重复开 tab。
+        const target = canonicalRemotePath(remote.path) ?? remote.path
+        const existing = tabs.find(
+          t => t.remote && (canonicalRemotePath(t.remote.path) ?? t.remote.path) === target
+        )
+        if (existing) {
+          // 同一远程文件已打开：切过去。
+          // 只有在本地没有未保存修改时才用服务器内容覆盖 —— 否则在云端列表里点一下
+          // 已打开的文件就会静默丢掉用户的编辑。显式 forceReload 才无条件覆盖。
+          const replace = opts?.forceReload === true || existing.isSaved
+          set({
+            activeTabId: existing.id,
+            tabs: tabs.map(t => t.id === existing.id
+              ? replace
+                ? { ...t, filePath: cachePath, content, remote, isSaved: true, saveStatus: 'saved' }
+                : { ...t, filePath: cachePath, remote }
+              : t),
+          })
+          return existing.id
+        }
+        const id = 'remote-' + Date.now()
+        const name = remote.path.split('/').pop() || remote.path
+        const newTab: FileTab = {
+          id, name, filePath: cachePath, content,
+          isSaved: true, saveStatus: 'saved', viewMode: 'preview', remote,
+        }
+        set({ tabs: [...tabs, newTab], activeTabId: id })
         return id
       },
 
@@ -162,6 +227,13 @@ export const useEditorStore = create<EditorState>()(
         })
       },
 
+      markTabSaved: (tabId) => {
+        const { tabs } = get()
+        set({
+          tabs: tabs.map(t => t.id === tabId ? { ...t, isSaved: true, saveStatus: 'just-saved' } : t),
+        })
+      },
+
       clearJustSaved: (tabId) => {
         const { tabs } = get()
         set({
@@ -180,6 +252,13 @@ export const useEditorStore = create<EditorState>()(
         const { tabs } = get()
         set({
           tabs: tabs.map(t => t.id === tabId ? { ...t, filePath } : t),
+        })
+      },
+
+      setTabRemote: (tabId, remote) => {
+        const { tabs } = get()
+        set({
+          tabs: tabs.map(t => t.id === tabId ? { ...t, remote } : t),
         })
       },
 
@@ -204,16 +283,20 @@ export const useEditorStore = create<EditorState>()(
           content: t.content, isSaved: t.isSaved,
           saveStatus: t.saveStatus,
           viewMode: t.viewMode,
+          // 远程身份必须持久化：漏掉会让重启后的云端文档退化成"本地文件"，
+          // Ctrl+S 只写缓存、永不 PUT，而用户以为已存到云端（静默丢数据）
+          remote: t.remote,
         })),
         activeTabId: state.activeTabId,
         recentFiles: state.recentFiles,
       }),
-      // 兼容旧版本持久化数据：saveStatus 缺失时按 isSaved 推断
+      // 兼容旧版本持久化数据：saveStatus 缺失时按 isSaved 推断；remote 缺失即普通本地文件
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<EditorState>
         const tabs = (p.tabs ?? []).map(t => ({
           ...t,
           saveStatus: t.saveStatus ?? (t.isSaved ? 'saved' : 'unsaved'),
+          remote: t.remote ?? undefined,
         }))
         return { ...current, ...p, tabs }
       },

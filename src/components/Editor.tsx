@@ -115,6 +115,16 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
   // 插件就绪状态：变化时触发 markdown 重新渲染
   const pluginsReady = useEditorStore((s: any) => s._pluginsReady)
 
+  // 当前文档所在目录：相对路径图片按它解析（云端文档解析到本地镜像里已下载的图片）。
+  // 必须作为图片 effect 的依赖 —— 否则切换 tab 而未重渲染时，
+  // 会拿上一个文档的目录去解析，图片指向错误位置。
+  const docBaseDir = useEditorStore((s) => {
+    const tab = s.tabs.find((t) => t.id === s.activeTabId)
+    if (!tab?.filePath) return null
+    const sep = Math.max(tab.filePath.lastIndexOf('\\'), tab.filePath.lastIndexOf('/'))
+    return sep > 0 ? tab.filePath.substring(0, sep) : null
+  })
+
   // 防抖渲染：150ms 内不重复触发 markdown-it
   const [debouncedContent, setDebouncedContent] = useState(content)
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -244,7 +254,7 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
     imgs.forEach((img) => {
       const src = img.getAttribute('src')
       if (!src || src.startsWith('http') || src.startsWith('data:') || src.startsWith('asset://')) return
-      resolveLocalImageSrc(src).then((path) => {
+      resolveLocalImageSrc(src, docBaseDir).then((path) => {
         if (!path) return
         return tauri.invoke('read_image_base64', { path })
           .then((dataUrl: string) => {
@@ -252,7 +262,7 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
           })
       }).catch(() => {})
     })
-  }, [renderedHtml])
+  }, [renderedHtml, docBaseDir])
 
   // 代码块增强：添加复制按钮、换行控制、语言标签
   useEffect(() => {

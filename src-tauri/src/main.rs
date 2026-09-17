@@ -17,7 +17,16 @@ mod ai_proxy;
 mod docx_export;
 mod pdf_export;
 
+// WebDAV 云端存储（v0.3.0）
+mod remote_cache;
+mod webdav;
+
 use ai_proxy::{ai_cancel, ai_chat, ai_clear_key, ai_has_key, ai_set_key, ai_verify_key};
+use remote_cache::{webdav_open, webdav_save};
+use webdav::{
+    webdav_clear_credentials, webdav_delete, webdav_get_username, webdav_has_credentials,
+    webdav_list, webdav_mkdir, webdav_move, webdav_set_credentials, webdav_test_connection,
+};
 
 
 
@@ -325,7 +334,7 @@ fn get_app_root() -> Result<PathBuf, String> {
 /// 获取用户文档中的配置目录：~/Documents/yizimarkdown/（包含 skills/ 等用户配置）
 /// Windows: C:\Users\<user>\Documents\yizimarkdown\
 /// macOS:   /Users/<user>/Documents/yizimarkdown\
-fn get_user_config_dir() -> Result<PathBuf, String> {
+pub(crate) fn get_user_config_dir() -> Result<PathBuf, String> {
     #[cfg(target_os = "windows")]
     {
         if let Ok(profile) = std::env::var("USERPROFILE") {
@@ -1279,26 +1288,34 @@ fn sniff_image_mime(b: &[u8]) -> Option<&'static str> {
     }
 }
 
-/// 用 pulldown-cmark 解析出 md 中所有网络图片 URL（去重）。
+/// 用 pulldown-cmark 解析出 md 中所有图片引用（去重，保持出现顺序）。
 /// 相比手工扫描原始文本，这里天然覆盖引用式 `![a][id]`（解析后 dest_url 相同）、
 /// 括号平衡（如 `File_(1).png`）与转义，且拿到的字符串与生成器解析结果逐字一致。
-fn collect_network_image_urls(md: &str) -> Vec<String> {
+/// Markdown 语法图片与 HTML 标签图片（`<img src="…">`）都会收集。
+pub(crate) fn collect_image_urls(md: &str) -> Vec<String> {
     use pulldown_cmark::{Event, Options, Parser, Tag};
     let mut urls: Vec<String> = Vec::new();
     for ev in Parser::new_ext(md, Options::all()) {
-        // Markdown 语法图片与 HTML 标签图片（<img src="…">）都要收集
         let candidates: Vec<String> = match ev {
             Event::Start(Tag::Image { dest_url, .. }) => vec![dest_url.to_string()],
             Event::Html(h) | Event::InlineHtml(h) => docx_export::extract_img_srcs(&h),
             _ => Vec::new(),
         };
         for url in candidates {
-            if (url.starts_with("http://") || url.starts_with("https://")) && !urls.contains(&url) {
+            if !urls.contains(&url) {
                 urls.push(url);
             }
         }
     }
     urls
+}
+
+/// 只要网络图片 URL（供 DOCX 导出下载）。
+fn collect_network_image_urls(md: &str) -> Vec<String> {
+    collect_image_urls(md)
+        .into_iter()
+        .filter(|u| u.starts_with("http://") || u.starts_with("https://"))
+        .collect()
 }
 
 /// 下载单张网络图片并编码为 data URL。非图片响应（403/404 的 HTML 错误页等）返回 None。
@@ -1467,6 +1484,18 @@ fn main() {
             ai_verify_key,
             ai_chat,
             ai_cancel,
+            // WebDAV 云端存储（v0.3.0）
+            webdav_set_credentials,
+            webdav_has_credentials,
+            webdav_get_username,
+            webdav_clear_credentials,
+            webdav_test_connection,
+            webdav_list,
+            webdav_open,
+            webdav_save,
+            webdav_mkdir,
+            webdav_delete,
+            webdav_move,
         ])
                 .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             // 从命令行参数中提取文件路径，通过 eval 直接调用前端全局函数

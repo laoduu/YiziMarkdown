@@ -54,6 +54,14 @@ export interface SettingsState {
   /** AI 聊天面板宽度（px） */
   aiChatWidth: number
 
+  // WebDAV 云端存储（v0.3.0）
+  /** 服务器根地址，如 https://dav.jianguoyun.com/dav/（用户名/密码存 OS 凭据库，不在此处） */
+  webdavBaseUrl: string
+  /** 云端浏览器进入时的起始目录 */
+  webdavRootPath: string
+  /** 云端浏览器上次停留的目录，重新打开时恢复 */
+  webdavLastPath: string
+
   // AI 面板运行时状态（不持久化）
   /** AI 面板是否打开 */
   aiPanelOpen: boolean
@@ -112,6 +120,11 @@ export const useSettingsStore = create<SettingsState>()(
       aiContextTurns: 3,
       aiProviderConfigs: {},
       aiChatWidth: 380,
+
+      // WebDAV 云端存储（v0.3.0）
+      webdavBaseUrl: '',
+      webdavRootPath: '/',
+      webdavLastPath: '/',
 
       // AI 面板运行时状态
       aiPanelOpen: false,

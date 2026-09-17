@@ -1172,7 +1172,8 @@ a {
   min-width: 0;
   max-width: 100%;
 }
-.ai-settings .settings-row > div:last-child p {
+.ai-settings .settings-row > div:last-child p,
+.cloud-settings .settings-row > div:last-child p {
   max-width: 100%;
   overflow-wrap: anywhere;
 }

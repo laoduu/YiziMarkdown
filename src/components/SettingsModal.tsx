@@ -1,12 +1,20 @@
 import { invokeTauri, invokeTauriOrThrow } from '../lib/tauri'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { X, Loader2, ChevronRight, FolderOpen, Palette, FileText, Keyboard, Settings2, Eye, EyeOff, Info, Github, History, BookOpen, ExternalLink, Zap, Globe, Puzzle, Bot } from 'lucide-react'
+import { X, Loader2, ChevronRight, FolderOpen, Palette, FileText, Keyboard, Settings2, Eye, EyeOff, Info, Github, History, BookOpen, ExternalLink, Zap, Globe, Puzzle, Bot, Cloud } from 'lucide-react'
 import { useSettingsStore } from '../stores/settingsStore'
 import { SHORTCUT_ACTIONS, getKeybindingsMap, saveKeybindings, getDefaultMap, formatKey, findConflict, getActionLabel } from '../lib/keybindings'
 import { RotateCcw } from 'lucide-react'
 import { getAllPlugins, loadPlugin, unloadPlugin } from '../plugins/registry'
 import { useI18n, LANGUAGES } from '../i18n'
 import { PROVIDERS, providerById } from '../lib/ai-providers'
+import {
+  hasCredentials,
+  getUsername,
+  setCredentials,
+  clearCredentials,
+  testConnection,
+} from '../lib/webdav'
+import { normalizeBaseUrl } from '../lib/remotePath'
 
 const fallbackFonts = [
   'Consolas', 'Courier New', 'Lucida Console', 'Monaco', 'Menlo',
@@ -43,7 +51,7 @@ interface SettingsModalProps {
   defaultTab?: CategoryKey
 }
 
-type CategoryKey = 'general' | 'appearance' | 'editor' | 'liveMode' | 'ai' | 'plugins' | 'shortcuts' | 'templates' | 'about'
+type CategoryKey = 'general' | 'appearance' | 'editor' | 'liveMode' | 'ai' | 'cloud' | 'plugins' | 'shortcuts' | 'templates' | 'about'
 
 const categories: Array<{ key: CategoryKey; labelKey: string; icon: React.ReactNode }> = [
   { key: 'general', labelKey: 'settings.general', icon: <Settings2 size={16} /> },
@@ -51,6 +59,7 @@ const categories: Array<{ key: CategoryKey; labelKey: string; icon: React.ReactN
   { key: 'editor', labelKey: 'settings.editor', icon: <FileText size={16} /> },
   { key: 'liveMode', labelKey: 'settings.liveMode', icon: <Zap size={16} /> },
   { key: 'ai', labelKey: 'settings.ai', icon: <Bot size={16} /> },
+  { key: 'cloud', labelKey: 'settings.cloud', icon: <Cloud size={16} /> },
   { key: 'plugins', labelKey: 'settings.plugins', icon: <Puzzle size={16} /> },
   { key: 'shortcuts', labelKey: 'settings.shortcuts', icon: <Keyboard size={16} /> },
   { key: 'templates', labelKey: 'settings.templates', icon: <FolderOpen size={16} /> },
@@ -1403,6 +1412,178 @@ function AISettings() {
   )
 }
 
+// ===================== 云端存储（WebDAV）=====================
+
+function CloudSettings() {
+  const { t } = useI18n()
+  const store = useSettingsStore()
+
+  const [baseUrl, setBaseUrl] = useState(store.webdavBaseUrl)
+  const [rootPath, setRootPath] = useState(store.webdavRootPath)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [hasCred, setHasCred] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
+  // 回填已保存的用户名（密码永不回传，只能显示"已保存"）
+  useEffect(() => {
+    getUsername().then((u) => { if (u) setUsername(u) }).catch(() => {})
+    hasCredentials().then(setHasCred).catch(() => {})
+  }, [])
+
+  const commitBaseUrl = (raw: string) => {
+    const normalized = normalizeBaseUrl(raw)
+    setBaseUrl(normalized)
+    store.setField('webdavBaseUrl', normalized)
+    setTestMsg(null)
+  }
+
+  const commitRootPath = (raw: string) => {
+    // 统一成以 / 开头的形式，避免拼出相对路径
+    const trimmed = raw.trim()
+    const normalized = trimmed ? (trimmed.startsWith('/') ? trimmed : `/${trimmed}`) : '/'
+    setRootPath(normalized)
+    store.setField('webdavRootPath', normalized)
+  }
+
+  const handleSaveCredentials = async () => {
+    try {
+      await setCredentials(username, password)
+      setHasCred(true)
+      setPassword('')
+      setTestMsg(null)
+    } catch (e) {
+      setTestMsg({ ok: false, text: e instanceof Error ? e.message : String(e) })
+    }
+  }
+
+  const handleClearCredentials = async () => {
+    try {
+      await clearCredentials()
+      setHasCred(false)
+      setUsername('')
+      setPassword('')
+      setTestMsg(null)
+    } catch { /* 清除失败无需打断用户 */ }
+  }
+
+  const handleTest = async () => {
+    setTesting(true)
+    setTestMsg(null)
+    try {
+      const msg = await testConnection(baseUrl)
+      setTestMsg({ ok: msg.startsWith('OK'), text: msg })
+    } catch (e) {
+      setTestMsg({ ok: false, text: e instanceof Error ? e.message : String(e) })
+    }
+    setTesting(false)
+  }
+
+  return (
+    <>
+      <div className="settings-content-scroll cloud-settings">
+        <div className="space-y-4">
+          <Section title={t('settings.cloudSectionServer')}>
+            <Row label={t('settings.cloudBaseUrl')} hint={t('settings.cloudBaseUrlHint')}>
+              <input
+                type="text"
+                value={baseUrl}
+                onChange={(e) => setBaseUrl(e.target.value)}
+                onBlur={(e) => commitBaseUrl(e.target.value)}
+                placeholder={t('settings.cloudBaseUrlPlaceholder')}
+                className="settings-input w-full"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              />
+            </Row>
+            <Row label={t('settings.cloudRootPath')} hint={t('settings.cloudRootPathHint')}>
+              <input
+                type="text"
+                value={rootPath}
+                onChange={(e) => setRootPath(e.target.value)}
+                onBlur={(e) => commitRootPath(e.target.value)}
+                placeholder="/"
+                className="settings-input w-full"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              />
+            </Row>
+          </Section>
+
+          <Section title={t('settings.cloudSectionAuth')}>
+            <Row label={t('settings.cloudUsername')} hint={t('settings.cloudUsernameHint')}>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="settings-input w-full"
+                autoComplete="off"
+              />
+            </Row>
+            <Row label={t('settings.cloudPassword')} hint={t('settings.cloudPasswordHint')}>
+              {/* 与 AI 密钥一致的密码输入：等宽字体 + 显隐切换 */}
+              <div className="relative w-full">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={hasCred ? t('settings.cloudPasswordSaved') : t('settings.cloudPasswordNotSet')}
+                  className="settings-input w-full pr-8"
+                  style={{ fontFamily: 'var(--font-mono)' }}
+                  autoComplete="off"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--sidebar-text)] hover:text-[var(--editor-text)]"
+                >
+                  {showPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                </button>
+              </div>
+              <div className="flex items-center gap-2 w-full justify-end flex-wrap">
+                <button
+                  onClick={handleSaveCredentials}
+                  disabled={!username.trim() || !password}
+                  className="settings-btn-primary"
+                  style={!username.trim() || !password ? { opacity: 0.5 } : undefined}
+                >
+                  {t('settings.cloudSaveCredentials')}
+                </button>
+                <span className="text-[10px] text-[var(--sidebar-text)]">
+                  {hasCred ? `✓ ${t('settings.cloudPasswordSaved')}` : t('settings.cloudPasswordNotSet')}
+                </span>
+                {hasCred && (
+                  <button
+                    onClick={handleClearCredentials}
+                    className="text-[10px] text-[var(--sidebar-text)] hover:text-[var(--editor-accent)] underline"
+                  >
+                    {t('settings.cloudClearCredentials')}
+                  </button>
+                )}
+                <button
+                  onClick={handleTest}
+                  disabled={testing || !baseUrl.trim()}
+                  className="text-[10px] text-[var(--editor-accent)] hover:underline disabled:opacity-50"
+                >
+                  {testing ? t('settings.cloudTesting') : t('settings.cloudTest')}
+                </button>
+              </div>
+              {testMsg && (
+                <p className={`text-[10px] break-all ${testMsg.ok ? 'text-emerald-500' : 'text-red-500'}`}>
+                  {testMsg.ok
+                    ? t('settings.cloudTestOk', { msg: testMsg.text })
+                    : t('settings.cloudTestFailed', { msg: testMsg.text })}
+                </p>
+              )}
+              <p className="text-[10px] text-[var(--sidebar-text)]">{t('settings.cloudCredentialsNote')}</p>
+            </Row>
+          </Section>
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ===================== 主弹窗 =====================
 export default function SettingsModal({ isOpen, onClose, defaultTab }: SettingsModalProps) {
   const { t } = useI18n()
@@ -1416,7 +1597,8 @@ export default function SettingsModal({ isOpen, onClose, defaultTab }: SettingsM
 
   const content: Record<CategoryKey, React.ReactNode> = {
     general: <GeneralSettings />, appearance: <AppearanceSettings />, editor: <EditorSettings />,
-    liveMode: <LiveModeSettings />, ai: <AISettings />, plugins: <PluginsSettings />,
+    liveMode: <LiveModeSettings />, ai: <AISettings />, cloud: <CloudSettings />,
+    plugins: <PluginsSettings />,
     shortcuts: <ShortcutsSettings />, templates: <TemplatesSettings />, about: <AboutSettings />,
   }
 

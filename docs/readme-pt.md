@@ -96,6 +96,14 @@ Criamos uma experiência extremamente elegante para o modo WYSIWYG (o que você 
 - **Exportar**: Cinco formatos — HTML / Markdown / texto simples / Word (DOCX) / PDF; DOCX usa a semântica nativa do Word (listas/tabelas/blocos de código/citações/listas de tarefas), os estilos de tabela correspondem à pré-visualização, as imagens suportam caminhos locais, imagens da web e tags HTML `<img>` (largura controlável pelo atributo `width`); o PDF corresponde à pré-visualização com paginação automática
 - **Associação de arquivos .md**: Configuração com um clique para definir como editor Markdown padrão do sistema; clique duplo em .md abre diretamente (Registro do Windows / LaunchServices do macOS)
 
+### Armazenamento na nuvem (WebDAV)
+
+- **Navegador de arquivos na nuvem**: percorra a árvore do servidor WebDAV na aba "Nuvem" da barra lateral — abrir documentos, criar pastas, renomear, excluir
+- **Salvar na nuvem**: envie um documento local com um clique (as imagens referenciadas por caminhos relativos também são enviadas, mantendo a estrutura de pastas); em documentos na nuvem, `Ctrl+S` grava direto no servidor
+- **Proteção contra conflitos**: compara o ETag do servidor antes de salvar; se o arquivo foi alterado em outro dispositivo, um diálogo permite sobrescrever ou recarregar — nunca uma sobrescrita silenciosa
+- **Credenciais seguras**: nome de usuário e senha ficam no cofre do sistema (Gerenciador de Credenciais do Windows / Chaveiro do macOS), nunca em arquivos de configuração
+- **Compatibilidade**: funciona com serviços WebDAV padrão como Nutstore, Nextcloud e Synology (recomenda-se uma senha de aplicativo)
+
 ### Personalização de Aparência
 
 - **Quinze temas integrados**: Azul Acadêmico (padrão), Laranja Vibrante, Tecnológico, Minimalista, Revista, Natural, Vidro Líquido, Lychee Vermelho, Violeta, Cyberpunk, Facebook, Matrix, Mint Frappe, Pôr do Sol Derretido, Datilografia Vintage — cada um com esquema de cores claro e escuro
@@ -108,7 +116,7 @@ Criamos uma experiência extremamente elegante para o modo WYSIWYG (o que você 
 
 - **Templates de documento**: os modelos são armazenados no diretório do usuário `~/Documents/yizimarkdown/templates/`; basta colocar arquivos `.md` para usá-los (também pode criá-los/editá-los em Configurações → Modelos, o menu é atualizado imediatamente); os modelos internos são sincronizados ali automaticamente na primeira inicialização, atualizar/reinstalar não substituirá seus modelos
 - **Sistema de atalhos**: Painel de configuração visual de atalhos, com suporte a personalização de 30 ações, gravação de teclas, detecção de conflitos e restauração de padrões
-- **Painel de configurações**: Múltiplas abas — Geral, Aparência, Editor, Modo em tempo real, AI, Plugins, Atalhos, Templates, Sobre — com visualização instantânea das alterações
+- **Painel de configurações**: Múltiplas abas — Geral, Aparência, Editor, Modo em tempo real, AI, Nuvem, Plugins, Atalhos, Templates, Sobre — com visualização instantânea das alterações
 
 ---
 

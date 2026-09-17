@@ -1,6 +1,6 @@
 [package]
 name = "yizimarkdown"
-version = "0.2.5"
+version = "0.3.0"
 description = "YiziMarkdown - A sleek Markdown editor"
 authors = ["You"]
 license = ""
@@ -38,6 +38,10 @@ tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "sync"
 # 导出 DOCX：markdown 解析 + OOXML 打包（轻量，仅 deflate）
 pulldown-cmark = "0.13"
 zip = { version = "2", default-features = false, features = ["deflate"] }
+# WebDAV 云端存储：PROPFIND multistatus 解析 + 路径百分号编解码
+# 两者均已在 Cargo.lock 中（quick-xml 经 plist、percent-encoding 经 url 传递），不引入新 crate
+quick-xml = "0.39"
+percent-encoding = "2"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.52"

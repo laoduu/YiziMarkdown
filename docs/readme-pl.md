@@ -96,6 +96,14 @@ Stworzyliśmy niezwykle eleganckie doświadczenie w trybie edycji WYSIWYG. Ponad
 - **Eksport**: pięć formatów - HTML / Markdown / zwykły tekst / Word (DOCX) / PDF; DOCX używa natywnej semantyki Worda (listy/tabele/bloki kodu/cytaty/listy zadań), style tabel zgodne z podglądem, obrazy obsługują ścieżki lokalne, obrazy sieciowe i tagi HTML `<img>` (szerokość można ustawić atrybutem `width`); PDF odwzorowuje podgląd i automatycznie dzieli na strony
 - **Powiązanie .md**: jednym kliknięciem ustaw edytor Markdown jako domyślny w systemie; kliknięcie dwukrotne .md otwiera bezpośrednio (rejestr Windows / LaunchServices macOS)
 
+### Pamięć w chmurze (WebDAV)
+
+- **Przeglądarka plików w chmurze**: przeglądaj drzewo serwera WebDAV w zakładce „Chmura” na pasku bocznym — otwieraj dokumenty, twórz foldery, zmieniaj nazwy, usuwaj
+- **Zapisz w chmurze**: wyślij lokalny dokument jednym kliknięciem (obrazy wskazywane ścieżkami względnymi również zostaną wysłane, z zachowaniem struktury folderów); w dokumentach w chmurze `Ctrl+S` zapisuje bezpośrednio na serwerze
+- **Ochrona przed konfliktami**: przed zapisem porównuje ETag serwera; jeśli plik zmieniono na innym urządzeniu, okno dialogowe pozwala nadpisać lub wczytać ponownie — nigdy cichego nadpisania
+- **Bezpieczne dane logowania**: nazwa użytkownika i hasło trafiają do magazynu poświadczeń systemu (Menedżer poświadczeń Windows / Pęk kluczy macOS), nigdy do plików konfiguracyjnych
+- **Zgodność**: działa ze standardowymi usługami WebDAV, takimi jak Nutstore, Nextcloud i Synology (zalecane hasło aplikacji)
+
 ### Personalizacja wyglądu
 
 - **15 wbudowanych motywów**: Akademicki niebieski (domyślny), Energiczny pomarańczowy, Technologiczny, Minimalistyczny, Magazynowy, Naturalny, Szklany płynny, Czerwień liczi, Fioletowy, Cyberpunk, Facebook, Matrix, Miętowy smoothie, Zachodzące słońce, Retro maszyna do pisania; każdy z dwoma wersjami kolorystycznymi (jasna/ciemna)
@@ -108,7 +116,7 @@ Stworzyliśmy niezwykle eleganckie doświadczenie w trybie edycji WYSIWYG. Ponad
 
 - **Szablony dokumentów**: szablony są przechowywane w katalogu użytkownika `~/Documents/yizimarkdown/templates/`; wystarczy umieścić w nim pliki `.md` (możesz je też tworzyć/edytować w Ustawienia → Szablony, menu odświeża się natychmiast); wbudowane szablony są automatycznie synchronizowane tam przy pierwszym uruchomieniu, aktualizacja/ponowna instalacja nie nadpisze Twoich szablonów
 - **System skrótów klawiszowych**: wizualny panel konfiguracji skrótów; obsługa 30 akcji z własnymi przypisaniami, nagrywaniem klawiszy, wykrywaniem konfliktów i przywracaniem ustawień domyślnych
-- **Panel ustawień**: zakładki Ogólne, Wygląd, Edytor, Tryb na żywo, AI, Wtyczki, Skróty, Szablony, O programie; natychmiastowy podgląd zmian
+- **Panel ustawień**: zakładki Ogólne, Wygląd, Edytor, Tryb na żywo, AI, Chmura, Wtyczki, Skróty, Szablony, O programie; natychmiastowy podgląd zmian
 
 ---
 

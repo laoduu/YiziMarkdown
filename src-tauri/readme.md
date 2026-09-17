@@ -1,6 +1,9 @@
 # YiziMarkdown
 
-![image](https://md.yizigpt.com/assets/index.webp)
+
+![image](https://github.com/laoduu/YiziMarkdown/raw/main/docs/index.png)
+
+[简体中文](./readme.md) | [繁體中文](./docs/readme-zh-TW.md) | [English](./docs/readme-en.md) | [日本語](./docs/readme-ja.md) | [한국어](./docs/readme-ko.md) | [Deutsch](./docs/readme-de.md) | [Français](./docs/readme-fr.md) | [Español](./docs/readme-es.md) | [Português](./docs/readme-pt.md) | [Italiano](./docs/readme-it.md) | [Polski](./docs/readme-pl.md) | [Nederlands](./docs/readme-nl.md) | [Türkçe](./docs/readme-tr.md) | [Svenska](./docs/readme-sv.md) | [Українська](./docs/readme-uk.md)
 
 **官方网站：** https://md.yizigpt.com
 
@@ -30,7 +33,7 @@
 - **流式对话**：工具栏机器人按钮打开右侧 AI 面板，回复实时流式输出，可随时停止
 - **思考过程展示**：推理模型的思考内容（reasoning/thinking）以可折叠区块展示，默认收起，不影响正文阅读
 - **密钥安全**：API 密钥存系统钥匙串（OS keychain），支持一键保存、清除、验证；本地端点（llama.cpp / LM Studio / vLLM 等）密钥可留空
-- **引用当前文档**：勾选后把当前文档作为上下文发送给 AI，可配置引用上限（64K~512K/不限）
+- **引用当前文档**：勾选后把当前文档作为上下文发送给 AI，可配置引用上限（64K~512K/不限）和上下文轮数（0~20轮，默认3轮）
 - **结果落盘**：回复可复制、插入到文档光标处、或一键创建为新文档
 
 ### 编辑与预览
@@ -45,6 +48,9 @@
 - **工具栏快捷格式**：粗体、斜体、删除线、行内代码，选中文字即裹即用
 - **本地图片渲染**：预览模式自动渲染本地路径图片（jpg/png/gif/webp/svg/bmp）
 - **行号 / 自动换行**：均可在设置中开关
+- **代码块增强**：语法高亮（highlight.js）、语言标签、复制按钮、自动换行切换
+- **格式工具栏折叠**：窗口宽度不足时自动折叠，支持手动展开/收起
+- **Frontmatter 过滤**：预览/并排/实时模式自动过滤 YAML frontmatter
 
 ### 数学公式与图表
 
@@ -64,7 +70,8 @@
 - **鼠标滚轮翻页**：内容可滚动时先滚内容，到边界再翻页
 - **主题继承**：标题颜色随主题精确变化（15 个主题均支持），演示内可切换主题/明暗
 - **全屏切换**：F 键全屏/还原，支持从任意窗口状态（普通/最大化）可靠进入
-- **演讲者备注**：`<!-- notes: ... -->` 注释，播放时按 `S` 显示
+- **退出按钮**：鼠标活动时右上角显示半透明退出按钮，1.5 秒无操作自动隐藏
+- **窗口状态还原**：退出演示时自动还原到进入前的窗口状态（全屏/最大化/普通）
 
 ### 插件系统
 
@@ -89,7 +96,14 @@
 - **另存为**：新建文件保存时自动弹出另存为对话框
 - **导出**：HTML / Markdown / 纯文本 / Word（DOCX）/ PDF 五种格式；DOCX 使用 Word 原生语义（列表/表格/代码块/引用/任务列表），表格样式对齐预览，图片支持本地路径、网络图片与 HTML `<img>` 标签（可用 `width` 属性控制宽度）；PDF 与预览还原度一致并自动分页
 - **.md 文件关联**：设置中一键设为系统默认 Markdown 编辑器，双击 .md 直接打开（Windows 注册表 / macOS LaunchServices）
-- **命令行打开**：`YiziMarkdown 文件路径.md` 直接打开
+
+### 云端存储（WebDAV）
+
+- **云端文件浏览器**：侧边栏「云端」标签页浏览 WebDAV 服务器目录树，支持打开文档、新建文件夹、重命名、删除
+- **保存到云端**：本地文档一键上传（文档中相对引用的图片一并上传并保持目录结构）；已是云端文档则 `Ctrl+S` 直接写回服务器
+- **冲突保护**：保存前比对服务器 ETag，远程被其他设备改过会弹窗让你选择「覆盖服务器版本」或「放弃本地修改并重新加载」，绝不静默覆盖
+- **凭据安全**：用户名与密码存入系统凭据库（Windows 凭据管理器 / macOS 钥匙串），不写入任何配置文件
+- **兼容性**：支持坚果云、Nextcloud、群晖等标准 WebDAV 服务（建议使用应用专用密码）
 
 ### 外观定制
 
@@ -97,13 +111,13 @@
 - **深色 / 亮色模式**：每套主题均有亮暗两套配色
 - **字体自定义**：源码和预览模式分别设置字体、字号、行高
 - **自定义 CSS**：`user.css` 覆盖在所有主题之后，优先级最高
-- **主题扩展**：`themes/` 目录放入 `.css` 文件，重启后自动识别
+- **主题扩展**：`themes/` 目录放入 `.css` 文件，并在 `themes/theme.json` 中添加主题参数，重启后自动识别
 
 ### 其他
 
 - **文档模板**：模板存放在用户目录 `~/Documents/yizimarkdown/templates/`，放入 `.md` 文件即可使用（也可在 设置 → 模板 中新建/编辑，新建后菜单即时刷新）；内置模板首次启动自动同步到该目录，升级/重装不会覆盖你的模板
 - **快捷键系统**：可视化快捷键配置面板，支持 30 个 action 的自定义绑定、按键录制、冲突检测和恢复默认
-- **设置面板**：通用、外观、编辑器、实时模式、AI、插件、快捷键、模板、关于等多个标签页，设置即时预览
+- **设置面板**：通用、外观、编辑器、实时模式、AI、云端、插件、快捷键、模板、关于等多个标签页，设置即时预览
 
 ---
 
@@ -163,7 +177,16 @@ YiziMarkdown/
 │   ├── tech.css            # 科技感
 │   ├── minimal.css         # 极简风
 │   ├── magazine.css        # 杂志感
-│   └── nature.css          # 自然风
+│   ├── nature.css          # 自然风
+│   ├── liquidglass.css     # 液态玻璃
+│   ├── lychee.css          # 荔枝红
+│   ├── violet.css          # 紫罗兰
+│   ├── cyberpunk.css       # 赛博朋克
+│   ├── facebook.css        # Facebook
+│   ├── matrix.css          # 黑客帝国
+│   ├── mint.css            # 薄荷冰沙
+│   ├── sunset.css          # 落日熔金
+│   └── typewriter.css      # 复古打字机
 ├── skills/                 # AI 技能（Skill）
 │   ├── skills.json         # 技能清单
 │   ├── slides-outline.md   # 演示稿提炼
@@ -233,7 +256,7 @@ npm run tauri:build -- --target universal-apple-darwin
 
 构建产物：
 - 应用包：`src-tauri/target/universal-apple-darwin/release/bundle/macos/YiziMarkdown.app`
-- 安装包：`src-tauri/target/universal-apple-darwin/release/bundle/dmg/YiziMarkdown_0.2.1_universal.dmg`
+- 安装包：`src-tauri/target/universal-apple-darwin/release/bundle/dmg/YiziMarkdown_0.2.2_universal.dmg`
 
 ### 项目结构
 

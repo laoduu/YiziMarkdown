@@ -40,6 +40,7 @@ import {
   ChevronsRight,
   Download,
   LayoutTemplate,
+  CloudUpload,
 } from 'lucide-react'
 import WindowControls from './WindowControls'
 import { useSettingsStore } from '../stores/settingsStore'
@@ -53,6 +54,8 @@ interface ToolbarProps {
   onOpen: () => void
   onSave: () => void
   onSaveAs: () => void
+  /** 另存到云端（WebDAV） */
+  onSaveToCloud: () => void
   onToggleSidebar: () => void
   onToggleDark: () => void
   onInsertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'link') => void
@@ -85,7 +88,7 @@ const getTauriWindow = (): WindowCtrl => {
 }
 
 export default function Toolbar({ 
-  onNew, onNewFromTemplate, onOpen, onSave, onSaveAs, onToggleSidebar, onToggleDark, onUndo, onRedo,
+  onNew, onNewFromTemplate, onOpen, onSave, onSaveAs, onSaveToCloud, onToggleSidebar, onToggleDark, onUndo, onRedo,
   onInsertMarkdown, onExport, onSearch, onSettings, onPresent, onAIChat,
   isDark,
 }: ToolbarProps) {
@@ -249,6 +252,7 @@ export default function Toolbar({
         <ToolbarButton icon={<FolderOpen size={16} />} tooltip={t('toolbar.open')} onClick={onOpen} accent />
         <ToolbarButton icon={<Save size={16} />} tooltip={t('toolbar.save')} onClick={onSave} accent />
         <ToolbarButton icon={<SaveAll size={16} />} tooltip={t('toolbar.saveAs')} onClick={onSaveAs} accent />
+        <ToolbarButton icon={<CloudUpload size={16} />} tooltip={t('toolbar.saveToCloud')} onClick={onSaveToCloud} accent />
         <div 
           className="relative" 
           ref={exportBtnRef}

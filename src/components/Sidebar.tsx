@@ -4,12 +4,14 @@ import {
   ChevronRight, 
   ChevronDown,
   ChevronUp,
+  Cloud,
   Folder, 
   FolderOpen,
   Hash,
   FileCode,
 } from 'lucide-react'
 import { useI18n } from '../i18n'
+import CloudBrowser from './CloudBrowser'
 
 interface SidebarProps {
   visible: boolean
@@ -20,6 +22,12 @@ interface SidebarProps {
   onFolderChange: (folderPath: string) => void
   onNavigateToLine?: (target: { id: string; line: number }) => void
   activeHeadingId?: string | null
+  /** 当前 tab 是否为云端文档（其 filePath 指向本地缓存镜像） */
+  isRemote?: boolean
+  /** 打开云端文档 */
+  onOpenRemote: (remotePath: string) => void
+  /** 未配置 WebDAV 时跳转到设置 */
+  onRequestSettings: () => void
 }
 
 interface FileNode {
@@ -71,9 +79,9 @@ async function fetchDirectory(folderPath: string): Promise<FileNode[]> {
   return []
 }
 
-export default function Sidebar({ visible, currentFile, currentFolder, content, onFileSelect, onFolderChange, onNavigateToLine, activeHeadingId }: SidebarProps) {
+export default function Sidebar({ visible, currentFile, currentFolder, content, onFileSelect, onFolderChange, onNavigateToLine, activeHeadingId, isRemote = false, onOpenRemote, onRequestSettings }: SidebarProps) {
   const { t } = useI18n()
-  const [activeTab, setActiveTab] = useState<'files' | 'outline'>('outline')
+  const [activeTab, setActiveTab] = useState<'files' | 'outline' | 'cloud'>('outline')
   const [fileTree, setFileTree] = useState<FileNode[]>([])
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
 
@@ -158,20 +166,33 @@ export default function Sidebar({ visible, currentFile, currentFolder, content, 
           icon={<Hash size={14} />}
           label={t('sidebar.outline')}
         />
+        <TabButton
+          active={activeTab === 'cloud'}
+          onClick={() => setActiveTab('cloud')}
+          icon={<Cloud size={14} />}
+          label={t('sidebar.cloud')}
+        />
       </div>
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto min-h-0">
         {activeTab === 'outline' ? (
           <OutlineView items={outlineItems} onNavigate={onNavigateToLine} activeHeadingId={activeHeadingId} />
+        ) : activeTab === 'cloud' ? (
+          <CloudBrowser onOpenRemote={onOpenRemote} onRequestSettings={onRequestSettings} />
         ) : (
           <>
             {/* 目录导航栏 */}
             <FolderPathNav
-              currentFolder={currentFolder}
+              currentFolder={isRemote ? null : currentFolder}
               onGoUp={goUp}
             />
 
-            {fileTree.length === 0 ? (
+            {isRemote ? (
+              <div className="py-8 px-4 text-center text-sm text-[var(--sidebar-text)]">
+                <Cloud size={24} className="mx-auto mb-2 opacity-30" />
+                <p>{t('cloud.remoteDocHint')}</p>
+              </div>
+            ) : fileTree.length === 0 ? (
               <div className="py-8 px-4 text-center text-sm text-[var(--sidebar-text)]">
                 <Folder size={24} className="mx-auto mb-2 opacity-30" />
                 <p>{t('sidebar.showAfterOpen')}</p>

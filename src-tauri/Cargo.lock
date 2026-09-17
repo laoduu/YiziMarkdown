@@ -5952,14 +5952,16 @@ dependencies = [
 
 [[package]]
 name = "yizimarkdown"
-version = "0.2.5"
+version = "0.3.0"
 dependencies = [
  "base64 0.22.1",
  "futures-util",
  "keyring",
  "once_cell",
  "open",
+ "percent-encoding",
  "pulldown-cmark",
+ "quick-xml",
  "reqwest",
  "serde",
  "serde_json",

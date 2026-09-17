@@ -8,6 +8,7 @@ import {
 } from '../lib/slides'
 import { enterFullscreen, exitFullscreen, toggleFullscreen } from '../lib/fullscreen'
 import { resolveLocalImageSrc } from '../lib/localImages'
+import { useEditorStore } from '../stores/editorStore'
 import { useI18n } from '../i18n'
 import '../styles/slideshow.css'
 
@@ -43,6 +44,13 @@ export default function Slideshow({
   onExit,
 }: SlideshowProps) {
   const { t } = useI18n()
+  // 当前文档所在目录：相对路径图片按它解析（云端文档解析到本地镜像）
+  const docBaseDir = useEditorStore((s) => {
+    const tab = s.tabs.find((t) => t.id === s.activeTabId)
+    if (!tab?.filePath) return null
+    const sep = Math.max(tab.filePath.lastIndexOf('\\'), tab.filePath.lastIndexOf('/'))
+    return sep > 0 ? tab.filePath.substring(0, sep) : null
+  })
   const [h, setH] = useState(0)
   const [showHelp, setShowHelp] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
@@ -334,13 +342,13 @@ export default function Slideshow({
     container.querySelectorAll('img').forEach((img) => {
       const src = img.getAttribute('src')
       if (!src || src.startsWith('http') || src.startsWith('data:') || src.startsWith('asset://')) return
-      resolveLocalImageSrc(src).then((path) => {
+      resolveLocalImageSrc(src, docBaseDir).then((path) => {
         if (!path) return
         return tauri.invoke('read_image_base64', { path })
           .then((dataUrl: string) => img.setAttribute('src', dataUrl))
       }).catch(() => {})
     })
-  }, [slides, enabledPlugins, pluginConfigs])
+  }, [slides, enabledPlugins, pluginConfigs, docBaseDir])
 
   return (
     <div className={`yizi-slideshow theme-${theme}${dark ? ' dark' : ''}`}>
