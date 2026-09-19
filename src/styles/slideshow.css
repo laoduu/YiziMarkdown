@@ -321,12 +321,19 @@
 .ys-flip-tile {
   position: absolute;
   perspective: 1100px;
+  /* WebKit 兼容：每格钉在自己的合成层上。WebKit 对 preserve-3d 的层叠排序
+     与 Chromium 不同，相邻格子的 3D 变换可能互相污染（背面透出/前后错层的
+     "变形"观感）。 */
+  transform: translateZ(0);
 }
 
 .ys-flip-card {
   position: absolute;
   inset: 0;
   transform-style: preserve-3d;
+  /* WebKit 兼容：翻转卡片必须是独立合成层，否则 WebKit 在动画中途反复
+     重光栅化 3D 内容 ⇒ 撕裂/变形。 */
+  will-change: transform;
 }
 
 /* ---- 翻面族：棋盘格子 / 百叶窗格 ----
@@ -372,10 +379,16 @@
 
 /* 每格窗口里的整页克隆：定位（left/top = -格子坐标，宽高 = 整页）由
    Slideshow.tsx 内联写入。这里只解除 .ys-slide 基类的 inset:0，
-   避免 left/top 与 right/bottom 过约束。 */
+   避免 left/top 与 right/bottom 过约束。
+   ⚠️ will-change: auto 是 WebKit（macOS WKWebView）兼容修复：.ys-slide 基类
+   带 will-change: transform, opacity，克隆会继承 ⇒ 每格窗口里那份 1920×1080
+   的克隆被提升为独立合成层，70 格 × 2 面 = 140 个超大合成层，WebKit 的
+   tile 缓存被打爆后纹理降采样 ⇒ 内容模糊/错位/变形（Chromium 扛得住，
+   WebKit 不能）。克隆本身不做动画，不需要层提升。 */
 .ys-flip-page {
   right: auto !important;
   bottom: auto !important;
+  will-change: auto;
 }
 
 /* 六角蜂巢的影 = 每格垫一层【六边形裁形】的阴影（.ys-flip-shade，由
