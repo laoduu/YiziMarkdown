@@ -5,6 +5,7 @@
   position: fixed;
   inset: 0;
   z-index: 10000;
+  /* 背景即主题背景色：全程只有主题色，动画不引入任何外来颜色 */
   background: var(--editor-bg, #ffffff);
   color: var(--editor-text, #1f2937);
   font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif);
@@ -53,24 +54,577 @@
   font-size: clamp(18px, 2.1vw, 30px);
   line-height: 1.7;
   text-align: left;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(28px) scale(0.99);
-  transition: opacity 0.45s ease, transform 0.45s ease, visibility 0.45s ease;
+  /* ===== "新页加载"动画模型 =====
+     新页（incoming/active）：z-index 提到最上层，播放入场动画——
+     滑入 / 淡入 / 缩放浮现 / 碎块聚合 / 百叶窗展开 / 立方体旋入。
+     旧页（outgoing）：静止在底层，无主动动画，被入场页逐帧覆盖；
+     强烈型叠加同步微退（scale 0.97）让"新页盖上来"的层次感更强。
+     页面自带主题背景：柔和型新旧页背景同色（内容动、背景融合）；
+     强烈型新页整面（含背景）入场，全程只有主题色。 */
+  opacity: 1;
+  visibility: visible;
+  background: var(--editor-bg, #ffffff);
+  /* will-change 强制 GPU 合成层提升：WebView2 下缺失过渡的经典修复 */
+  will-change: transform, opacity;
+  transition: opacity 0.4s cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
+/* 活动页（新页）：最上层，入场动画的主角 */
 .ys-slide.ys-active {
   opacity: 1;
   visibility: visible;
   transform: none;
+  z-index: 2;
 }
 
-.ys-slide.ys-past {
-  transform: translateY(-28px);
-}
-
+/* 非活动页：默认隐藏。
+   关键：若 past/future 全部可见，DOM 顺序靠后的页面会绘制在更上层——
+   翻页时透过新页 mask 的孔洞（百叶窗/棋盘）看到的会是窗口里
+   DOM 最靠后的页面（如最后一页"谢谢观看"提前闪现），而非旧页。
+   因此只让"刚被覆盖的旧页"短暂可见（ys-leaving，翻页时由
+   Slideshow.tsx 瞬时标记，动画结束后移除）。 */
+.ys-slide.ys-past,
 .ys-slide.ys-future {
-  transform: translateY(28px);
+  z-index: 1;
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* 离场页：翻页瞬间的旧页，保持可见供入场页覆盖。
+   注意：leaving 页同时带 past/future 类，必须用更高特异性
+   （0,3,0）压过上面 (0,2,0) 的隐藏规则，否则旧页被渐隐
+   （立方体旋出时半透明穿帮）。 */
+.ys-slide.ys-leaving {
+  opacity: 1;
+  visibility: visible;
+}
+
+.ys-slide.ys-past.ys-leaving,
+.ys-slide.ys-future.ys-leaving {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 免疫主题过渡工具类：App 根容器带 .theme-transition（globals.css），
+   其 `.theme-transition *` 规则（background/color/border 0.3s）会把
+   .ys-slide 的 transition 覆盖掉（globals.css 在 main.tsx 中晚于
+   App 模块树加载，同特异性下后者胜），导致翻页动画静默失效。
+   此处用 (0,2,0) 特异性夺回过渡定义，与导入顺序无关。 */
+.theme-transition .ys-slide {
+  transition: opacity 0.4s cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.theme-transition .ys-slide [data-fragment] {
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+/* ===== 切换动画变体（HUD 菜单选择，类挂在 .ys-deck 上，仅本次播放生效） =====
+   模型：所有动画都是"新页加载"。入场动画用 keyframes 挂在 ys-active 上
+   （from 态 → 静止态），旧页静止在下层被逐帧覆盖 = "融为一体"。
+   柔和型（slide/fade/zoom/dissolve）：新页内容层入场——新旧页背景同色，
+   背景移动不可见，视觉上只有内容在动，协调不混乱。
+   强烈型（blinds/checkerboard/cube）：新页整面（含背景）入场——
+   百叶窗展开 / 棋盘聚合 / 立方体旋入，旧页同步微退强化层次。
+   铁律：keyframes 只作用于 ys-active；禁止给旧页加主动位移动画。 */
+
+/* ---- slide：新页从翻页方向整面滑入（PowerPoint Push）。
+   方向语义：前进（future→active）从右入，后退（past→active）从左入。
+   keyframes 无法感知方向，由 deck 级方向类切换（Slideshow.tsx 注入
+   ys-dir-fwd / ys-dir-back）。柔和型背景同色 → 视觉上只有内容滑入。 ---- */
+@keyframes ys-slide-fwd {
+  from { transform: translateX(100vw); }
+  to { transform: none; }
+}
+
+@keyframes ys-slide-back {
+  from { transform: translateX(-100vw); }
+  to { transform: none; }
+}
+
+.ys-deck:not([class*="ys-anim-"]) .ys-slide.ys-active {
+  animation: ys-slide-fwd 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.ys-deck:not([class*="ys-anim-"]).ys-dir-back .ys-slide.ys-active {
+  animation-name: ys-slide-back;
+}
+
+/* ---- fade：新页原地淡入。背景同色 → 只有内容在淡现 ---- */
+@keyframes ys-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ys-anim-fade .ys-slide.ys-active {
+  animation: ys-fade-in 0.4s ease;
+}
+
+/* ---- zoom：新页从 1.06 缩放落定（Keynote 缩放入场） ---- */
+@keyframes ys-zoom-in {
+  from { opacity: 0; transform: scale(1.06); }
+  to { opacity: 1; transform: none; }
+}
+
+.ys-anim-zoom .ys-slide.ys-active {
+  animation: ys-zoom-in 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* ---- none：无动画，直接切换 ---- */
+.ys-anim-none .ys-slide.ys-active {
+  animation: none;
+}
+
+/* ===== 强烈型动画变体：新页整面（含主题背景）加载入场 =====
+   mask 动画（Chromium 85+；不支持的引擎 mask 静止 → 降级为 fade）。
+   旧页同步微退（scale 0.97）与新页入场融为一体：一个连续动作里
+   新页盖上来、旧页让位，层次感强且全程只有主题色。 */
+
+/* --ys-reveal：0 = 全遮，1 = 全显。注册为 <number> 才能参与 transition/animation */
+@property --ys-reveal {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 1;
+}
+
+/* 强烈型公共：旧页微退（与新页入场同步，同曲线同时长 → 融为一体）。
+   用 keyframes 一次性播放（from 1 → to 0.97），只作用于 ys-leaving
+   （翻页瞬间的旧页）：翻页前所有非活动页隐藏，leaving 标记让它短暂
+   可见并播放微退，动画结束移除标记回到隐藏态。
+   注：棋盘（瓷砖翻转）不在此列——旧页被不透明新页完全覆盖，微退不可见；
+   格子层里的正面是旧页 DOM 的独立克隆，也不受旧页自身 transform 影响。 */
+@keyframes ys-retreat {
+  from { transform: scale(1); }
+  to { transform: scale(0.97); }
+}
+
+.ys-anim-blinds .ys-slide.ys-leaving {
+  animation: ys-retreat 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+.theme-transition .ys-anim-blinds .ys-slide.ys-leaving {
+  animation: ys-retreat 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+/* ---- 溶解（水）：像水渍从多点渗开、互相吞并，有机边缘逐渐吞没整页 ----
+   用户要求"水溶解"而非像素溶解 ⇒ 不用方格网格，改用 12 个软边水渍同时
+   膨胀成 mask，边界是有机弧线；新页同时从模糊里清晰起来（隔着水看的感觉）。
+   ⚠️ 圆形的 size 不能用百分比，用 `circle farthest-side` 取 max(w,h)/2
+   ⇒ 各层基准半径与位置无关、彼此同尺寸（否则近角的渍大、中心的渍小）。
+   ⚠️ 软边那一档的半径必须也乘 --ys-blob：否则 blob=0 时留下 12 个半透明
+   小渍，首帧就不再与旧页重合（破坏无缝起手）。
+   ⚠️ 绝不能在 keyframes 里切 mask-image 来"保证铺满"：mask-image 是【离散
+   属性】，离散切换点按【缓动后】的进度取中值——ease-out 曲线下 99% 偏移会被
+   提前到约 150ms 触发，水渍只存在一瞬就退化成单个大圆。这里改为让 12 个水渍
+   在 blob=1 时数学上就铺满（核心半径 0.38×960=365px > 抖动网格半对角 316px），
+   于是无需任何切换。 */
+@property --ys-blob {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
+@keyframes ys-dissolve-water {
+  from {
+    --ys-blob: 0;
+    opacity: 0.25;
+  }
+  55% {
+    opacity: 1;
+  }
+  to {
+    --ys-blob: 1;
+    opacity: 1;
+  }
+}
+
+/* 模糊单独一条动画、且【不设 fill】：播完自动回落到基值 none，不留 blur(0px)
+   （残留的 filter 会挂一个合成层，还会让文字失去次像素抗锯齿）。
+   ⚠️ 同一属性由 animation 列表里【靠后】的动画胜出 ⇒ 它必须放在 water 之后。
+   ⚠️ 别指望"补一条 from 显式、to 为 none 的收尾动画"：只写 to 时 from 取底层值
+   （底层本来就是 none）⇒ 该动画退化成空操作，压不住前一条 forwards 的填充值。 */
+@keyframes ys-dissolve-blur {
+  from { filter: blur(12px); }
+  to { filter: blur(0px); }
+}
+
+.ys-anim-dissolve .ys-slide.ys-active {
+  -webkit-mask-image: radial-gradient(circle farthest-side at 12% 14%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 38% 20%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 64% 12%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 88% 18%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 18% 48%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 44% 54%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 70% 46%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 94% 52%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 10% 84%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 36% 88%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 62% 80%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 90% 86%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%));
+  mask-image: radial-gradient(circle farthest-side at 12% 14%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 38% 20%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 64% 12%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 88% 18%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 18% 48%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 44% 54%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 70% 46%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 94% 52%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 10% 84%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 36% 88%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 62% 80%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%)),
+    radial-gradient(circle farthest-side at 90% 86%, #000 0 calc(var(--ys-blob) * 38%), transparent calc(var(--ys-blob) * 50%));
+  animation: ys-dissolve-water 0.85s cubic-bezier(0.22, 0.61, 0.36, 1) forwards,
+    ys-dissolve-blur 0.85s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* ---- 百叶窗：已并入下方「瓷砖转场」（竖条形态）。
+   旧实现是整页 mask 竖叶展开——页面背景与容器同色 ⇒ mask 孔洞露出同色背景，
+   背景完全隐形、只有内容在动（用户报告"效果不好"）。现在竖条各自带内容翻面
+   并带投影。 ---- */
+
+/* ===== 瓷砖转场（棋盘 / 波浪 / 立方体 / 六边形 / 三角 / 爆裂 / 景深 / 百叶窗）=====
+   共同机制：整页（背景 + 内容）被切成 N 个单元，每格 = 一个窗口（矩形或
+   clip-path 形状）+ 一份【整页克隆】负偏移对齐 ⇒ 每格都能独立做 2D/3D 变换、
+   独立时序。
+
+   ⚠️ 为什么必须每格持有一份页面克隆：CSS 无法对【单个元素】做分区变换，
+   mask/clip-path 只能"显露或隐藏"，不能让每一格带着内容独立翻转。所以每格
+   是"overflow:hidden 的窗口 + 负偏移的全页克隆"。
+   ⚠️ 克隆取【活 DOM】(cloneNode) 而非 HTML 字符串：活 DOM 已含 postRender
+   产物（mermaid SVG、katex）与已转好的图片 data URL；HTML 字符串两者都缺。
+   ⚠️ 克隆的类名要滤掉状态类（ys-active/ys-past/ys-future/ys-leaving），
+   否则会命中状态规则（隐藏/位移/mask），窗口里就空了。
+   成本实测可忽略：最重页 40 份克隆 = 插入 0.6ms / 含布局 10ms。
+
+   切割形状 / 延迟节奏 / 单格时长由 src/lib/slideTiles.ts 的 TILE_VARIANTS
+   配置驱动，经 CSS 变量下发（--ys-delay / --ys-turn / --ys-merge / 冲量）。 */
+.ys-flip-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  /* 影用主题文字色派生：亮色下是深色投影，暗色下自动变成浅色辉光
+     （纯黑投影在近黑背景上读不出来，与卡片推换同源的处理）。 */
+  --ys-flip-shadow: color-mix(in srgb, var(--editor-text, #1f2937) 30%, transparent);
+  --ys-turn: 0.5s;
+  --ys-merge: 0.25s;
+  --ys-merge-delay: 0.95s;
+  /* 收尾融合：整层淡出。克隆内容与真页逐像素相同 ⇒ 只有格子的影在消失。 */
+  animation: ys-flip-merge var(--ys-merge) ease-in var(--ys-merge-delay) forwards;
+}
+
+@keyframes ys-flip-merge {
+  to { opacity: 0; }
+}
+
+.ys-flip-tile {
+  position: absolute;
+  perspective: 1100px;
+}
+
+.ys-flip-card {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+/* ---- 翻面族：棋盘格子 / 百叶窗格 ----
+   都是"每格绕自身 Y 轴翻 180°"，差别只在【切割形状】与【延迟节奏】
+   （由 slideTiles.ts 配置决定）。起手无影（首帧与旧页逐像素重合 ⇒ 无缝），
+   翻起来后影出现并保持，最后由整层的 ys-flip-merge 统一抹掉 = "融合、消失"。
+   （六角蜂巢同样翻面，但影是六边形专属的 .ys-flip-shade，见下。） */
+.ys-anim-checkerboard .ys-flip-card,
+.ys-anim-blinds .ys-flip-card {
+  animation: ys-flip-turn var(--ys-turn) cubic-bezier(0.35, 0, 0.25, 1) forwards;
+  animation-delay: var(--ys-delay, 0s);
+}
+
+/* 起手无影（首帧与旧页完全重合 ⇒ 无缝），翻起来后影出现并保持，
+   最后由整层的 ys-flip-merge 统一抹掉 = "融合、消失"。 */
+@keyframes ys-flip-turn {
+  0% {
+    transform: rotateY(0deg) scale(1);
+    box-shadow: 0 0 0 var(--ys-flip-shadow);
+  }
+  30% {
+    transform: rotateY(54deg) scale(0.955);
+    box-shadow: 0 10px 22px var(--ys-flip-shadow);
+  }
+  100% {
+    transform: rotateY(180deg) scale(1);
+    box-shadow: 0 10px 22px var(--ys-flip-shadow);
+  }
+}
+
+.ys-flip-face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--editor-bg, #ffffff);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.ys-flip-face.back {
+  transform: rotateY(180deg);
+}
+
+/* 每格窗口里的整页克隆：定位（left/top = -格子坐标，宽高 = 整页）由
+   Slideshow.tsx 内联写入。这里只解除 .ys-slide 基类的 inset:0，
+   避免 left/top 与 right/bottom 过约束。 */
+.ys-flip-page {
+  right: auto !important;
+  bottom: auto !important;
+}
+
+/* 六角蜂巢的影 = 每格垫一层【六边形裁形】的阴影（.ys-flip-shade，由
+   Slideshow.tsx 在带 clip 的格子下插入，位置在卡片之前 ⇒ 在卡片下层）。
+   ⚠️ 为什么不能用卡片级 box-shadow：box-shadow 只会画【矩形】边界，矩形影
+   会在每个六边形外勾出方角 —— 整片看起来就是一格格方块（用户报"怎么是方块"）。
+   ⚠️ 为什么不用逐格 drop-shadow：70 个格子各挂一个 filter = 每帧 70 次高斯
+   模糊，实测帧率从 60 掉到 34fps。clip-path + 半透明主题色零滤镜开销。
+   影随各自延迟淡入（起手无影 ⇒ 首帧仍与旧页逐像素重合）。 */
+@keyframes ys-hex-shade {
+  0%,
+  18% { opacity: 0; }
+  40%,
+  100% { opacity: 0.7; }
+}
+
+.ys-anim-hex .ys-flip-shade {
+  position: absolute;
+  inset: 0;
+  /* ⚠️ 基值必须是 0：animation-delay 未到时动画还没开始，元素取【基值】——
+     不设的话延迟未到的格子第一帧就带着影，起手就不再与旧页逐像素重合。 */
+  opacity: 0;
+  transform: translateY(7px);
+  background: var(--ys-flip-shadow);
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  animation: ys-hex-shade var(--ys-turn) cubic-bezier(0.35, 0, 0.25, 1) forwards;
+  animation-delay: var(--ys-delay, 0s);
+}
+
+/* 六角蜂巢的卡片：同样的翻面，但【不画 box-shadow】（影交给上面的阴影层） */
+@keyframes ys-flip-turn-noshadow {
+  0% { transform: rotateY(0deg) scale(1); }
+  30% { transform: rotateY(54deg) scale(0.955); }
+  100% { transform: rotateY(180deg) scale(1); }
+}
+
+.ys-anim-hex .ys-flip-card {
+  animation: ys-flip-turn-noshadow var(--ys-turn) cubic-bezier(0.35, 0, 0.25, 1) forwards;
+  animation-delay: var(--ys-delay, 0s);
+}
+
+/* 百叶窗格：竖条窄而高，透视略强 ⇒ 像百叶叶片整体翻转 */
+.ys-anim-blinds .ys-flip-tile {
+  perspective: 900px;
+}
+
+/* ---- 立方体：每格绕自身 Y 轴翻 180°，三个面各沿自身法线平移半格宽 ⇒
+   中途露出「侧面」，是立方体的棱在转，而不是一张纸片在翻。
+   几何要点 1：正面 normal=+Z（φ<90° 可见）、背面 normal=-Z（φ>90° 可见），
+   中间那个面必须放在 rotateY(-90°)（normal=-X）——因为 CSS 正向 rotateY 是
+   把物体【左侧面】转到眼前；放成 +90° 的话它的法线在 φ=90° 时指向屏幕内，
+   backface 隐藏 ⇒ 中段会空掉。
+   几何要点 2：卡片必须整体 translateZ(-半格宽)，让【正面恰好落在 z=0】。
+   否则正面在 z=+半格宽处被透视放大（1500/(1500-96)≈1.068）⇒ 起手帧整页
+   放大 6.8%，与旧页对不上（实测起手帧差异 4.17%）。立方体改为向后延伸。 */
+.ys-anim-cube3d .ys-flip-tile {
+  perspective: 1500px;
+}
+
+.ys-anim-cube3d .ys-flip-card {
+  /* ⚠️ 基值必须等于关键帧的 0%：动画带延迟，延迟相位取【基值】——不写的话
+     延迟未到的格子里卡片还在 z=0，而正面是静态的 translateZ(+半格宽)，
+     净 z=+半格宽 ⇒ 被透视放大 1.068 倍（实测起手帧差异 4.09%）。 */
+  transform: translateZ(calc(var(--ys-half, 0px) * -1));
+  animation: ys-cube3d-turn var(--ys-turn) cubic-bezier(0.42, 0, 0.28, 1) forwards;
+  animation-delay: var(--ys-delay, 0s);
+}
+
+@keyframes ys-cube3d-turn {
+  from { transform: translateZ(calc(var(--ys-half, 0px) * -1)) rotateY(0deg); }
+  to { transform: translateZ(calc(var(--ys-half, 0px) * -1)) rotateY(180deg); }
+}
+
+.ys-anim-cube3d .ys-flip-face.front {
+  transform: translateZ(var(--ys-half, 0px));
+}
+
+.ys-anim-cube3d .ys-flip-face.back {
+  transform: rotateY(180deg) translateZ(var(--ys-half, 0px));
+}
+
+/* 侧面 = 立方体的棱面：只做厚度、不装页面内容。用主题色与文字色混合派生
+   （亮色下压暗、暗色下提亮），不引入外来色。
+   ⚠️ 必须显式淡入（基值 opacity:0）：侧面在 φ=0 时是 90° 侧立，理论上不可见，
+   但抗锯齿会沿格边画出 1px 细线 ⇒ 起手帧多出一层细网格（实测差异比基线高 2.75%）。 */
+@keyframes ys-cube3d-side {
+  0%,
+  20% { opacity: 0; }
+  40%,
+  100% { opacity: 1; }
+}
+
+.ys-anim-cube3d .ys-flip-side {
+  transform: rotateY(-90deg) translateZ(var(--ys-half, 0px));
+  background: color-mix(in srgb, var(--editor-bg, #ffffff) 82%, var(--editor-text, #1f2937));
+  opacity: 0;
+  animation: ys-cube3d-side var(--ys-turn) linear forwards;
+  animation-delay: var(--ys-delay, 0s);
+}
+
+/* ---- 爆裂聚合：每格带着旧页碎片随机方向飞散（位移 + 三轴旋转 + 缩小 + 淡出），
+   同时新页碎片从【相反方向】飞入归位 ⇒ 一散一聚。 */
+.ys-anim-shatter .ys-flip-tile {
+  perspective: 1000px;
+}
+
+/* 爆裂不是翻面：背面不做 180° 预旋转，两面各自独立"飞出/飞入"；
+   backface 放开可见，碎片在空中翻过侧面也不消失。
+   ⚠️ 基值必须是「无影 + 背面透明」：两面的动画都带延迟，延迟未到时取基值——
+   静态影会让第一帧就带方角影，背面 opacity=1 会盖住正面（旧页）露出新页。
+   影由关键帧在飞行中带出（见 ys-shatter-out / ys-shatter-in）。 */
+.ys-anim-shatter .ys-flip-face {
+  box-shadow: none;
+  -webkit-backface-visibility: visible;
+  backface-visibility: visible;
+}
+
+.ys-anim-shatter .ys-flip-face.back {
+  transform: none;
+  opacity: 0;
+}
+
+.ys-anim-shatter .ys-flip-face.front {
+  animation: ys-shatter-out var(--ys-turn) cubic-bezier(0.45, 0, 0.75, 1) forwards;
+  animation-delay: var(--ys-delay, 0s);
+}
+
+.ys-anim-shatter .ys-flip-face.back {
+  animation: ys-shatter-in var(--ys-turn) cubic-bezier(0.2, 0.75, 0.3, 1) forwards;
+  animation-delay: var(--ys-delay, 0s);
+}
+
+@keyframes ys-shatter-out {
+  0% { transform: none; opacity: 1; box-shadow: 0 0 0 transparent; }
+  25% { box-shadow: 0 10px 24px var(--ys-flip-shadow); }
+  100% {
+    transform: translate3d(var(--ys-tx, 0), var(--ys-ty, 0), 0) rotateX(var(--ys-rx, 0deg))
+      rotateY(var(--ys-ry, 0deg)) rotateZ(var(--ys-rz, 0deg)) scale(var(--ys-s, 0.6));
+    opacity: 0;
+    box-shadow: 0 10px 24px var(--ys-flip-shadow);
+  }
+}
+
+@keyframes ys-shatter-in {
+  0% {
+    transform: translate3d(calc(var(--ys-tx, 0px) * -1), calc(var(--ys-ty, 0px) * -1), 0)
+      rotateX(calc(var(--ys-rx, 0deg) * -1)) rotateY(calc(var(--ys-ry, 0deg) * -1))
+      rotateZ(calc(var(--ys-rz, 0deg) * -1)) scale(var(--ys-s, 0.6));
+    opacity: 0;
+    box-shadow: 0 10px 24px var(--ys-flip-shadow);
+  }
+  75% { box-shadow: 0 10px 24px var(--ys-flip-shadow); }
+  100% { transform: none; opacity: 1; box-shadow: 0 0 0 transparent; }
+}
+
+/* ---- 景深视差：每格有自己的 z 深度，翻面过程中整体前后穿梭 ⇒
+   近处格子位移大、远处小，形成纵深视差（收尾回到 z=0 保证与真页对齐）。 */
+.ys-anim-depth .ys-flip-tile {
+  perspective: 900px;
+}
+
+.ys-anim-depth .ys-flip-card {
+  animation: ys-depth-turn var(--ys-turn) cubic-bezier(0.4, 0, 0.3, 1) forwards;
+  animation-delay: var(--ys-delay, 0s);
+}
+
+@keyframes ys-depth-turn {
+  /* 0% 必须是 translateZ(0)：基值也是 0（无 transform），两者一致才不会在
+     延迟结束、动画启动的瞬间把格子从 z=0 跳到 z=-var(--ys-z)（可见跳变）。
+     每格随机正负 z ⇒ 有的前冲有的后退，形成视差；100% 回 0 保证与真页对齐。 */
+  0% { transform: translateZ(0px) rotateY(0deg); }
+  60% { transform: translateZ(var(--ys-z, 0px)) rotateY(112deg); }
+  100% { transform: translateZ(0px) rotateY(180deg); }
+}
+
+/* ---- 卡片推换：三阶段"缩小 → 平移换位 → 放大" ----
+   用户定义的模型（大众翻页直觉，方向不可反）：
+   前进：当前页缩小成卡片向左移出；新页以卡片形态从右缘同步进入；
+         新页到达中间后放大回全屏落定。
+   后退：完全镜像——旧页向右移出，新页从左缘进入。
+   深度模型：卡片（页面）全程保持主题背景色；deck 也用主题背景色（不加
+   特殊舞台色）；卡片的区分来自投影 + 圆角（卡片形态时出现，落定还原）。
+   纯 2D 变换，节奏 0.9s：缩(0-28%) → 移(28-72%) → 放(72-100%)。
+   注意：deck 绝不能在此变体里改 position——`.ys-deck` 的
+   `position:absolute; inset:0` 是页面几何的唯一来源，改成 relative 会让
+   deck 高度塌成 0、子页 inset:0 全部塌陷（内容被顶到顶部溢出）。 */
+
+/* 旧页（前进）：缩小成卡片 → 向左移出淡出。
+   卡片全程保持主题背景（keyframes 不声明 background，基类值贯穿）；
+   圆角与投影仅在卡片形态（28%-100%）出现，落定还原直角无影。 */
+@keyframes ys-cube-out-fwd {
+  0% { transform: scale(1); opacity: 1; border-radius: 0; box-shadow: none; }
+  28% { transform: scale(0.8); opacity: 1; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+  72% { transform: scale(0.8) translateX(-45vw); opacity: 0.9; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+  100% { transform: scale(0.8) translateX(-60vw); opacity: 0; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+}
+
+/* 旧页（后退）：镜像——向右移出 */
+@keyframes ys-cube-out-back {
+  0% { transform: scale(1); opacity: 1; border-radius: 0; box-shadow: none; }
+  28% { transform: scale(0.8); opacity: 1; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+  72% { transform: scale(0.8) translateX(45vw); opacity: 0.9; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+  100% { transform: scale(0.8) translateX(60vw); opacity: 0; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+}
+
+/* 新页（前进）：卡片从右缘进入 → 移到中间 → 放大落定 */
+@keyframes ys-cube-in-fwd {
+  0% { transform: translateX(100vw) scale(0.8); opacity: 0; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+  28% { transform: translateX(55vw) scale(0.8); opacity: 1; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+  72% { transform: translateX(0) scale(0.8); opacity: 1; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+  100% { transform: none; opacity: 1; border-radius: 0; box-shadow: none; }
+}
+
+/* 新页（后退）：镜像——从左缘进入 */
+@keyframes ys-cube-in-back {
+  0% { transform: translateX(-100vw) scale(0.8); opacity: 0; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+  28% { transform: translateX(-55vw) scale(0.8); opacity: 1; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+  72% { transform: translateX(0) scale(0.8); opacity: 1; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+  100% { transform: none; opacity: 1; border-radius: 0; box-shadow: none; }
+}
+
+.ys-anim-cube .ys-slide.ys-active {
+  animation: ys-cube-in-fwd 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ys-anim-cube .ys-slide.ys-leaving {
+  animation: ys-cube-out-fwd 0.9s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* 免疫 theme-transition 简写覆盖：App 根容器的 .theme-transition 是 deck 的
+   祖先，.theme-transition .ys-anim-cube ...（0,4,0）完整简写若声明在
+   dir-back 覆盖（0,4,0）之后，会把动画名重置回 fwd（后退方向失效的根因）。
+   因此 dir-back 覆盖必须用 (0,5,0) 祖先形式并置于所有简写之后。 */
+.theme-transition .ys-anim-cube .ys-slide.ys-active {
+  animation: ys-cube-in-fwd 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.theme-transition .ys-anim-cube .ys-slide.ys-leaving {
+  animation: ys-cube-out-fwd 0.9s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.ys-anim-cube.ys-dir-back .ys-slide.ys-active,
+.theme-transition .ys-anim-cube.ys-dir-back .ys-slide.ys-active {
+  animation-name: ys-cube-in-back;
+}
+
+.ys-anim-cube.ys-dir-back .ys-slide.ys-leaving,
+.theme-transition .ys-anim-cube.ys-dir-back .ys-slide.ys-leaving {
+  animation-name: ys-cube-out-back;
 }
 
 /* 正文块宽度：块在页面中居中；文字默认左对齐，列表/引用/表格内保持左对齐 */
@@ -151,8 +705,12 @@
   margin: 0.55em 0;
 }
 
-/* 无序列表：主题强调色圆点 */
-.ys-slide ul li::before {
+/* 无序列表：主题强调色圆点。
+   必须用 > 限定直接子级：多级混合列表中（如 ol > li > ul > li），
+   嵌套层 li 会同时命中 ul/ol 两条 ::before 规则，属性合并后
+   圆点的 background/border-radius 与数字的 content 叠加，
+   渲染成一块实心椭圆（数字与背景同色不可见）。 */
+.ys-slide ul > li::before {
   content: '';
   position: absolute;
   left: 0;
@@ -163,17 +721,20 @@
   background: var(--editor-accent, #4f46e5);
 }
 
-/* 有序列表：主题强调色数字，位置与圆点对齐 */
-.ys-slide ol li {
+/* 有序列表：主题强调色数字，位置与圆点对齐。
+   counter-increment 同样限定直接子级：否则嵌套在 ol 内的无序 li
+   也参与计数，后续同级序号会被多计（如 2. 显示成 4.）。
+   min-width 替代 width：两位数序号（10. 及以上）不换行。 */
+.ys-slide ol > li {
   counter-increment: slide-ol;
 }
 
-.ys-slide ol li::before {
+.ys-slide ol > li::before {
   content: counter(slide-ol) ".";
   position: absolute;
   left: 0;
   top: 0;
-  width: 1.2em;
+  min-width: 1.2em;
   color: var(--editor-accent, #4f46e5);
   font-weight: 600;
 }
@@ -181,6 +742,28 @@
 .ys-slide li > ul,
 .ys-slide li > ol {
   margin: 0.25em 0;
+}
+
+/* ===== 片段逐步显示 =====
+   片段 = 内容/列表/路线图版式页的顶层列表项（Slideshow.tsx 打 data-fragment）。
+   默认隐藏，加 .ys-fragment-visible 点亮；嵌套子列表随父项整体出现。 */
+.ys-slide [data-fragment] {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.ys-slide [data-fragment].ys-fragment-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* 用户偏好减弱动效时，片段直接显示/隐藏，不做位移过渡 */
+@media (prefers-reduced-motion: reduce) {
+  .ys-slide [data-fragment] {
+    transform: none;
+    transition: opacity 0.2s ease;
+  }
 }
 
 .ys-slide input[type="checkbox"] {
@@ -405,7 +988,7 @@
   counter-reset: ys-agenda;
 }
 
-.ys-layout-agenda li {
+.ys-layout-agenda ol > li {
   counter-increment: ys-agenda;
   position: relative;
   padding-left: 2.6em;
@@ -415,7 +998,7 @@
   margin: 0;
 }
 
-.ys-layout-agenda li::before {
+.ys-layout-agenda ol > li::before {
   content: counter(ys-agenda);
   position: absolute;
   left: 0;
@@ -863,6 +1446,15 @@
 
 .ys-icon-btn:hover {
   background: var(--editor-hover, rgba(128, 128, 128, 0.25));
+}
+
+/* 演示模式 HUD 按钮为鼠标交互控件（键盘操作由全局快捷键承担），
+   点击后残留的 focus 轮廓会在方向键翻页时触发按钮激活，直接禁用 */
+.ys-icon-btn:focus,
+.ys-icon-btn:focus-visible,
+.ys-hud-btn:focus,
+.ys-hud-btn:focus-visible {
+  outline: none;
 }
 
 /* 透明点击遮罩（不调暗画面），用于关闭浮层 */

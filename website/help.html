@@ -34,6 +34,17 @@
         ]
     }
     </script>
+
+    <!-- 百度统计 -->
+    <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?782f6fcd479a342d5d05f5bc47c61349";
+      var s = document.getElementsByTagName("script")[0]; 
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
 </head>
 <body>
 
@@ -379,7 +390,7 @@
         </section>
 
         <!-- ========== 5. 演示模式 ========== -->
-        <section class="help-section" id="slideshow" data-kw="演示 幻灯片 PPT 全屏 分页 版式 layout align 备注 演讲者 滚轮 模板">
+        <section class="help-section" id="slideshow" data-kw="演示 幻灯片 PPT 全屏 分页 版式 layout align 备注 演讲者 滚轮 模板 切换动画 过渡 棋盘格子 百变立方 六角蜂巢 爆裂卡片 纵深穿梭 卡片推换 百叶窗格 高斯溶解 片段 逐步 分步">
             <h2><a class="anchor" href="#slideshow">#</a>演示模式（类 PPT）</h2>
             <p class="help-lead">笔记一键变全屏幻灯片。<strong>不需要任何额外格式</strong>——按平时写 Markdown 的习惯写，版式自动推断，配色继承当前主题。</p>
 
@@ -406,6 +417,19 @@
                     <li>代码围栏内部的 <code>---</code> 属于代码内容，<strong>不会</strong>分页</li>
                     <li>文档顶部的 front matter（首个 <code>--- ... ---</code> 块）自动忽略，不会成为一页</li>
                 </ul>
+            </div>
+
+            <div class="help-sub" id="slideshow-fragments">
+                <h3>片段逐步显示（默认关闭）</h3>
+                <p>把一页内容拆成多步展示：<kbd>→</kbd> 先逐条显示、走完再翻页；<kbd>←</kbd> 先逐条退回、退完再翻页。</p>
+                <ul>
+                    <li><strong>生效版式</strong>：内容页 / 列表页 / 路线图页（目录页不分段）</li>
+                    <li><strong>整副开启</strong>：front matter 写 <code>slideshow-fragments: on</code></li>
+                    <li><strong>单页开启</strong>：页面里写 <code>&lt;!-- fragments: on --&gt;</code>（<code>off</code> 可单页关闭）</li>
+                    <li><strong>临时开启</strong>：播放中点 HUD 的列表图标按钮，仅本次播放生效</li>
+                    <li>优先级：页级注释 &gt; HUD 开关 &gt; front matter</li>
+                </ul>
+                <p>默认关闭——多数场景整页显示更省心，需要控制节奏时再开。</p>
             </div>
 
             <div class="help-sub" id="slideshow-layout">
@@ -438,6 +462,31 @@
                 <figure class="help-figure">
                     <img src="assets/slide-content.webp" alt="演示模式内容页（标题 + 列表版式）" loading="lazy">
                 </figure>
+            </div>
+
+            <div class="help-sub" id="slideshow-anim">
+                <h3>12 种切换动画</h3>
+                <p>播放中点 HUD 底部的 ✨ 图标选择，<strong>仅本次播放生效</strong>（不改文档）。</p>
+                <div class="help-table-wrap">
+                    <table>
+                        <thead><tr><th>动画</th><th>效果</th></tr></thead>
+                        <tbody>
+                            <tr><td>水平滑动</td><td>新页从右滑入 + 淡入（默认）</td></tr>
+                            <tr><td>淡入淡出</td><td>纯透明度溶解</td></tr>
+                            <tr><td>轻微缩放</td><td>轻微缩放进出</td></tr>
+                            <tr><td>高斯溶解</td><td>水渍从多点渗开、互相吞并，有机边缘吞没整页</td></tr>
+                            <tr><td>百叶窗格</td><td>整页切成竖条，每条绕自身中轴翻面露出下一页</td></tr>
+                            <tr><td>棋盘格子</td><td>整页拆成方格，随机次序 3D 翻面露出下一页，随后融合回落</td></tr>
+                            <tr><td>百变立方</td><td>每格绕自身竖轴转 180°，中途露出侧面，像一个个小立方体在转</td></tr>
+                            <tr><td>六角蜂巢</td><td>整页切成蜂巢状六边形，各自随机次序翻面</td></tr>
+                            <tr><td>爆裂卡片</td><td>旧页碎片随机方向飞散，新页碎片从反方向飞入归位</td></tr>
+                            <tr><td>纵深穿梭</td><td>每格带不同纵深，翻面时前后穿梭产生视差</td></tr>
+                            <tr><td>卡片推换</td><td>当前页缩小成卡片向左移出，新页卡片从右进入后放大落定</td></tr>
+                            <tr><td>无动画</td><td>直接切换</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p>切换动画是「新页加载」模型：新页在上层入场、旧页静止在下层被覆盖。强烈型会把整页（含背景）切成单元，每个单元自带前后两页的内容各自独立变换——所以背景也一起动，不是只有文字在变。</p>
             </div>
 
             <div class="help-sub" id="slideshow-directive">

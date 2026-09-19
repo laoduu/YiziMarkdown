@@ -1,11 +1,11 @@
 {
-  "version": 2,
+  "version": 4,
   "skills": [
     {
       "id": "slides-outline",
       "name": "演示稿提炼",
       "summary": "把当前文档提炼为简洁的演示模式 Markdown",
-      "description": "将当前文档提炼为适合演示模式（幻灯片）的精简 Markdown：用 `---` 分页，每页一个要点，语言简练、句式短小，保留核心结论与数据，去掉冗余叙述。需要引用当前文档。",
+      "description": "将当前文档提炼为适合演示模式（幻灯片）的精简 Markdown：用 `---` 分页，每页一个要点，语言简练、句式短小，保留核心结论与数据，去掉冗余叙述。片段逐步显示默认关闭，用户要求分段演示时才开启。需要引用当前文档。",
       "file": "slides-outline.md",
       "needsDoc": true
     },

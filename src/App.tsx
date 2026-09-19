@@ -252,7 +252,7 @@ function App() {
         case 'blockquote': editorRef.current?.insertMarkdown('> ', 'prefix'); break
         case 'link': editorRef.current?.insertMarkdown('[', 'link'); break
         case 'image': editorRef.current?.insertMarkdown('![', 'link'); break
-        case 'codeBlock': editorRef.current?.insertMarkdown('```\n\n```\n'); break
+        case 'codeBlock': editorRef.current?.insertCodeBlock(); break
         case 'table': editorRef.current?.insertMarkdown('| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n|  |  |  |\n'); break
         case 'horizontalRule': editorRef.current?.insertMarkdown('\n---\n', 'prefix'); break
         // 视图循环切换：源代码 → 并排 → 实时 → 预览 → 源代码

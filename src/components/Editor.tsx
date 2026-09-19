@@ -869,16 +869,25 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       const view = viewRef.current
       if (!view) return
       const { from, to } = view.state.selection.main
-      const insertText = '\n```\n\n```\n'
-      // 光标定位到两个 ``` 之间（第3个字符位置）
-      const cursorOffset = 4
-      const newFrom = from + cursorOffset
-      const newTo = from + cursorOffset
-
-      view.dispatch({
-        changes: { from, to, insert: insertText },
-        selection: { anchor: newFrom, head: newTo },
-      })
+      // 有选中内容：用代码块包裹（而不是替换掉）。
+      // ⚠️ 插入串首尾各带一个 \n，会把选中文字前后的换行"顶"出来 ⇒ 多出空行。
+      // 所以包裹时用不带首尾换行的 ``` 围栏，前后换行交给原文档里已有的。
+      if (to > from) {
+        const txt = view.state.sliceDoc(from, to)
+        const insert = `\`\`\`\n${txt}\n\`\`\``
+        view.dispatch({
+          changes: { from, to, insert },
+          selection: { anchor: from + 4, head: from + 4 + txt.length },
+        })
+      } else {
+        const insertText = '\n```\n\n```\n'
+        // 光标定位到两个 ``` 之间（第3个字符位置）
+        const cursorOffset = 4
+        view.dispatch({
+          changes: { from, to, insert: insertText },
+          selection: { anchor: from + cursorOffset, head: from + cursorOffset },
+        })
+      }
       view.focus()
     },
     toggleSearch: () => {
@@ -1337,7 +1346,17 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       }
       case 'link': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '[]()' }, selection: { anchor: newFrom + 1, head: newFrom + 1 } }); break
       case 'image': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '![]()' }, selection: { anchor: newFrom + 2, head: newFrom + 2 } }); break
-      case 'codeBlock': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '\n```\n\n```\n' }, selection: { anchor: newFrom + 4, head: newFrom + 4 } }); break
+      case 'codeBlock': {
+        // 有选中内容：用代码块包裹（而不是替换掉）；无选中：插入空代码块。
+        // ⚠️ 包裹时插入串不带首尾换行（会把原文档的换行顶出来 ⇒ 多出空行）。
+        if (newTo > newFrom) {
+          const txt = selectedText
+          view.dispatch({ changes: { from: newFrom, to: newTo, insert: `\`\`\`\n${txt}\n\`\`\`` }, selection: { anchor: newFrom + 4, head: newFrom + 4 + txt.length } })
+        } else {
+          view.dispatch({ changes: { from: newFrom, to: newTo, insert: '\n```\n\n```\n' }, selection: { anchor: newFrom + 4, head: newFrom + 4 } })
+        }
+        break
+      }
       case 'horizontalRule': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '\n---\n' }, selection: { anchor: newFrom + 5, head: newFrom + 5 } }); break
     }
 

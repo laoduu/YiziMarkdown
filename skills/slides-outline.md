@@ -18,10 +18,13 @@ YiziMarkdown 演示模式的渲染规则如下，请严格按此输出，让每�
 title: 演示标题
 author: 作者名
 date: 2026-09-01
+slideshow-fragments: off
 ---
 ```
 
 支持 `title` / `author` / `date` 三个键（单行 `key: value`）。封面页底部会自动显示「作者 · 日期」。
+
+`slideshow-fragments: on` 可整副开启片段逐步显示（见第四节）。**默认关闭**（列表整页显示）；仅当用户明确要求"逐条出现/分段演示"时才加。
 
 ## 三、14 种版式（引擎根据整页结构自动推断，无需标注）
 
@@ -151,16 +154,28 @@ $$
 ```
 `$$...$$` 块由 KaTeX 渲染 LaTeX 公式。适合核心公式单独成页。
 
-## 四、显式指令（HTML 注释，渲染时不可见，可选）
+## 四、片段逐步显示（默认关闭，按需开启）
 
-- `<!-- layout: quote -->`：强制该页使用指定版式（当自动推断不符合意图时），可选值：cover / section / thanks / agenda / content / content-list / table / roadmap / figure / image / quote / code / chart / formula
+内容页 / 列表页 / 路线图页的**顶层列表项**可逐条出现：播放时按 → 先显示下一条，全部显示后再按才翻页；按 ← 先回退一条。讲哪条，观众看哪条。
+
+- **默认关闭**（列表整页显示）。开启方式：播放中点 HUD 列表图标；或 front matter `slideshow-fragments: on` 整副开启
+- **给 AI 的策略**：仅当用户明确要求"逐条出现/分段演示/控制节奏"时，才在 front matter 加 `slideshow-fragments: on`；否则不要写
+- 嵌套子列表随父项一起出现，无需单独标记
+- 封面 / 章节 / 目录 / 表格 / 图表 / 公式 / 引用等版式整页显示，不受影响
+- 页级关闭：`<!-- fragments: off -->`（该页整页显示）；恢复用 `<!-- fragments: on -->`
+
+## 五、显式指令（HTML 注释，渲染时不可见，可选）
+
+- `<!-- layout: quote -->`：强制该页使用指定版式（当自动推断不符合意图时），可选值：cover / section / thanks / agenda / content / content-list / table / roadmap / figure / image / quote / code / chart / formula。**非法值会被忽略并回落自动推断**
 - `<!-- align: center -->`：强制整页水平居中（可选 left / center / right）
+- `<!-- fragments: off -->`：关闭该页片段逐步显示（on 恢复），见第四节
 - `<!-- notes: 演讲者备注 -->`：给该页附加演讲备注（播放时按 S 键显示）
 
-## 五、输出规范
+## 六、输出规范
 
 1. 全文用 `---` 分页；第 1 页为封面，最后一页为结尾页（谢谢/Thanks）。
 2. 提炼时保留核心结论、关键数据、步骤与流程；删掉铺垫、重复、口语化冗余；**不编造文档中没有的内容**。
 3. 语言与原文档保持一致；正文精炼，每页聚焦一个观点。
 4. 只输出 Markdown 正文，不要任何解释说明，不要用代码块包裹整篇文稿（代码页/图表页除外）。
 5. 原文档含流程图/架构/关系时，优先用 ```mermaid 呈现；含数据对比时，优先用表格呈现。
+6. **片段标记保持克制**：默认不写任何 fragments 标记（片段默认关闭，列表整页显示）；仅用户明确要求分段演示时才加 `slideshow-fragments: on`。

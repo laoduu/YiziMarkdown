@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Sun, Moon, Palette, Check, X } from 'lucide-react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Sun, Moon, Palette, Check, X, ListOrdered, Sparkles } from 'lucide-react'
 import { renderMarkdown } from '../lib/markdownRenderer'
 import { extendMarkdownIt, postRender as pluginPostRender } from '../plugins/registry'
 import {
@@ -8,6 +8,7 @@ import {
 } from '../lib/slides'
 import { enterFullscreen, exitFullscreen, toggleFullscreen } from '../lib/fullscreen'
 import { resolveLocalImageSrc } from '../lib/localImages'
+import { buildTiles, delayFor, impulseVars, tileTotalDuration, TILE_ANIM_IDS, TILE_VARIANTS } from '../lib/slideTiles'
 import { useEditorStore } from '../stores/editorStore'
 import { useI18n } from '../i18n'
 import '../styles/slideshow.css'
@@ -17,11 +18,14 @@ function escapeHtml(s: string): string {
 }
 
 interface Slide {
-  html: string
+  /** 页面 Markdown 源（HTML 惰性渲染，见 htmlCache） */
+  src: string
   notes: string
   kind: SlideKind
   title?: string
   align?: 'left' | 'center' | 'right'
+  /** 该页顶层列表是否参与片段逐步显示（版式 + deck/页级 fragments 指令共同决定） */
+  fragmentEligible: boolean
 }
 
 interface SlideshowProps {
@@ -33,6 +37,17 @@ interface SlideshowProps {
   isDark: boolean
   onExit: () => void
 }
+
+/** 切换动画变体（柔和型 + 强烈型，见 slideshow.css .ys-anim-*）。
+ *  其中 TILE_ANIM_IDS（棋盘/波浪/立方体/爆裂/景深/六边形/三角/百叶窗）走
+ *  「瓷砖转场」：整页切成单元、每格持有前后两页的真实 DOM 克隆。 */
+type SlideAnim =
+  | 'slide' | 'fade' | 'zoom' | 'none' | 'dissolve'
+  | 'blinds' | 'checkerboard' | 'cube' | 'cube3d' | 'shatter' | 'hex' | 'depth'
+
+/** 页面元素的状态类：瓷砖转场克隆整页时必须滤掉，否则克隆会命中
+ *  ys-past/ys-future（opacity:0 + hidden）或 ys-leaving 等状态规则而变空。 */
+const SLIDE_STATE_CLASSES = new Set(['ys-active', 'ys-past', 'ys-future', 'ys-leaving'])
 
 export default function Slideshow({
   content,
@@ -82,24 +97,64 @@ export default function Slideshow({
     return exts
   }, [enabledPlugins, pluginConfigs])
 
-  // 纯 markdown → 幻灯片：`---` 分页 + 整页结构自动版式推断
+  // 纯 markdown → 幻灯片：`---` 分页 + 整页结构自动版式推断。
+  // 元数据全量廉价计算；HTML 惰性渲染（htmlCache，仅窗口内页面渲染）。
+  // 注意：slideMetaRef 在此同步填充（useMemo 先于 JSX 渲染执行），
+  // 保证 getSlideHtml 首次渲染封面页时 meta 已就绪。
+  const slideMetaRef = useRef<{ author?: string; date?: string }>({})
+  // deck 级片段开关初始值（front matter slideshow-fragments: on → 初始开启），
+  // 默认关闭：列表整页显示，避免目录等内容被迫逐条点击；需要时用户在 HUD 打开
+  // 或 front matter 显式声明。HUD 按钮可在播放中随时切换（仅本次播放生效，同主题/明暗）
+  const deckFragmentsInitial = useMemo(
+    () => (parseFrontMatter(content)['slideshow-fragments'] || '').toLowerCase() === 'on',
+    [content]
+  )
+  const [fragmentsOn, setFragmentsOn] = useState(deckFragmentsInitial)
+  // 切换动画变体：柔和型 slide（默认，水平滑动）/ fade（溶解淡入）/ zoom（缩放）/ none（无）
+  //            强烈型 dissolve（像素溶解）/ blinds（百叶窗）/ checkerboard（棋盘）/ cube（立方体）
+  // 仅本次播放生效，同主题/明暗；类挂在 .ys-deck 上（ys-anim-*）
+  const [anim, setAnim] = useState<SlideAnim>('slide')
+  const [animMenuOpen, setAnimMenuOpen] = useState(false)
   const slides: Slide[] = useMemo(() => {
     const meta = parseFrontMatter(content)
+    slideMetaRef.current = { author: meta.author, date: meta.date }
     const body = stripFrontMatter(content)
+    // 片段生效版式：内容/列表/路线图页的顶层列表逐条出现（目录 agenda 不分段）
+    const FRAGMENT_KINDS: SlideKind[] = ['content', 'content-list', 'roadmap']
     return splitSlides(body).map((src) => {
       const { body: b, notes } = extractNotes(src)
       const { body: b2, directives } = extractDirectives(b)
       const layout: SlideLayout = detectLayout(b2)
       const kind = directives.layout || layout.kind
-      let html = renderMarkdown(b2, pluginExtenders)
+      // 页级 fragments 指令可否决（off 强制不分段；未设置时跟随 HUD 开关）
+      const pageFragments = directives.fragments === 'off' ? false
+        : directives.fragments === 'on' ? true
+        : true
+      const fragmentEligible = pageFragments && FRAGMENT_KINDS.includes(kind)
+      return { src: b2, notes, kind, title: layout.title, align: directives.align, fragmentEligible }
+    })
+  }, [content])
+
+  // 惰性 HTML 渲染缓存：仅渲染窗口内的页面；content 变化时随 slides 重建清空
+  const htmlCacheRef = useRef(new Map<number, string>())
+  useEffect(() => { htmlCacheRef.current.clear() }, [slides])
+
+  /** 取页面 HTML：命中缓存直接返回，否则渲染并缓存 */
+  const getSlideHtml = useCallback((slide: Slide, index: number): string => {
+    const cache = htmlCacheRef.current
+    let html = cache.get(index)
+    if (html === undefined) {
+      html = renderMarkdown(slide.src, pluginExtenders)
       // 封面页：拼接 front matter 提供的作者/日期 meta 行
-      if (kind === 'cover' && (meta.author || meta.date)) {
+      if (slide.kind === 'cover' && slideMetaRef.current.author) {
+        const meta = slideMetaRef.current
         const metaLine = [meta.author, meta.date].filter(Boolean).join(' · ')
         html += `<div class="ys-cover-meta">${escapeHtml(metaLine)}</div>`
       }
-      return { html, notes, kind, title: layout.title, align: directives.align }
-    })
-  }, [content, pluginExtenders])
+      cache.set(index, html)
+    }
+    return html
+  }, [pluginExtenders])
 
   const total = slides.length
   const cur = slides[h]
@@ -121,8 +176,159 @@ export default function Slideshow({
     return { chapter: curChapter, sectionNums: nums }
   }, [slides, h, title])
 
-  const next = useCallback(() => setH((x) => Math.min(x + 1, slides.length - 1)), [slides.length])
-  const prev = useCallback(() => setH((x) => Math.max(x - 1, 0)), [])
+  // ===== 片段逐步显示 =====
+  // 片段 = 当前页顶层列表项（data-fragment 标记）。
+  // next：先点亮最早未显示片段，走完再翻页（新页片段全隐）；
+  // prev：先隐藏最晚已显示片段，退完再翻页（目标页片段全显）。
+  const REVEAL_ALL = '__ys_reveal_all__'
+
+  // 离场页索引：翻页时同步记录（与 setH 同一渲染周期），className 直接计算
+  // ys-leaving——若用 commit 后的 effect 加类，旧页会先经历一帧
+  // "past 且无 leaving"（opacity 0 / hidden），导致渐隐闪烁与穿帮。
+  // 方向 dir 同理必须在 goTo 里同步设置：若在 commit 后的 effect 里更新，
+  // 入场动画第一帧会用上一次的方向（后退时先播前进动画再重启）。
+  const [leavingIdx, setLeavingIdx] = useState<number | null>(null)
+  const [dir, setDir] = useState<'fwd' | 'back'>('fwd')
+  const leavingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // 瓷砖转场（棋盘/波浪/立方体/爆裂/景深/六边形/三角/百叶窗）：翻页时置为
+  // {from,to,anim}，渲染出格子层，动画结束后清空。每格持有旧页/新页的
+  // 【活 DOM 克隆】——见下面的 useLayoutEffect。
+  const [flip, setFlip] = useState<{ from: number; to: number; anim: SlideAnim } | null>(null)
+  const flipLayerRef = useRef<HTMLDivElement | null>(null)
+  const flipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const goTo = useCallback((target: number) => {
+    setLeavingIdx(h)
+    setDir(target > h ? 'fwd' : target < h ? 'back' : dir)
+    if (TILE_ANIM_IDS.includes(anim) && target !== h) {
+      const cfg = TILE_VARIANTS[anim]
+      setFlip({ from: h, to: target, anim })
+      if (flipTimerRef.current) clearTimeout(flipTimerRef.current)
+      flipTimerRef.current = setTimeout(() => setFlip(null), Math.round(tileTotalDuration(cfg) * 1000) + 80)
+    }
+    setH(target)
+    if (leavingTimerRef.current) clearTimeout(leavingTimerRef.current)
+    // 旧页可见时长：默认 600ms 够覆盖 0.4s 的入场动画；溶解（水）0.85s
+    // 更长，必须撑到新页水渍铺满——否则 mask 孔洞里的旧内容会提前消失。
+    leavingTimerRef.current = setTimeout(() => setLeavingIdx(null), anim === 'dissolve' ? 1000 : 600)
+  }, [h, dir, anim])
+
+  // 瓷砖转场的格子层：在提交后、绘制前把每格填好内容。
+  // 每格 = 窗口（矩形或 clip-path 形状）+ 一份【整页克隆】负偏移对齐，
+  // 正面是旧页、背面是新页的活 DOM 克隆（含 postRender 产物与图片 data URL）。
+  // 切割形状 / 延迟节奏 / 单格时长 / 冲量全部来自 TILE_VARIANTS 配置，
+  // 经 CSS 变量下发（--ys-delay/--ys-turn/--ys-merge + 冲量变量）。
+  // 必须在 useLayoutEffect 里做：此时 DOM 已提交（新页已是 ys-active、
+  // 旧页已是 ys-leaving），但浏览器还没绘制 ⇒ 不会闪一帧未铺格子的新页。
+  useLayoutEffect(() => {
+    const layer = flipLayerRef.current
+    const deck = deckRef.current
+    if (!flip || !layer || !deck) return
+    const cfg = TILE_VARIANTS[flip.anim]
+    const fromEl = deck.querySelector<HTMLElement>(`.ys-slide[data-index="${flip.from}"]`)
+    const toEl = deck.querySelector<HTMLElement>('.ys-slide.ys-active')
+    const W = layer.clientWidth
+    const H = layer.clientHeight
+    if (!cfg || !fromEl || !toEl || !W || !H) return
+
+    layer.style.setProperty('--ys-turn', `${cfg.turn}s`)
+    layer.style.setProperty('--ys-merge', `${cfg.merge}s`)
+    layer.style.setProperty('--ys-merge-delay', `${(cfg.spread + cfg.turn).toFixed(3)}s`)
+
+    const rand = Math.random
+    const frag = document.createDocumentFragment()
+    for (const t of buildTiles(W, H, cfg)) {
+      const tile = document.createElement('div')
+      tile.className = 'ys-flip-tile'
+      tile.style.cssText = `left:${t.x}px;top:${t.y}px;width:${t.w}px;height:${t.h}px`
+      tile.style.setProperty('--ys-delay', `${delayFor(t, W, H, cfg, rand)}s`)
+      // 立方体：每个面沿自身法线平移半格宽 ⇒ 拼成一个边长 = 格宽的立方体
+      tile.style.setProperty('--ys-half', `${(t.w / 2).toFixed(1)}px`)
+      if (cfg.impulse) {
+        for (const [k, v] of Object.entries(impulseVars(rand))) tile.style.setProperty(k, v)
+      }
+
+      const card = document.createElement('div')
+      card.className = 'ys-flip-card'
+      // 被裁形的变体（六角蜂巢）：垫一层【同形状】的阴影。不能用卡片级
+      // box-shadow——矩形影会在每个六边形外勾出方角，整片看起来是一格格方块。
+      // 也不用 filter（逐格高斯模糊，实测帧率掉到 34fps）。
+      if (t.clip) {
+        const shade = document.createElement('div')
+        shade.className = 'ys-flip-shade'
+        tile.appendChild(shade)
+      }
+      for (const [src, side] of [[fromEl, 'front'], [toEl, 'back']] as const) {
+        const face = document.createElement('div')
+        face.className = `ys-flip-face ${side}`
+        // 裁形挂在【面】上而不是格子：格子上的 clip-path 会把格子级投影一起
+        // 裁掉（box-shadow/filter 都逃不掉），挂面上则格子的 drop-shadow 能
+        // 沿裁剪后的轮廓描影 ⇒ 六边形也能有卡片外阴影。
+        if (t.clip) face.style.clipPath = t.clip
+        const page = src.cloneNode(true) as HTMLElement
+        // 滤掉状态类：否则克隆会命中 ys-past/ys-future/ys-leaving 的隐藏规则
+        page.className = [
+          ...src.className.split(/\s+/).filter((k) => k && !SLIDE_STATE_CLASSES.has(k)),
+          'ys-flip-page',
+        ].join(' ')
+        page.removeAttribute('data-index')
+        page.style.cssText = `position:absolute;left:${-t.x}px;top:${-t.y}px;width:${W}px;height:${H}px`
+        face.appendChild(page)
+        card.appendChild(face)
+      }
+      if (cfg.faces === 3) {
+        // 侧面：不装页面内容，只做立方体的厚度面（配色见 CSS，主题色派生）
+        const side = document.createElement('div')
+        side.className = 'ys-flip-face ys-flip-side'
+        card.appendChild(side)
+      }
+      tile.appendChild(card)
+      frag.appendChild(tile)
+    }
+    layer.replaceChildren(frag)
+    return () => { layer.replaceChildren() }
+  }, [flip])
+
+  /** 查询当前活动 section 的片段元素（按 DOM 顺序） */
+  const getFragments = useCallback((): HTMLElement[] => {
+    const deck = deckRef.current
+    const active = deck?.querySelector<HTMLElement>('.ys-slide.ys-active')
+    if (!active) return []
+    return Array.from(active.querySelectorAll<HTMLElement>('[data-fragment]'))
+  }, [])
+
+  const next = useCallback(() => {
+    // HUD 片段开关关闭时，直接翻页（片段全部显示态）
+    if (!fragmentsOn) {
+      goTo(Math.min(h + 1, slides.length - 1))
+      return
+    }
+    const frags = getFragments()
+    const hidden = frags.find((el) => !el.classList.contains('ys-fragment-visible'))
+    if (hidden) {
+      hidden.classList.add('ys-fragment-visible')
+      return
+    }
+    goTo(Math.min(h + 1, slides.length - 1))
+  }, [slides.length, getFragments, fragmentsOn, goTo, h])
+
+  const prev = useCallback(() => {
+    if (!fragmentsOn) {
+      sessionStorage.setItem(REVEAL_ALL, '1')
+      goTo(Math.max(h - 1, 0))
+      return
+    }
+    const frags = getFragments()
+    const visible = frags.filter((el) => el.classList.contains('ys-fragment-visible'))
+    if (visible.length) {
+      visible[visible.length - 1].classList.remove('ys-fragment-visible')
+      return
+    }
+    // 翻回上一页：目标页片段全部显示（revealAll 标志在渲染 effect 中消费）
+    sessionStorage.setItem(REVEAL_ALL, '1')
+    goTo(Math.max(h - 1, 0))
+  }, [getFragments, REVEAL_ALL, fragmentsOn, goTo, h])
 
   // 统一退出：退出全屏后关闭演示，回到打开前的编辑视图
   const requestExit = useCallback(async () => {
@@ -154,8 +360,8 @@ export default function Slideshow({
     if (['ArrowLeft', 'PageUp', 'Backspace'].includes(k)) {
       e.preventDefault(); prev(); return
     }
-    if (k === 'Home') { e.preventDefault(); setH(0); return }
-    if (k === 'End') { e.preventDefault(); setH(slides.length - 1); return }
+    if (k === 'Home') { e.preventDefault(); sessionStorage.setItem(REVEAL_ALL, ''); goTo(0); return }
+    if (k === 'End') { e.preventDefault(); sessionStorage.setItem(REVEAL_ALL, '1'); goTo(slides.length - 1); return }
     if (k === 'f' || k === 'F') {
       e.preventDefault()
       toggleIntentRef.current = true
@@ -177,7 +383,7 @@ export default function Slideshow({
       if (showHelp) { setShowHelp(false); return }
       requestExit()
     }
-  }, [next, prev, slides.length, requestExit, showHelp])
+  }, [next, prev, slides.length, requestExit, showHelp, REVEAL_ALL, goTo])
 
   useEffect(() => {
     window.addEventListener('keydown', onKey)
@@ -330,16 +536,73 @@ export default function Slideshow({
     document.getElementById('yizimarkdown-slideshow-theme-css')?.remove()
   }, [])
 
-  // DOM 后处理：katex/mermaid 渲染 + 本地图片转 data URL
+  // ===== 懒渲染窗口 + 按 section 后处理 =====
+  // 仅渲染 |i - h| <= 2 的页面（窗口外空壳，absolute 定位无布局影响）；
+  // section key 含窗口态（w/e 前缀），进出窗口即卸载重挂载，天然清理
+  // data-processed 与片段类残留。每个 section 挂载后：
+  //   1. 片段标记（fragmentEligible 页的顶层列表项打 data-fragment）
+  //   2. 插件 postRender（katex/mermaid，作用域即该 section）
+  //   3. 本地图片转 data URL
+  // 全部用 data-processed 防重复。
+  const WINDOW = 2
+  const inWindow = (i: number) => Math.abs(i - h) <= WINDOW
+
+  // 片段方向语义：前进进入新页 → 全隐；后退进入 → 全显（REVEAL_ALL 标志）。
+  // Home → 全隐（空标志）；End → 全显。
+  // 翻页方向 dir 已在 goTo 中同步设置（见上）。
+  const prevHRef = useRef(h)
   useEffect(() => {
-    const container = deckRef.current
-    if (!container) return
-    if (enabledPlugins.length > 0) {
-      pluginPostRender(container, enabledPlugins, pluginConfigs)
+    const prevH = prevHRef.current
+    prevHRef.current = h
+    const flag = sessionStorage.getItem(REVEAL_ALL)
+    sessionStorage.removeItem(REVEAL_ALL)
+    // flag: '1' = 全显（prev/End）；'' = 全隐（Home）；null = 前进翻页 → 全隐
+    const revealAll = flag === '1'
+    const deck = deckRef.current
+    if (!deck) return
+    const active = deck.querySelector<HTMLElement>('.ys-slide.ys-active')
+    if (!active) return
+    // 仅当页码真的变化时处理片段（初始挂载 h=0 时 flag 为 null，全隐即默认态）
+    if (h !== prevH) {
+      active.querySelectorAll<HTMLElement>('[data-fragment]').forEach((el) => {
+        el.classList.toggle('ys-fragment-visible', revealAll)
+      })
     }
+  }, [h, REVEAL_ALL])
+
+  // 卸载时清理 leaving / flip 定时器
+  useEffect(() => () => {
+    if (leavingTimerRef.current) clearTimeout(leavingTimerRef.current)
+    if (flipTimerRef.current) clearTimeout(flipTimerRef.current)
+  }, [])
+
+  // section 挂载后处理：片段标记 + 插件 + 图片（按 section 粒度，data-processed 防重复）
+  const processSection = useCallback((section: HTMLElement | null) => {
+    if (!section) return
+    if (section.dataset.processed) return
+    section.dataset.processed = '1'
+    const index = Number(section.dataset.index)
+    const slide = slides[index]
+    if (!slide) return
+
+    // 1. 片段标记：仅 fragmentEligible 页；顶层列表的直接子 li（嵌套随父项出现）。
+    //    HUD 运行时开关关闭时不打标记（列表整页显示）；重新开启时由
+    //    fragmentsOn effect 对当前页补打标记。
+    if (slide.fragmentEligible && fragmentsOn) {
+      section.querySelectorAll<HTMLElement>(':scope > ul > li, :scope > ol > li').forEach((li) => {
+        li.setAttribute('data-fragment', '')
+      })
+    }
+
+    // 2. 插件后处理（katex/mermaid 等，作用域限定本 section）
+    if (enabledPlugins.length > 0) {
+      pluginPostRender(section, enabledPlugins, pluginConfigs)
+    }
+
+    // 3. 本地图片转 data URL
     const tauri = (window as any).__TAURI_INTERNALS__
     if (!tauri || typeof tauri.invoke !== 'function') return
-    container.querySelectorAll('img').forEach((img) => {
+    section.querySelectorAll('img').forEach((img) => {
       const src = img.getAttribute('src')
       if (!src || src.startsWith('http') || src.startsWith('data:') || src.startsWith('asset://')) return
       resolveLocalImageSrc(src, docBaseDir).then((path) => {
@@ -348,7 +611,27 @@ export default function Slideshow({
           .then((dataUrl: string) => img.setAttribute('src', dataUrl))
       }).catch(() => {})
     })
-  }, [slides, enabledPlugins, pluginConfigs, docBaseDir])
+  }, [slides, enabledPlugins, pluginConfigs, docBaseDir, fragmentsOn])
+
+  // HUD 片段开关切换时的即时生效：
+  //   开 → 当前页补打 data-fragment 标记并全隐（从头逐条）
+  //   关 → 当前页移除标记（列表立即整页显示）
+  useEffect(() => {
+    const deck = deckRef.current
+    const active = deck?.querySelector<HTMLElement>('.ys-slide.ys-active')
+    if (!active) return
+    if (fragmentsOn) {
+      active.querySelectorAll<HTMLElement>(':scope > ul > li, :scope > ol > li').forEach((li) => {
+        li.setAttribute('data-fragment', '')
+        li.classList.remove('ys-fragment-visible')
+      })
+    } else {
+      active.querySelectorAll<HTMLElement>('[data-fragment]').forEach((el) => {
+        el.removeAttribute('data-fragment')
+        el.classList.remove('ys-fragment-visible')
+      })
+    }
+  }, [fragmentsOn, h])
 
   return (
     <div className={`yizi-slideshow theme-${theme}${dark ? ' dark' : ''}`}>
@@ -363,24 +646,39 @@ export default function Slideshow({
         <span>{t('slideshow.exit')}</span>
       </button>
 
-      <div className="ys-deck" ref={deckRef}>
+      <div className={`ys-deck ys-dir-${dir}${anim !== 'slide' ? ` ys-anim-${anim}` : ''}`} ref={deckRef}>
         {slides.map((slide, i) => {
           const active = i === h
           const past = i < h
           const classes = ['ys-slide', `ys-layout-${slide.kind}`]
           if (slide.align) classes.push(`ys-align-${slide.align}`)
-          if (active) classes.push('ys-active')
-          if (past) classes.push('ys-past')
-          else classes.push('ys-future')
+          if (active) {
+            classes.push('ys-active')
+          } else if (i === leavingIdx) {
+            // 翻页瞬间的旧页：保持可见供入场页覆盖（与 setH 同一 commit）
+            classes.push('ys-leaving')
+            classes.push(past ? 'ys-past' : 'ys-future')
+          } else if (past) {
+            classes.push('ys-past')
+          } else {
+            classes.push('ys-future')
+          }
+          // key 含窗口态：进出窗口卸载重挂载，清理 data-processed/片段残留
+          const key = `${inWindow(i) ? 'w' : 'e'}${i}`
+          const windowed = inWindow(i)
           return (
             <section
-              key={i}
+              key={key}
               className={classes.join(' ')}
               data-num={sectionNums[i] || undefined}
-              dangerouslySetInnerHTML={{ __html: slide.html }}
+              data-index={i}
+              ref={windowed ? processSection : undefined}
+              dangerouslySetInnerHTML={windowed ? { __html: getSlideHtml(slide, i) } : undefined}
             />
           )
         })}
+        {/* 棋盘（瓷砖翻转）的格子层：内容由 useLayoutEffect 命令式填充 */}
+        {flip && <div className="ys-flip-layer" ref={flipLayerRef} />}
       </div>
 
       {/* 页脚：章节名 + 页码 + 进度条 */}
@@ -393,26 +691,72 @@ export default function Slideshow({
       {/* HUD */}
       <div className="ys-hud">
         {cur?.notes && (
-          <button className="ys-hud-btn" onClick={() => setShowNotes((x) => !x)}>{t('slideshow.notes')}</button>
+          <button className="ys-hud-btn" onClick={(e) => { e.currentTarget.blur(); setShowNotes((x) => !x) }}>{t('slideshow.notes')}</button>
         )}
         <div className="ys-hud-ctrl">
           <button
             className="ys-icon-btn"
+            title={fragmentsOn ? t('slideshow.fragmentsOff') : t('slideshow.fragmentsOn')}
+            onClick={(e) => { e.currentTarget.blur(); setFragmentsOn((f) => !f) }}
+          >
+            <ListOrdered size={14} style={{ opacity: fragmentsOn ? 1 : 0.4 }} />
+          </button>
+          <button
+            className="ys-icon-btn"
             title={dark ? t('slideshow.toLight') : t('slideshow.toDark')}
-            onClick={() => setDark((d) => !d)}
+            onClick={(e) => { e.currentTarget.blur(); setDark((d) => !d) }}
           >
             {dark ? <Sun size={14} /> : <Moon size={14} />}
           </button>
           <button
             className="ys-icon-btn"
             title={t('slideshow.toggleTheme')}
-            onClick={() => setThemeMenuOpen((o) => !o)}
+            onClick={(e) => { e.currentTarget.blur(); setThemeMenuOpen((o) => !o) }}
           >
             <Palette size={14} />
+          </button>
+          <button
+            className="ys-icon-btn"
+            title={t('slideshow.toggleAnim')}
+            onClick={(e) => { e.currentTarget.blur(); setAnimMenuOpen((o) => !o) }}
+          >
+            <Sparkles size={14} />
           </button>
         </div>
         <span className="ys-hint">{t('slideshow.hintBar')}</span>
       </div>
+
+      {/* 切换动画菜单：柔和型 + 强烈型两组 */}
+      {animMenuOpen && (
+        <>
+          <div className="ys-dismiss" onClick={() => setAnimMenuOpen(false)} />
+          <div className="ys-theme-menu">
+            {([
+              ['slide', t('slideshow.animSlide')],
+              ['fade', t('slideshow.animFade')],
+              ['zoom', t('slideshow.animZoom')],
+              ['dissolve', t('slideshow.animDissolve')],
+              ['blinds', t('slideshow.animBlinds')],
+              ['checkerboard', t('slideshow.animCheckerboard')],
+              ['cube', t('slideshow.animCube')],
+              ['cube3d', t('slideshow.animCube3d')],
+              ['hex', t('slideshow.animHex')],
+              ['shatter', t('slideshow.animShatter')],
+              ['depth', t('slideshow.animDepth')],
+              ['none', t('slideshow.animNone')],
+            ] as const).map(([id, label]) => (
+              <button
+                key={id}
+                className={anim === id ? 'ys-theme-active' : ''}
+                onClick={() => { setAnim(id); setAnimMenuOpen(false) }}
+              >
+                {anim === id && <Check size={13} />}
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* 主题菜单 */}
       {themeMenuOpen && (
@@ -454,6 +798,8 @@ export default function Slideshow({
               </tbody>
             </table>
             <p className="ys-card-foot">
+              {t('slideshow.helpFragments')}
+              {t('slideshow.helpLayouts')}
               {t('slideshow.helpText1')}
               {t('slideshow.helpText2')}
               {t('slideshow.helpText3')}
