@@ -145,6 +145,7 @@
 - **溶解完全失效**：原方案用 `@property --ys-blob` 驱动 12 层 mask 动画，`@property` 需 Safari 16.4+（macOS 13.3+）⇒ 旧系统属性注册失败、mask 恒为初始值。macOS 降级为整页淡入
 - **"只见内容动、不见方块"**：face 背景与页面背景同色 ⇒ 给 tile 铺 `--editor-surface` 作实体底座
 - **蜂巢"叠出正方形"**：tile 是【矩形】窗口，铺色后 card 缩小时露出矩形块 ⇒ macOS 的 hex tile 改透明，六边形轮廓由 `clip-path` 保证
+- **亮色下百叶窗叶片翻转变黑**：`preserve-3d` 的 card 是独立合成层，WebKit 在重绘间隙可能让 `backface-visibility` 判定失效、或背面纹理尚未光栅化完成就被 GPU 采样 —— card 自身无背景时露出的就是未初始化的黑色纹理。macOS 给 card 铺主题背景色作保险丝（Windows 走原方案不受影响）。此修复此前存在，在把基础 CSS 恢复为 dd0827d 原版时被一并清掉，本次恢复
 
 **本次追加踩坑（续号 21–26）**
 

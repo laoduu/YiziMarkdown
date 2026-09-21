@@ -1718,6 +1718,18 @@
   animation: ys-fade-in 0.3s ease;
 }
 
+/* ---- macOS：翻转卡片的"黑块保险丝"（本次恢复）----
+   症状：亮色主题下，百叶窗叶片翻过 90° 后整片变黑。
+   机制：`preserve-3d` 里 card 是独立合成层；WebKit 在重绘间隙可能让
+   `backface-visibility` 判定失效、或背面纹理尚未光栅化完成就被 GPU 采样，
+   此时 card 自身若【没有背景】就会露出未初始化的黑色纹理。
+   做法：给 card 铺主题背景色 —— 即使面纹理失效，露出的也是主题色而非黑。
+   （此前存在过，本次因把基础 CSS 恢复为 dd0827d 原版而被清掉；仅 macOS 需要，
+   Windows 走原方案不受影响。） */
+.ys-mac .ys-flip-card {
+  background: var(--editor-bg, #ffffff);
+}
+
 /* ---- macOS：flip 族的 tile 实体底座 ----
    face 背景与页面同色，翻转中缩小的 card 与背景无对比 ⇒ WebKit 上
    "只见内容动、不见方块"。给 tile 铺主题面板色（与 bg 必有明暗差）。 */
