@@ -56,6 +56,52 @@
 - `help.md` / `docs/slideshow-style-mapping.md` 更新动画双表格与片段说明；`src-tauri/` 镜像同步
 - `skills/slides-outline.md` + `skills/skills.json` v4：AI 提炼策略改为"默认零标记，用户明确要求分段演示才加 front matter"
 
+### 追加（2026-09-21）：切换动画平台分离 + 小格闪烁
+
+**平台分离架构（本次追加的核心）**
+
+- 用户要求**两平台各自独立**：Windows 冻结在最初方案（实测"已经很好了"），macOS 用修复后的方案。做法是把基础 CSS 恢复为最初 Windows 方案（`dd0827d` 原样），文件末尾新增**平台分离层** —— 所有 `.ys-mac` 前缀规则仅 macOS（WKWebView）生效
+- 配置层新增 `TileConfig.mac?: Partial<TileConfig>` + `tileConfigFor(cfg, isMac)`：同一变体可让两平台走不同模式 / 格尺寸 / 时序（如棋盘 Windows=flip+192px、macOS=shimmer+96px）
+- JS 层按平台决定构件：`needsShade = isMac && anim === 'blinds'`（Windows 的影本来就在 keyframes 里，不需要独立影层）
+
+| 变体 | Windows | macOS |
+| --- | --- | --- |
+| 棋盘格子 | flip + 192px（原方案，未动） | shimmer + 96px 小格 |
+| 六角蜂巢 | shimmer + 112px（与 macOS 统一） | shimmer + 112px |
+| 百叶窗格 | flip + 120px 竖条（原方案，未动） | flip + 120px（仅 CSS 层：noshadow + 独立影层） |
+| 百变立方 / 爆裂卡片 / 纵深穿梭 | flip 原样 | flip 原样（未改动） |
+| 高斯溶解 | `@property` mask 原样 | 淡入降级 |
+
+**小格闪烁（shimmer，新增动画模式）**
+
+- 新增 `TileMode = 'shimmer' | 'flip'`。shimmer 下**每格是一块纯色贴片**（不克隆页面、不做 3D）⇒ 无左右异色、无方块、无克隆开销，旧方案"140 个整页克隆打爆 WebKit tile 缓存"的问题从设计上消失
+- **随机同主题异色**：每格随机取 `--editor-surface` 或 `--editor-accent`（约 55% / 45%）；**轻微渐显**：峰值透明度随机 0.14~0.40；**随机延迟错开** ⇒ 网格逐片亮起又消退，整体呈闪烁感
+- 新页由**真实页面自身淡入**承担（与旧页交叉溶解），格子只作闪烁层
+- 蜂巢两平台统一用此效果（按用户要求同步到 Windows）；棋盘在 macOS 使用
+
+**macOS（WebKit / Safari 15）修复**
+
+- **翻面黑块**：`preserve-3d` 层内用 keyframes 动画 `box-shadow`，WebKit 强制逐帧重绘 face，重绘间隙 `backface-visibility: hidden` 判定失效 ⇒ 背面被画成不透明黑块（亮色主题尤其刺眼；Chromium 无此问题）。macOS 改为 card 只动 `transform` + 影交给独立 shade 层（本体透明、静态 `box-shadow`、随延迟淡入）
+- **影全部消失（computed `box-shadow: none`）**：`--ys-flip-shadow` 用 `color-mix()` 派生，而 `color-mix()` 需 Safari 16.2+；旧引擎上该声明无效会让自定义属性变成 **guaranteed-invalid**，导致所有消费点的 `box-shadow` 整条失效。macOS 改静态 `rgba(31, 41, 55, 0.3)`
+- **溶解完全失效**：原方案用 `@property --ys-blob` 驱动 12 层 mask 动画，`@property` 需 Safari 16.4+（macOS 13.3+）⇒ 旧系统属性注册失败、mask 恒为初始值。macOS 降级为整页淡入
+- **"只见内容动、不见方块"**：face 背景与页面背景同色 ⇒ 给 tile 铺 `--editor-surface` 作实体底座
+- **蜂巢"叠出正方形"**：tile 是【矩形】窗口，铺色后 card 缩小时露出矩形块 ⇒ macOS 的 hex tile 改透明，六边形轮廓由 `clip-path` 保证
+
+**本次追加踩坑（续号 21–26）**
+
+- **同类挂同一元素 ⇒ 必须复合选择器**：`.ys-mac` 与 `.ys-anim-*` 都在 `.ys-deck` 上，但覆盖被写成后代形式 `.ys-mac .ys-anim-hex ...` ⇒ 同元素永不匹配，全部 macOS 覆盖成为死代码（连续八轮"修复"从未进入渲染）。**规则：同元素多类一律 `.a.b`（无空格）**
+- **CSS 自定义属性没有"双声明回退"**：无效值（如旧引擎不认的 `color-mix()`）会让变量本身 guaranteed-invalid，`var()` 的整条属性失效。**正解是整条替换变量值**
+- **平台隔离铁律**：用户要求"两平台各自独立"时，任何修复都必须落在 `.ys-mac` 门控内；写进基础规则就等于改了另一个平台（本版曾把棋盘 shimmer / 百叶窗回退 / 溶解降级全写进基础规则，Windows 一并被改，被用户发现并指出）
+- **不要让用户盲测**：macOS 12 上 Playwright WebKit 不可用，但**系统 WKWebView 就是应用真实引擎** —— 用 `swiftc` + `WKSnapshotConfiguration` 离屏快照最小复现页，页面内 `window.__runDiag()` 由 Swift 侧 `evaluateJavaScript` 调用回传 `getComputedStyle`，一轮即定位"覆盖未生效 / 影为 none"；配合像素扫描器检测**水平直边**（尖顶六边形铺砖不应有水平边）量化验证：修复前 tile 行边界跳变 42–45%，修复后 ≤3.6%
+- **复现页要内联整份 CSS**：正则抽取规则会因注释里的花括号错位而丢规则（丢的正是关键的 `.ys-mac` 覆盖），一度误判复现失真
+- **影的可见性由绘制层级决定**：影挂 card 之外的平层会被相邻格 face 遮挡 + 合成层排序压制；挂 face 自身溢出部分仍被相邻 face 盖住、且 hex 的 `clip-path` 会裁掉自身 `box-shadow`；放大 shade 本体则会在 face 缩小时大面积露出。**影色本体绝不能比 face 更大或错位**
+
+**测试**
+
+- 62 条（`node --test` 四文件）；新增平台矩阵与 `tileConfigFor` 覆盖合并语义两条判据
+- 单元数上限按模式分档：shimmer（每格一个纯色贴片）≤600，flip（每格 2 份整页克隆）≤160
+
+
 ## v0.3.0
 
 > 注：**v0.2.5 曾提交代码但从未发布**（无安装包、官网也未更新），其改动实际是随 v0.3.0 一起发布的，故已并入本条目，不单独成篇。

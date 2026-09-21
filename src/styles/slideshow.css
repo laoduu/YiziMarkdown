@@ -181,13 +181,6 @@
    旧页同步微退（scale 0.97）与新页入场融为一体：一个连续动作里
    新页盖上来、旧页让位，层次感强且全程只有主题色。 */
 
-/* --ys-reveal：0 = 全遮，1 = 全显。注册为 <number> 才能参与 transition/animation */
-@property --ys-reveal {
-  syntax: '<number>';
-  inherits: false;
-  initial-value: 1;
-}
-
 /* 强烈型公共：旧页微退（与新页入场同步，同曲线同时长 → 融为一体）。
    用 keyframes 一次性播放（from 1 → to 0.97），只作用于 ys-leaving
    （翻页瞬间的旧页）：翻页前所有非活动页隐藏，leaving 标记让它短暂
@@ -1641,4 +1634,102 @@
   max-height: 40vh;
   overflow: auto;
   white-space: pre-wrap;
+}
+
+
+/* ============================================================================
+   ===== 平台分离层（2026-09-21）=====
+   基础规则（本文件其余部分）= 【最初 Windows 方案】= v0.3.1 原版，
+   用户要求 Windows 视觉完全不动（dd0827d 起即为此状态，含 WebKit 层提示）。
+
+   以下所有 `.ys-mac` 开头的规则【仅 macOS（WKWebView）生效】。
+   ⚠️ 选择器铁律：`.ys-mac` 与 `.ys-anim-*` 挂在【同一个元素】（.ys-deck）上，
+   必须写复合选择器 `.ys-mac.ys-anim-x`（无空格）；写成后代形式永不命中。
+   ============================================================================ */
+
+/* ---- 蜂巢：两平台统一 shimmer 小格闪烁（用户要求同步到 Windows）----
+   设计：小格网 + 随机同主题异色格轻微渐显 ⇒ 整体闪烁。
+   每格是一块【纯色贴片】（Slideshow.tsx 建 .ys-shimmer-tile，不含页面克隆、
+   不做 3D），随机延迟错开；新页由真实页面自身淡入承担。
+   无克隆开销、无左右异色、无方块、无 WebKit 合成层压力。 */
+@keyframes ys-shimmer {
+  0% { opacity: 0; }
+  35% { opacity: var(--ys-tint-alpha, 0.3); }
+  100% { opacity: 0; }
+}
+
+.ys-shimmer-tile {
+  position: absolute;
+  background: var(--ys-tint-color, var(--editor-surface, #f0f7ff));
+  opacity: 0;
+  animation: ys-shimmer var(--ys-turn) ease-in-out var(--ys-delay, 0s) both;
+}
+
+/* hex 的新页入场（shimmer 由页面淡入承担；原 hex 翻面规则不再使用） */
+.ys-anim-hex .ys-slide.ys-active {
+  animation: ys-fade-in 0.45s ease;
+}
+
+/* hex 的旧翻面构件在本方案下不再需要（保留规则但不会被触发：
+   Slideshow.tsx 对 shimmer 变体不建 card/face/shade） */
+
+/* ---- macOS：棋盘改用 shimmer（Windows 保持原 flip 方案）---- */
+.ys-mac.ys-anim-checkerboard .ys-flip-card {
+  animation: none;
+}
+
+.ys-mac.ys-anim-checkerboard .ys-slide.ys-active {
+  animation: ys-fade-in 0.45s ease;
+}
+
+/* ---- macOS：百叶窗避开 WebKit 黑块 ----
+   原方案把 box-shadow 放进 keyframes 逐帧动画，WebKit 会强制重绘 face，
+   重绘间隙 backface-visibility:hidden 判定失效 ⇒ 背面被画成黑块。
+   macOS 改为：card 只动 transform（noshadow 版），影交给独立 shade 层
+   （本体透明 + 静态 box-shadow，随延迟淡入）。Windows 走上方原方案。 */
+@keyframes ys-rect-shade {
+  0%,
+  18% { opacity: 0; }
+  40%,
+  100% { opacity: 0.7; }
+}
+
+.ys-mac.ys-anim-blinds .ys-flip-card {
+  animation-name: ys-flip-turn-noshadow;
+}
+
+.ys-mac.ys-anim-blinds .ys-flip-shade {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: transparent;
+  box-shadow: 0 10px 22px var(--ys-flip-shadow);
+  animation: ys-rect-shade var(--ys-turn) cubic-bezier(0.35, 0, 0.25, 1) forwards;
+  animation-delay: var(--ys-delay, 0s);
+}
+
+/* ---- macOS：溶解降级为淡入 ----
+   原方案用 @property --ys-blob 驱动 12 层 mask 动画，@property 需
+   Safari/WKWebView 16.4+（macOS 13.3+）；旧系统上属性注册失败 ⇒ mask 恒为
+   初始值，水渍动画完全失效。macOS 改用整页淡入（Windows 保留原 mask 方案）。 */
+.ys-mac.ys-anim-dissolve .ys-slide.ys-active {
+  -webkit-mask-image: none;
+  mask-image: none;
+  animation: ys-fade-in 0.3s ease;
+}
+
+/* ---- macOS：flip 族的 tile 实体底座 ----
+   face 背景与页面同色，翻转中缩小的 card 与背景无对比 ⇒ WebKit 上
+   "只见内容动、不见方块"。给 tile 铺主题面板色（与 bg 必有明暗差）。 */
+.ys-mac .ys-flip-tile {
+  background: var(--editor-surface, rgba(127, 127, 127, 0.15));
+}
+
+/* ---- macOS：影色改用静态 rgba ----
+   color-mix() 需 Safari 16.2+（macOS 13+）；旧系统上该声明无效会使自定义
+   属性在 computed-value time 变 guaranteed-invalid，导致所有消费点
+   （box-shadow）整条失效（computed = none，影完全消失）。
+   ⚠️ 双声明回退对自定义属性无效，必须整条替换。 */
+.ys-mac .ys-flip-layer {
+  --ys-flip-shadow: rgba(31, 41, 55, 0.3);
 }

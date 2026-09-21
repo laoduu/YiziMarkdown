@@ -8,7 +8,7 @@ import {
 } from '../lib/slides'
 import { enterFullscreen, exitFullscreen, toggleFullscreen } from '../lib/fullscreen'
 import { resolveLocalImageSrc } from '../lib/localImages'
-import { buildTiles, delayFor, impulseVars, tileTotalDuration, TILE_ANIM_IDS, TILE_VARIANTS } from '../lib/slideTiles'
+import { buildTiles, delayFor, impulseVars, tileTotalDuration, tileConfigFor, TILE_ANIM_IDS, TILE_VARIANTS } from '../lib/slideTiles'
 import { useEditorStore } from '../stores/editorStore'
 import { useI18n } from '../i18n'
 import '../styles/slideshow.css'
@@ -69,6 +69,10 @@ export default function Slideshow({
   const [h, setH] = useState(0)
   const [showHelp, setShowHelp] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
+  // 平台：macOS（WKWebView）上翻面族的"方块感"需要 tile 层实体化（背景+边框+
+  // 更大缩小幅度）才可见——face 背景与页面同色在 WebKit 3D 变换中无对比。
+  // Windows（WebView2）走原版视觉，不加任何分支类。
+  const [isMac, setIsMac] = useState(false)
   // 主题/明暗：进入时继承应用当前设定；可在演示内切换（仅本次播放生效）
   const [theme, setTheme] = useState(currentTheme)
   const [dark, setDark] = useState(isDark)
@@ -225,12 +229,17 @@ export default function Slideshow({
     const layer = flipLayerRef.current
     const deck = deckRef.current
     if (!flip || !layer || !deck) return
-    const cfg = TILE_VARIANTS[flip.anim]
-    const fromEl = deck.querySelector<HTMLElement>(`.ys-slide[data-index="${flip.from}"]`)
-    const toEl = deck.querySelector<HTMLElement>('.ys-slide.ys-active')
+    // 平台决定实际配置：棋盘 Windows=flip+192px / macOS=shimmer+96px（各自独立）
+    const cfg = tileConfigFor(TILE_VARIANTS[flip.anim], isMac)
     const W = layer.clientWidth
     const H = layer.clientHeight
-    if (!cfg || !fromEl || !toEl || !W || !H) return
+    const mode = cfg.mode
+    // shimmer 模式不需要页面克隆（格子是纯色贴片），只要求几何有效
+    const needsClones = mode === 'flip'
+    const fromEl = needsClones ? deck.querySelector<HTMLElement>(`.ys-slide[data-index="${flip.from}"]`) : null
+    const toEl = needsClones ? deck.querySelector<HTMLElement>('.ys-slide.ys-active') : null
+    if (!cfg || !W || !H) return
+    if (needsClones && (!fromEl || !toEl)) return
 
     layer.style.setProperty('--ys-turn', `${cfg.turn}s`)
     layer.style.setProperty('--ys-merge', `${cfg.merge}s`)
@@ -238,6 +247,28 @@ export default function Slideshow({
 
     const rand = Math.random
     const frag = document.createDocumentFragment()
+    // ===== shimmer 模式（棋盘 / 六边形 / 百叶窗）：小格闪烁 =====
+    // 每格是一块【纯色贴片】（不克隆页面、不做 3D）：以随机延迟淡入淡出，
+    // 随机一部分用主题的另一种颜色（surface / accent）⇒ 整体格子闪烁感。
+    // 新页由真实页面自身淡入承担（.ys-anim-<v> .ys-slide.ys-active 的
+    // ys-fade-in）⇒ 无左右异色、无方块、无克隆开销、无 WebKit 合成层压力。
+    if (mode === 'shimmer') {
+      for (const t of buildTiles(W, H, cfg)) {
+        const tile = document.createElement('div')
+        tile.className = 'ys-shimmer-tile'
+        tile.style.cssText = `left:${t.x}px;top:${t.y}px;width:${t.w}px;height:${t.h}px`
+        if (t.clip) tile.style.clipPath = t.clip
+        tile.style.setProperty('--ys-delay', `${delayFor(t, W, H, cfg, rand)}s`)
+        // 随机取主题的另一种颜色（"相同主题不同颜色"）+ 随机峰值透明度
+        // （"轻微渐显"）。两者都用 CSS 变量下发，keyframes 里消费。
+        tile.style.setProperty('--ys-tint-color', rand() < 0.45 ? 'var(--editor-accent, #4f46e5)' : 'var(--editor-surface, #f0f7ff)')
+        tile.style.setProperty('--ys-tint-alpha', (0.14 + rand() * 0.26).toFixed(2))
+        frag.appendChild(tile)
+      }
+      layer.replaceChildren(frag)
+      return () => { layer.replaceChildren() }
+    }
+
     for (const t of buildTiles(W, H, cfg)) {
       const tile = document.createElement('div')
       tile.className = 'ys-flip-tile'
@@ -251,15 +282,22 @@ export default function Slideshow({
 
       const card = document.createElement('div')
       card.className = 'ys-flip-card'
-      // 被裁形的变体（六角蜂巢）：垫一层【同形状】的阴影。不能用卡片级
-      // box-shadow——矩形影会在每个六边形外勾出方角，整片看起来是一格格方块。
-      // 也不用 filter（逐格高斯模糊，实测帧率掉到 34fps）。
-      if (t.clip) {
-        const shade = document.createElement('div')
-        shade.className = 'ys-flip-shade'
-        tile.appendChild(shade)
+      // 影层（shade）：仅在【macOS 的百叶窗】需要。
+      // 原方案（Windows）把 box-shadow 放进 keyframes；WebKit 对 preserve-3d
+      // 层内动画 box-shadow 会逐帧重绘 face，重绘间隙 backface-visibility
+      // 判定失效 ⇒ 背面被 GPU 画成黑块。macOS 因此改用独立 shade 层承担影：
+      // 本体透明（不遮内容），仅 box-shadow 溢出格子边界外可见，挂在 card
+      // 之后（绘制在上）⇒ 翻转中 card 缩小露缝隙时影从缝隙可见。
+      // 其他变体两平台均用原方案（Windows 的 box-shadow keyframes /
+      // cube3d 的棱厚 / shatter 的碎片影），不建 shade。
+      let shadeEl: HTMLDivElement | undefined = undefined
+      const needsShade = isMac && flip.anim === 'blinds'
+      if (needsShade) {
+        shadeEl = document.createElement('div')
+        shadeEl.className = 'ys-flip-shade'
       }
-      for (const [src, side] of [[fromEl, 'front'], [toEl, 'back']] as const) {
+      // flip 模式：front = 旧页克隆、back = 新页克隆（needsClones 已保证非空）
+      for (const [src, side] of [[fromEl as HTMLElement, 'front'], [toEl as HTMLElement, 'back']] as const) {
         const face = document.createElement('div')
         face.className = `ys-flip-face ${side}`
         // 裁形挂在【面】上而不是格子：格子上的 clip-path 会把格子级投影一起
@@ -284,6 +322,8 @@ export default function Slideshow({
         card.appendChild(side)
       }
       tile.appendChild(card)
+      // macOS 百叶窗的影层挂在 card 之后（绘制在上，见上方注释）
+      if (needsShade && shadeEl) tile.appendChild(shadeEl)
       frag.appendChild(tile)
     }
     layer.replaceChildren(frag)
@@ -496,10 +536,11 @@ export default function Slideshow({
     return () => document.removeEventListener('fullscreenchange', onChange)
   }, [requestExit])
 
-  // 加载主题列表
+  // 加载主题列表 + 平台检测（macOS 翻面方块感分支，见 isMac 注释）
   useEffect(() => {
     const tauri = (window as any).__TAURI_INTERNALS__
     if (!tauri?.invoke) return
+    tauri.invoke('get_platform').then((p: string) => setIsMac(p === 'macos')).catch(() => {})
     tauri.invoke('list_themes').then((files: string[]) => setThemes(files || [])).catch(() => {})
     tauri.invoke('read_theme_json').then((json: string) => {
       try { setThemeMeta(JSON.parse(json || '{}')) } catch {}
@@ -646,7 +687,7 @@ export default function Slideshow({
         <span>{t('slideshow.exit')}</span>
       </button>
 
-      <div className={`ys-deck ys-dir-${dir}${anim !== 'slide' ? ` ys-anim-${anim}` : ''}`} ref={deckRef}>
+      <div className={`ys-deck ys-dir-${dir}${anim !== 'slide' ? ` ys-anim-${anim}` : ''}${isMac ? ' ys-mac' : ''}`} ref={deckRef}>
         {slides.map((slide, i) => {
           const active = i === h
           const past = i < h

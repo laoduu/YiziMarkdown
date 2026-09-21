@@ -7,7 +7,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { buildTiles, delayFor, impulseVars, tileTotalDuration, TILE_ANIM_IDS, TILE_VARIANTS, type TileConfig } from '../src/lib/slideTiles.ts'
+import { buildTiles, delayFor, impulseVars, tileTotalDuration, tileConfigFor, TILE_ANIM_IDS, TILE_VARIANTS, type TileConfig } from '../src/lib/slideTiles.ts'
 
 /** 种子化随机源（mulberry32），保证测试确定性 */
 const seeded = (seed: number) => () => {
@@ -220,7 +220,48 @@ test('TILE_VARIANTS: 1920×1080 下各变体单元数在可承受范围', () => 
   for (const [id, c] of Object.entries(TILE_VARIANTS)) {
     const n = buildTiles(1920, 1080, c).length
     assert.ok(n > 8, `${id} 单元太少：${n}`)
-    // 每单元 2 份整页克隆，超过 ~160 会明显变重（实测 60 格 1140 元素/44ms）
-    assert.ok(n <= 160, `${id} 单元过多：${n}`)
+    if (c.mode === 'shimmer') {
+      // shimmer 每格只是【一个纯色贴片】（无页面克隆），数量可远多于 flip
+      assert.ok(n <= 600, `${id}（shimmer）单元过多：${n}`)
+    } else {
+      // flip 每单元 2 份整页克隆，超过 ~160 会明显变重（实测 60 格 1140 元素/44ms）
+      assert.ok(n <= 160, `${id}（flip）单元过多：${n}`)
+    }
   }
+})
+
+test('TILE_VARIANTS: 平台归属（两平台各自独立）', () => {
+  // 蜂巢：两平台统一 shimmer 小格
+  assert.equal(TILE_VARIANTS.hex.mode, 'shimmer')
+  assert.equal(TILE_VARIANTS.hex.target, 112)
+  assert.equal(TILE_VARIANTS.hex.mac, undefined, '蜂巢两平台同一配置')
+  // 棋盘：Windows=flip+192（原方案不动），macOS=shimmer+96（各自独立）
+  assert.equal(TILE_VARIANTS.checkerboard.mode, 'flip')
+  assert.equal(TILE_VARIANTS.checkerboard.target, 192)
+  assert.equal(TILE_VARIANTS.checkerboard.mac?.mode, 'shimmer')
+  assert.equal(TILE_VARIANTS.checkerboard.mac?.target, 96)
+  // 百叶窗：两平台都是 flip+120（macOS 仅 CSS 不同）
+  assert.equal(TILE_VARIANTS.blinds.mode, 'flip')
+  assert.equal(TILE_VARIANTS.blinds.target, 120)
+  assert.equal(TILE_VARIANTS.blinds.mac, undefined)
+  // cube3d / shatter / depth：未改动
+  for (const id of ['cube3d', 'shatter', 'depth']) {
+    assert.equal(TILE_VARIANTS[id].mode, 'flip')
+    assert.equal(TILE_VARIANTS[id].mac, undefined)
+  }
+})
+
+test('tileConfigFor: macOS 合并 mac 覆盖，Windows 用默认', () => {
+  const cb = TILE_VARIANTS.checkerboard
+  const win = tileConfigFor(cb, false)
+  assert.equal(win.mode, 'flip')
+  assert.equal(win.target, 192)
+  const mac = tileConfigFor(cb, true)
+  assert.equal(mac.mode, 'shimmer')
+  assert.equal(mac.target, 96)
+  // 未覆盖的字段保持默认（如 shape / delay）
+  assert.equal(mac.shape, cb.shape)
+  assert.equal(mac.delay, cb.delay)
+  // 蜂巢两平台一致
+  assert.deepEqual(tileConfigFor(TILE_VARIANTS.hex, false), tileConfigFor(TILE_VARIANTS.hex, true))
 })

@@ -9,21 +9,35 @@
 export type TileShape = 'square' | 'strip' | 'hex'
 export type DelayMode = 'random' | 'wave' | 'row'
 
+/** 动画模式：
+ *  - 'shimmer'：小格网闪烁——每格是一块【纯色贴片】（不克隆页面），
+ *    以随机延迟淡入淡出；随机一部分用主题的另一种颜色，整体呈格子闪烁感。
+ *    新页由真实页面自身淡入承担（无 3D、无克隆 ⇒ 无左右异色、无方块、
+ *    无 WebKit 合成层压力）。
+ *  - 'flip'：旧方案（每格持整页克隆 + 3D 翻面）。 */
+export type TileMode = 'shimmer' | 'flip'
+
 export type TileConfig = {
   shape: TileShape
-  /** 单元尺寸（方块边长 / 竖条宽 / 六边形宽 / 三角格边长），px */
+  /** 单元尺寸（方块边长 / 竖条宽 / 六边形宽），px */
   target: number
   delay: DelayMode
-  /** 随机或波延迟的最大秒数（每格翻转时长之外的部分） */
+  /** 随机或波延迟的最大秒数（每格动画时长之外的部分） */
   spread: number
   /** 单格动画时长（秒），写成 CSS 变量 --ys-turn */
   turn: number
   /** 收尾融合淡出时长（秒），写成 CSS 变量 --ys-merge */
   merge: number
-  /** 是否给每格随机 3D 冲量（爆裂、景深用；CSS 读 --ys-tx/--ys-z 等） */
+  /** 是否给每格随机 3D 冲量（仅 flip 模式用；CSS 读 --ys-tx/--ys-z 等） */
   impulse: boolean
-  /** 每格的面数：2 = 正（旧页）/ 背（新页）；3 = 额外一个「侧面」做出厚度 */
+  /** 每格的面数（仅 flip 模式用）：2 = 正/背；3 = 额外一个「侧面」 */
   faces: 2 | 3
+  /** 动画模式（默认，Windows/共享路径） */
+  mode: TileMode
+  /** macOS 专属覆盖（部分字段即可）。不填 = 与默认完全相同。
+   *  用途：棋盘在 Windows 用原 flip + 大格，在 macOS 用 shimmer + 小格
+   *  —— 两平台各自独立，互不影响。 */
+  mac?: Partial<Omit<TileConfig, 'mac'>>
 }
 
 export type Tile = {
@@ -36,14 +50,24 @@ export type Tile = {
   clip: string | null
 }
 
-/** 各变体的切割与节奏配置（键 = SlideAnim 里的变体 id） */
+/** 各变体的切割与节奏配置（键 = SlideAnim 里的变体 id）。
+ *  平台归属（用户明确要求，两平台各自独立）：
+ *  - hex：两平台统一 shimmer 小格（用户要求把 mac 的蜂巢效果同步到 Windows）
+ *  - checkerboard：Windows 保持原 flip + 192px 大格（"已经很好了"）；
+ *    macOS 用 shimmer + 96px 小格（mac 那版"也不错"）
+ *  - blinds：两平台都是 flip + 120px 竖条；macOS 仅 CSS 层不同
+ *    （noshadow + 独立影层，避开 WebKit 黑块）
+ *  - cube3d / shatter / depth：两平台均为原 flip（未改动） */
 export const TILE_VARIANTS: Record<string, TileConfig> = {
-  checkerboard: { shape: 'square', target: 192, delay: 'random', spread: 0.45, turn: 0.5, merge: 0.25, impulse: false, faces: 2 },
-  cube3d: { shape: 'square', target: 192, delay: 'random', spread: 0.45, turn: 0.62, merge: 0.25, impulse: false, faces: 3 },
-  shatter: { shape: 'square', target: 168, delay: 'random', spread: 0.4, turn: 0.6, merge: 0.3, impulse: true, faces: 2 },
-  depth: { shape: 'square', target: 200, delay: 'wave', spread: 0.35, turn: 0.6, merge: 0.25, impulse: true, faces: 2 },
-  hex: { shape: 'hex', target: 250, delay: 'random', spread: 0.45, turn: 0.5, merge: 0.25, impulse: false, faces: 2 },
-  blinds: { shape: 'strip', target: 120, delay: 'row', spread: 0.3, turn: 0.55, merge: 0.25, impulse: false, faces: 2 },
+  checkerboard: {
+    shape: 'square', target: 192, delay: 'random', spread: 0.45, turn: 0.5, merge: 0.25, impulse: false, faces: 2, mode: 'flip',
+    mac: { mode: 'shimmer', target: 96, spread: 0.5, turn: 0.42, merge: 0.22 },
+  },
+  cube3d: { shape: 'square', target: 192, delay: 'random', spread: 0.45, turn: 0.62, merge: 0.25, impulse: false, faces: 3, mode: 'flip' },
+  shatter: { shape: 'square', target: 168, delay: 'random', spread: 0.4, turn: 0.6, merge: 0.3, impulse: true, faces: 2, mode: 'flip' },
+  depth: { shape: 'square', target: 200, delay: 'wave', spread: 0.35, turn: 0.6, merge: 0.25, impulse: true, faces: 2, mode: 'flip' },
+  hex: { shape: 'hex', target: 112, delay: 'random', spread: 0.5, turn: 0.42, merge: 0.22, impulse: false, faces: 2, mode: 'shimmer' },
+  blinds: { shape: 'strip', target: 120, delay: 'row', spread: 0.3, turn: 0.55, merge: 0.25, impulse: false, faces: 2, mode: 'flip' },
 }
 
 /** 走瓷砖转场的变体 id（其余变体是纯 CSS mask/transform） */
@@ -51,6 +75,10 @@ export const TILE_ANIM_IDS = Object.keys(TILE_VARIANTS)
 
 /** 变体总时长（秒）：延迟铺开 + 单格动画 + 收尾融合 */
 export const tileTotalDuration = (cfg: TileConfig) => cfg.spread + cfg.turn + cfg.merge
+
+/** 取该变体在指定平台上的实际配置（macOS 用 mac 覆盖合并） */
+export const tileConfigFor = (cfg: TileConfig, isMac: boolean): TileConfig =>
+  isMac && cfg.mac ? { ...cfg, ...cfg.mac } : cfg
 
 const SQRT3 = Math.sqrt(3)
 /** 正六边形（尖顶）内接于 w×h 矩形的 clip-path；h 取 w*2/√3 时为正六边形 */
