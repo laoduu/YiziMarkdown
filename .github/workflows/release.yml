@@ -56,7 +56,8 @@ jobs:
       matrix:
         include:
           - platform: windows-latest
-            args: --bundles nsis,wix
+            # CLI 只认 msi / nsis（wix 是工具名，不是 bundle 名）
+            args: --bundles nsis,msi
           - platform: macos-latest
             args: --target universal-apple-darwin --bundles dmg
     runs-on: ${{ matrix.platform }}
