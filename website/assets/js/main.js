@@ -2,6 +2,9 @@
 
     // ===== Theme Stack =====
     const themes = [
+        { id: 'liquidglass-prism', name: '液态玻璃 Prism', tag: '玻璃', color: '#2563eb',
+          desc: '冰蓝玻璃质感，光影流转，折射光带与多重内阴影，清爽通透（默认主题）',
+          img: 'screenshots/liquidglass.webp' },
         { id: 'academic-blue', name: '学术蓝', tag: '经典', color: '#002FA7',
           desc: '沉稳蓝色主调，适配学术论文、技术文档等正式场景',
           img: 'screenshots/academic-blue.webp' },
@@ -23,9 +26,6 @@
         { id: 'nature', name: '自然风', tag: '清新', color: '#4CAF50',
           desc: '柔和绿色调，森林宁静氛围，适合生活记录、旅行笔记',
           img: 'screenshots/nature.webp' },
-        { id: 'liquidglass', name: '液态玻璃', tag: '玻璃', color: '#3b82f6',
-          desc: '冰蓝通透玻璃质感，毛玻璃+折射光线，清爽通透',
-          img: 'screenshots/liquidglass.webp' },
         { id: 'matrix', name: '黑客帝国', tag: '终端', color: '#008a2e',
           desc: '白底绿字终端风，暗色绿色发光，极客专属风格',
           img: 'screenshots/matrix.webp' },

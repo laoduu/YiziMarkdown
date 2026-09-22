@@ -131,7 +131,7 @@
         </section>
 
         <!-- ========== 2. 文档管理 ========== -->
-        <section class="help-section" id="files" data-kw="新建 打开 保存 另存为 自动保存 导出 HTML 标签 首页 最近文件 文件关联 单实例">
+        <section class="help-section" id="files" data-kw="新建 打开 保存 另存为 自动保存 导出 HTML 大纲 侧栏 标签 拖动 排序 首页 最近文件 文件关联 单实例">
             <h2><a class="anchor" href="#files">#</a>文档管理</h2>
             <p class="help-lead">新建、打开、保存、导出与多文件切换。</p>
 
@@ -162,7 +162,7 @@
                 <ul>
                     <li><strong>Word 文档（DOCX）</strong>：Word 原生语义（标题 / 列表 / 表格 / 代码块 / 引用 / 任务列表），表格与表头样式对齐预览；图片支持本地路径、网络图片与 HTML <code>&lt;img&gt;</code> 标签，可用 <code>width</code> 属性控制宽度</li>
                     <li><strong>PDF</strong>：与预览还原度一致，长文档自动分页（Windows）</li>
-                    <li><strong>HTML</strong>（<kbd>Ctrl</kbd>+<kbd>H</kbd>）：保留主题样式，可直接分享或发布</li>
+                    <li><strong>HTML</strong>（<kbd>Ctrl</kbd>+<kbd>H</kbd>）：保留主题样式，可直接分享或发布；导出的 HTML 自带<strong>左侧悬浮大纲卡片</strong>，点击条目直达对应章节（PDF 不含侧栏）</li>
                     <li><strong>Markdown</strong>（<kbd>Ctrl</kbd>+<kbd>M</kbd>）：纯 Markdown 文本副本</li>
                     <li><strong>纯文本</strong>：去除所有标记符号</li>
                 </ul>
@@ -172,6 +172,7 @@
                 <h3>标签栏与首页</h3>
                 <ul>
                     <li>点击标签切换文件；<strong>双击</strong>或<strong>中键</strong>点击可关闭标签</li>
+                    <li><strong>按住标签拖动可调整顺序</strong>，带插入指示线与跟手浮层</li>
                     <li>未保存的文件标签上显示主题色<strong>呼吸圆点</strong>，保存成功后变勾号，1.5 秒后消失</li>
                     <li>关闭最后一个标签回到<strong>首页</strong>，展示最近打开的文件（名称、大小、修改时间）</li>
                 </ul>
@@ -187,9 +188,9 @@
         </section>
 
         <!-- ========== 3. 编辑基础 ========== -->
-        <section class="help-section" id="edit" data-kw="视图 源码 实时 并排 预览 演示 工具栏 格式化 斜杠菜单 自动补全 搜索 替换 大纲 标题折叠 划词 划词助手 选中">
+        <section class="help-section" id="edit" data-kw="视图 源码 实时 并排 预览 演示 工具栏 格式化 斜杠菜单 自动补全 搜索 替换 大纲 标题折叠 划词 划词助手 选中 元信息 属性面板 front matter YAML 属性 类型">
             <h2><a class="anchor" href="#edit">#</a>编辑基础</h2>
-            <p class="help-lead">五种视图、工具栏、斜杠菜单与 v0.2.3 新增的划词助手、标题折叠。</p>
+            <p class="help-lead">五种视图、工具栏、斜杠菜单，以及 v0.2.3 的划词助手、标题折叠与 v0.3.2 的元信息属性面板。</p>
 
             <div class="help-sub" id="edit-views">
                 <h3>五种视图模式</h3>
@@ -213,7 +214,18 @@
                         </tbody>
                     </table>
                 </div>
-                <p>切换视图时会自动定位到当前编辑位置。按 <kbd>F3</kbd> 可循环切换。</p>
+                <p>切换视图时会自动定位到当前编辑位置；<strong>停在顶部时不作补偿</strong>，不会刚切过去就被动滚走。按 <kbd>F3</kbd> 可循环切换。</p>
+            </div>
+
+            <div class="help-sub" id="edit-properties">
+                <h3>元信息属性面板（v0.3.2 新增）</h3>
+                <p>文档开头的 YAML 元信息（<code>---</code> 包裹）在三种模式下各有规范显示：</p>
+                <ul>
+                    <li><strong>源码模式</strong>：原样显示，所见即文件</li>
+                    <li><strong>实时模式</strong>：渲染为<strong>可编辑属性面板</strong> —— 每行 = [类型图标] [属性名] [值]，点类型图标可切换 7 种属性类型（自动 / 文本 / 数字 / 复选框 / 日期 / 日期和时间 / 列表），类型按属性名自动记忆</li>
+                    <li><strong>预览模式</strong>：隐藏（阅读模式主流做法）</li>
+                </ul>
+                <p>面板表头的「<strong>编辑源码</strong>」可把光标落到第一个属性行，直接编辑原始 YAML。</p>
             </div>
 
             <div class="help-sub" id="edit-live">
@@ -471,7 +483,7 @@
                     <table>
                         <thead><tr><th>动画</th><th>效果</th></tr></thead>
                         <tbody>
-                            <tr><td>水平滑动</td><td>新页从右滑入 + 淡入（默认）</td></tr>
+                            <tr><td>水平滑动</td><td>新页从右滑入 + 淡入</td></tr>
                             <tr><td>淡入淡出</td><td>纯透明度溶解</td></tr>
                             <tr><td>轻微缩放</td><td>轻微缩放进出</td></tr>
                             <tr><td>高斯溶解</td><td>水渍从多点渗开、互相吞并，有机边缘吞没整页</td></tr>
@@ -481,12 +493,13 @@
                             <tr><td>六角蜂巢</td><td>整页切成蜂巢状六边形，各自随机次序翻面</td></tr>
                             <tr><td>爆裂卡片</td><td>旧页碎片随机方向飞散，新页碎片从反方向飞入归位</td></tr>
                             <tr><td>纵深穿梭</td><td>每格带不同纵深，翻面时前后穿梭产生视差</td></tr>
-                            <tr><td>卡片推换</td><td>当前页缩小成卡片向左移出，新页卡片从右进入后放大落定</td></tr>
+                            <tr><td>卡片推换</td><td>当前页缩小成卡片向左移出，新页卡片从右进入后放大落定（<strong>默认</strong>）</td></tr>
                             <tr><td>无动画</td><td>直接切换</td></tr>
                         </tbody>
                     </table>
                 </div>
                 <p>切换动画是「新页加载」模型：新页在上层入场、旧页静止在下层被覆盖。强烈型会把整页（含背景）切成单元，每个单元自带前后两页的内容各自独立变换——所以背景也一起动，不是只有文字在变。</p>
+                <p>动画方案<strong>按平台分别优化</strong>：Windows 与 macOS（WebKit）各走一套经过实测调校的参数；翻面黑块、阴影丢失、溶解失效、亮色下叶片发黑等问题已在 macOS 侧修掉，棋盘格子与六角蜂巢在 macOS 使用小格闪烁效果。选择的动画会被记住。</p>
             </div>
 
             <div class="help-sub" id="slideshow-directive">
@@ -657,7 +670,7 @@
         </section>
 
         <!-- ========== 8. 云端存储 ========== -->
-        <section class="help-section" id="cloud" data-kw="云端 WebDAV 坚果云 Nextcloud 群晖 同步 服务器 凭据 密码 应用专用密码 冲突 ETag 上传 下载 缓存 云盘">
+        <section class="help-section" id="cloud" data-kw="云端 WebDAV 坚果云 Nextcloud 群晖 同步 服务器 凭据 密码 应用专用密码 冲突 ETag 上传 下载 缓存 云盘 加载预设 面包屑 目录树 展开">
             <h2><a class="anchor" href="#cloud">#</a>云端存储（WebDAV）</h2>
             <p class="help-lead">v0.3.0 新增：把文档直接读写到 WebDAV 服务器，多台设备共用同一份笔记。</p>
 
@@ -668,7 +681,7 @@
                     <table>
                         <thead><tr><th>项目</th><th>说明</th></tr></thead>
                         <tbody>
-                            <tr><td>服务器地址</td><td>WebDAV 根地址，需包含完整路径。坚果云：<code>https://dav.jianguoyun.com/dav/</code>；Nextcloud：<code>https://你的域名/remote.php/dav/files/用户名/</code></td></tr>
+                            <tr><td>服务器地址</td><td>WebDAV 根地址，需包含完整路径。坚果云：<code>https://dav.jianguoyun.com/dav/</code>；Nextcloud：<code>https://你的域名/remote.php/dav/files/用户名/</code>。也可在地址框<strong>聚焦时点「加载预设」</strong>一键填入坚果云地址</td></tr>
                             <tr><td>用户名 / 密码</td><td>填好后点「保存凭据」。多数服务需要<strong>应用专用密码</strong>而非登录密码：坚果云在「账户信息 → 安全选项 → 添加应用」生成，Nextcloud 在「设置 → 安全 → 应用密码」生成</td></tr>
                             <tr><td>起始目录</td><td>云端浏览器打开时进入的目录，默认服务器根目录</td></tr>
                         </tbody>
@@ -683,7 +696,8 @@
             <div class="help-sub" id="cloud-browse">
                 <h3>浏览云端文件</h3>
                 <ul>
-                    <li>侧边栏切换到<strong>「云端」</strong>标签页，点击文件夹进入，顶部面包屑可回上级</li>
+                    <li>侧边栏切换到<strong>「云端」</strong>标签页，点击文件夹进入；层级较深时顶部面包屑把上级折成 <code>…</code>，点 <code>…</code> 可下拉跳转任意隐藏层级</li>
+                    <li>点<strong>文件夹图标</strong>可就地逐层展开子目录（懒加载），带层级引导线，不必来回进出</li>
                     <li>点击文档直接打开；正文与文档中<strong>相对引用</strong>的图片会一并下载到本地缓存</li>
                     <li>悬停行尾的 <code>⋯</code> 或右键，可<strong>新建文件夹 / 重命名 / 删除</strong>（删除不可撤销，删文件夹会一并删除其中内容）</li>
                     <li>右上角 <code>⟳</code> 手动刷新；保存到云端后若正浏览该目录，列表会自动刷新</li>
@@ -731,13 +745,13 @@
             <div class="help-sub" id="appearance-themes">
                 <h3>主题一览</h3>
                 <div class="theme-shot-grid">
-                    <div class="theme-shot"><img src="screenshots/academic-blue.webp" alt="学术蓝" loading="lazy"><span>学术蓝（默认）</span></div>
+                    <div class="theme-shot"><img src="screenshots/liquidglass.webp" alt="液态玻璃 Prism" loading="lazy"><span>液态玻璃 Prism（默认）</span></div>
+                    <div class="theme-shot"><img src="screenshots/academic-blue.webp" alt="学术蓝" loading="lazy"><span>学术蓝</span></div>
                     <div class="theme-shot"><img src="screenshots/vibrant-orange.webp" alt="活力橙" loading="lazy"><span>活力橙</span></div>
                     <div class="theme-shot"><img src="screenshots/tech.webp" alt="科技感" loading="lazy"><span>科技感</span></div>
                     <div class="theme-shot"><img src="screenshots/minimal.webp" alt="极简风" loading="lazy"><span>极简风</span></div>
                     <div class="theme-shot"><img src="screenshots/magazine.webp" alt="杂志感" loading="lazy"><span>杂志感</span></div>
                     <div class="theme-shot"><img src="screenshots/nature.webp" alt="自然风" loading="lazy"><span>自然风</span></div>
-                    <div class="theme-shot"><img src="screenshots/liquidglass.webp" alt="液态玻璃" loading="lazy"><span>液态玻璃</span></div>
                     <div class="theme-shot"><img src="screenshots/lychee.webp" alt="荔枝红" loading="lazy"><span>荔枝红</span></div>
                     <div class="theme-shot"><img src="screenshots/violet.webp" alt="紫罗兰" loading="lazy"><span>紫罗兰</span></div>
                     <div class="theme-shot"><img src="screenshots/cyberpunk.webp" alt="赛博朋克" loading="lazy"><span>赛博朋克</span></div>
