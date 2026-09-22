@@ -135,7 +135,6 @@
   font-size: 2em;
   font-weight: 700;
   margin: 1.5em 0 0.5em;
-  color: #002FA7;
   letter-spacing: -0.02em;
 }
 
@@ -144,7 +143,6 @@
   font-size: 1.5em;
   font-weight: 600;
   margin: 1.3em 0 0.4em;
-  color: #1a3a7a;
   letter-spacing: -0.01em;
 }
 
@@ -153,7 +151,6 @@
   font-size: 1.25em;
   font-weight: 600;
   margin: 1.2em 0 0.3em;
-  color: #2a4a9a;
 }
 
 /* 段落间距 */
@@ -164,8 +161,8 @@
 /* 引用块：左边框为品牌蓝色线，文字使用侧栏文字色（灰蓝），与正文区分 */
 .editor-content.theme-academic blockquote {
   border-left: 3px solid var(--editor-accent);
-  padding-left: 1em;
-  margin: 1em 0;
+  padding: 0.5em 1em;
+  margin: 0.5em 0;
   color: var(--sidebar-text);
 }
 

@@ -97,9 +97,17 @@ Vi har skapat en extremt elegant upplevelse för WYSIWYG-läge; det stöder ocks
 - **Exportera**: Fem format: HTML / Markdown / ren text / Word (DOCX) / PDF; DOCX använder Words inbyggda semantik (listor/tabeller/kodblock/citat/uppgiftslistor), tabellstilar matchar förhandsvisningen, bilder stöder lokala sökvägar, webbilder och HTML-`<img>`-taggar (bredd kan styras med `width`-attributet); PDF matchar förhandsvisningen med automatisk paginering
 - **.md-fil association**: Enklicksställ in som systemstandard Markdown-redigeringsprogram i inställningar, dubbelklicka på .md för att öppna direkt (Windows-register / macOS LaunchServices)
 
+### Molnlagring (WebDAV)
+
+- **Molnfilbläddrare**: bläddra i WebDAV-serverns träd från fliken ”Moln” i sidofältet — öppna dokument, skapa mappar, byta namn, ta bort
+- **Spara till molnet**: ladda upp ett lokalt dokument med ett klick (bilder som refereras via relativa sökvägar laddas upp samtidigt och mappstrukturen bevaras); för molndokument skriver `Ctrl+S` direkt tillbaka till servern
+- **Konfliktskydd**: jämför serverns ETag före sparande; har filen ändrats på en annan enhet får du välja att skriva över eller läsa om — aldrig tyst överskrivning
+- **Säkra inloggningsuppgifter**: användarnamn och lösenord lagras i operativsystemets nyckelring (Windows Autentiseringshanteraren / macOS Nyckelring), aldrig i konfigurationsfiler
+- **Kompatibilitet**: fungerar med vanliga WebDAV-tjänster som Nutstore, Nextcloud och Synology (ett appspecifikt lösenord rekommenderas)
+
 ### Utseendeanpassning
 
-- ** femton inbyggda teman**: Akademiskt blå (standard), Dynamisk orange, Tekniskt, Minimalistiskt, Magasin, Natur, Vätske glas, Litchi röd, Viol, Cyberpunk, Facebook, Matrix, Mint, Solnedgång, Retro skrivmaskin, varje med ljust och mörkt färgschema
+- ** femton inbyggda teman**: Akademiskt blå, Dynamisk orange, Tekniskt, Minimalistiskt, Magasin, Natur, Vätske glas Prism (standard), Litchi röd, Viol, Cyberpunk, Facebook, Matrix, Mint, Solnedgång, Retro skrivmaskin, varje med ljust och mörkt färgschema
 - **Mörkt / Ljust läge**: Varje tema har både ljust och mörkt färgschema
 - **Typsnittsanpassning**: Källa och förhandsgranskningläge kan ställa in typsnitt, teckensnittstorlek, radavstånd separat
 - **Anpassad CSS**: `user.css` åsätter efter alla teman, högsta prioritet
@@ -109,7 +117,7 @@ Vi har skapat en extremt elegant upplevelse för WYSIWYG-läge; det stöder ocks
 
 - **Dokumentmallar**: mallar lagras i användarkatalogen `~/Documents/yizimarkdown/templates/`; lägg bara till `.md`-filer för att använda dem (du kan även skapa/redigera dem under Inställningar → Mallar, menyn uppdateras direkt); inbyggda mallar synkroniseras dit automatiskt vid första start, uppgradering/ominstallation skriver inte över dina mallar
 - **Genvägssystem**: Visuellt genvägspanel, stöder anpassad bindning för 30 åtgärder, tangentinspelning, konfliktupptäckning och återställning till standard
-- **Inställningspanelen**: Allmänt, Utseende, Redigerare, Realtidsläge, AI, Tillägg, Genvägar, Mallar, Om och andra flikar, inställningar träder i kraft omedelbart
+- **Inställningspanelen**: Allmänt, Utseende, Redigerare, Realtidsläge, AI, Moln, Tillägg, Genvägar, Mallar, Om och andra flikar, inställningar träder i kraft omedelbart
 
 ---
 
@@ -164,13 +172,13 @@ YiziMarkdown/
 ├── user.css                # Anpassade stilar
 ├── keybindings.json        # Genvägsconfiguration
 ├── themes/                 # Tema CSS-filer
-│   ├── academic.css        # Akademiskt blå (standard)
+│   ├── academic.css        # Akademiskt blå
 │   ├── vibrant.css         # Dynamisk orange
 │   ├── tech.css            # Tekniskt
 │   ├── minimal.css         # Minimalistiskt
 │   ├── magazine.css        # Magasin
 │   ├── nature.css          # Natur
-│   ├── liquidglass.css     # Vätske glas
+│   ├── liquidglass-prism.css # Vätske glas Prism (standard)
 │   ├── lychee.css          # Litchi röd
 │   ├── violet.css          # Viol
 │   ├── cyberpunk.css       # Cyberpunk

@@ -344,6 +344,7 @@ export const uk = {
     animFlashCss: 'filter: brightness(1) → 1.5 → 1',
     animGlowCss: 'blur + brightness разом',
     animRippleCss: 'багатоетапний blur + brightness',
+    cloudLoadPreset: 'Шаблон',
   },
   shortcuts: {
     file: 'Файл',
@@ -546,5 +547,19 @@ export const uk = {
     retry: 'Повторити',
     pathLabel: 'Хмарний шлях',
     root: 'Корінь',
+  },
+  properties: {
+    title: 'Властивості',
+    add: 'Додати властивість',
+    editSource: 'Редагувати джерело',
+    deleteProp: 'Видалити властивість',
+    blockValue: 'Блокове значення (лише читання)',
+    typeAuto: 'Автоматично',
+    typeText: 'Текст',
+    typeNumber: 'Число',
+    typeCheckbox: 'Прапорець',
+    typeDate: 'Дата',
+    typeDatetime: 'Дата й час',
+    typeList: 'Список',
   },
 }

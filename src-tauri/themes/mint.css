@@ -59,20 +59,17 @@
   font-size: 2em;
   font-weight: 700;
   margin: 1.5em 0 0.5em;
-  color: #059669;
   letter-spacing: -0.01em;
 }
 .editor-content.theme-mint h2 {
   font-size: 1.5em;
   font-weight: 600;
   margin: 1.3em 0 0.4em;
-  color: #10b981;
 }
 .editor-content.theme-mint h3 {
   font-size: 1.25em;
   font-weight: 600;
   margin: 1.2em 0 0.3em;
-  color: #34d399;
 }
 .editor-content.theme-mint p {
   margin: 0 0 var(--paragraph-spacing);
@@ -80,8 +77,8 @@
 }
 .editor-content.theme-mint blockquote {
   border-left: 3px solid #10b981;
-  padding: 0.8em 1em;
-  margin: 1em 0;
+  padding: 0.5em 1em;
+  margin: 0.5em 0;
   color: #3a6a4a;
   background: rgba(16, 185, 129, 0.06);
   border-radius: 0 var(--border-radius) var(--border-radius) 0;
@@ -170,13 +167,10 @@
 
 /* ── 深色模式完整覆盖 ────────────────────────────────────────── */
 .dark .theme-mint h1 {
-  color: #6ee7b7;
 }
 .dark .theme-mint h2 {
-  color: #5ad4a6;
 }
 .dark .theme-mint h3 {
-  color: #34d399;
 }
 .dark .theme-mint p {
   color: #b0e0d0;

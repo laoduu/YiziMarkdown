@@ -1,6 +1,25 @@
 import { ViewPlugin, EditorView, Decoration, DecorationSet, ViewUpdate } from '@codemirror/view'
 import { syntaxTree, toggleFold, foldedRanges } from '@codemirror/language'
 import { RangeSetBuilder } from '@codemirror/state'
+import { frontMatterOf } from './cm-frontmatter'
+
+/**
+ * 该行是否落在 front matter 块内 —— 元信息**不是标题**，不该出现 H 折叠徽标。
+ *
+ * 根因：`@lezer/markdown`（CM 的 Markdown 解析器）不认识 YAML front matter，
+ * 会把
+ *     ---
+ *     title: x
+ *     ---
+ * 的第 2~3 行当成 **setext 二级标题**，于是 `headingLevelAtLine` 会返回 2。
+ * 与实时模式那边同一根因（见 cm-frontmatter.ts 的说明）—— 这里是源码模式的入口。
+ */
+function inFrontMatter(view: EditorView, lineNo: number): boolean {
+  const r = frontMatterOf(view.state).range
+  if (!r) return false
+  const line = view.state.doc.line(lineNo)
+  return line.from < r.to && line.to > r.from
+}
 
 /** 返回指定行号的标题层级（1-6），非标题行返回 0（支持 ATX 与 Setext 标题） */
 function headingLevelAtLine(view: EditorView, lineNo: number): number {
@@ -92,7 +111,10 @@ class HeadingFoldView {
         return
       }
       const lineNo = this.editorView.state.doc.lineAt(pos).number
-      if (headingLevelAtLine(this.editorView, lineNo) > 0) {
+      // 元信息块内的"标题"是假的（setext 误判），不显示折叠徽标
+      if (inFrontMatter(this.editorView, lineNo)) {
+        this.setMouseLine(-1)
+      } else if (headingLevelAtLine(this.editorView, lineNo) > 0) {
         this.setMouseLine(lineNo)
       } else {
         this.setMouseLine(-1)
@@ -151,10 +173,12 @@ class HeadingFoldView {
     })
 
     const visible = new Set<number>()
+    const fm = frontMatterOf(view.state).range
     for (const { from, to } of view.visibleRanges) {
       const startLine = doc.lineAt(from).number
       const endLine = doc.lineAt(to).number
       for (let i = startLine; i <= endLine; i++) {
+        if (fm && doc.line(i).from < fm.to && doc.line(i).to > fm.from) continue // 元信息不算标题
         if (headingLevelAtLine(view, i) > 0) visible.add(i)
       }
     }

@@ -344,6 +344,7 @@ export const ko = {
     animFlashCss: 'filter: brightness(1) → 1.5 → 1',
     animGlowCss: 'blur + brightness 조합',
     animRippleCss: '다단계 blur + brightness',
+    cloudLoadPreset: '프리셋',
   },
   shortcuts: {
     file: '파일',
@@ -546,5 +547,19 @@ export const ko = {
     retry: '다시 시도',
     pathLabel: '클라우드 경로',
     root: '루트',
+  },
+  properties: {
+    title: '속성',
+    add: '속성 추가',
+    editSource: '소스 편집',
+    deleteProp: '이 속성 삭제',
+    blockValue: '블록 값(읽기 전용)',
+    typeAuto: '자동',
+    typeText: '텍스트',
+    typeNumber: '숫자',
+    typeCheckbox: '체크박스',
+    typeDate: '날짜',
+    typeDatetime: '날짜 및 시간',
+    typeList: '목록',
   },
 }

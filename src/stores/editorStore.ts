@@ -50,6 +50,8 @@ interface EditorState {
   closeTab: (tabId: string) => void
   forceCloseTab: (tabId: string) => void
   switchTab: (tabId: string | null) => void
+  /** 拖动排序：把 dragId 插到 targetId 之前（after=false）或之后（after=true） */
+  moveTab: (dragId: string, targetId: string, after: boolean) => void
   updateContent: (content: string) => void
   updateViewMode: (viewMode: ViewMode) => void
   markAsSaved: () => void
@@ -194,6 +196,20 @@ export const useEditorStore = create<EditorState>()(
 
       switchTab: (tabId) => {
         set({ activeTabId: tabId })
+      },
+
+      moveTab: (dragId, targetId, after) => {
+        const { tabs } = get()
+        const from = tabs.findIndex(t => t.id === dragId)
+        if (from === -1 || dragId === targetId) return
+        const next = [...tabs]
+        const [moved] = next.splice(from, 1)
+        // 目标下标必须在「已移除 dragId」的数组上重算：
+        // 从左往右拖时原下标会偏一位，用旧下标插入就会落到目标前面
+        const at = next.findIndex(t => t.id === targetId)
+        if (at === -1) return
+        next.splice(after ? at + 1 : at, 0, moved)
+        set({ tabs: next })
       },
 
       updateContent: (content) => {

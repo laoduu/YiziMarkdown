@@ -23,11 +23,11 @@ export default function Dialog({ open, onClose, title, children, width = 400 }: 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 backdrop-blur-sm" style={{ background: 'var(--overlay-bg)' }} onClick={onClose} />
       <div
         ref={dialogRef}
-        className="relative bg-[var(--editor-bg)] border border-[var(--editor-border)] rounded-xl shadow-2xl overflow-hidden animate-dialog-in"
-        style={{ width }}
+        className="relative border rounded-pop overflow-hidden animate-dialog-in"
+        style={{ width, background: 'var(--dialog-bg)', borderColor: 'var(--dialog-border)', boxShadow: 'var(--dialog-shadow)' }}
       >
         <div className="flex items-center justify-between px-4 h-11 border-b border-[var(--editor-border)]">
           <span className="text-sm font-semibold text-[var(--editor-text)]">{title}</span>

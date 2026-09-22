@@ -1,0 +1,89 @@
+/**
+ * HTML 导出专用样式 —— 悬浮卡片式大纲（左侧）。
+ *
+ * 只在 **HTML 导出**时以 `?inline` 注入（App.tsx 的 buildExportHtml），
+ * PDF 导出**不加载**本文件：大纲是屏幕导航元素，打印时不该出现在纸面上。
+ *
+ * 形态：**悬浮卡片**而不是贴边侧栏 ——
+ *   · 宽高**随内容自适应**（内容超长时用 max-height + 滚动兜底，否则会滚不到底部条目）
+ *   · 滚动时 `position: sticky` 吸顶悬浮，像一个跟随的菜单
+ *   · 与正文之间留 24px 边距（body 的 gap），整组在视口居中
+ *
+ * 层级缩进用 `--lv` 自定义属性，由生成大纲的代码按标题级别写入。
+ */
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 24px; /* 卡片与正文之间的边距 */
+}
+
+.export-toc {
+  position: sticky;
+  /* 与正文第一个标题的**底部**对齐：各主题的留白/字号不同，无法写死，
+     由导出 HTML 里的一小段脚本实测后写入 --toc-top；取不到时回退 96px。
+     margin-top 与 top 用同一个值 —— 静止位置与吸顶位置一致，卡片始终停在同一高度。 */
+  top: var(--toc-top, 96px);
+  margin-top: var(--toc-top, 96px);
+  flex: 0 0 auto;
+  width: 232px;
+  max-width: 28vw;
+  /* 高度自适应内容；超长时用**剩余视口高度**兜底：
+     必须把卡片自身的顶部偏移 --toc-top 一起减掉 —— 只写 calc(100vh - 48px)
+     会与 margin-top 叠加，导致卡片底部溢出屏幕。留 24px 作为底部间隙。 */
+  max-height: calc(100vh - var(--toc-top, 96px) - 24px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 14px 12px;
+  border: 1px solid var(--editor-border);
+  border-radius: var(--radius-lg, 12px);
+  background: var(--editor-surface);
+  box-shadow: var(--menu-shadow, 0 8px 24px rgba(0, 0, 0, 0.12));
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.export-toc-title {
+  margin: 0 0 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--editor-border);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--sidebar-text);
+}
+
+.export-toc a {
+  display: block;
+  padding: 3px 8px;
+  margin-left: calc((var(--lv, 1) - 1) * 14px);
+  color: var(--sidebar-text);
+  text-decoration: none;
+  border-radius: var(--radius-md, 6px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.export-toc a:hover {
+  background: var(--editor-hover);
+  color: var(--editor-text);
+}
+
+/* 窄屏（手机打开导出的 HTML）：卡片收窄，别抢正文宽度 */
+@media (max-width: 720px) {
+  body { gap: 12px; }
+  .export-toc { width: 132px; max-width: 40vw; padding: 10px 8px; }
+}
+
+/* 正文不分配剩余空间（`flex:1` 会撑满整行、把卡片顶到最左），
+   也不让主题自带的 `margin: … auto` 把正文从卡片旁边推开 ——
+   auto 外边距会抢走 justify-content 分配的自由空间，在卡片与正文之间顶出空隙。 */
+.editor-content {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}

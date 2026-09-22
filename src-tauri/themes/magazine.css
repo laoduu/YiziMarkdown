@@ -24,6 +24,8 @@
   --font-sans: 'Source Serif Pro', 'Noto Serif SC', Georgia, serif;
   --font-mono: 'Fira Code', 'Consolas', monospace;
   --font-serif: 'Playfair Display', 'Noto Serif SC', Georgia, serif;
+  /* 标题字体：走 --font-heading，预览与实时模式共用同一来源（实时 = 可编辑的预览） */
+  --font-heading: var(--font-serif);
   --font-size-base: 17px;
   --line-height: 1.9;
   --paragraph-spacing: 1.8em;
@@ -51,7 +53,7 @@
 
 /* 杂志风 - 标题样式 */
 .editor-content.theme-magazine h1 { 
-  font-family: var(--font-serif); 
+  font-family: var(--font-heading);
   font-size: 2.5em; 
   font-weight: 700; 
   margin: 2em 0 0.6em; 
@@ -59,14 +61,14 @@
   line-height: 1.2;
 }
 .editor-content.theme-magazine h2 { 
-  font-family: var(--font-serif); 
+  font-family: var(--font-heading);
   font-size: 1.8em; 
   font-weight: 600; 
   margin: 1.8em 0 0.5em; 
   font-style: italic;
 }
 .editor-content.theme-magazine h3 { 
-  font-family: var(--font-serif); 
+  font-family: var(--font-heading);
   font-size: 1.4em; 
   font-weight: 600; 
   margin: 1.5em 0 0.4em; 
@@ -77,7 +79,7 @@
 .editor-content.theme-magazine blockquote { 
   border-left: 4px solid var(--editor-accent); 
   padding: 0.5em 1.5em; 
-  margin: 1.5em 0; 
+  margin: 0.5em 0; 
   font-style: italic;
   color: var(--sidebar-text);
   font-size: 1.1em;

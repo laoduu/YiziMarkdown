@@ -24,6 +24,8 @@
   --font-sans: 'Lora', 'Merriweather', 'Noto Serif SC', Georgia, serif;
   --font-mono: 'Fira Code', 'Consolas', monospace;
   --font-serif: 'Lora', Georgia, serif;
+  /* 标题字体：走 --font-heading，预览与实时模式共用同一来源（实时 = 可编辑的预览） */
+  --font-heading: var(--font-serif);
   --font-size-base: 16px;
   --line-height: 1.85;
   --paragraph-spacing: 1.6em;
@@ -51,32 +53,29 @@
 
 /* 自然风 - 标题样式 */
 .editor-content.theme-nature h1 { 
-  font-family: var(--font-serif); 
+  font-family: var(--font-heading);
   font-size: 2.2em; 
   font-weight: 600; 
-  margin: 1.8em 0 0.5em; 
-  color: #3a5a3c;
+  margin: 1.8em 0 0.5em;
   letter-spacing: -0.01em;
 }
 .editor-content.theme-nature h2 { 
-  font-family: var(--font-serif); 
+  font-family: var(--font-heading);
   font-size: 1.6em; 
   font-weight: 600; 
-  margin: 1.5em 0 0.4em; 
-  color: #4a6a4c;
+  margin: 1.5em 0 0.4em;
 }
 .editor-content.theme-nature h3 { 
-  font-family: var(--font-serif); 
+  font-family: var(--font-heading);
   font-size: 1.3em; 
   font-weight: 500; 
-  margin: 1.3em 0 0.35em; 
-  color: #5a7a5c;
+  margin: 1.3em 0 0.35em;
 }
 .editor-content.theme-nature p { margin: 0 0 var(--paragraph-spacing); }
 .editor-content.theme-nature blockquote { 
   border-left: 4px solid var(--editor-accent); 
-  padding: 0.6em 1.2em; 
-  margin: 1.2em 0; 
+  padding: 0.5em 1.2em; 
+  margin: 0.5em 0; 
   color: var(--sidebar-text);
   font-style: italic;
   background: linear-gradient(to right, var(--editor-surface), transparent);

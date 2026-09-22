@@ -344,6 +344,7 @@ export const tr = {
     animFlashCss: 'filter: brightness(1) → 1.5 → 1',
     animGlowCss: 'blur + brightness birlikte',
     animRippleCss: 'çok aşamalı blur + brightness',
+    cloudLoadPreset: 'Ön ayar',
   },
   shortcuts: {
     file: 'Dosya',
@@ -546,5 +547,19 @@ export const tr = {
     retry: 'Yeniden dene',
     pathLabel: 'Bulut yolu',
     root: 'Kök',
+  },
+  properties: {
+    title: 'Özellikler',
+    add: 'Özellik ekle',
+    editSource: 'Kaynağı düzenle',
+    deleteProp: 'Özelliği sil',
+    blockValue: 'Blok değeri (salt okunur)',
+    typeAuto: 'Otomatik',
+    typeText: 'Metin',
+    typeNumber: 'Sayı',
+    typeCheckbox: 'Onay kutusu',
+    typeDate: 'Tarih',
+    typeDatetime: 'Tarih ve saat',
+    typeList: 'Liste',
   },
 }

@@ -107,7 +107,7 @@ Abbiamo creato un'esperienza estremamente elegante per la modalità WYSIWYG; sup
 
 ### Personalizzazione aspetto
 
-- **Quindici temi integrati**: Blu Accademico (predefinito), Arancio Vivace, Tecnologico, Minimalista, Rivista, Naturale, Vetro Liquido, Rosso Litchi, Viola, Cyberpunk, Facebook, Matrix, Menta, Tramonto, Macchina da scrivere retro, ogni tema ha schemi di colori chiaro e scuro
+- **Quindici temi integrati**: Blu Accademico, Arancio Vivace, Tecnologico, Minimalista, Rivista, Naturale, Vetro Liquido Prism (predefinito), Rosso Litchi, Viola, Cyberpunk, Facebook, Matrix, Menta, Tramonto, Macchina da scrivere retro, ogni tema ha schemi di colori chiaro e scuro
 - **Modalità scura / chiara**: Ogni tema ha entrambi gli schemi di colori chiaro e scuro
 - **Personalizzazione font**: Le modalità sorgente e anteprima possono impostare font, dimensione font e interlinea separatamente
 - **CSS personalizzato**: `user.css` sovrascrive dopo tutti i temi, massima priorità
@@ -172,13 +172,13 @@ YiziMarkdown/
 ├── user.css                # Stili personalizzati utente
 ├── keybindings.json        # Configurazione scorciatoie
 ├── themes/                 # File CSS temi
-│   ├── academic.css        # Blu Accademico (predefinito)
+│   ├── academic.css        # Blu Accademico
 │   ├── vibrant.css         # Arancio Vivace
 │   ├── tech.css            # Tecnologico
 │   ├── minimal.css         # Minimalista
 │   ├── magazine.css        # Rivista
 │   ├── nature.css          # Naturale
-│   ├── liquidglass.css     # Vetro Liquido
+│   ├── liquidglass-prism.css # Vetro Liquido Prism (predefinito)
 │   ├── lychee.css          # Rosso Litchi
 │   ├── violet.css          # Viola
 │   ├── cyberpunk.css       # Cyberpunk

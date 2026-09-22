@@ -21,6 +21,8 @@ import {
 } from '@codemirror/view'
 import { tags as t } from '@lezer/highlight'
 import { liveBlocksBundle } from './cm-live-blocks'
+import { frontMatterField } from './cm-frontmatter'
+import { propertiesPanel } from './cm-properties'
 
 const HIDDEN_MARK_NODES = new Set<string>([
   'HeaderMark', 'EmphasisMark', 'StrikethroughMark',
@@ -100,10 +102,17 @@ function buildDecorations(view: EditorView): DecorationSet {
     ranges.push(animLineClass.range(clObj.from))
   }
 
+  // 元信息块区间：块内一律不生成 Markdown 装饰（见下方 enter 里的说明）
+  const fm = view.state.field(frontMatterField, false)
+
   for (const { from, to } of view.visibleRanges) {
     tree.iterate({
       from, to,
       enter: (node) => {
+        // 元信息块内不参与 Markdown 渲染。解析器（lezer）不认识 front matter，
+        // 会把第 1 行 --- 当分隔线、把 title 那行当成 setext H2 ⇒ 这里整块跳过，
+        // 只留 cm-frontmatter.ts 给的"元信息块"外观。返回 false 连子节点一起跳过。
+        if (fm && node.from >= fm.from && node.to <= fm.to) return false
         const name = node.name
         const nFrom = node.from
         const nTo = node.to
@@ -249,39 +258,39 @@ const liveRenderPlugin = ViewPlugin.fromClass(
 )
 
 export const liveEditHighlightStyle = HighlightStyle.define([
-  { tag: t.heading1, fontWeight: '700', color: 'var(--editor-accent)' },
-  { tag: t.heading2, fontWeight: '700', color: 'var(--editor-accent)' },
-  { tag: t.heading3, fontWeight: '700', color: 'var(--editor-accent)' },
-  { tag: t.heading4, fontWeight: '700', color: 'var(--editor-accent)' },
-  { tag: t.heading5, fontWeight: '700', color: 'var(--editor-accent)' },
-  { tag: t.heading6, fontWeight: '700', color: 'var(--editor-accent)' },
-  { tag: t.strong, fontWeight: '700', color: 'var(--editor-text)' },
-  { tag: t.emphasis, fontStyle: 'italic', color: 'var(--editor-text)' },
-  { tag: t.strikethrough, textDecoration: 'line-through', color: 'var(--editor-text)' },
-  { tag: t.link, color: 'var(--editor-accent)' },
-  { tag: t.url, color: 'var(--editor-accent)' },
-  { tag: t.monospace, fontFamily: 'var(--font-mono)', color: 'var(--editor-accent)', backgroundColor: 'color-mix(in srgb, var(--editor-text) 10%, var(--editor-surface))', padding: '0.2em 0.4em', borderRadius: '5px' },
-  { tag: t.quote, color: 'var(--editor-text)', fontStyle: 'italic' },
+  { tag: t.heading1, fontWeight: '700', color: 'var(--code-heading)' },
+  { tag: t.heading2, fontWeight: '700', color: 'var(--code-heading)' },
+  { tag: t.heading3, fontWeight: '700', color: 'var(--code-heading)' },
+  { tag: t.heading4, fontWeight: '700', color: 'var(--code-heading)' },
+  { tag: t.heading5, fontWeight: '700', color: 'var(--code-heading)' },
+  { tag: t.heading6, fontWeight: '700', color: 'var(--code-heading)' },
+  { tag: t.strong, fontWeight: '700', color: 'var(--code-strong)' },
+  { tag: t.emphasis, fontStyle: 'italic', color: 'var(--code-emphasis)' },
+  { tag: t.strikethrough, textDecoration: 'line-through', color: 'var(--code-emphasis)' },
+  { tag: t.link, color: 'var(--code-link)' },
+  { tag: t.url, color: 'var(--code-link)' },
+  { tag: t.monospace, fontFamily: 'var(--font-mono)', color: 'var(--code-inline-fg)', backgroundColor: 'var(--code-inline-bg)', padding: '0.2em 0.4em', borderRadius: '5px' },
+  { tag: t.quote, color: 'var(--code-quote-fg)', fontStyle: 'italic' },
   // t.list: removed color to prevent CSS cascade conflict with .cm-md-code inside lists
-  { tag: t.contentSeparator, color: 'var(--editor-border)' },
-  { tag: t.processingInstruction, color: 'var(--editor-text)' },
-  { tag: t.keyword, color: 'var(--editor-accent)' },
-  { tag: t.string, color: 'var(--editor-accent)' },
-  { tag: t.number, color: 'var(--editor-accent)' },
-  { tag: t.comment, color: 'var(--editor-border)', fontStyle: 'italic' },
-  { tag: t.function(t.variableName), color: 'var(--editor-accent)' },
-  { tag: t.variableName, color: 'var(--editor-text)' },
-  { tag: t.typeName, color: 'var(--editor-accent)' },
-  { tag: t.className, color: 'var(--editor-accent)' },
-  { tag: t.propertyName, color: 'var(--editor-text)' },
-  { tag: t.operator, color: 'var(--editor-text)' },
-  { tag: t.punctuation, color: 'var(--editor-text)' },
-  { tag: t.bracket, color: 'var(--editor-text)' },
-  { tag: t.bool, color: 'var(--editor-accent)' },
-  { tag: t.null, color: 'var(--editor-accent)' },
-  { tag: t.tagName, color: 'var(--editor-accent)' },
-  { tag: t.attributeName, color: 'var(--editor-text)' },
-  { tag: t.attributeValue, color: 'var(--editor-accent)' },
+  { tag: t.contentSeparator, color: 'var(--code-comment)' },
+  { tag: t.processingInstruction, color: 'var(--code-punct)' },
+  { tag: t.keyword, color: 'var(--code-keyword)' },
+  { tag: t.string, color: 'var(--code-string)' },
+  { tag: t.number, color: 'var(--code-number)' },
+  { tag: t.comment, color: 'var(--code-comment)', fontStyle: 'italic' },
+  { tag: t.function(t.variableName), color: 'var(--code-function)' },
+  { tag: t.variableName, color: 'var(--code-variable)' },
+  { tag: t.typeName, color: 'var(--code-type)' },
+  { tag: t.className, color: 'var(--code-type)' },
+  { tag: t.propertyName, color: 'var(--code-variable)' },
+  { tag: t.operator, color: 'var(--code-operator)' },
+  { tag: t.punctuation, color: 'var(--code-punct)' },
+  { tag: t.bracket, color: 'var(--code-punct)' },
+  { tag: t.bool, color: 'var(--code-constant)' },
+  { tag: t.null, color: 'var(--code-constant)' },
+  { tag: t.tagName, color: 'var(--code-tag)' },
+  { tag: t.attributeName, color: 'var(--code-attr)' },
+  { tag: t.attributeValue, color: 'var(--code-string)' },
 ])
 
 export const liveEditTheme = EditorView.theme({
@@ -292,31 +301,33 @@ export const liveEditTheme = EditorView.theme({
   '.cm-md-heading-line-4': { fontSize: '1.1em', fontWeight: '700' },
   '.cm-md-heading-line-5': { fontWeight: '700' },
   '.cm-md-heading-line-6': { fontWeight: '700', opacity: '0.6' },
-  '.cm-md-h1': { color: 'var(--editor-accent)' },
-  '.cm-md-h2': { color: 'var(--editor-accent)' },
-  '.cm-md-h3': { color: 'var(--editor-accent)' },
-  '.cm-md-h4': { color: 'var(--editor-accent)' },
-  '.cm-md-h5': { color: 'var(--editor-accent)' },
-  '.cm-md-h6': { color: 'var(--editor-accent)' },
-  '.cm-md-strong': { fontWeight: '700', color: 'var(--editor-text)' },
-  '.cm-md-em': { fontStyle: 'italic', color: 'var(--editor-text)' },
-  '.cm-md-strike': { textDecoration: 'line-through', color: 'var(--editor-text)' },
+  // 标题字体与预览对齐：走 --font-heading（主题设了就用主题的，没设回退到内容字体）。
+  // 实时模式的定位是"可编辑的预览"，标题字体不能只继承正文字体。
+  '.cm-md-h1': { color: 'var(--code-heading)', fontFamily: 'var(--font-heading)' },
+  '.cm-md-h2': { color: 'var(--code-heading)', fontFamily: 'var(--font-heading)' },
+  '.cm-md-h3': { color: 'var(--code-heading)', fontFamily: 'var(--font-heading)' },
+  '.cm-md-h4': { color: 'var(--code-heading)', fontFamily: 'var(--font-heading)' },
+  '.cm-md-h5': { color: 'var(--code-heading)', fontFamily: 'var(--font-heading)' },
+  '.cm-md-h6': { color: 'var(--code-heading)', fontFamily: 'var(--font-heading)' },
+  '.cm-md-strong': { fontWeight: '700', color: 'var(--code-strong)' },
+  '.cm-md-em': { fontStyle: 'italic', color: 'var(--code-emphasis)' },
+  '.cm-md-strike': { textDecoration: 'line-through', color: 'var(--code-emphasis)' },
   '.cm-md-code': {
-    fontFamily: 'var(--font-mono)', color: 'var(--editor-accent)',
-    backgroundColor: 'color-mix(in srgb, var(--editor-text) 10%, var(--editor-surface))',
+    fontFamily: 'var(--font-mono)', color: 'var(--code-inline-fg)',
+    backgroundColor: 'var(--code-inline-bg)',
     padding: '0.2em 0.4em', borderRadius: '5px',
   },
-  '.cm-md-link': { color: 'var(--editor-accent)', textDecoration: 'underline', textUnderlineOffset: '2px' },
+  '.cm-md-link': { color: 'var(--code-link)', textDecoration: 'underline', textUnderlineOffset: '2px' },
   '.cm-md-quote-line': {
-    borderLeft: '3px solid var(--editor-accent)', paddingLeft: '12px',
-    color: 'var(--sidebar-text)', fontStyle: 'italic', backgroundColor: 'var(--editor-surface)',
+    borderLeft: '3px solid var(--code-quote-bar)', paddingLeft: '12px',
+    color: 'var(--code-quote-fg)', fontStyle: 'italic', backgroundColor: 'var(--code-quote-bg)',
   },
   '.cm-md-hr-line': {
-    borderTop: '1px solid var(--editor-border)', minHeight: '1px',
+    borderTop: '1px solid var(--code-comment)', minHeight: '1px',
     backgroundColor: 'transparent',
   },
   '.cm-md-fenced-line': {
-    backgroundColor: 'color-mix(in srgb, var(--editor-text) 5%, var(--editor-surface))',
+    backgroundColor: 'var(--code-block-bg)',
     fontFamily: 'var(--font-mono)',
   },
   // 无序列表：隐藏标记，显示圆点
@@ -386,7 +397,7 @@ export const liveEditTheme = EditorView.theme({
     transition: 'font-size 0.18s ease, padding-top 0.18s ease, padding-bottom 0.18s ease',
   },
   '.cm-selectionLayer': { zIndex: '2 !important' },
-  '.cm-selectionBackground': { backgroundColor: 'rgba(100, 100, 255, 0.25) !important' },
+  '.cm-selectionBackground': { backgroundColor: 'var(--code-selection-bg) !important' },
 })
 
 export function liveEditExtension() {
@@ -395,5 +406,7 @@ export function liveEditExtension() {
     liveRenderPlugin,
     liveEditTheme,
     liveBlocksBundle(),
+    // 元信息属性面板：只在实时模式挂载（源码模式保持原样显示 YAML）
+    propertiesPanel,
   ]
 }

@@ -344,6 +344,7 @@ export const nl = {
     animFlashCss: 'filter: brightness(1) → 1.5 → 1',
     animGlowCss: 'blur + brightness gecombineerd',
     animRippleCss: 'meerfasig blur + brightness',
+    cloudLoadPreset: 'Preset',
   },
   shortcuts: {
     file: 'Bestand',
@@ -546,5 +547,19 @@ export const nl = {
     retry: 'Opnieuw proberen',
     pathLabel: 'Cloudpad',
     root: 'Hoofdmap',
+  },
+  properties: {
+    title: 'Eigenschappen',
+    add: 'Eigenschap toevoegen',
+    editSource: 'Bron bewerken',
+    deleteProp: 'Eigenschap verwijderen',
+    blockValue: 'Blokwaarde (alleen-lezen)',
+    typeAuto: 'Automatisch',
+    typeText: 'Tekst',
+    typeNumber: 'Getal',
+    typeCheckbox: 'Selectievakje',
+    typeDate: 'Datum',
+    typeDatetime: 'Datum en tijd',
+    typeList: 'Lijst',
   },
 }

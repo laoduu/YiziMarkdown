@@ -59,21 +59,18 @@
   font-size: 2em;
   font-weight: 700;
   margin: 1.5em 0 0.5em;
-  color: #008a2e;
   letter-spacing: 0.08em;
 }
 .editor-content.theme-matrix h2 {
   font-size: 1.5em;
   font-weight: 600;
   margin: 1.3em 0 0.4em;
-  color: #0a9a3a;
   letter-spacing: 0.05em;
 }
 .editor-content.theme-matrix h3 {
   font-size: 1.25em;
   font-weight: 600;
   margin: 1.2em 0 0.3em;
-  color: #2aaa4a;
 }
 .editor-content.theme-matrix p {
   margin: 0 0 var(--paragraph-spacing);
@@ -81,8 +78,8 @@
 }
 .editor-content.theme-matrix blockquote {
   border-left: 3px solid #008a2e;
-  padding: 0.8em 1em;
-  margin: 1em 0;
+  padding: 0.5em 1em;
+  margin: 0.5em 0;
   color: #3a7a3a;
   background: rgba(0, 138, 46, 0.04);
   border-radius: var(--border-radius);

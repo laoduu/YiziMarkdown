@@ -22,6 +22,7 @@ import { useI18n, translate, getCurrentLang } from './i18n'
 import { refreshThemeCursorVars } from './lib/themeCursor'
 // 导出 PDF 用的内联样式（globals.css 已包含 Tailwind prose / 编辑器排版；KaTeX 样式保证公式还原）
 import globalsCss from './styles/globals.css?inline'
+import exportTocCss from './styles/export-toc.css?inline'
 import katexCss from 'katex/dist/katex.min.css?inline'
 
 // 打开文件对话框 - Tauri 环境用 Rust 命令，浏览器降级用 HTML input
@@ -147,8 +148,14 @@ function App() {
 
   // 应用字体/排版设置到 CSS 变量
   useEffect(() => {
-    if (fontFamily) document.documentElement.style.setProperty('--font-mono', fontFamily)
-    if (previewFontFamily) document.documentElement.style.setProperty('--font-sans', previewFontFamily)
+    // 字体分三个独立角色，别互相越权（详见 globals.css 的说明）：
+    //   --font-editor  ←「编辑器字体」：只作用于源码模式的可编辑内容
+    //   --font-preview ←「预览字体」：只作用于预览 / 实时 / 演示模式的内容
+    //   --font-ui      软件界面字体，**不由这里写入** —— 内容字体设置不该改到界面文案
+    // 另外**不要**写 --font-mono：它的语义是"等宽编程字体"（globals.css 注释与各主题
+    // 都按此声明），写进比例字体（默认 MiSans）会让代码块与等宽输入框全部错位。
+    if (fontFamily) document.documentElement.style.setProperty('--font-editor', fontFamily)
+    if (previewFontFamily) document.documentElement.style.setProperty('--font-preview', previewFontFamily)
     if (fontSize) document.documentElement.style.setProperty('--font-size-base', `${fontSize}px`)
     if (lineHeight) document.documentElement.style.setProperty('--line-height', String(lineHeight))
     if (previewFontSize) document.documentElement.style.setProperty('--preview-font-size', `${previewFontSize}px`)
@@ -733,15 +740,41 @@ function App() {
   const buildExportHtml = useCallback((opts?: { print?: boolean }): string => {
     const themeCss = document.getElementById('yizimarkdown-theme-css')?.textContent || ''
     const userCss = document.getElementById('yizimarkdown-user-css')?.textContent || ''
-    const previewHtml = document.querySelector('.editor-content')?.innerHTML || ''
+    const contentEl = document.querySelector('.editor-content')
+    const previewHtml = contentEl?.innerHTML || ''
     const themeClass = `theme-${currentTheme}${isDark ? ' dark' : ''}`
+
+    // 大纲：直接从**渲染后的标题元素**取 —— 与正文同源，锚点 id 必然一致，
+    // 不必再跑一遍 Markdown（也就不会出现"大纲与正文对不上"）。
+    // PDF/打印**不带**侧栏：侧边栏是屏幕导航元素，不该出现在纸面上。
+    const tocItems = contentEl
+      ? Array.from(contentEl.querySelectorAll<HTMLElement>('h1[id],h2[id],h3[id],h4[id],h5[id],h6[id]'))
+        .map((el) => ({ level: Number(el.tagName.charAt(1)), id: el.id, text: (el.textContent || '').trim() }))
+        .filter((it) => it.id && it.text)
+      : []
+    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    const wantToc = !opts?.print && tocItems.length > 0
+    const tocHtml = wantToc
+      ? `<nav class="export-toc"><div class="export-toc-title">${esc(t('sidebar.outline'))}</div>${
+          tocItems.map((it) => `<a href="#${esc(it.id)}" style="--lv:${it.level}">${esc(it.text)}</a>`).join('')
+        }</nav>`
+      : ''
+    // 大纲卡片与正文第一个标题的**底部**对齐。各主题的留白/字号不同，写死数值换主题就偏，
+    // 所以在文档解析后实测一次；取不到标题时保留 CSS 里的 96px 回退。
+    const tocScript = wantToc
+      ? '<script>(function(){var h=document.querySelector(".editor-content h1,.editor-content h2,.editor-content h3,.editor-content h4");if(!h)return;document.documentElement.style.setProperty("--toc-top",Math.round(h.getBoundingClientRect().bottom+16)+"px")})()</script>'
+      : ''
+
     // globals.css 的 html,body{height:100%;overflow:hidden} 是应用 UI 用的；
     // 独立导出文件必须解除，否则文档锁死在视口高度、无法滚动
     const extraCss = opts?.print
       ? '@page{margin:18mm}html,body{height:auto!important;overflow:visible!important}body{background:#fff}.editor-content{padding:0!important;max-width:none!important;margin:0!important}'
       : 'html,body{height:auto!important;overflow:visible!important}'
-    return `<!DOCTYPE html><html class="${themeClass}"><head><meta charset="utf-8"><style>${globalsCss}</style><style>${katexCss}</style><style>${themeCss}</style><style>${userCss}</style>${extraCss ? `<style>${extraCss}</style>` : ''}</head><body class="${themeClass}"><div class="editor-content prose prose-lg max-w-none theme-${currentTheme}">${previewHtml}</div></body></html>`
-  }, [currentTheme, isDark])
+    // 大纲侧栏样式只在 HTML 导出时注入（PDF 不带大纲，也就用不上）
+    const tocCss = wantToc ? exportTocCss : ''
+
+    return `<!DOCTYPE html><html class="${themeClass}"><head><meta charset="utf-8"><style>${globalsCss}</style><style>${katexCss}</style><style>${themeCss}</style><style>${userCss}</style>${tocCss ? `<style>${tocCss}</style>` : ''}${extraCss ? `<style>${extraCss}</style>` : ''}</head><body class="${themeClass}">${tocHtml}<div class="editor-content prose prose-lg max-w-none theme-${currentTheme}">${previewHtml}</div>${tocScript}</body></html>`
+  }, [currentTheme, isDark, t])
 
   const handleExport = useCallback(async (format: 'html' | 'md' | 'txt' | 'docx' | 'pdf') => {
     const tab = currentTab()

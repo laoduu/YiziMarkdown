@@ -355,6 +355,7 @@ export const zhTW = {
     cloudTestOk: '連線成功：{msg}',
     cloudTestFailed: '連線失敗：{msg}',
     cloudCredentialsNote: '帳號認證保存在系統憑證儲存庫（Windows 認證管理員 / macOS 鑰匙圈），不會寫入任何設定檔。',
+    cloudLoadPreset: '載入預設',
   },
   shortcuts: {
     // 分類
@@ -563,5 +564,19 @@ export const zhTW = {
     retry: '重試',
     pathLabel: '雲端路徑',
     root: '根目錄',
+  },
+  properties: {
+    title: '屬性',
+    add: '新增屬性',
+    editSource: '編輯原始碼',
+    deleteProp: '刪除此屬性',
+    blockValue: '區塊值（唯讀）',
+    typeAuto: '自動',
+    typeText: '文字',
+    typeNumber: '數字',
+    typeCheckbox: '核取方塊',
+    typeDate: '日期',
+    typeDatetime: '日期與時間',
+    typeList: '列表',
   },
 }

@@ -44,6 +44,7 @@ import {
 } from 'lucide-react'
 import WindowControls from './WindowControls'
 import { useSettingsStore } from '../stores/settingsStore'
+import { orderThemes } from '../lib/themeOrder'
 import { useI18n } from '../i18n'
 import LinkModal from './LinkModal'
 import ImageModal from './ImageModal'
@@ -137,7 +138,7 @@ export default function Toolbar({
             tauri.invoke('read_theme_json') as Promise<string>,
             tauri.invoke('list_templates') as Promise<string[]>,
           ])
-          if (files) setThemeFiles(files)
+          if (files) setThemeFiles(orderThemes(files))
           try { setThemeMeta(JSON.parse(json || '{}')) } catch {}
           if (tmpl) setTemplates(tmpl)
         }
@@ -237,7 +238,7 @@ export default function Toolbar({
               }}
             >
               {templates.length === 0 ? (
-                <div className="px-3 py-2 text-sm text-[var(--editor-text-muted)]">{t('toolbar.noTemplates')}</div>
+                <div className="px-3 py-2 text-sm text-[var(--toolbar-fg-muted)]">{t('toolbar.noTemplates')}</div>
               ) : templates.map((name) => (
                 <ExportMenuItem 
                   key={name} 
@@ -448,7 +449,7 @@ export default function Toolbar({
                 setShowTablePicker(false)
               }}
             >
-              <div className="text-xs text-[var(--editor-text-muted)] mb-2 h-4">
+              <div className="text-xs text-[var(--toolbar-fg-muted)] mb-2 h-4">
                 {tablePickerSize.rows > 0 ? `${tablePickerSize.rows} × ${tablePickerSize.cols}` : t('toolbar.pickSize')}
               </div>
               <div 
@@ -617,13 +618,13 @@ function ToolbarButton({ icon, tooltip, onClick, active, accent }: ToolbarButton
       onClick={onClick}
       title={tooltip}
       className={`
-        w-7 h-7 flex items-center justify-center rounded-md
+        w-7 h-7 flex items-center justify-center rounded-ui
         transition-colors duration-150
         ${active 
-          ? 'bg-[var(--editor-accent)] text-white' 
+          ? 'bg-[var(--toolbar-accent)] text-[var(--on-accent)]' 
           : accent
-            ? 'hover:bg-[var(--editor-hover)] text-[var(--editor-accent)] opacity-80 hover:opacity-100'
-            : 'hover:bg-[var(--editor-hover)] text-[var(--editor-text)] opacity-80 hover:opacity-100'
+            ? 'hover:bg-[var(--toolbar-hover)] text-[var(--toolbar-accent)] opacity-80 hover:opacity-100'
+            : 'hover:bg-[var(--toolbar-hover)] text-[var(--toolbar-fg)] opacity-80 hover:opacity-100'
         }
       `}
     >
@@ -633,7 +634,7 @@ function ToolbarButton({ icon, tooltip, onClick, active, accent }: ToolbarButton
 }
 
 function ToolbarDivider() {
-  return <div className="w-px h-5 bg-[var(--editor-border)] mx-px shrink-0" />
+  return <div className="w-px h-5 bg-[var(--toolbar-border)] mx-px shrink-0" />
 }
 
 function generateTableMd(rows: number, cols: number, t: (key: string, params?: Record<string, string | number>) => string): string {

@@ -6,6 +6,14 @@
  *
  * 本模块只负责「切成什么」与「什么节奏」；「怎么动」由 CSS 各变体负责。 */
 
+/** 演示模式的切换动画 id（对应 slideshow.css 的 `.ys-anim-*` 变体）。
+ *  其中 `TILE_ANIM_IDS` 走「瓷砖转场」（整页切成单元、每格持前后两页克隆），
+ *  其余是纯 CSS mask / transform 变体。
+ *  类型定义在这里而不是组件里：settingsStore.slideAnim 也要用它做持久化字段的类型。 */
+export type SlideAnim =
+  | 'slide' | 'fade' | 'zoom' | 'none' | 'dissolve'
+  | 'blinds' | 'checkerboard' | 'cube' | 'cube3d' | 'shatter' | 'hex' | 'depth'
+
 export type TileShape = 'square' | 'strip' | 'hex'
 export type DelayMode = 'random' | 'wave' | 'row'
 

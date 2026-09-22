@@ -357,6 +357,7 @@ export const zh = {
     github: 'GitHub',
     releases: '历史版本',
     helpDoc: '帮助文档',
+    cloudLoadPreset: '加载预设',
   },
   shortcuts: {
     // 分类
@@ -565,5 +566,19 @@ export const zh = {
     retry: '重试',
     pathLabel: '云端路径',
     root: '根目录',
+  },
+  properties: {
+    title: '属性',
+    add: '添加属性',
+    editSource: '编辑源码',
+    deleteProp: '删除该属性',
+    blockValue: '块状值（只读）',
+    typeAuto: '自动',
+    typeText: '文本',
+    typeNumber: '数字',
+    typeCheckbox: '复选框',
+    typeDate: '日期',
+    typeDatetime: '日期和时间',
+    typeList: '列表',
   },
 }

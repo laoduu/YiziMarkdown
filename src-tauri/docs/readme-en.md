@@ -97,9 +97,17 @@ We have created an extremely elegant experience for WYSIWYG mode; it also suppor
 - **Export**: Five formats: HTML / Markdown / plain text / Word (DOCX) / PDF; DOCX uses native Word semantics (lists/tables/code blocks/quotes/task lists), table styles match the preview, images support local paths, web images and HTML `<img>` tags (width can be controlled with the `width` attribute); PDF matches the preview with automatic pagination
 - **.md file association**: One-click set as system default Markdown editor in settings, double-click .md to open directly (Windows registry / macOS LaunchServices)
 
+### Cloud Storage (WebDAV)
+
+- **Cloud file browser**: browse your WebDAV server tree from the "Cloud" tab in the sidebar — open documents, create folders, rename, delete
+- **Save to cloud**: upload a local document in one click (images referenced by relative paths are uploaded too, keeping the directory structure); for cloud documents `Ctrl+S` writes straight back to the server
+- **Conflict protection**: compares the server ETag before saving; if the file was changed on another device a dialog lets you overwrite or reload — never a silent overwrite
+- **Credential safety**: username and password go into the OS keychain (Windows Credential Manager / macOS Keychain), never into config files
+- **Compatibility**: works with standard WebDAV services such as Nutstore, Nextcloud and Synology (an app-specific password is recommended)
+
 ### Appearance Customization
 
-- **Fifteen built-in themes**: Academic Blue (default), Vibrant Orange, Tech, Minimalist, Magazine, Nature, Liquid Glass, Lychee Red, Violet, Cyberpunk, Facebook, Matrix, Mint, Sunset, Retro Typewriter, each with light and dark color schemes
+- **Fifteen built-in themes**: Academic Blue, Vibrant Orange, Tech, Minimalist, Magazine, Nature, Liquid Glass Prism (default), Lychee Red, Violet, Cyberpunk, Facebook, Matrix, Mint, Sunset, Retro Typewriter, each with light and dark color schemes
 - **Dark / Light mode**: Each theme has both light and dark color schemes
 - **Font customization**: Source and preview modes can set font, font size, line height separately
 - **Custom CSS**: `user.css` overrides after all themes, highest priority
@@ -109,7 +117,7 @@ We have created an extremely elegant experience for WYSIWYG mode; it also suppor
 
 - **Document templates**: Templates are stored in the user directory `~/Documents/yizimarkdown/templates/`, just drop in `.md` files to use them (you can also create/edit them under Settings → Templates, the menu refreshes immediately); built-in templates sync there automatically on first launch, upgrading/reinstalling won't overwrite your templates
 - **Shortcut key system**: Visual shortcut key configuration panel, supports custom binding for 30 actions, key recording, conflict detection, and restore defaults
-- **Settings panel**: General, Appearance, Editor, Real-time mode, AI, Plugins, Shortcut keys, Templates, About and other tabs, settings take effect immediately
+- **Settings panel**: General, Appearance, Editor, Real-time mode, AI, Cloud, Plugins, Shortcut keys, Templates, About and other tabs, settings take effect immediately
 
 ---
 
@@ -164,13 +172,13 @@ YiziMarkdown/
 ├── user.css                # User custom styles
 ├── keybindings.json        # Shortcut key configuration
 ├── themes/                 # Theme CSS files
-│   ├── academic.css        # Academic Blue (default)
+│   ├── academic.css        # Academic Blue
 │   ├── vibrant.css         # Vibrant Orange
 │   ├── tech.css            # Tech
 │   ├── minimal.css         # Minimalist
 │   ├── magazine.css        # Magazine
 │   ├── nature.css          # Nature
-│   ├── liquidglass.css     # Liquid Glass
+│   ├── liquidglass-prism.css # Liquid Glass Prism (default)
 │   ├── lychee.css          # Lychee Red
 │   ├── violet.css          # Violet
 │   ├── cyberpunk.css       # Cyberpunk

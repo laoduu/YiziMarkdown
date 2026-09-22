@@ -2,6 +2,7 @@ import MarkdownIt from 'markdown-it'
 import taskLists from 'markdown-it-task-lists'
 import hljs from 'highlight.js'
 import { generateHeadingId } from './headingId'
+import { splitFrontMatter } from './frontMatter.ts'
 
 // ---- Core ruler：给块级元素注入 data-source-line 属性 ----
 const BLOCK_OPEN_TYPES = new Set([
@@ -124,9 +125,9 @@ export function renderMarkdown(
 ): string {
   // 重置标题计数
   Object.keys(headingCountRef).forEach(k => delete headingCountRef[k])
-  // 过滤 frontmatter（以 --- 开头和结尾的 YAML 块，允许前导空行）
-  const cleaned = content.replace(/^\s*---\r?\n[\s\S]*?\r?\n---\r?\n/, '')
-  return getMarkdownIt(pluginExtenders).render(cleaned)
+  // 元信息块不参与预览渲染。解析统一在 lib/frontMatter.ts
+  // （此前这里有一份与 slides.ts 规则不一致的内联正则）。
+  return getMarkdownIt(pluginExtenders).render(splitFrontMatter(content).body)
 }
 
 export default getMarkdownIt

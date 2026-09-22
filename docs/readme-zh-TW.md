@@ -106,7 +106,7 @@
 
 ### 外觀定製
 
-- **十五套內建主題**：學術藍（預設）、活力橙、科技感、極簡風、雜誌感、自然風、液態玻璃、荔枝紅、紫羅蘭、賽博朋克、Facebook、駭客帝國、薄荷冰沙、落日熔金、復古打字機，每套均有亮暗兩套配色
+- **十五套內建主題**：學術藍、活力橙、科技感、極簡風、雜誌感、自然風、液態玻璃 Prism（預設）、荔枝紅、紫羅蘭、賽博朋克、Facebook、駭客帝國、薄荷冰沙、落日熔金、復古打字機，每套均有亮暗兩套配色
 - **深色 / 亮色模式**：每套主題均有亮暗兩套配色
 - **字體定製**：原始碼和預覽模式分別設定字體、字號、行高
 - **自訂 CSS**：`user.css` 覆蓋在所有主題之後，優先級最高
@@ -171,13 +171,13 @@ YiziMarkdown/
 ├── user.css                # 使用者自訂樣式
 ├── keybindings.json        # 快捷鍵配置
 ├── themes/                 # 主題 CSS 檔案
-│   ├── academic.css        # 學術藍（預設）
+│   ├── academic.css        # 學術藍
 │   ├── vibrant.css         # 活力橙
 │   ├── tech.css            # 科技感
 │   ├── minimal.css         # 極簡風
 │   ├── magazine.css        # 雜誌感
 │   ├── nature.css          # 自然風
-│   ├── liquidglass.css     # 液態玻璃
+│   ├── liquidglass-prism.css # 液態玻璃 Prism（預設）
 │   ├── lychee.css          # 荔枝紅
 │   ├── violet.css          # 紫羅蘭
 │   ├── cyberpunk.css       # 賽博朋克

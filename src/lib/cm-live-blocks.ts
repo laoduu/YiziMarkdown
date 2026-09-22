@@ -8,16 +8,20 @@
  */
 
 import { syntaxTree } from '@codemirror/language'
-import { useSettingsStore } from '../stores/settingsStore'
+// 带 .ts 扩展名：本模块要能被 `node --test` 直接加载（tests/liveBlocks.test.ts），
+// 而 Node 的 ESM 解析器不做扩展名补全（见 lib/remotePath.ts 的同类说明）。
+import { useSettingsStore } from '../stores/settingsStore.ts'
 import { StateField } from '@codemirror/state'
 import type { EditorState } from '@codemirror/state'
 import type { Range } from '@codemirror/state'
 import {
   Decoration,
-  DecorationSet,
   EditorView,
   WidgetType,
 } from '@codemirror/view'
+// DecorationSet 是**类型导出**：写在值导入里 Vite/esbuild 能丢弃，
+// 但 Node 的类型剥离器（tests/liveBlocks.test.ts 要加载本模块）不能。
+import type { DecorationSet } from '@codemirror/view'
 
 /* ------------------------------------------------------------------ */
 /*  Data types                                                        */
@@ -441,13 +445,12 @@ function buildBlockDecorations(state: EditorState): DecorationSet {
       }
       // 多行块级公式: $$\nformula\n$$（允许行首有列表标记）
       if (/^(?:\s*(?:[-*+]|\d+\.\s))?\s*\$\$\s*$/.test(line.text)) {
-        let endLine = i
+        // 闭合行 = 「整行是 $$」或「行尾是 $$」（`\sqrt{\pi}$$` 这种写法也要认）。
+        // 找不到闭合就**不生成替换** —— 早先这里有个 `endLine = j` 兜底，会让 endLine
+        // 一路推到文档最后一行，把公式之后的全部内容都盖掉（就是"公式后面没渲染出来"）。
+        let endLine = -1
         for (let j = i + 1; j <= doc.lines; j++) {
-          if (/^(?:\s*(?:[-*+]|\d+\.\s))?\s*\$\$\s*$/.test(doc.line(j).text)) {
-            endLine = j
-            break
-          }
-          endLine = j
+          if (/\$\$\s*$/.test(doc.line(j).text)) { endLine = j; break }
         }
         if (endLine > i) {
           const tex = doc.sliceString(line.from, doc.line(endLine).to)
@@ -577,6 +580,16 @@ const liveBlocksTheme = EditorView.theme({
     margin: '0.6em 0',
     padding: '0',
     cursor: 'text',
+  },
+  // 元信息属性面板（widget 本体在 cm-properties.ts，内部样式走 Shadow DOM）。
+  // 宿主做成"属性面板"观感，与源码模式里元信息块的样式保持一致。
+  '.cm-live-block--properties': {
+    margin: '0.2em 0 0.8em',
+    padding: '6px 0 6px 10px',
+    cursor: 'default',
+    borderLeft: '2px solid var(--editor-accent)',
+    background: 'color-mix(in srgb, var(--editor-text) 4%, transparent)',
+    borderRadius: '0 var(--radius-md) var(--radius-md) 0',
   },
   '.cm-live-block--image img': {
     maxWidth: '100%',

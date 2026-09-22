@@ -344,6 +344,7 @@ export const pt = {
     animFlashCss: 'filter: brightness(1) → 1.5 → 1',
     animGlowCss: 'blur + brightness combinados',
     animRippleCss: 'blur + brightness em várias etapas',
+    cloudLoadPreset: 'Predefinição',
   },
   shortcuts: {
     file: 'Arquivo',
@@ -546,5 +547,19 @@ export const pt = {
     retry: 'Tentar novamente',
     pathLabel: 'Caminho na nuvem',
     root: 'Raiz',
+  },
+  properties: {
+    title: 'Propriedades',
+    add: 'Adicionar propriedade',
+    editSource: 'Editar código-fonte',
+    deleteProp: 'Excluir propriedade',
+    blockValue: 'Valor em bloco (somente leitura)',
+    typeAuto: 'Automático',
+    typeText: 'Texto',
+    typeNumber: 'Número',
+    typeCheckbox: 'Caixa de seleção',
+    typeDate: 'Data',
+    typeDatetime: 'Data e hora',
+    typeList: 'Lista',
   },
 }

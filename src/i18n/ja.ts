@@ -344,6 +344,7 @@ export const ja = {
     animFlashCss: 'filter: brightness(1) → 1.5 → 1',
     animGlowCss: 'blur + brightness の組み合わせ',
     animRippleCss: '多段階 blur + brightness',
+    cloudLoadPreset: 'プリセット',
   },
   shortcuts: {
     file: 'ファイル',
@@ -546,5 +547,19 @@ export const ja = {
     retry: '再試行',
     pathLabel: 'クラウドパス',
     root: 'ルート',
+  },
+  properties: {
+    title: 'プロパティ',
+    add: 'プロパティを追加',
+    editSource: 'ソースを編集',
+    deleteProp: 'このプロパティを削除',
+    blockValue: 'ブロック値（読み取り専用）',
+    typeAuto: '自動',
+    typeText: 'テキスト',
+    typeNumber: '数値',
+    typeCheckbox: 'チェックボックス',
+    typeDate: '日付',
+    typeDatetime: '日付と時刻',
+    typeList: 'リスト',
   },
 }

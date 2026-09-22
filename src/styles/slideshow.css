@@ -8,7 +8,8 @@
   /* 背景即主题背景色：全程只有主题色，动画不引入任何外来颜色 */
   background: var(--editor-bg, #ffffff);
   color: var(--editor-text, #1f2937);
-  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif);
+  /* 内容字体跟随「预览字体」设置（--font-preview）；主题的 --font-sans 作为回退 */
+  font-family: var(--font-preview, var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif));
   overflow: hidden;
 }
 
@@ -812,7 +813,7 @@
 .ys-slide blockquote {
   border-left: 4px solid var(--editor-accent, #4f46e5);
   padding: 0.15em 0 0.15em 1.2em;
-  color: var(--editor-text-muted, inherit);
+  color: var(--sidebar-text, inherit);
 }
 
 /* 表格 */
@@ -899,7 +900,7 @@
 
 .ys-layout-cover > :not(:first-child):not(.ys-cover-meta) {
   font-size: 1.12em;
-  color: var(--editor-text-muted, inherit);
+  color: var(--sidebar-text, inherit);
   max-width: 42rem;
   margin: 0.35em auto 0;
 }
@@ -911,7 +912,7 @@
 .ys-cover-meta {
   margin-top: 2.2em;
   font-size: 0.8em;
-  color: var(--editor-text-muted, inherit);
+  color: var(--sidebar-text, inherit);
   letter-spacing: 0.02em;
 }
 
@@ -974,7 +975,7 @@
 
 .ys-layout-thanks > :not(:first-child) {
   font-size: 1.1em;
-  color: var(--editor-text-muted, inherit);
+  color: var(--sidebar-text, inherit);
 }
 
 /* ---- 目录页：大号数字编号，横向排列 ---- */
@@ -1360,7 +1361,7 @@
   gap: 14px;
   align-items: baseline;
   font-size: 12px;
-  color: var(--editor-text-muted, rgba(128, 128, 128, 0.8));
+  color: var(--sidebar-text, rgba(128, 128, 128, 0.8));
   font-family: var(--font-mono, ui-monospace, monospace);
   pointer-events: none;
   z-index: 100;
@@ -1393,7 +1394,7 @@
   gap: 16px;
   align-items: center;
   font-size: 12px;
-  color: var(--editor-text-muted, rgba(128, 128, 128, 0.8));
+  color: var(--sidebar-text, rgba(128, 128, 128, 0.8));
   font-family: var(--font-mono, ui-monospace, monospace);
   pointer-events: none;
   z-index: 100;
@@ -1516,7 +1517,7 @@
   top: 14px;
   left: 24px;
   font-size: 12px;
-  color: var(--editor-text-muted, rgba(128, 128, 128, 0.7));
+  color: var(--sidebar-text, rgba(128, 128, 128, 0.7));
   pointer-events: none;
   z-index: 100;
   max-width: 60vw;
@@ -1564,7 +1565,7 @@
 }
 
 .ys-card td:first-child {
-  color: var(--editor-text-muted, inherit);
+  color: var(--sidebar-text, inherit);
   width: 45%;
 }
 
@@ -1576,7 +1577,7 @@
 .ys-card-foot {
   margin: 16px 0 0;
   font-size: 12px;
-  color: var(--editor-text-muted, inherit);
+  color: var(--sidebar-text, inherit);
   border-top: 1px solid var(--editor-border, rgba(128, 128, 128, 0.3));
   padding-top: 14px;
   line-height: 1.6;
@@ -1617,7 +1618,7 @@
 .ys-notes-head button {
   background: transparent;
   border: none;
-  color: var(--editor-text-muted, inherit);
+  color: var(--sidebar-text, inherit);
   font-size: 12px;
   cursor: pointer;
   font-family: inherit;

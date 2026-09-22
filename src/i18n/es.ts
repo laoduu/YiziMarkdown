@@ -344,6 +344,7 @@ export const es = {
     animFlashCss: 'filter: brightness(1) → 1.5 → 1',
     animGlowCss: 'blur + brightness combinados',
     animRippleCss: 'blur + brightness en varias etapas',
+    cloudLoadPreset: 'Preajuste',
   },
   shortcuts: {
     file: 'Archivo',
@@ -546,5 +547,19 @@ export const es = {
     imageAlt: 'Texto alternativo',
     imageAltPlaceholder: 'Descripción de la imagen (opcional)',
     browse: 'Examinar',
+  },
+  properties: {
+    title: 'Propiedades',
+    add: 'Añadir propiedad',
+    editSource: 'Editar código fuente',
+    deleteProp: 'Eliminar propiedad',
+    blockValue: 'Valor en bloque (solo lectura)',
+    typeAuto: 'Automático',
+    typeText: 'Texto',
+    typeNumber: 'Número',
+    typeCheckbox: 'Casilla de verificación',
+    typeDate: 'Fecha',
+    typeDatetime: 'Fecha y hora',
+    typeList: 'Lista',
   },
 }

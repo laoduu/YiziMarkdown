@@ -99,9 +99,17 @@ Creamos una experiencia extremadamente elegante para el modo WYSIWYG; además, s
 - **Exportar**: Cinco formatos: HTML / Markdown / texto plano / Word (DOCX) / PDF; DOCX usa la semántica nativa de Word (listas/tablas/bloques de código/citas/listas de tareas), los estilos de tabla coinciden con la vista previa, las imágenes admiten rutas locales, imágenes web y etiquetas HTML `<img>` (el ancho se controla con el atributo `width`); el PDF coincide con la vista previa y pagina automáticamente
 - **Asociación de archivos .md**: Configurar con un clic como editor Markdown predeterminado del sistema; hacer doble clic en .md para abrir directamente (registro de Windows / macOS LaunchServices)
 
+### Almacenamiento en la nube (WebDAV)
+
+- **Navegador de archivos en la nube**: recorre el árbol del servidor WebDAV desde la pestaña «Nube» de la barra lateral — abrir documentos, crear carpetas, cambiar nombre, eliminar
+- **Guardar en la nube**: sube un documento local con un clic (las imágenes referenciadas con rutas relativas también se suben, manteniendo la estructura de carpetas); en documentos de la nube, `Ctrl+S` escribe directamente en el servidor
+- **Protección frente a conflictos**: compara el ETag del servidor antes de guardar; si el archivo se modificó en otro dispositivo, un diálogo permite sobrescribir o recargar — nunca una sobrescritura silenciosa
+- **Credenciales seguras**: el nombre de usuario y la contraseña se guardan en el almacén del sistema (Administrador de credenciales de Windows / Llavero de macOS), nunca en archivos de configuración
+- **Compatibilidad**: funciona con servicios WebDAV estándar como Nutstore, Nextcloud y Synology (se recomienda una contraseña de aplicación)
+
 ### Personalización de apariencia
 
-- **Quince temas integrados**: Azul académico (predeterminado), naranja vibrante, estilo tecnológico, minimalista, estilo revista, estilo natural, vidrio líquido, rojo lichi, violeta, cyberpunk, Facebook, Matrix, menta, atardecer dorado, typewriter vintage; cada uno con esquemas de colores claro y oscuro
+- **Quince temas integrados**: Azul académico, naranja vibrante, estilo tecnológico, minimalista, estilo revista, estilo natural, vidrio líquido Prism (predeterminado), rojo lichi, violeta, cyberpunk, Facebook, Matrix, menta, atardecer dorado, typewriter vintage; cada uno con esquemas de colores claro y oscuro
 - **Modo oscuro / claro**: Cada tema tiene esquemas de colores claro y oscuro
 - **Personalización de fuentes**: Configuración separada de fuente, tamaño y interlineado para modo fuente y vista previa
 - **CSS personalizado**: `user.css` se aplica después de todos los temas, con la máxima prioridad
@@ -111,7 +119,7 @@ Creamos una experiencia extremadamente elegante para el modo WYSIWYG; además, s
 
 - **Plantillas de documentos**: las plantillas se guardan en el directorio de usuario `~/Documents/yizimarkdown/templates/`; solo tienes que colocar archivos `.md` para usarlas (también puedes crearlas/editarlas en Ajustes → Plantillas, el menú se actualiza al instante); las plantillas integradas se sincronizan allí automáticamente en el primer inicio, actualizar/reinstalar no sobrescribirá tus plantillas
 - **Sistema de atajos de teclado**: Panel de configuración visual de atajos, soporta personalización de 30 acciones, grabación de teclas, detección de conflictos y restauración de valores predeterminados
-- **Panel de configuración**: Múltiples pestañas: General, Apariencia, Editor, Modo en tiempo real, AI, Plugins, Atajos de teclado, Plantillas, Acerca de; vista previa en tiempo real de los ajustes
+- **Panel de configuración**: Múltiples pestañas: General, Apariencia, Editor, Modo en tiempo real, AI, Nube, Plugins, Atajos de teclado, Plantillas, Acerca de; vista previa en tiempo real de los ajustes
 
 ---
 
@@ -166,13 +174,13 @@ YiziMarkdown/
 ├── user.css                # Estilos personalizados del usuario
 ├── keybindings.json        # Configuración de atajos de teclado
 ├── themes/                 # Archivos CSS de temas
-│   ├── academic.css        # Azul académico (predeterminado)
+│   ├── academic.css        # Azul académico
 │   ├── vibrant.css         # Naranja vibrante
 │   ├── tech.css            # Estilo tecnológico
 │   ├── minimal.css         # Minimalista
 │   ├── magazine.css        # Estilo revista
 │   ├── nature.css          # Estilo natural
-│   ├── liquidglass.css     # Vidrio líquido
+│   ├── liquidglass-prism.css # Vidrio líquido Prism (predeterminado)
 │   ├── lychee.css          # Rojo lichi
 │   ├── violet.css          # Violeta
 │   ├── cyberpunk.css       # Cyberpunk

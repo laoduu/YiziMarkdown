@@ -1,0 +1,453 @@
+/* ═══════════════════════════════════════════════════════════════
+   液态玻璃 Prism (Liquid Glass Prism) — YiziMarkdown 主题
+
+   第四版（令牌化重写）。第三版是「用组件选择器 + 字面量补足变量体系的缺失」，
+   全文 529 行、14 处 !important / [class*=] / z-index 硬怼，改一处要动几十行。
+   本版改为**只用令牌**表达：区域配色走 --<region>-*，纹路与流光走 --*-deco-* / --*-sheen-*，
+   圆角走 --radius-*，代码配色走 --code-*。结果：行数减半，且不含任何 !important、
+   属性子串选择器、z-index —— 因此不会再和下拉菜单的层级打架，也不会被 overflow 裁掉。
+
+   视觉语言（与第三版一致）：
+     亮色 — 冰晶白底 + 极淡冰蓝渐变光晕；卡片/引用块/代码块用双层玻璃（内高光 + 渐变描边）。
+     暗色 — 深靛黑实面板，顶部工具栏与底部状态栏各有一抹缓慢流动的冰蓝光影。
+     光影色链 — 青 → 天蓝 → 蓝 → 深蓝，色温有层次但全收敛在蓝域。
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 亮色 ────────────────────────────────────────────────────── */
+:root.theme-liquidglass-prism {
+  /* 编辑器 */
+  --editor-bg: #eef3fb;
+  --editor-text: #1a2538;
+  --editor-accent: #2563eb;
+  --editor-border: rgba(120, 152, 205, 0.45);
+  --editor-surface: rgba(255, 255, 255, 0.78);
+  --editor-hover: rgba(200, 220, 250, 0.55);
+  --editor-selection-bg: rgba(37, 99, 235, 0.2);
+  --editor-cursor: #2563eb;
+  --editor-h1: #1e40af;
+  --editor-h2: #1e40af;
+  --editor-h3: #2563eb;
+
+  /* 顶部工具栏：实色基底 + 流动冰蓝光影（第三版要写 .toolbar 选择器 + z-index，现在只给值） */
+  --toolbar-bg: #f2f7ff;
+  --toolbar-fg: #1a2538;
+  --toolbar-fg-muted: #3f5c85;
+  --toolbar-border: rgba(120, 152, 205, 0.35);
+  --toolbar-accent: #2563eb;
+  --toolbar-hover: rgba(200, 220, 250, 0.55);
+  --toolbar-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 1px 4px rgba(37, 99, 235, 0.10);
+  --toolbar-sheen-image: linear-gradient(90deg,
+      rgba(34, 211, 238, 0) 0%,
+      rgba(34, 211, 238, 0.30) 22%,
+      rgba(56, 189, 248, 0.34) 34%,
+      rgba(59, 130, 246, 0.36) 46%,
+      rgba(37, 99, 235, 0.34) 58%,
+      rgba(37, 99, 235, 0.30) 68%,
+      rgba(37, 99, 235, 0) 100%);
+  --toolbar-sheen-size: 200% 100%;
+  --toolbar-sheen-anim: deco-sweep 14s ease-in-out infinite;
+
+  /* 标签栏：比顶栏略沉，形成层次 */
+  --tabbar-bg: rgba(228, 240, 255, 0.85);
+  --tabbar-border: rgba(120, 152, 205, 0.3);
+  --tabbar-active-bg: #eef3fb;
+
+  /* 侧栏：蓝白玻璃，较高不透明保证可读 */
+  --sidebar-bg: rgba(228, 240, 255, 0.9);
+  --sidebar-text: #3f5c85;
+  --sidebar-border: rgba(120, 152, 205, 0.35);
+
+  /* 状态栏：品牌蓝 + 流动光影 */
+  --statusbar-bg: #2563eb;
+  --statusbar-text: #ffffff;
+  --statusbar-sheen-image: linear-gradient(90deg,
+      rgba(34, 211, 238, 0) 0%,
+      rgba(34, 211, 238, 0.40) 22%,
+      rgba(56, 189, 248, 0.45) 34%,
+      rgba(59, 130, 246, 0.46) 46%,
+      rgba(37, 99, 235, 0.44) 58%,
+      rgba(37, 99, 235, 0.40) 68%,
+      rgba(37, 99, 235, 0) 100%);
+  --statusbar-sheen-size: 200% 100%;
+  --statusbar-sheen-anim: deco-sweep 14s ease-in-out infinite;
+
+  /* 菜单 / 弹窗：第三版用 [class*="menu"] + z-index:99999!important 硬怼，现在只给值 */
+  --menu-bg: rgba(255, 255, 255, 0.97);
+  --menu-border: rgba(120, 152, 205, 0.4);
+  --menu-shadow: 0 8px 28px rgba(37, 99, 235, 0.14), 0 2px 8px rgba(0, 0, 0, 0.06);
+  --dialog-bg: #f7faff;
+  --dialog-border: rgba(120, 152, 205, 0.45);
+  --dialog-shadow: 0 25px 60px rgba(37, 99, 235, 0.18), 0 8px 20px rgba(0, 0, 0, 0.06);
+  --overlay-bg: rgba(20, 40, 80, 0.35);
+
+  /* 形状与预览排版 */
+  --border-radius: 12px;
+  --quote-bar: #3b82f6;
+  --quote-fg: #3f5c85;
+  --quote-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.74));
+  --inline-code-bg: rgba(255, 255, 255, 0.72);
+  --inline-code-fg: #2563eb;
+  --table-head-bg: rgba(37, 99, 235, 0.07);
+  --table-border: rgba(120, 152, 205, 0.25);
+  --hr-color: rgba(37, 99, 235, 0.22);
+  --link-color: #2563eb;
+  --code-pre-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.82), rgba(240, 246, 255, 0.66));
+
+  /* 语法配色：冰蓝色链。此前 25 种 token 全挤在强调色上，代码是单色的 */
+  --code-keyword: #0e7490;
+  --code-type: #0891b2;
+  --code-string: #1d4ed8;
+  --code-number: #7c3aed;
+  --code-constant: #7c3aed;
+  --code-builtin: #d97706;
+  --code-function: #2563eb;
+  --code-tag: #0ea5e9;
+  --code-attr: #0284c7;
+  --code-operator: #1e40af;
+  --code-comment: #94a3b8;
+  --code-inline-fg: #1e40af;
+
+  /* 字体 */
+  --font-sans: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --font-size-base: 16px;
+  --line-height: 1.8;
+  --paragraph-spacing: 1.5em;
+}
+
+/* ── 暗色 ────────────────────────────────────────────────────── */
+:root.theme-liquidglass-prism.dark {
+  --editor-bg: #0a0f1e;
+  --editor-text: #cfd9ec;
+  --editor-accent: #7ab3ff;
+  --editor-border: rgba(110, 145, 200, 0.38);
+  --editor-surface: #121a30;
+  --editor-hover: #1a2540;
+  --editor-selection-bg: rgba(122, 179, 255, 0.24);
+  --editor-cursor: #7ab3ff;
+  --editor-h1: #7ab3ff;
+  --editor-h2: #9ac3ff;
+  --editor-h3: #7ab3ff;
+
+  --toolbar-bg: #0f1728;
+  --toolbar-fg: #cfd9ec;
+  --toolbar-fg-muted: #5f7da8;
+  --toolbar-border: rgba(110, 145, 200, 0.3);
+  --toolbar-accent: #7ab3ff;
+  --toolbar-hover: #1a2540;
+  --toolbar-shadow: inset 0 1px 0 rgba(122, 179, 255, 0.10), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --toolbar-sheen-image: linear-gradient(90deg,
+      rgba(103, 232, 249, 0) 0%,
+      rgba(103, 232, 249, 0.34) 22%,
+      rgba(125, 211, 252, 0.40) 34%,
+      rgba(96, 165, 250, 0.42) 46%,
+      rgba(59, 130, 246, 0.40) 58%,
+      rgba(59, 130, 246, 0.36) 68%,
+      rgba(59, 130, 246, 0) 100%);
+
+  --tabbar-bg: #0d1526;
+  --tabbar-border: rgba(110, 145, 200, 0.22);
+  --tabbar-active-bg: #121a30;
+
+  --sidebar-bg: #0d1526;
+  --sidebar-text: #5f7da8;
+  --sidebar-border: rgba(110, 145, 200, 0.22);
+
+  --statusbar-bg: #141f3a;
+  --statusbar-text: #9ab8e0;
+  --statusbar-sheen-image: linear-gradient(90deg,
+      rgba(103, 232, 249, 0) 0%,
+      rgba(103, 232, 249, 0.38) 22%,
+      rgba(125, 211, 252, 0.45) 34%,
+      rgba(96, 165, 250, 0.47) 46%,
+      rgba(59, 130, 246, 0.45) 58%,
+      rgba(59, 130, 246, 0.40) 68%,
+      rgba(59, 130, 246, 0) 100%);
+
+  --menu-bg: #131b30;
+  --menu-border: rgba(110, 145, 200, 0.3);
+  --menu-shadow: 0 8px 28px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.25);
+  --dialog-bg: #111a2e;
+  --dialog-border: rgba(110, 145, 200, 0.32);
+  --dialog-shadow: 0 25px 60px rgba(0, 0, 0, 0.55), 0 8px 20px rgba(0, 0, 0, 0.3);
+  --overlay-bg: rgba(0, 0, 0, 0.55);
+
+  --quote-bar: #60a5fa;
+  --quote-fg: #9ab8e0;
+  --quote-bg: linear-gradient(160deg, #16203a, #0f1628);
+  --inline-code-bg: #141e36;
+  --inline-code-fg: #7ab3ff;
+  --table-head-bg: rgba(122, 179, 255, 0.08);
+  --table-border: rgba(110, 145, 200, 0.18);
+  --hr-color: rgba(122, 179, 255, 0.16);
+  --link-color: #7ab3ff;
+  --code-pre-bg: linear-gradient(160deg, #131d36, #0d1526);
+
+  --code-keyword: #67e8f9;
+  --code-type: #22d3ee;
+  --code-string: #93c5fd;
+  --code-number: #c4b5fd;
+  --code-constant: #c4b5fd;
+  --code-builtin: #fbbf24;
+  --code-function: #7ab3ff;
+  --code-tag: #7dd3fc;
+  --code-attr: #38bdf8;
+  --code-operator: #9ac3ff;
+  --code-comment: #64748b;
+  --code-inline-fg: #9ac3ff;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   预览区排版
+   只有「无法用令牌表达」的结构性装饰留在这里（渐变文字、双层玻璃的多重内阴影、
+   伪元素光带）。颜色一律走令牌。
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 正文区：淡冰蓝渐变光晕卡片 */
+.editor-content.theme-liquidglass-prism {
+  max-width: 800px;
+  margin: 1.5em auto;
+  padding: 2em;
+  background: linear-gradient(160deg, rgba(219, 234, 254, 0.55), rgba(255, 255, 255, 0.85) 50%);
+  border-radius: 18px;
+  box-shadow:
+    0 0 0 1px rgba(120, 152, 205, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.5),
+    0 6px 30px rgba(120, 150, 210, 0.12);
+}
+.dark .editor-content.theme-liquidglass-prism {
+  background: linear-gradient(165deg, rgba(26, 38, 64, 0.6), rgba(10, 15, 30, 0.92) 55%);
+  box-shadow:
+    0 0 0 1px rgba(110, 145, 200, 0.22),
+    inset 0 1px 0 rgba(122, 179, 255, 0.07),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35),
+    0 6px 28px rgba(0, 0, 0, 0.4);
+}
+
+/* 一级标题：冰蓝色链渐变文字（background-clip 无法令牌化） */
+.editor-content.theme-liquidglass-prism h1 {
+  font-size: 2em;
+  font-weight: 800;
+  margin: 1.6em 0 0.5em;
+  letter-spacing: -0.025em;
+  background: linear-gradient(135deg, #22d3ee 0%, #0ea5e9 35%, #3b82f6 65%, #2563eb 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  padding-bottom: 0.4em;
+  border-bottom: 2px solid rgba(37, 99, 235, 0.16);
+}
+.dark .editor-content.theme-liquidglass-prism h1 {
+  background: linear-gradient(135deg, #67e8f9 0%, #7dd3fc 35%, #93c5fd 65%, #60a5fa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  border-bottom-color: rgba(122, 179, 255, 0.2);
+}
+.editor-content.theme-liquidglass-prism h2 {
+  font-size: 1.5em;
+  font-weight: 700;
+  margin: 1.4em 0 0.4em;
+  letter-spacing: -0.015em;
+  padding-bottom: 0.25em;
+  border-bottom: 1px solid rgba(37, 99, 235, 0.12);
+}
+.editor-content.theme-liquidglass-prism h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin: 1.2em 0 0.3em;
+}
+.dark .editor-content.theme-liquidglass-prism h2 {
+  border-bottom-color: rgba(122, 179, 255, 0.14);
+}
+
+/* 引用块：双层玻璃 + 顶部高光折线 + 左侧渐变光带 */
+.editor-content.theme-liquidglass-prism blockquote {
+  border-left: none;
+  padding: 0.5em 1.2em;
+  margin: 0.5em 0;
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 0 0 1px rgba(120, 152, 205, 0.28),
+    0 4px 14px rgba(37, 99, 235, 0.08);
+}
+.dark .editor-content.theme-liquidglass-prism blockquote {
+  box-shadow:
+    inset 0 1px 0 rgba(122, 179, 255, 0.10),
+    inset 0 0 0 1px rgba(110, 145, 200, 0.22),
+    0 4px 14px rgba(0, 0, 0, 0.32);
+}
+.editor-content.theme-liquidglass-prism blockquote::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 3px;
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.9) 50%,
+      rgba(255, 255, 255, 0) 100%);
+}
+.dark .editor-content.theme-liquidglass-prism blockquote::after {
+  background: linear-gradient(90deg,
+      rgba(122, 179, 255, 0) 0%,
+      rgba(122, 179, 255, 0.30) 50%,
+      rgba(122, 179, 255, 0) 100%);
+}
+.editor-content.theme-liquidglass-prism blockquote::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 5px;
+  background: linear-gradient(180deg, #3b82f6 0%, #60a5fa 50%, #93c5fd 100%);
+  border-radius: 5px 0 0 5px;
+}
+
+/* 行内代码：玻璃胶囊（颜色走令牌，只有描边与内高光留在这里） */
+.editor-content.theme-liquidglass-prism code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  padding: 0.2em 0.55em;
+  border-radius: 6px;
+  border: 1px solid rgba(120, 152, 205, 0.38);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  word-break: break-all;
+  overflow-wrap: break-word;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.dark .editor-content.theme-liquidglass-prism code {
+  border-color: rgba(110, 145, 200, 0.28);
+  box-shadow: inset 0 1px 0 rgba(122, 179, 255, 0.06);
+}
+.editor-content.theme-liquidglass-prism pre code {
+  background: none;
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  color: inherit;
+}
+
+/* 代码块：双层玻璃面板 */
+.theme-liquidglass-prism pre {
+  padding: 1em 1.2em;
+  border-radius: 12px;
+  margin: 1em 0;
+  overflow-x: auto;
+  position: relative;
+  border: 1px solid rgba(120, 152, 205, 0.34);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1px 0 rgba(120, 152, 205, 0.10),
+    0 4px 16px rgba(37, 99, 235, 0.05);
+}
+.dark .theme-liquidglass-prism pre {
+  border-color: rgba(110, 145, 200, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(122, 179, 255, 0.07),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* 链接：令牌给色，这里只加下划线形态 */
+.editor-content.theme-liquidglass-prism a {
+  text-decoration: none;
+  border-bottom: 1px solid rgba(37, 99, 235, 0.35);
+  text-underline-offset: 3px;
+  transition: border-color 0.2s, color 0.2s;
+}
+.editor-content.theme-liquidglass-prism a:hover {
+  border-bottom-color: #2563eb;
+}
+.dark .editor-content.theme-liquidglass-prism a {
+  border-bottom-color: rgba(122, 179, 255, 0.35);
+}
+.dark .editor-content.theme-liquidglass-prism a:hover {
+  border-bottom-color: #7ab3ff;
+}
+
+/* 图片：玻璃卡片 */
+.editor-content.theme-liquidglass-prism img {
+  max-width: 100%;
+  border-radius: 12px;
+  margin: 1em 0;
+  border: 1px solid rgba(120, 152, 205, 0.38);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.65),
+    0 6px 20px rgba(37, 99, 235, 0.09);
+}
+.dark .editor-content.theme-liquidglass-prism img {
+  border-color: rgba(110, 145, 200, 0.22);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+/* 表格：圆角玻璃卡片 */
+.editor-content.theme-liquidglass-prism table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 1em 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--table-border);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.72));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 2px 10px rgba(37, 99, 235, 0.05);
+}
+.dark .editor-content.theme-liquidglass-prism table {
+  background: linear-gradient(160deg, #15203a, #0f1728);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+.editor-content.theme-liquidglass-prism th,
+.editor-content.theme-liquidglass-prism td {
+  padding: 0.65em 1em;
+  border-bottom: 1px solid var(--table-border);
+  text-align: left;
+}
+.editor-content.theme-liquidglass-prism tr:last-child td {
+  border-bottom: none;
+}
+.editor-content.theme-liquidglass-prism tr:hover td {
+  background: var(--editor-hover);
+}
+
+/* 分隔线：光线折射（颜色走 --hr-color，这里只给渐变形态） */
+.editor-content.theme-liquidglass-prism hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(37, 99, 235, 0.08) 15%,
+    rgba(37, 99, 235, 0.22) 50%,
+    rgba(37, 99, 235, 0.08) 85%,
+    transparent 100%
+  );
+  margin: 2.5em 0;
+}
+.dark .editor-content.theme-liquidglass-prism hr {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(122, 179, 255, 0.06) 15%,
+    rgba(122, 179, 255, 0.16) 50%,
+    rgba(122, 179, 255, 0.06) 85%,
+    transparent 100%
+  );
+}
+
+/* 列表与任务列表 */
+.editor-content.theme-liquidglass-prism ul,
+.editor-content.theme-liquidglass-prism ol {
+  padding-left: 2em;
+  margin: 0.5em 0;
+}
+.editor-content.theme-liquidglass-prism li {
+  margin: 0.35em 0;
+}
+.editor-content.theme-liquidglass-prism input[type="checkbox"] {
+  accent-color: var(--editor-accent);
+}

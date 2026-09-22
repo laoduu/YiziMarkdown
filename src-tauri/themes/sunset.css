@@ -58,20 +58,17 @@
   font-size: 2em;
   font-weight: 700;
   margin: 1.5em 0 0.5em;
-  color: #b45309;
   letter-spacing: 0.02em;
 }
 .editor-content.theme-sunset h2 {
   font-size: 1.5em;
   font-weight: 600;
   margin: 1.3em 0 0.4em;
-  color: #c66a1a;
 }
 .editor-content.theme-sunset h3 {
   font-size: 1.25em;
   font-weight: 600;
   margin: 1.2em 0 0.3em;
-  color: #d88030;
 }
 .editor-content.theme-sunset p {
   margin: 0 0 var(--paragraph-spacing);
@@ -79,8 +76,8 @@
 }
 .editor-content.theme-sunset blockquote {
   border-left: 3px solid #b45309;
-  padding: 0.8em 1em;
-  margin: 1em 0;
+  padding: 0.5em 1em;
+  margin: 0.5em 0;
   color: #8a6a40;
   background: linear-gradient(135deg, rgba(180, 83, 9, 0.05), rgba(217, 119, 6, 0.03));
   border-radius: 0 var(--border-radius) var(--border-radius) 0;

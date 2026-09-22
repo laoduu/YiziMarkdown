@@ -314,7 +314,7 @@ function FileNodeItem({
         {node.type === 'folder' ? (
           <>
             {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            {isExpanded ? <FolderOpen size={14} className="text-amber-500" /> : <Folder size={14} className="text-amber-500" />}
+            {isExpanded ? <FolderOpen size={14} className="text-[var(--editor-accent)]" /> : <Folder size={14} className="text-[var(--editor-accent)]" />}
           </>
         ) : (
           <>

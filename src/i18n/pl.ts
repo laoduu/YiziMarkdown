@@ -344,6 +344,7 @@ export const pl = {
     animFlashCss: 'filter: brightness(1) → 1.5 → 1',
     animGlowCss: 'blur + brightness łącznie',
     animRippleCss: 'wieloetapowy blur + brightness',
+    cloudLoadPreset: 'Wstępne',
   },
   shortcuts: {
     file: 'Plik',
@@ -546,5 +547,19 @@ export const pl = {
     retry: 'Ponów',
     pathLabel: 'Ścieżka w chmurze',
     root: 'Katalog główny',
+  },
+  properties: {
+    title: 'Właściwości',
+    add: 'Dodaj właściwość',
+    editSource: 'Edytuj źródło',
+    deleteProp: 'Usuń właściwość',
+    blockValue: 'Wartość blokowa (tylko odczyt)',
+    typeAuto: 'Automatyczny',
+    typeText: 'Tekst',
+    typeNumber: 'Liczba',
+    typeCheckbox: 'Pole wyboru',
+    typeDate: 'Data',
+    typeDatetime: 'Data i godzina',
+    typeList: 'Lista',
   },
 }

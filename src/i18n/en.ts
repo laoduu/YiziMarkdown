@@ -357,6 +357,7 @@ export const en = {
     github: 'GitHub',
     releases: 'Releases',
     helpDoc: 'Help Document',
+    cloudLoadPreset: 'Preset',
   },
   shortcuts: {
     // 分类
@@ -565,5 +566,19 @@ export const en = {
     retry: 'Retry',
     pathLabel: 'Cloud path',
     root: 'Root',
+  },
+  properties: {
+    title: 'Properties',
+    add: 'Add property',
+    editSource: 'Edit source',
+    deleteProp: 'Delete property',
+    blockValue: 'Block value (read-only)',
+    typeAuto: 'Auto',
+    typeText: 'Text',
+    typeNumber: 'Number',
+    typeCheckbox: 'Checkbox',
+    typeDate: 'Date',
+    typeDatetime: 'Date & time',
+    typeList: 'List',
   },
 }

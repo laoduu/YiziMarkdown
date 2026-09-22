@@ -1,6 +1,479 @@
 # YiziMarkdown 开发日志
 
+## v0.3.2
+
+> 本版主题：**实时模式属性面板 + 主题令牌体系** —— front matter 按 Obsidian 式属性面板渲染
+> （三模式规范显示 + 严格判定 + 属性类型系统）；主题扩展出区域 / 装饰 / 效果三层令牌并新增
+> `check-themes` 六项门禁；默认主题改为「液态玻璃 Prism」并排列表第一位。
+> 另有 HTML 导出大纲侧栏、WebDAV 加载预设、云端面包屑折叠与目录树逐层展开、Tab 拖动排序、
+> 字体三通道、引用块与公式渲染修复等。
+
+### 追加（2026-09-22）：WebDAV 设置面板「加载预设」 + 云端目录树增强
+
+- **加载预设**：设置 → 云端存储，服务器地址框聚焦时出现「加载预设」按钮，
+  一键填入坚果云地址 `https://dav.jianguoyun.com/dav/`（i18n 新增 `settings.cloudLoadPreset` × 15 语言）
+- **面包屑折叠**：云端目录层级深时上级折成「…」并消除横向滚动，点「…」可下拉跳转隐藏层级
+  （`MAX_CRUMBS = 2` + `min-w-0` 收缩）
+- **目录树逐层展开**：点文件夹图标懒加载展开子层级（不再整页跳转），逐层浅色引导线
+
+### 追加（2026-09-22）：Tab 标签拖动排序
+
+- `editorStore` 新增 `moveTab`；TabBar 用**指针事件**拖拽而非 HTML5 DnD
+  （Tauri 默认 `dragDropEnabled: true` 会把拖拽事件拦给原生文件拖放）
+- 插入指示线 + 跟手浮层（透明度经三轮调整：太实像错误提示、太虚看不见）
+
+### 追加（2026-09-22）：切换视图模式时不再被动下滚
+
+- **根因**：跨模式「阅读锚点补偿」把旧视口 1/3 处那行在新模式里也摆到 1/3 处，
+  但两模式**顶部留白不同**（预览有 margin/padding，源码有元信息行 + CM padding）⇒ 明明在顶部却被滚走
+- **修法**：快照时记 `atTop`（`scrollTop <= 1`），顶部时整段跳过补偿
+  （位置本身即语义时，补偿必须让位）。用户验收：「非常好，改的很好」
+
+### 追加（2026-09-23）：HTML 导出新增左侧大纲侧栏
+
+- **仅 HTML 导出注入**（`src/styles/export-toc.css` 经 `?inline` 内联），PDF / 打印不带 ——
+  屏幕导航元素不该印到纸面
+- 大纲取自**渲染后的** `h1[id]..h6[id]`（与正文同源 ⇒ 锚点必然对得上，无需重跑 Markdown）；
+  heading 文本过 `esc()` 转义，防文档内 HTML 在导出文件里执行
+- **悬浮圆角卡片**：sticky 吸顶、背景/阴影读 `--editor-surface` / `--menu-shadow`（随主题）；
+  `top` 由导出页内小脚本**实测首个标题底部**对齐（各主题留白/字号不同，写死必偏）；
+  `max-height: calc(100vh - var(--toc-top))` 兜底超长大纲，不撑出屏幕下边缘
+- 窄屏（≤720px）媒体查询把侧栏收窄到 140px，不抢正文宽度
+
+### 追加（2026-09-22）：默认动画改为「卡片推换」+ 动画选择持久化
+
+- **默认切换动画**：水平滑动 → **卡片推换**（`cube`）。同时把「卡片推换」提到动画菜单**第一位**，其余顺序不变（菜单顺序 = 默认 → 柔和型 → 强烈型）
+- **动画选择持久化**：原先 `anim` 是 `Slideshow` 组件内的 `useState`，每次进入演示模式都退回默认值；现改为 `settingsStore.slideAnim`（zustand persist → `localStorage` 的 `yizimarkdown-settings`），选过就记住
+- `SlideAnim` 类型从 `Slideshow.tsx` 移到 `src/lib/slideTiles.ts`（动画注册表所在模块）：持久化字段在 store 里也要用它，避免在 store 里退化成 `string`
+- 无 persist 版本号变更：新字段由 zustand persist 的默认浅合并从初始值补齐，存量存档不受影响
+
+
+### 追加（2026-09-22）：主题体系扩展 —— 区域 + 装饰 + 效果三层令牌
+
+**背景（为什么要做）**：`liquidglass-prism` 主题（529 行）一个新变量都没引入，全靠
+`.theme-x .toolbar` / `.sidebar` / `.statusbar` 选择器 + 字面量硬怼，甚至要用
+`[class*="menu"]` + `z-index: 99999 !important` 才够得着下拉菜单。根因是**顶部工具栏没有自己的变量**：
+`.toolbar` 与编辑器内容区共用 `--editor-surface`，主题只能借用 `--sel-toolbar-bg`（本意是划词工具栏）。
+
+**三层令牌（全部纯增量 + fallback 链 ⇒ 现有 16 个主题一行不改、视觉逐像素不变）**
+
+- **区域令牌**：`--toolbar-*` / `--tabbar-*` / `--sidebar-*` / `--statusbar-*` / `--menu-*` /
+  `--dialog-*` / `--overlay-bg`，值全部回退到既有基础层。菜单/弹窗/遮罩此前**完全没有令牌**
+- **装饰层**：`--<region>-deco-image/size/repeat/blend`（走区域自身背景图层，天然在内容之下）
+  + `--<region>-sheen-image/size/anim`（走区域 `::after`，z-index:1，在下拉菜单 z-50 之下）。
+  配 4 个通用 keyframes（`deco-sweep` / `deco-sweep-back` / `deco-pulse` / `deco-drift`）⇒
+  主题**只给值就能加纹路与流动光影**，不必写选择器、不必自带动画、不必抢层级。
+  刻意**不用 `isolation: isolate`**：那会把区域的层叠上下文封起来，区域内的下拉菜单就压不过编辑器内容了。
+  装饰动画遵循 `prefers-reduced-motion`（系统开启"减少动效"时静止）
+- **效果令牌**：`--radius-xs/sm/md/lg/xl`（`--radius-md` 接 `--border-radius`，兑现各主题注释里
+  "全局圆角半径"的承诺）、`--shadow-1/2/3`、`--dur-*`、`--ease-*`，以及纹理预设
+  `--texture-diagonal/grid/dots/paper/shine`（用 `currentColor` 派生，自动跟随区域文字色）
+- **代码 / 语法令牌**：`--code-*` 共 28 个。此前实时编辑与源码模式的 **25 种 token 全挤在
+  `--editor-accent` / `--editor-text` / `--editor-border` 三个颜色上 ⇒ 所有主题的代码都是单色的**。
+  同时用 `src/styles/hljs-theme.css` 取代全局引入的 `highlight.js/styles/github.css`
+  （后者把预览代码块颜色写死成 GitHub 浅色主题，完全不受主题影响）。
+  默认值取法刻意分开：语法 token 用 GitHub 调色板（预览代码块零变化）、markdown 角色 token
+  保持强调色（实时编辑正文零变化）⇒ 两套配色首次统一且各自都不回退
+- **预览排版令牌**：`--h1-color` / `--quote-*` / `--inline-code-*` / `--table-*` / `--hr-color` /
+  `--link-color`，经 Tailwind prose 的 `--tw-prose-*` 注入 —— **没有特异性之争**，prose 本来就靠变量驱动
+
+**修掉的"假旋钮"（定义了但全仓无人消费）**
+
+- `--editor-text-muted`：`Toolbar.tsx` 引用了它但全局从未定义 ⇒ 颜色静默回落为继承值
+- `--border-radius`：16 个主题都声明"全局圆角半径"，但 UI 层零消费（工具栏/弹窗/菜单全用写死 px）
+- `--editor-h1/2/3`：16 个主题都声明，但全仓只有 `slideshow.css` 消费 —— 预览区标题色被各主题自己的
+  `h1 { color: … }` 规则接管。逐主题审计（`h1` 规则里是否写死颜色）：**3 个主题（magazine / minimal / tech）
+  规则不设颜色，变量本来就已经生效**；**11 个主题写死的颜色恰好等于其声明的 `--editor-h1`**
+  ⇒ 删掉这行冗余写死值是零视觉变化、变量随之生效；2 个玻璃主题（liquidglass / liquidglass-prism）
+  的 h1 走渐变文字填充（`-webkit-text-fill-color: transparent` + `background-clip: text`），
+  没有 `color:`，单个颜色变量对它们本就不适用
+- `.settings-modal-container` 写死 `'Inter'` 字体栈，绕过 `--font-sans`
+
+**新增护栏 `scripts/check-themes.mjs`（已接入 `npm run build`）**
+
+CSS 变量写错名字不报错、只静默失效 —— 这是主题作者最大的坑（`--editor-h1/2/3` 就是实例）。
+六项检查：变量白名单（拼错即失败）、亮/暗一致性、死声明、命名一致性、反模式计数、双目录漂移。
+三处假阳性防护（都是实际踩出来的）：字体/圆角/装饰几何类变量不参与亮暗一致性检查；
+主题文件自身算消费点；**扫描反模式前先剥掉注释**（否则文档里提到 `!important` 会被算成反模式）。
+
+**liquidglass-prism 用新令牌重写**：529 → 411 行，**反模式 14 处 → 0 处**。
+工具栏/侧栏/状态栏/菜单的选择器硬怼全部消失，改为给令牌值；剩下的是预览排版的结构性装饰
+（渐变文字、多重内阴影、伪元素光带）与令牌声明，这些无法用单个值表达。
+
+**未做（有意）**：`--editor-selection`（选中文字色）**没有接线** —— 实测暗色主题下接上后
+选中文字对比度从 7.65:1 掉到 3.05:1（低于 WCAG AA 4.5:1）。问题在令牌语义本身
+（它与 `--editor-selection-bg` 同色相），需先重新定义语义再接线。
+
+**跟进（同日）：接线三处遗留项**
+
+- **`--editor-h1/2/3` 接线**：逐主题审计后发现 16 个主题里 3 个（magazine / minimal / tech）的 h1 规则
+  本来就不设颜色（变量早已生效），11 个把颜色写死在规则里。删除其中 **48 条**「写死值恰好等于同模式
+  声明值」的声明（亮色 33 + 暗色 15）：
+  - 亮色全部零变化（值逐字符相同）
+  - 5 个主题（cyberpunk / facebook / lychee / mint / violet）暗色也零变化
+  - 3 个主题（academic / nature / vibrant）**没有暗色标题规则**，亮色值泄漏进暗色模式 —— 例如
+    academic 暗色 h1 是 `#002FA7` 深藏蓝叠在 `#0d1117` 近黑底上（对比度约 1.4:1，几乎不可见）。
+    删掉后走变量、取到主题声明的暗色值 `#5a7ce3` ⇒ **修好了**
+  - 3 个主题（matrix / sunset / typewriter）各有两套暗色 h 规则，层叠顺序无法静态判定 ⇒ **只删亮色**
+  - 迁移脚本的两条判据都是踩坑后才加的（值必须同模式相同；同级同模式存在多条规则一律跳过）：
+    第一版没考虑"后一条覆盖前一条"，把 matrix 暗色 h2、sunset 暗色 h3 意外改掉了；同时删声明时
+    吞掉了闭合花括号前的换行，造成缩进损伤
+- **字体：`--font-mono` 不再被编辑器字体覆盖**：`App.tsx` 原先把用户选的编辑器字体（默认 MiSans，
+  **比例字体**）写进 `--font-mono`，而该变量语义是"等宽编程字体"（globals.css 注释与各主题都按此声明）。
+  已移除该写入 —— 编辑器正文字体本来就由 CodeMirror 主题直接应用（不经 CSS 变量），故编辑器显示不受影响。
+  连带 Tailwind 的 `font-*` 工具类改为指向 `var(--font-sans/mono/serif)`（原先硬编码 DengXian 等，
+  与变量完全脱钩）。实际影响面 **20 处**（`var(--font-mono)` 12 处 + `font-mono` 工具类 8 处），
+  效果是代码与等宽输入框从比例字体变成真等宽。
+  **更正**：此前口头估计的"90 处"是错的 —— 那个数字把 `--font-sans` 这类**声明**也算进了 `font-sans` 匹配
+- **`liquidglass` 主题试点令牌化**：工具栏与侧栏的 `.theme-liquidglass .toolbar` / `.sidebar` 选择器硬怼
+  改为给区域令牌值（新增 `--sidebar-shadow` / `--sidebar-blur` 并接进 `.sidebar`）。菜单那段
+  （`[class*="menu"]` + `!important`）**刻意保留**：菜单表面写在各组件的 Tailwind 类里，没有集中
+  CSS 规则可挂，需先把那些组件改读 `--menu-*` 才能安全删除 —— 先删会让该主题的下拉菜单丢玻璃样式
+
+**修复（同日）：字体三角色解耦 —— 修掉上一轮「字体拆分」引入的回归**
+
+上一轮把编辑器字体从 `--font-mono` 里摘出来时判断错了，造成两个问题：
+
+- **源码字体设置失效**：`Editor.tsx` 里编辑器字体写的是 `var(--font-mono, ${fontFamily})` ——
+  设置值只是**回退值**，而 `--font-mono` 一旦有定义（globals.css `:root` 里本来就有），
+  那个回退永远用不到。删掉 App.tsx 写 `--font-mono` 那行后，编辑器被冻结在 CSS 声明的等宽栈上，
+  改设置无效。当时的错误假设是"编辑器字体由 CodeMirror 主题直接应用、不经 CSS 变量"。
+- **预览字体越权改界面**：`--font-sans` 被写入「预览字体」，而 `body { font-family: var(--font-sans) }`
+  ⇒ 全应用界面文案跟着内容字体变。另外上一轮 P0 把 `.settings-modal-container` 的硬编码 `'Inter'`
+  改成了 `var(--font-sans)`，让设置面板也一起吃到了这个泄漏（**这一处是本轮引入的**）。
+
+**改法：拆成三个互不越权的角色**（`globals.css` 里逐个注释了用途）
+
+| 变量 | 作用域 | 来源 |
+| --- | --- | --- |
+| `--font-ui` | 软件界面：设置面板 / 侧边栏 / tab / 状态栏 / 菜单 | **固定**，不由用户字体设置写入；主题可覆盖以获得风格差异 |
+| `--font-editor` | 源码模式「可编辑的源码内容」 | 设置里的「编辑器字体」 |
+| `--font-preview` | 预览 / 实时 / 演示模式「内容」 | 设置里的「预览字体」 |
+
+- `body` / `.settings-modal-container` / `.selection-toolbar` 改读 `--font-ui`
+- 预览面板与 `slideshow.css` 改读 `--font-preview`
+- CodeMirror 主题按模式取变量：`var(--font-${实时 ? 'preview' : 'editor'}, …)`
+  ⇒ 实时模式的内容字体跟随预览字体，源码模式跟随编辑器字体
+- 结果：`var(--font-sans)` 现在**零真实消费**（只作为两个默认回退），预览字体不可能再泄漏到界面；
+  `--font-mono` 回归"纯等宽"语义，不再被用户字体覆盖
+
+**补充（同日）：实时模式的标题字体与预览对齐**
+
+实时模式的定位是「可编辑的预览」，但它的标题此前只继承正文字体 —— 主题为设计指定的标题字体
+（magazine / nature 用 `var(--font-serif)`）只在预览里生效，于是实时与预览观感不一致。
+
+- 新增 `--font-heading` 令牌作为**单一来源**，预览与实时共用：默认 `var(--font-preview)`
+  （即用户设置的预览字体），主题可在变量块里覆盖 ⇒ **主题优先**；没设主题的就回退到内容字体
+- `cm-live-render.ts` 的 `.cm-md-h1..h6` 补上 `fontFamily: var(--font-heading)`
+- magazine / nature 的 h1/h2/h3 规则由 `var(--font-serif)` 改为 `var(--font-heading)`，
+  并在变量块里声明 `--font-heading: var(--font-serif)` ⇒ 两处共用同一来源
+  （magazine 的 `th` 表头字体仍用 `--font-serif`，属另一处设计，未动）
+- 分工明确为：用户设置管「正文字体」，主题管「标题字体」—— 后者优先
+
+
+### 追加（2026-09-22）：元信息块（front matter）在三个模式下的规范显示
+
+**根因：三个症状同源。** `@lezer/markdown`（CodeMirror 的 Markdown 解析器）**不认识 YAML front matter**
+（包内搜不到任何 frontmatter / yaml 代码）。于是文档开头的 `---` / `title: …` / `---` 被按 CommonMark
+解析成「第 1 行 = 分隔线」+「第 2~3 行 = setext 二级标题」（CommonMark 规定"文本行 + 紧跟 `---` 下划线"
+就是 H2）。这一个事实同时解释：
+
+- **源码模式"第二个 `---` 下面多一根下划线"**：`defaultHighlightStyle` 对 heading 标签就是
+  `text-decoration: underline` + 粗体，而 setext 标题节点**跨越两行** ⇒ 下划线画在 `---` 那行下面
+- **实时模式"顶部一根分割线 + 第一行变成 H2"**：第 1 行被渲染成 `<hr>`、`title:` 行被套上 `.cm-md-h2`
+- 预览模式走的是另一条路：内联正则把整块删掉，所以什么都不显示
+
+**为什么不写 lezer 块解析器**（看起来最"正统"）：块解析器的 `parse` 一旦调用 `cx.nextLine()` 消费了行，
+就**不能再返回 false**（内置解析器全都遵守这条）。而"文档以 `---` 开头、却没有闭合 `---`"（就是普通
+分隔线）是最常见的情况之一 —— 那时必须能退回原状。故改用 `StateField`：它拿得到全文，能安全判定。
+
+**改动**
+
+- 新增 `src/lib/frontMatter.ts` 作为**唯一事实源**：`splitFrontMatter(src) → { meta, body, range }`
+  （额外给出字符偏移，供 CodeMirror 使用）。此前 `slides.ts` 与 `markdownRenderer.ts` **各有一份规则
+  不一致的正则**（一个允许前导空行、一个不允许；对结尾换行的处理也不同）⇒ 同一份文档在演示模式与
+  预览模式下可能给出不同判断。两者现在都委托给它，公开 API 与既有测试不变
+- 新增 `src/lib/cm-frontmatter.ts`：`frontMatterField`（区间）+ `frontMatterLines`（给区间内每行套类），
+  挂在**基础扩展**里 ⇒ 源码与实时模式同时生效
+- `cm-live-render.ts` 的装饰构建在元信息区间内**整块跳过**（`enter` 返回 false 连子节点一起跳）
+  ⇒ 分隔线与 H2 一起消失
+- 样式（`globals.css`）做成"属性面板"观感：弱化文字色 + 0.92em + 淡背景 + 左侧强调色细线。两处刻意为之：
+  ① 选择器**重复写一遍类名**提升特异性 —— CodeMirror 主题样式是运行时注入 `<head>` 的，与 globals.css
+  的先后顺序不可控，单类会被它的 `.cm-line` padding 吃掉；② 下划线**必须命中 span** —— highlight 的
+  下划线作用在生成的 `<span>` 上，而后代自己的 `text-decoration` 不会被祖先的 `none` 取消
+- 新增 `tests/frontMatter.test.ts`（8 条），重点盯"不能误判"的边界：**没有闭合 `---` 时必须当正文**
+  （否则整篇会被吞掉）、CRLF、只有元信息、前导空行、非键值行；`npm test` 纳入该文件，62 → **70 条**
+
+**三模式的最终分工**：源码 = 原样（只去掉了错误的"标题"观感）；实时 = 弱化的元信息面板（仍可编辑）；
+预览 = 隐藏（解析改为结构化，与另两个模式共用同一份实现）
+
+
+### 追加（2026-09-22）：元信息判定改严格档 + 实时模式属性面板
+
+**修掉的误判（用户实测）**：原规则 `/^\s*---…/` 有两处过宽 —— `^\s*` 允许前导空行；
+对块内内容**不做任何校验** ⇒ 只要出现第二个 `---`，中间所有内容（哪怕整章正文）都被当元信息。
+反例：
+```md
+---
+第一段正文
+---
+第二段正文
+```
+⇒ 整块被套上元信息样式。**测试盲区**：原用例只覆盖了"没有闭合 `---`"，没覆盖这个更常见的反例。
+
+**严格判定规则**（`src/lib/frontMatter.ts`）
+
+```
+是元信息 ⟺ 三条同时成立：
+1. 第 1 行第 1 列就是 ---（不允许前导空行；与 Jekyll / Hugo / Obsidian 一致）
+2. 存在闭合行 --- 或 ...
+3. 块内每行 ∈ { 空行, # 注释, key: value, 缩进续行 }，且至少有一行 key: value
+```
+
+- 为什么不是"每行都必须 `key: value`"：合法 YAML 的列表与嵌套（`tags:` 换行缩进 `- a`）会被**误杀**
+- 为什么"至少一行键值对"必需：`# 第一章` 在 YAML 里**就是注释**，光靠"注释行合法"挡不住散文
+- key 必须是 ASCII 标识符 ⇒ 顺带把中文散文（`注意: 正文`）挡在门外
+- 已知固有歧义（与 Obsidian 相同，不特殊处理）：`Note: this is prose` 本身就是合法 YAML 映射，只能当元信息
+
+**新增 `parseProperties()`**：逐条给出属性名/值 + 字符偏移（键、值、整行），属性面板写回要用。
+
+**实时模式属性面板**（`src/lib/cm-properties.ts`，仅实时模式挂载）
+
+照抄项目已有的 `EditableTableWidget` 模式：Shadow DOM 隔离事件、原生控件、事件全部 `stopPropagation`、
+**提交走 `view.dispatch` ⇒ 撤销/重做自动可用**、不 `preventDefault` beforeinput ⇒ **输入法可用**。
+
+- 表格：第一列属性名（可改，类型跟随改名）+ 类型下拉，第二列按类型换控件，行尾删除，底部「+ 添加属性」
+- 类型：自动（按值推断）/ 文本 / 数字 / 复选框 / 日期 / 日期和时间 / 列表
+- **「常驻」与「编辑源码」靠同一个光标守卫共存**：点表格内部的事件被 `stopPropagation` 拦下
+  ⇒ CM 光标不会进入块内 ⇒ 表格常驻可编辑；点「编辑源码」显式把选区放进块内 ⇒ 表格让位、
+  原始 YAML 可编辑。**不需要额外状态**
+- 类型按**属性名全局**存（`settingsStore.frontMatterTypes`，与 Obsidian 的 `types.json` 语义一致）。
+  刻意不按文件路径索引：项目里没有任何按路径索引的持久化，且未命名新文件与云端文档都没有可靠本地路径
+
+**两处 CodeMirror 约束（读 CM 源码确认，不是猜的）**
+
+1. **跨行替换装饰必须由 StateField 提供，不能是 ViewPlugin**。CM 源码即
+   `if (this.disallowBlockEffectsFor[index]) { if (deco.block) throw new RangeError("Block decorations may not be specified via plugins") }`
+   —— 第一版写成 ViewPlugin 会**直接抛错**；已改为 StateField（与 `cm-live-blocks.ts` 的 `blockDecorField` 一致）
+2. 行装饰与替换装饰**重叠不报错**（CM 源码里没有 "Overlapping" 这个错误）⇒ 不必为源码模式的行装饰加抑制逻辑
+3. 属性面板**自己从文档算区间**（`frontMatterOf`），不读 `frontMatterField`：StateField 之间互相读取
+   依赖扩展注册顺序，而两者挂在不同 compartment 里，顺序不保证
+
+**i18n**：新增 `properties` 命名空间 12 个键 × 15 语言（走 `scripts/apply-i18n.mjs`），`check-i18n --strict` 缺失 0
+
+**测试**：`tests/frontMatter.test.ts` 扩到 18 条，`npm test` 70 → **78 条**。其中两条旧断言按严格档
+**有意改写**（原先断言"允许前导空行""忽略非键值行" —— 那两条宽松行为正是误判来源）
+
+**未做（有意，记为后续）**：文档没有元信息时"创建元信息块"（需往第 1 行插入 `---` 空行 `---`，
+涉及光标与撤销语义）；块状 YAML 列表的完整编辑（当前标记为只读，避免写坏结构）
+
+**跟进（同日）：实测后修三个问题 + 属性表按 Obsidian 观感重做**
+
+用户实测 5 项，其中 3 项有问题：
+
+1. **「编辑源码」没反应**：光标守卫是 `sel.to > range.from`，而按钮把**折叠光标**放在 `range.from`（位置 0）
+   ⇒ `0 > 0` 为假 ⇒ 判定为"在块外"、属性列表不消失。
+   注意**不能**简单改成 `>=`：刚打开文档时光标本来就在 0，那样会一打开就看不到属性列表。
+   正解是让按钮**选中整个块**（区间选区），守卫便明确判定为"在块内"
+2. **判定规则过严（连带导致演示模式 title/author/date 全丢）**：用探针测 12 个真实样本，发现 4 处误杀 ——
+   `publish.date:`（Hugo/Jekyll 常见的点号键）、`标题:`（YAML 允许非 ASCII 键）、`my key:`（plain scalar key 可含空格）、
+   开头 BOM（Windows 常见）。放宽为「key 不要求 ASCII，但冒号后必须有空白或行尾」——
+   后者专门挡掉 `https://example.com` 这类"看着像键值对其实是 URL"的行（`https:` 后面是 `/`）。
+   误判防护仍在：仍需"块内至少一行键值对"，用户原反例依然正确拒掉。
+   **已知固有歧义**（与 Obsidian 一致，已在测试里写明）：`注意: 这是正文`（半角冒号 + 空格）本身就是合法 YAML 映射
+3. **front matter 的 `title` 从未接线**：`Slideshow.tsx` 只取了 `author`/`date`，左上角 `.ys-title`
+   与章节名用的都是 `title` 属性（文档名）。改为 **front matter 的 title 优先，没有才用文档名**
+
+**属性表按 Obsidian 观感重做**（用户反馈"现有属性值是生硬的下拉菜单、且在属性名右侧、属性名一栏极窄"）
+
+- 行布局改为 **`[类型 icon] [属性名] [值]`**：类型 icon 在**行首**，点它弹出菜单（每项 = icon + 名称），
+  取代原先摆在属性名右边的原生 `<select>`
+- **去掉所有表格线**，改为 hover 时当前行出现圆角框 + 淡背景（与 Obsidian 一致）
+- **属性名宽度按内容自适应**（`min-width: 5em; max-width: 45%`），修掉"极窄无法显示完整"
+- 类型图标内联自 lucide 的图标节点数据（ISC）。**刻意不用 `lucide-react` 组件**：
+  那是 React 组件，在 widget 里渲染要挂 React root，而 React 18 的 `createRoot` 是异步渲染，
+  与 CodeMirror 在 `toDOM` 时同步测量 widget 高度的做法冲突（会闪会跳）；内联 SVG 保持纯 DOM，
+  与 `EditableTableWidget` 的做法一致
+- 保留左侧强调色竖线 + 淡背景（与源码模式的元信息块观感一致）
+
+**顺带**：清掉 `slideshow.css` 里 **7 处幽灵变量** `--editor-text-muted`（从未定义，一直回落成硬编码灰色、
+与主题脱钩）—— 与之前修 `Toolbar` 那处同类。全仓现已无残留。
+
+**测试**：`tests/frontMatter.test.ts` 增至 22 条（新增点号键/中文键/BOM/URL 行/全角冒号），`npm test` **83 条**
+
+**再跟进（同日）：类型菜单移到 light DOM + 属性名列对齐**
+
+用户复测后剩两点，根因都不是"调参"，而是**结构性**问题：
+
+1. **类型菜单太宽、且颜色与其它菜单不一致** —— 两个根因：
+   - **颜色**：菜单原先渲染在 **Shadow DOM** 里，而主题对菜单的定制写在 **light DOM**
+     （如液态玻璃主题的 `[class*="menu"] { … !important }`）。**样式不跨 shadow 边界**
+     ⇒ 放在 shadow 里就拿不到主题的菜单外观，自然与其它菜单不一致。
+     改为把菜单挂到 `document.body`，类名 `properties-type-menu`（**含 "menu" 以命中主题那类规则**），
+     样式基线写在 `globals.css`，主题定制照常覆盖 ⇒ 与其它菜单同源
+   - **太宽**：面板继承的是**编辑器字号**（默认 20px），而菜单里用 `em` ⇒ `0.88em ≈ 16px`，
+     比应用 UI 菜单的 14px 大一圈。改为**绝对 px**（13px），宽度 `max-content` + `max-width: 200px`
+   - 顺带用 `position: fixed` + 出屏翻转（下方/右侧放不下就向上/向左），
+     避开 `.cm-scroller` 的 `overflow` 裁剪 —— 之前担心的"编辑器底部菜单被切掉"一并解决
+2. **值列没左对齐**：属性名列原先**逐行按自身内容**定宽（`flex: 0 0 auto`），行与行宽度不同 ⇒
+   值列起点参差。改为**取所有属性名里最宽的那个**（按显示列宽算，CJK 算 2 列）作为**共用的 `size`**，
+   既对齐又不会为短名留出过多空白
+
+**另一个交互坑（自测发现）**：「点外面关闭」原先用 **capture 阶段**监听，会在图标自身的 click 处理器
+**之前**先关掉菜单 ⇒ 再点同一个图标会"关了又开"（切换失效）。改为 **bubble 阶段**
+（图标与菜单项都已 `stopPropagation`，document 监听不会误触发），并加上"点另一个图标直接切换"
+（`openFor` 记录菜单归属）。widget 被销毁时通过 `WidgetType.destroy` 收走挂在 body 上的菜单，避免残留。
+
+**修复（同日）：切换视图模式时被被动下滚一段**
+
+**现象**：明明已在页面最顶部，切换源码/并排/实时/预览后会自动下滚一点 —— 元信息显示不全，
+液态玻璃 Prism 专门为预览设计的顶部留白也被吃掉。
+
+**根因**：跨模式切换的「阅读锚点补偿」——它把"旧模式视口 1/3 处的那一行"当作锚点，
+在新模式里把该行也摆到 1/3 处。但**两种模式的顶部留白并不相同**：预览有 `.editor-content` 的
+`margin: 1.5em + padding: 2em`，而源码/实时里元信息还占着几行；且两边取锚点的判据也不同
+（预览按"元素 bottom 越过 1/3 线"，编辑器按 `lineBlockAtHeight`）。于是同一 source line 在两边的 y 不同
+⇒ 补偿时被被动下滚，正好把元信息与预览顶部留白顶出视野。
+
+**修法**：记录「旧模式是否本来就在顶部」（`scrollTop <= 1`），**在顶部时完全不做补偿** ——
+新模式本身就从顶部开始（CodeMirror 视图实例跨模式复用、scrollTop 保留；预览面板重新挂载也是 0）。
+
+**顺带排除一个猜测**：怀疑是"大纲与页面对齐"导致的滚动，**不成立** —— `activeHeadingId` 只用于
+大纲项高亮（`Sidebar.tsx:379`），不驱动任何滚动；其余 `scrollIntoView` 都在搜索跳转、
+大纲点击（`navigateToLine`）与 `insertMarkdown` 里，均为用户触发，不在切模式路径上。
+
+**修复（同日）：引用块渲染 —— 上下留白统一 + 去掉强加的引号**
+
+**问题**：引用块在预览/并排右侧有两个毛病 —— (a) 下方多出一段边距，看起来像"引用里多了个空行"；
+(b) 内容被强制加上首尾引号。
+
+**根因**：
+- 引号来自 Tailwind prose 的 `blockquote p:first-of-type::before { content: open-quote }`（及 last-of-type 的 close-quote）
+- "多出的空行"来自两层叠加：prose 给 `p` 的 `margin: 1.25em` 在引用块内部变成**可见**的上下留白；
+  各主题又各自写了 `margin: 1em 0` + 纵向 `padding 0.5~1em` ⇒ 合计 1.5~2em（就是那"一行"）
+
+**改法**（统一为"半行左右"）：
+- prose 基线（`tailwind.config.ts`）：`margin: 0.5em 0`、首尾段落外边距归零、`quotes: none` + 两条 `content: none`
+  —— 引号用两道保险：`quotes: none` 让 `open-quote` 关键字不产生内容（不依赖特异性），
+  `content: none` 直接改掉那两条伪元素规则
+- 16 个主题：`margin` 纵向统一 0.5em、`padding` 纵向统一 0.5em（横向保留各自设计 1em/1.2em/1.5em）
+  ⇒ 纵向合计 **1em ≈ 半行**（line-height 默认 2.0）
+
+**⚠️ 过程中的事故（如实记录）**：批量改主题文件时我用了 PowerShell，而
+`Get-Content -Raw` 会按系统 ANSI 解码 UTF-8 文件 ⇒ **16 个主题文件的中文注释全部变成乱码**
+（含未跟踪的 prism）。这正是本 changelog 早先记过的坑（"PowerShell `Set-Content` 破坏 UTF-8 编码"），
+我重复踩了一次。恢复过程：
+
+- **受版本控制的 15 个文件**：`git checkout` 完美还原 ✓，再用 **Node 脚本**重新施加本会话的主题改动
+  （标题色 48 条、`--font-heading`、引用块间距、liquidglass 区域令牌）
+- **prism（未跟踪、无 git 副本）**：从 `src-tauri/target/debug/themes/` 的副本恢复结构
+  → 逆转编码（UTF-8 当 GBK 读的逆运算，恢复代码与大部分注释）
+  → **逐行**修补残留受损字符。逆转**有损**（47 处不可逆，主要是注释里 `═` 与换行），所以只能逐行修
+- 中途还犯了第二个错：用 `[\s\S]*?` 做**跨文件**正则替换横幅，结果从文件头一路匹配到预览区横幅，
+  **把中间的令牌块整段删掉**（文件从 14692 字符掉到 7401）⇒ 从备份恢复后改为逐行处理
+- 最终状态：**全仓主题文件 0 乱码**、prism 变量声明数与备份一致（118 个）、`check-themes` 0 失败
+
+**教训（写进流程）**：改这些文件**一律用 Node 脚本或编辑工具**（显式 UTF-8），
+不用 PowerShell 的 `Get-Content`/`-replace`/`WriteAllText` 链路；批量替换**不做跨行/跨文件正则**。
+
+**跟进（同日）：引用块"多一个空行"没修干净 —— 真因是各主题自己的 `p` 规则**
+
+用户复测：13 个主题仍多一个空行（学术蓝/赛博朋克/Facebook/液态玻璃/杂志感/黑客帝国/极简风/
+薄荷冰沙/自然风/落日熔金/科技感/复古打字机/活力橙），只有 prism、荔枝红、紫罗兰修好了。
+
+**我上一轮的判断不完整**：我以为改 `tailwind.config.ts` 的 prose 覆盖就够了，但真正压住它的是**各主题自己**的
+段落规则 —— `.editor-content.theme-x p { margin: 0 0 var(--paragraph-spacing) }`，特异性 **(0,2,1)**，
+与 prose 生成的 `p:last-of-type{margin-bottom:0}` **同级**；而主题 CSS 是**运行时注入、排在后面**
+⇒ **主题赢**，于是首尾段落的 `--paragraph-spacing`（1.5em）在引用块内部变成"多出来的一行"。
+这解释了 13/3 的分布：荔枝红与紫罗兰的规则写作 `.theme-x p`（(0,1,1)），低于 prose 那条 ⇒ 它们被修好了。
+
+**修法**：在 `globals.css` 里加一条**更高特异性**的规则（(0,2,2)）压住所有主题：
+
+```css
+.editor-content blockquote p:first-of-type { margin-top: 0; }
+.editor-content blockquote p:last-of-type { margin-bottom: 0; }
+```
+
+已核对：没有任何主题存在 3 个类的 `p` 规则（即无更高特异性），所以这条在 16 个主题上都能赢。
+
+**顺带修复**：`theme.json` 里 prism 的注册信息在上一轮 `git checkout` 时被一并回退了
+（该目录整体还原），导致主题列表显示文件名而不是「液态玻璃 Prism」⇒ 已补回。
+
+**⚠️ 为什么第一次修复"看起来没生效"**：Vite dev server 的文件监视器是 **2026-09-22 13:25** 启动的
+（跑了两天），它**漏掉了 `globals.css` 这次写入的通知** —— 结果规则已在磁盘与 `dist/` 里、
+HTTP 接口也能拉到，但 **HMR 从未推送给客户端**，客户端仍持有旧 CSS。用户那次的测试**无效**。
+已重启 dev 进程树（仅本项目：`tauri dev` + `vite`，不动另一项目的 `next dev`），
+重启后确认服务端已包含全部四条修复：`blockquote p:first/last-of-type`、`quotes: none`、区域令牌。
+
+**修复（同日）：实时模式里公式块之后的内容不渲染（用户复测通过）**
+
+**根因**在 `cm-live-blocks.ts` 的**多行 `$$…$$` 区间计算**，两处确凿缺陷：
+
+1. **`endLine = j` 的兜底**：找不到闭合行时 `endLine` 会一路推到**文档最后一行**
+   ⇒ `if (endLine > i)` 几乎恒真 ⇒ 生成了「从 `$$` 到文档末尾」的替换区间，
+   把公式之后的全部内容一并盖掉
+2. **闭合检测过严**：只认「整行恰好是 `$$`」，`\sqrt{\pi}$$`（闭合挂在行尾）这种写法
+   **永远匹配不上** ⇒ 必然走上面那条兜底
+
+**改法**：
+- `endLine` 初值改为 `-1`，**找不到闭合就直接不生成替换** —— 宁可公式块显示为原始文本，
+  也绝不能吞掉正文
+- 闭合检测放宽为「**行尾是 `$$`**」，同时认「`$$` 独占一行」与「`…$$` 挂在行尾」两种写法
+
+修复后用户复测：公式正常渲染、其后内容恢复渲染 ✓
+
+**跟进（同日）：元信息行的 H2 折叠徽标（源码模式）**
+
+用户反馈：源码模式下把鼠标移到元信息的 `title: …` 那行会冒出可折叠的 `H2` 胶囊，
+而元信息不该有标题。**与前面同一根因** —— `@lezer` 把 `title: x` + 下一行 `---` 当成 setext 二级标题，
+于是 `cm-heading-fold.ts` 的 `headingLevelAtLine()` 认成了 2（那个胶囊还会执行 `toggleFold`，
+即**能折叠掉元信息**）。已在两个调用点跳过元信息区间：mousemove 判定 + `refreshIndicators()` 批量扫描。
+
+顺带核对了其它标题消费点：实时模式的标题装饰早已用 `frontMatterOf` 跳过；
+**大纲面板不受影响** —— 它用正则 `^#{1,6}\s+` 只认 ATX 标题，setext 根本进不去
+（所以大纲里从来不会出现 `title:` 这种伪标题）。
+
+**跟进（同日）：主题精简 —— 删除旧的液态玻璃，prism 成为默认并排第一**
+
+- 删除 `src-tauri/themes/liquidglass.css`（含 `theme.json` 条目、`globals.css` 里
+  `.theme-swatch-liquidglass` 死 CSS）
+- **默认主题**改为 `liquidglass-prism`：`settingsStore.currentTheme` 与「恢复默认」的
+  `DEFAULTS_APPEARANCE` 都指向新的 `DEFAULT_THEME` 常量
+- **展示顺序**：`list_themes()`（Rust）按文件名排序，prism 排不到最前 ⇒ 新增
+  `src/lib/themeOrder.ts` 的 `orderThemes()`，在**三个消费点**统一归位
+  （工具栏主题菜单 / 设置面板 / 演示模式主题菜单）
+- **persist 升到 v5**：迁移 `currentTheme === 'liquidglass'` → 默认主题 —— 该主题文件已删除，
+  不迁移会让 `read_theme_css` 取不到文件、**整块主题空白**。只动这一种被删值，用户选过的其它主题不动
+- 新增 `tests/themeOrder.test.ts`（顺序归位 + 兜住"改了 DEFAULT_THEME 却漏建主题文件"的手误）
+  ⇒ `npm test` **90 条全过**；`check-themes` 由 2 项告警降至 **1 项**
+- **⚠️ 删除主题文件必须连带清掉 `target/**/themes/` 里的副本**：`get_app_root()` 返回的是
+  **可执行文件所在目录**（`main.rs:331`），dev 模式即 `target/debug/` ⇒ `list_themes()` 实际读的是
+  **资源拷贝**而非 `src-tauri/themes/`。而 Tauri 的资源拷贝是**增量覆盖、不会删除源里已不存在的文件**，
+  所以删了源文件，旧主题仍会出现在列表里（已全盘清理 `target/debug` / `target/release` /
+  `target/release/bundle/portable` 三处，现均为 15 个）。
+  注：这也是 `check-themes` 只扫 `src-tauri/themes/` 而不扫 `target` 的原因 —— 源才是事实源。
+  **更正**：此前我说"运行时只读 `src-tauri/themes/`"不准确，dev 下读的是资源拷贝。
+
+**跟进（同日）：`check-i18n.mjs` 补第三个方向的检查 —— "用到但未定义"**
+
+原本只查「各语言之间的键齐不齐」，**查不到「代码用了、字典没有」** —— 而那才是更隐蔽的一类：
+界面会直接显示 `settings.foo` 这种原始键名（不崩溃，等于没翻译）。现已补上：
+
+- **静态** `t('ns.key')` → 必须存在于 `en.ts`，缺失即**退出码 1**（挡住构建）
+- **静态裸键经局部包装器**：`const t = (k) => translate(lang, \`properties.${k}\`)` 之后的
+  `t('editSource')` 不带命名空间 ⇒ **按本文件里定义的包装器补全前缀**再比对。
+  （第一版漏了这一环 —— 我用"临时改名破坏测试"才发现新检查没抓到，是被另一条校验兜住的）
+- **无命名空间且无包装器的裸键** ⇒ 报错（本项目约定所有键都带 `ns.`）
+- **动态键**：模板字面量无法静态求值，按「前缀 + 取值来源」显式展开后比对：
+  `i18nKey: 'xxx'` → `settings.xxx`（17 家 AI 供应商 + 插件配置）；
+  `cm-properties.ts` 的 `TYPES` 枚举 → `properties.type{Auto,Text,Number,…}`
+- **未声明来源的动态键前缀** ⇒ 告警（提醒补一条，否则是新的盲区）
+
+当前：**静态 388 + 动态 26 全部已定义，缺失 0**。已用破坏性测试验证：临时把 `en.ts` 的 `editSource`
+改名 → 报出 `静态 properties.editSource` 且退出码 1 → 已还原。
+
 ## v0.3.1
+
 
 > 本版主题：**演示模式（幻灯片）体系重做** —— 版式推断改为注册表驱动、新增片段逐步显示与懒渲染；切换动画从"整页 mask 过渡"升级为**瓷砖转场**（每格持有前后两页的真实 DOM 克隆），动画菜单扩到 12 种。
 
@@ -101,7 +574,6 @@
 
 - 62 条（`node --test` 四文件）；新增平台矩阵与 `tileConfigFor` 覆盖合并语义两条判据
 - 单元数上限按模式分档：shimmer（每格一个纯色贴片）≤600，flip（每格 2 份整页克隆）≤160
-
 
 ## v0.3.0
 

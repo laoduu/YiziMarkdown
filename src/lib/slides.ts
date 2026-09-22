@@ -18,21 +18,20 @@
  *     可整副关闭片段逐步显示（默认开）。不会成为一页幻灯片。
  */
 
-/** 去掉文档顶部的 front matter（首个 `--- ... ---` 块），避免其成为一页幻灯片 */
+// 带 .ts 扩展名是**必须的**：本模块要被 `node --test` 直接加载（tests/slides.test.ts），
+// 而 Node 的 ESM 解析器不做扩展名补全（见 lib/remotePath.ts 的同类说明）。
+import { splitFrontMatter } from './frontMatter.ts'
+
+/** 去掉文档顶部的 front matter（首个 `--- ... ---` 块），避免其成为一页幻灯片。
+ *  解析逻辑统一在 lib/frontMatter.ts —— 此前这里与 markdownRenderer 各有一份
+ *  规则不一致的正则，同一份文档在演示模式与预览模式下可能给出不同判断。 */
 export function stripFrontMatter(src: string): string {
-  return src.replace(/^\s*---\r?\n[\s\S]*?\r?\n---\r?\n?/, '')
+  return splitFrontMatter(src).body
 }
 
 /** 解析文档顶部 front matter（简易 YAML：仅支持 `key: value` 单行键值） */
 export function parseFrontMatter(src: string): Record<string, string> {
-  const m = src.match(/^\s*---\r?\n([\s\S]*?)\r?\n---\r?\n?/)
-  if (!m) return {}
-  const meta: Record<string, string> = {}
-  for (const line of m[1].split(/\r?\n/)) {
-    const kv = line.match(/^([a-zA-Z_][\w-]*)\s*:\s*(.*)$/)
-    if (kv) meta[kv[1].toLowerCase()] = kv[2].trim().replace(/^["']|["']$/g, '')
-  }
-  return meta
+  return splitFrontMatter(src).meta
 }
 
 function esc(s: string): string {

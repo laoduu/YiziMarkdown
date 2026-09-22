@@ -97,9 +97,17 @@ WYSIWYG modu için son derece şık bir deneyim yarattık; ayrıca PPT benzeri h
 - **Dışa aktarma**: HTML / Markdown / Düz metin / Word (DOCX) / PDF olmak üzere beş format; DOCX yerel Word semantiğini (listeler/tablolar/kod blokları/alıntılar/görev listeleri) kullanır, tablo stilleri önizlemeyle uyumludur, resimler yerel yolları, ağ resimlerini ve HTML `<img>` etiketlerini destekler (genişlik `width` özniteliğiyle ayarlanabilir); PDF önizlemeyle birebir aynıdır ve otomatik sayfalanır
 - **.md dosya ilişkilendirmesi**: Ayarlardan tek tıkla sistem varsayılanı Markdown düzenleyicisi olarak ayarlanır, .md çift tıklanarak doğrudan açılır (Windows kayıt defteri / macOS LaunchServices)
 
+### Bulut depolama (WebDAV)
+
+- **Bulut dosya tarayıcısı**: kenar çubuğundaki "Bulut" sekmesinden WebDAV sunucu ağacına göz atın — belge açın, klasör oluşturun, yeniden adlandırın, silin
+- **Buluta kaydet**: yerel bir belgeyi tek tıkla yükleyin (göreli yollarla başvurulan görseller de klasör yapısı korunarak yüklenir); bulut belgelerinde `Ctrl+S` doğrudan sunucuya yazar
+- **Çakışma koruması**: kaydetmeden önce sunucunun ETag değerini karşılaştırır; dosya başka bir cihazda değiştirilmişse bir iletişim kutusu üzerine yazma veya yeniden yükleme seçeneği sunar — asla sessizce üzerine yazmaz
+- **Güvenli kimlik bilgileri**: kullanıcı adı ve parola işletim sisteminin kimlik deposunda (Windows Kimlik Bilgisi Yöneticisi / macOS Anahtar Zinciri) saklanır, yapılandırma dosyalarına asla yazılmaz
+- **Uyumluluk**: Nutstore, Nextcloud ve Synology gibi standart WebDAV hizmetleriyle çalışır (uygulamaya özel parola önerilir)
+
 ### Görünüm Özelleştirme
 
-- **On beş dahili tema**: Akademik Mavi (varsayılan), Canlı Turuncu, Teknolojik, Minimalist, Dergi, Doğal, Sıvı Cam, Lychee Kırmızısı, Mor, Siberpunk, Facebook, Matrix, Nane Smoothie, Günbatımı Eritmesi, Retro Daktilo; her birinin aydınlık ve koyu olmak üzere iki renk şeması
+- **On beş dahili tema**: Akademik Mavi, Canlı Turuncu, Teknolojik, Minimalist, Dergi, Doğal, Sıvı Cam Prism (varsayılan), Lychee Kırmızısı, Mor, Siberpunk, Facebook, Matrix, Nane Smoothie, Günbatımı Eritmesi, Retro Daktilo; her birinin aydınlık ve koyu olmak üzere iki renk şeması
 - **Koyu / Aydınlık modu**: Her temanın aydınlık ve koyu olmak üzere iki renk şeması
 - **Yazı tipi özelleştirme**: Kaynak ve önizleme modları için ayrı ayrı yazı tipi, punto ve satır yüksekliği ayarı
 - **Özel CSS**: `user.css`, tüm temaların üzerine uygulanır, en yüksek önceliğe sahiptir
@@ -109,7 +117,7 @@ WYSIWYG modu için son derece şık bir deneyim yarattık; ayrıca PPT benzeri h
 
 - **Belge şablonları**: şablonlar kullanıcı dizini `~/Documents/yizimarkdown/templates/` içinde saklanır; kullanmak için `.md` dosyalarını koymanız yeterlidir (Ayarlar → Şablonlar bölümünden de oluşturup düzenleyebilirsiniz, menü anında yenilenir); yerleşik şablonlar ilk başlatmada otomatik olarak bu dizine eşitlenir, yükseltme/yeniden kurulum şablonlarınızın üzerine yazmaz
 - **Kısayol tuşu sistemi**: Görsel kısayol tuşu yapılandırma paneli, 30 eylem için özelleştirilmiş bağlama, tuş kaydetme, çakışma algılama ve varsayılanlara geri dönme desteği
-- **Ayarlar paneli**: Genel, görünüm, düzenleyici, gerçek zamanlı mod, yapay zeka, eklentiler, kısayol tuşları, şablonlar, hakkında vb. çoklu sekme sayfaları, ayarlar anında önizleme
+- **Ayarlar paneli**: Genel, görünüm, düzenleyici, gerçek zamanlı mod, yapay zeka, bulut, eklentiler, kısayol tuşları, şablonlar, hakkında vb. çoklu sekme sayfaları, ayarlar anında önizleme
 
 ---
 
@@ -163,13 +171,13 @@ YiziMarkdown/
 ├── user.css                # Kullanıcı özel stil dosyası
 ├── keybindings.json        # Kısayol tuşu yapılandırması
 ├── themes/                 # Tema CSS dosyaları
-│   ├── academic.css        # Akademik Mavi (varsayılan)
+│   ├── academic.css        # Akademik Mavi
 │   ├── vibrant.css         # Canlı Turuncu
 │   ├── tech.css            # Teknolojik
 │   ├── minimal.css         # Minimalist
 │   ├── magazine.css        # Dergi
 │   ├── nature.css          # Doğal
-│   ├── liquidglass.css     # Sıvı Cam
+│   ├── liquidglass-prism.css # Sıvı Cam Prism (varsayılan)
 │   ├── lychee.css          # Lychee Kırmızısı
 │   ├── violet.css          # Mor
 │   ├── cyberpunk.css       # Siberpunk

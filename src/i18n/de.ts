@@ -344,6 +344,7 @@ export const de = {
     animFlashCss: 'filter: brightness(1) → 1.5 → 1',
     animGlowCss: 'blur + brightness kombiniert',
     animRippleCss: 'mehrstufig blur + brightness',
+    cloudLoadPreset: 'Vorlage',
   },
   shortcuts: {
     file: 'Datei',
@@ -546,5 +547,19 @@ export const de = {
     retry: 'Wiederholen',
     pathLabel: 'Cloud-Pfad',
     root: 'Stamm',
+  },
+  properties: {
+    title: 'Eigenschaften',
+    add: 'Eigenschaft hinzufügen',
+    editSource: 'Quelltext bearbeiten',
+    deleteProp: 'Eigenschaft löschen',
+    blockValue: 'Blockwert (schreibgeschützt)',
+    typeAuto: 'Automatisch',
+    typeText: 'Text',
+    typeNumber: 'Zahl',
+    typeCheckbox: 'Kontrollkästchen',
+    typeDate: 'Datum',
+    typeDatetime: 'Datum und Uhrzeit',
+    typeList: 'Liste',
   },
 }

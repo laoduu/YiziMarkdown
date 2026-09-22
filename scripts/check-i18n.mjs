@@ -137,6 +137,98 @@ if (placeholderProblems.length) {
 
 console.log(`\n合计缺失 ${totalMissing} 个键${totalMissing ? '（缺失的键会回退显示英文，不是崩溃）' : ''}`)
 
+// ---- 2b) 代码用到、但 en.ts 没定义的键 ----
+// 后果：界面上直接显示 `settings.foo` 这种原始键名（不崩溃，但等于没翻译）。
+// 上面的 1) 只比对各语言之间的齐不齐，查不到这个方向，所以单独再查一遍。
+//
+// 分两类：
+//   · 静态  t('ns.key') —— 正则直接取字面量
+//   · 动态  t(`ns.${x}`) —— 模板字面量无法求值，按「前缀 + 取值来源」显式声明，
+//         把它展开成完整键再比对。**新增动态键时必须在这里补一条，否则又是盲区。**
+function walkSrc(dir, acc = []) {
+  for (const n of readdirSync(dir)) {
+    if (['node_modules', 'target', 'dist', '.git', 'i18n'].includes(n)) continue
+    const full = join(dir, n)
+    if (statSync(full).isDirectory()) walkSrc(full, acc)
+    else if (/\.(ts|tsx)$/.test(n)) acc.push(full)
+  }
+  return acc
+}
+
+const srcFiles = walkSrc(join(root, 'src'))
+const STATIC_T = /\bt\(\s*'([^']+)'/g
+const STATIC_TPL = /\bt\(\s*`([^`$]*)\$/g
+
+const staticUsed = new Set()
+const dynamicPrefixes = new Set()
+const noNamespace = []
+for (const file of srcFiles) {
+  const text = readFileSync(file, 'utf8')
+  // 本文件里可能定义了**带命名空间前缀的局部包装器**，典型写法：
+  //   const t = (k: string) => translate(lang, `properties.${k}`)
+  // 此时 t('editSource') 的真实键是 properties.editSource —— 裸键（不带点）必须靠它补全。
+  const wrapper = /(?:const|let|var)\s+t\s*=\s*\([^)]*\)\s*=>\s*translate\([^,]+,\s*`([^`$]*)\$\{/.exec(text)
+  const prefix = wrapper ? wrapper[1] : ''
+
+  for (const m of text.matchAll(STATIC_T)) {
+    const key = m[1]
+    if (key.includes('.')) { staticUsed.add(key); continue }
+    if (prefix) { staticUsed.add(prefix + key); continue }
+    // 本项目约定所有键都带命名空间（如 settings.xxx），裸键几乎一定是漏了前缀
+    noNamespace.push(`${file.slice(root.length + 1)} → t('${key}')`)
+  }
+  for (const m of text.matchAll(/\btranslate\([^,]+,\s*['"]([^'"]+)['"]/g)) {
+    if (m[1].includes('.')) staticUsed.add(m[1])
+  }
+  // 模板字面量取「${ 之前」的前缀，用于报告未声明来源的动态键
+  for (const m of text.matchAll(STATIC_TPL)) dynamicPrefixes.add(m[1])
+}
+
+// 动态键的取值来源：展开成完整键
+const dynamicKeys = new Set()
+// a) i18nKey: 'xxx' → settings.xxx（AI 供应商 / 插件配置项，两处都用 settings. 命名空间）
+for (const file of srcFiles) {
+  for (const m of readFileSync(file, 'utf8').matchAll(/\bi18nKey:\s*'([^']+)'/g)) {
+    dynamicKeys.add(`settings.${m[1]}`)
+  }
+}
+// b) 属性面板的类型菜单：properties.type{Auto,Text,…}（来自 cm-properties.ts 的 TYPES 枚举）
+try {
+  const props = readFileSync(join(root, 'src', 'lib', 'cm-properties.ts'), 'utf8')
+  const arr = /const TYPES: FrontMatterPropType\[\] = \[([^\]]+)\]/.exec(props)
+  if (arr) {
+    for (const v of arr[1].matchAll(/'([^']+)'/g)) {
+      const ty = v[1]
+      dynamicKeys.add(`properties.type${ty[0].toUpperCase()}${ty.slice(1)}`)
+    }
+  }
+} catch { /* 文件结构变了时跳过，由下面的"未声明前缀"提示兜底 */ }
+
+const usedButUndefined = [
+  ...[...staticUsed].filter((k) => !reference.has(k)).map((k) => `静态 ${k}`),
+  ...[...dynamicKeys].filter((k) => !reference.has(k)).map((k) => `动态 ${k}`),
+]
+// 动态前缀里没声明取值来源的 —— 报出来提醒补，否则是盲区
+// 注：'type' 是 cm-properties.ts 里 t(`type${…}`) 的模板前缀，
+//     外层 t() 包装器会补上 `properties.`，完整键 properties.typeXxx 已由上面 b) 展开并校验过。
+const knownPrefixes = ['settings.', 'properties.type', 'type']
+const unknownPrefixes = [...dynamicPrefixes].filter(
+  (p) => !knownPrefixes.some((k) => p.startsWith(k))
+)
+
+console.log(`\n=== 用到但未定义 ===`)
+if (usedButUndefined.length === 0) {
+  console.log(`✓ 静态与动态键全部已定义（静态 ${staticUsed.size} / 动态 ${dynamicKeys.size}）`)
+} else {
+  console.log(`✗ ${usedButUndefined.length} 个（界面上会显示原始键名）`)
+  for (const k of usedButUndefined) console.log(`    ${k}`)
+}
+if (unknownPrefixes.length) {
+  console.log(`\n⚠ 动态键前缀未在检查器里声明取值来源（新增动态键请补一条）：`)
+  for (const p of unknownPrefixes) console.log(`    \`${p}…\``)
+}
+if (usedButUndefined.length) process.exit(1)
+
 // 退出码语义：
 //   - 占位符不一致 = 真 bug（插值失效），必须失败
 //   - 缺键 = 未翻译，默认只告警；加 --strict 才视为失败

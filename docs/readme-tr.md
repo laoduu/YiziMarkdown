@@ -107,7 +107,7 @@ WYSIWYG modu için son derece şık bir deneyim yarattık; ayrıca PPT benzeri h
 
 ### Görünüm Özelleştirme
 
-- **On beş dahili tema**: Akademik Mavi (varsayılan), Canlı Turuncu, Teknolojik, Minimalist, Dergi, Doğal, Sıvı Cam, Lychee Kırmızısı, Mor, Siberpunk, Facebook, Matrix, Nane Smoothie, Günbatımı Eritmesi, Retro Daktilo; her birinin aydınlık ve koyu olmak üzere iki renk şeması
+- **On beş dahili tema**: Akademik Mavi, Canlı Turuncu, Teknolojik, Minimalist, Dergi, Doğal, Sıvı Cam Prism (varsayılan), Lychee Kırmızısı, Mor, Siberpunk, Facebook, Matrix, Nane Smoothie, Günbatımı Eritmesi, Retro Daktilo; her birinin aydınlık ve koyu olmak üzere iki renk şeması
 - **Koyu / Aydınlık modu**: Her temanın aydınlık ve koyu olmak üzere iki renk şeması
 - **Yazı tipi özelleştirme**: Kaynak ve önizleme modları için ayrı ayrı yazı tipi, punto ve satır yüksekliği ayarı
 - **Özel CSS**: `user.css`, tüm temaların üzerine uygulanır, en yüksek önceliğe sahiptir
@@ -171,13 +171,13 @@ YiziMarkdown/
 ├── user.css                # Kullanıcı özel stil dosyası
 ├── keybindings.json        # Kısayol tuşu yapılandırması
 ├── themes/                 # Tema CSS dosyaları
-│   ├── academic.css        # Akademik Mavi (varsayılan)
+│   ├── academic.css        # Akademik Mavi
 │   ├── vibrant.css         # Canlı Turuncu
 │   ├── tech.css            # Teknolojik
 │   ├── minimal.css         # Minimalist
 │   ├── magazine.css        # Dergi
 │   ├── nature.css          # Doğal
-│   ├── liquidglass.css     # Sıvı Cam
+│   ├── liquidglass-prism.css # Sıvı Cam Prism (varsayılan)
 │   ├── lychee.css          # Lychee Kırmızısı
 │   ├── violet.css          # Mor
 │   ├── cyberpunk.css       # Siberpunk

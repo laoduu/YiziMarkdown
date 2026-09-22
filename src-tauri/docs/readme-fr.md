@@ -98,9 +98,17 @@ Nous avons créé une expérience extrêmement élégante pour le mode WYSIWYG ;
 - **Export** : cinq formats — HTML / Markdown / texte brut / Word (DOCX) / PDF ; DOCX utilise la sémantique native de Word (listes/tableaux/blocs de code/citations/listes de tâches), les styles de tableau correspondent à l'aperçu, les images prennent en charge les chemins locaux, les images web et les balises HTML `<img>` (largeur réglable via l'attribut `width`) ; le PDF correspond à l'aperçu avec pagination automatique
 - **Association de fichiers .md** : configuration en un clic comme éditeur Markdown par défaut du système, double-clic sur .md pour ouvrir directement (registre Windows / LaunchServices macOS)
 
+### Stockage cloud (WebDAV)
+
+- **Navigateur de fichiers cloud** : parcourez l'arborescence de votre serveur WebDAV depuis l'onglet « Cloud » de la barre latérale — ouvrir des documents, créer des dossiers, renommer, supprimer
+- **Enregistrer dans le cloud** : envoyez un document local en un clic (les images référencées par des chemins relatifs sont envoyées aussi, en conservant l'arborescence) ; pour un document cloud, `Ctrl+S` écrit directement sur le serveur
+- **Protection contre les conflits** : compare l'ETag du serveur avant d'enregistrer ; si le fichier a été modifié sur un autre appareil, une boîte de dialogue propose d'écraser ou de recharger — jamais d'écrasement silencieux
+- **Identifiants sécurisés** : le nom d'utilisateur et le mot de passe sont stockés dans le trousseau du système (Gestionnaire d'identification Windows / Trousseau macOS), jamais dans les fichiers de configuration
+- **Compatibilité** : fonctionne avec les services WebDAV standards tels que Nutstore, Nextcloud et Synology (un mot de passe d'application est recommandé)
+
 ### Personnalisation de l'apparence
 
-- **Quinze thèmes intégrés** : Académique (défaut), Vibrant Orange, Tech, Minimaliste, Magazine, Nature, Verre Liquide, Litchi Rouge, Violet, Cyberpunk, Facebook, Matrix, Mint Glacé, Coucher de Soleil, Vintage Typewriter, chacun avec deux palettes clair et sombre
+- **Quinze thèmes intégrés** : Académique, Vibrant Orange, Tech, Minimaliste, Magazine, Nature, Verre Liquide Prism (défaut), Litchi Rouge, Violet, Cyberpunk, Facebook, Matrix, Mint Glacé, Coucher de Soleil, Vintage Typewriter, chacun avec deux palettes clair et sombre
 - **Mode sombre / clair** : chaque thème possède deux palettes clair et sombre
 - **Personnalisation des polices** : paramètres de police, taille et interligne séparés pour les modes source et prévisualisation
 - **CSS personnalisé** : `user.css` est appliqué après tous les thèmes, avec la priorité la plus élevée
@@ -110,7 +118,7 @@ Nous avons créé une expérience extrêmement élégante pour le mode WYSIWYG ;
 
 - **Modèles de document** : les modèles sont stockés dans le répertoire utilisateur `~/Documents/yizimarkdown/templates/` ; il suffit d'y placer des fichiers `.md` (vous pouvez aussi les créer/modifier dans Paramètres → Modèles, le menu est actualisé immédiatement) ; les modèles intégrés y sont synchronisés automatiquement au premier lancement, une mise à jour/réinstallation n'écrasera pas vos modèles
 - **Système de raccourcis clavier** : panneau de configuration visuel des raccourcis, support de 30 actions personnalisables, enregistrement de touches, détection de conflits et restauration par défaut
-- **Panneau de paramètres** : plusieurs onglets - Général, Apparence, Éditeur, Mode temps réel, IA, Plugins, Raccourcis clavier, Modèles, À propos, etc., aperçu en temps réel des paramètres
+- **Panneau de paramètres** : plusieurs onglets - Général, Apparence, Éditeur, Mode temps réel, IA, Cloud, Plugins, Raccourcis clavier, Modèles, À propos, etc., aperçu en temps réel des paramètres
 
 ---
 
@@ -165,13 +173,13 @@ YiziMarkdown/
 ├── user.css                # Styles personnalisés utilisateur
 ├── keybindings.json        # Configuration des raccourcis clavier
 ├── themes/                 # Fichiers CSS de thèmes
-│   ├── academic.css        # Académique (défaut)
+│   ├── academic.css        # Académique
 │   ├── vibrant.css         # Vibrant Orange
 │   ├── tech.css            # Tech
 │   ├── minimal.css         # Minimaliste
 │   ├── magazine.css        # Magazine
 │   ├── nature.css          # Nature
-│   ├── liquidglass.css     # Verre Liquide
+│   ├── liquidglass-prism.css # Verre Liquide Prism (défaut)
 │   ├── lychee.css          # Litchi Rouge
 │   ├── violet.css          # Violet
 │   ├── cyberpunk.css       # Cyberpunk

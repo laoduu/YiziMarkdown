@@ -106,7 +106,7 @@ Criamos uma experiência extremamente elegante para o modo WYSIWYG (o que você 
 
 ### Personalização de Aparência
 
-- **Quinze temas integrados**: Azul Acadêmico (padrão), Laranja Vibrante, Tecnológico, Minimalista, Revista, Natural, Vidro Líquido, Lychee Vermelho, Violeta, Cyberpunk, Facebook, Matrix, Mint Frappe, Pôr do Sol Derretido, Datilografia Vintage — cada um com esquema de cores claro e escuro
+- **Quinze temas integrados**: Azul Acadêmico, Laranja Vibrante, Tecnológico, Minimalista, Revista, Natural, Vidro Líquido Prism (padrão), Lychee Vermelho, Violeta, Cyberpunk, Facebook, Matrix, Mint Frappe, Pôr do Sol Derretido, Datilografia Vintage — cada um com esquema de cores claro e escuro
 - **Modo escuro / claro**: Cada tema possui esquema de cores claro e escuro
 - **Personalização de fonte**: Configuração separada de fonte, tamanho e altura de linha nos modos de código-fonte e pré-visualização
 - **CSS personalizado**: `user.css` sobrepõe todos os temas, com a maior prioridade
@@ -171,13 +171,13 @@ YiziMarkdown/
 ├── user.css                # Estilos personalizados do usuário
 ├── keybindings.json        # Configuração de atalhos
 ├── themes/                 # Arquivos CSS de temas
-│   ├── academic.css        # Azul Acadêmico (padrão)
+│   ├── academic.css        # Azul Acadêmico
 │   ├── vibrant.css         # Laranja Vibrante
 │   ├── tech.css            # Tecnológico
 │   ├── minimal.css         # Minimalista
 │   ├── magazine.css        # Revista
 │   ├── nature.css          # Natural
-│   ├── liquidglass.css     # Vidro Líquido
+│   ├── liquidglass-prism.css # Vidro Líquido Prism (padrão)
 │   ├── lychee.css          # Lychee Vermelho
 │   ├── violet.css          # Violeta
 │   ├── cyberpunk.css       # Cyberpunk

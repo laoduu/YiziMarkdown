@@ -107,7 +107,7 @@ Wir haben für den What-You-See-Is-What-You-Get-Modus ein äußerst eleganten An
 
 ### Anpassung
 
-- **Fünfzehn integrierte Themen**: Academic Blue (Standard), Vibrant Orange, Tech, Minimal, Magazine, Nature, Liquid Glass, Lychee Red, Violet, Cyberpunk, Facebook, Matrix, Mint, Sunset, Typewriter – jedes mit heller und dunkler Farbgebung
+- **Fünfzehn integrierte Themen**: Academic Blue, Vibrant Orange, Tech, Minimal, Magazine, Nature, Liquid Glass Prism (Standard), Lychee Red, Violet, Cyberpunk, Facebook, Matrix, Mint, Sunset, Typewriter – jedes mit heller und dunkler Farbgebung
 - **Dunkler / Heller Modus**: Jedes Thema hat helle und dunkle Farbgebungen
 - **Schriftanpassung**: Schriftart, Schriftgröße und Zeilenhöhe können getrennt für Quelltext- und Vorschau-Modus eingestellt werden
 - **Benutzerdefiniertes CSS**: `user.css` wird nach allen Themen geladen und hat höchste Priorität
@@ -172,13 +172,13 @@ YiziMarkdown/
 ├── user.css                # Benutzerdefinierte Styles
 ├── keybindings.json        # Tastaturkürzel-Konfiguration
 ├── themes/                 # Thema CSS-Dateien
-│   ├── academic.css        # Academic Blue (Standard)
+│   ├── academic.css        # Academic Blue
 │   ├── vibrant.css         # Vibrant Orange
 │   ├── tech.css            # Tech
 │   ├── minimal.css         # Minimal
 │   ├── magazine.css        # Magazine
 │   ├── nature.css          # Nature
-│   ├── liquidglass.css     # Liquid Glass
+│   ├── liquidglass-prism.css # Liquid Glass Prism (Standard)
 │   ├── lychee.css          # Lychee Red
 │   ├── violet.css          # Violet
 │   ├── cyberpunk.css       # Cyberpunk

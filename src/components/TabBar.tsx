@@ -26,7 +26,7 @@ function StatusDot({ status }: { status: SaveStatus }) {
 
 export default function TabBar({ onNew, onPresent }: TabBarProps) {
   const { t } = useI18n()
-  const { tabs, activeTabId, switchTab, closeTab, currentTab, markAsSaved, clearJustSaved } = useEditorStore()
+  const { tabs, activeTabId, switchTab, closeTab, currentTab, markAsSaved, clearJustSaved, moveTab } = useEditorStore()
   const current = currentTab()
   const [pendingCloseId, setPendingCloseId] = useState<string | null>(null)
   const [overflowing, setOverflowing] = useState(false)
@@ -34,6 +34,19 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
   const justSavedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const tabListRef = useRef<HTMLDivElement>(null)
   const overflowWrapRef = useRef<HTMLDivElement>(null)
+
+  // ===== 拖动排序 =====
+  /** 位移超过这个阈值才算拖动，否则视为普通点击（不影响单击切换 / 双击关闭） */
+  const DRAG_THRESHOLD = 4
+  /** 正在拖的 tab + 跟手浮层的初始宽度与位置。
+   *  浮层后续的移动直接改 DOM style（见 onMove），否则每个 pointermove 都要重渲染整条 tab 栏 */
+  const [drag, setDrag] = useState<{ id: string; width: number; x: number; y: number } | null>(null)
+  const [dropTarget, setDropTarget] = useState<{ id: string; after: boolean } | null>(null)
+  const ghostRef = useRef<HTMLDivElement>(null)
+  /** dropTarget 的镜像：window 上的监听器闭包读不到最新 state，只能走 ref */
+  const dropTargetRef = useRef<{ id: string; after: boolean } | null>(null)
+  /** 拖动结束浏览器会补一个 click，必须吞掉，否则会顺带切换 tab */
+  const suppressClickRef = useRef(false)
 
   // 检测 tab 是否溢出容器
   useEffect(() => {
@@ -123,6 +136,77 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
     }
   }
 
+  /** 按住 tab 拖动 → 松手插到目标 tab 的前 / 后（不依赖 HTML5 DnD：
+   *  Tauri 在 Windows 上默认 dragDropEnabled=true，会拦掉 HTML5 拖放） */
+  const handleTabPointerDown = (tabId: string, e: React.PointerEvent) => {
+    if (e.button !== 0) return
+    // 关闭按钮自己有点击行为，不参与拖动
+    if ((e.target as HTMLElement).closest('.tab-close')) return
+    suppressClickRef.current = false
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    // 光标在 tab 内的落点：浮层按这个偏移"抓"住，才跟手而不是跳到光标中心
+    const offsetX = e.clientX - rect.left
+    const offsetY = e.clientY - rect.top
+    const startX = e.clientX
+    const startY = e.clientY
+    let dragging = false
+
+    const onMove = (ev: PointerEvent) => {
+      if (!dragging) {
+        if (Math.abs(ev.clientX - startX) < DRAG_THRESHOLD && Math.abs(ev.clientY - startY) < DRAG_THRESHOLD) return
+        dragging = true
+        // 浮层的首次定位走 state（此刻 DOM 里还没有浮层），之后改走下面的直接改 style
+        setDrag({ id: tabId, width: rect.width, x: ev.clientX - offsetX, y: ev.clientY - offsetY })
+      } else {
+        const ghost = ghostRef.current
+        if (ghost) ghost.style.transform = `translate3d(${ev.clientX - offsetX}px, ${ev.clientY - offsetY}px, 0)`
+      }
+      // 拖到列表左右边缘时自动滚动，否则标签多到溢出时拖不到看不见的位置
+      const list = tabListRef.current
+      if (list) {
+        const lr = list.getBoundingClientRect()
+        if (ev.clientX < lr.left + 24) list.scrollLeft -= 8
+        else if (ev.clientX > lr.right - 24) list.scrollLeft += 8
+      }
+      // 命中测试：拖拽期间被拖的 tab 仍在文档里，所以直接问光标下是谁
+      // （浮层是 pointer-events:none，不会挡住命中）
+      const hit = (document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null)
+        ?.closest<HTMLElement>('[data-tab-id]')
+      const hitId = hit?.dataset.tabId
+      let next: { id: string; after: boolean } | null = null
+      if (hit && hitId && hitId !== tabId) {
+        const hr = hit.getBoundingClientRect()
+        next = { id: hitId, after: ev.clientX > hr.left + hr.width / 2 }
+      }
+      const prev = dropTargetRef.current
+      if (prev?.id === next?.id && prev?.after === next?.after) return
+      dropTargetRef.current = next
+      setDropTarget(next)
+    }
+
+    const finish = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', finish)
+      window.removeEventListener('pointercancel', finish)
+      if (dragging) {
+        suppressClickRef.current = true
+        const target = dropTargetRef.current
+        if (target) {
+          moveTab(tabId, target.id, target.after)
+          // 拖完自动激活被拖的 tab
+          switchTab(tabId)
+        }
+      }
+      dropTargetRef.current = null
+      setDrag(null)
+      setDropTarget(null)
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', finish)
+    window.addEventListener('pointercancel', finish)
+  }
+
   const handleConfirmClose = (action: 'save' | 'discard' | 'cancel') => {
     const tabId = pendingCloseId
     setPendingCloseId(null)
@@ -135,6 +219,8 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
       closeTab(tabId)
     }
   }
+
+  const dragTab = drag ? tabs.find(t => t.id === drag.id) : null
 
   return (
     <div className="tab-bar">
@@ -152,10 +238,16 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
           <button
             key={tab.id}
             data-tab-id={tab.id}
-            onClick={() => switchTab(tab.id)}
+            onPointerDown={(e) => handleTabPointerDown(tab.id, e)}
+            onClick={() => {
+              if (suppressClickRef.current) { suppressClickRef.current = false; return }
+              switchTab(tab.id)
+            }}
             onAuxClick={(e) => handleAuxClick(tab.id, e)}
             onDoubleClick={(e) => handleClose(tab.id, e)}
-            className={`tab-item ${activeTabId === tab.id ? 'tab-item-active' : ''}`}
+            className={`tab-item ${activeTabId === tab.id ? 'tab-item-active' : ''}${
+              drag?.id === tab.id ? ' tab-item-dragging' : ''}${
+              dropTarget?.id === tab.id ? (dropTarget.after ? ' tab-drop-after' : ' tab-drop-before') : ''}`}
             title={tab.filePath || t('tabbar.untitled')}
           >
             <span className="tab-title truncate max-w-[120px] min-w-0">{tab.name}</span>
@@ -268,6 +360,16 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* 拖动跟手浮层：pointer-events:none，所以不会挡住下面的命中测试 */}
+      {drag && dragTab && (
+        <div
+          ref={ghostRef}
+          className="tab-drag-ghost"
+          style={{ width: drag.width, transform: `translate3d(${drag.x}px, ${drag.y}px, 0)` }}
+        >
+          <span className="truncate">{dragTab.name}</span>
         </div>
       )}
     </div>

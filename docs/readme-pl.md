@@ -106,7 +106,7 @@ Stworzyliśmy niezwykle eleganckie doświadczenie w trybie edycji WYSIWYG. Ponad
 
 ### Personalizacja wyglądu
 
-- **15 wbudowanych motywów**: Akademicki niebieski (domyślny), Energiczny pomarańczowy, Technologiczny, Minimalistyczny, Magazynowy, Naturalny, Szklany płynny, Czerwień liczi, Fioletowy, Cyberpunk, Facebook, Matrix, Miętowy smoothie, Zachodzące słońce, Retro maszyna do pisania; każdy z dwoma wersjami kolorystycznymi (jasna/ciemna)
+- **15 wbudowanych motywów**: Akademicki niebieski, Energiczny pomarańczowy, Technologiczny, Minimalistyczny, Magazynowy, Naturalny, Szklany płynny Prism (domyślny), Czerwień liczi, Fioletowy, Cyberpunk, Facebook, Matrix, Miętowy smoothie, Zachodzące słońce, Retro maszyna do pisania; każdy z dwoma wersjami kolorystycznymi (jasna/ciemna)
 - **Tryb ciemny/jasny**: każdy motyw ma dwie wersje kolorystyczne
 - **Dostosowanie czcionki**: osobne ustawienia czcionki, rozmiaru i interlinii dla trybu źródła i podglądu
 - **Własny CSS**: `user.css` nakłada się po wszystkich motywach, najwyższy priorytet
@@ -171,13 +171,13 @@ YiziMarkdown/
 ├── user.css                # Własny styl użytkownika
 ├── keybindings.json        # Konfiguracja skrótów
 ├── themes/                 # Pliki CSS motywów
-│   ├── academic.css        # Akademicki niebieski (domyślny)
+│   ├── academic.css        # Akademicki niebieski
 │   ├── vibrant.css         # Energiczny pomarańczowy
 │   ├── tech.css            # Technologiczny
 │   ├── minimal.css         # Minimalistyczny
 │   ├── magazine.css        # Magazynowy
 │   ├── nature.css          # Naturalny
-│   ├── liquidglass.css     # Szklany płynny
+│   ├── liquidglass-prism.css # Szklany płynny Prism (domyślny)
 │   ├── lychee.css          # Czerwień liczi
 │   ├── violet.css          # Fioletowy
 │   ├── cyberpunk.css       # Cyberpunk

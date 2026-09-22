@@ -108,7 +108,7 @@ We hebben een uiterst elegante ervaring gecreëerd voor de WYSIWYG-modus. Tegeli
 
 ### Uiterlijk aanpassen
 
-- **Vijftien ingebouwde thema's**: Academisch blauw (standaard), Levendig oranje, Tech-look, Minimalistisch, Magazine-look, Natureel, Vloeibaar glas, Lychee-rood, Violet, Cyberpunk, Facebook, Matrix, Mint-smoothie, Zonsondergang-goud, Retro typemachine — elk met lichte en donkere kleurenschema's
+- **Vijftien ingebouwde thema's**: Academisch blauw, Levendig oranje, Tech-look, Minimalistisch, Magazine-look, Natureel, Vloeibaar glas Prism (standaard), Lychee-rood, Violet, Cyberpunk, Facebook, Matrix, Mint-smoothie, Zonsondergang-goud, Retro typemachine — elk met lichte en donkere kleurenschema's
 - **Donkere / lichte modus**: Elk thema heeft zowel een licht als donker kleurenschema
 - **Lettertype aanpassen**: Afzonderlijke instellingen voor lettertype, lettergrootte en regelhoogte in de broncode- en voorvertoningsmodus
 - **Aangepaste CSS**: `user.css` overschrijft alle thema's met de hoogste prioriteit
@@ -173,13 +173,13 @@ YiziMarkdown/
 ├── user.css                # Gebruikers aangepaste stijlen
 ├── keybindings.json        # Sneltoetsconfiguratie
 ├── themes/                 # Thema CSS-bestanden
-│   ├── academic.css        # Academisch blauw (standaard)
+│   ├── academic.css        # Academisch blauw
 │   ├── vibrant.css         # Levendig oranje
 │   ├── tech.css            # Tech-look
 │   ├── minimal.css         # Minimalistisch
 │   ├── magazine.css        # Magazine-look
 │   ├── nature.css          # Natureel
-│   ├── liquidglass.css     # Vloeibaar glas
+│   ├── liquidglass-prism.css # Vloeibaar glas Prism (standaard)
 │   ├── lychee.css          # Lychee-rood
 │   ├── violet.css          # Violet
 │   ├── cyberpunk.css       # Cyberpunk

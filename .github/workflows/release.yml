@@ -1,0 +1,128 @@
+# 推送 v* 标签时自动构建并创建 GitHub Release（草稿）。
+#
+# 资产与历史手工发布一致（5 个）：
+#   - YiziMarkdown_<ver>_x64-setup.exe   NSIS 安装包      （Windows 腿）
+#   - YiziMarkdown_<ver>_x64_zh-CN.msi   WiX MSI          （Windows 腿）
+#   - YiziMarkdown_<ver>_x64-portable.zip 便携版          （Windows 腿，make-portable.ps1）
+#   - YiziMarkdown_<ver>_source.zip      源码包           （Windows 腿，git archive）
+#   - YiziMarkdown_<ver>_universal.dmg   macOS 通用 dmg   （macOS 腿）
+#
+# Release 正文取仓库根的 CHANGELOG-V<ver>.md（与 v0.3.1 手工正文同源）。
+# 默认产出【草稿】，在 GitHub 上确认资产无误后再点 Publish。
+#
+# 使用：git tag v0.3.2 && git push origin v0.3.2
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test & gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: npm ci
+        run: npm ci
+
+      - name: npm test
+        run: npm test
+
+      # 四道门禁（tsc / check-tauri-args / check-i18n / check-themes）+ vite build
+      # 在起昂贵的 Rust 构建之前先把便宜的失败挡掉
+      - name: npm run build (gates)
+        run: npm run build
+
+  build:
+    name: Build (${{ matrix.platform }})
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            args: --bundles nsis,wix
+          - platform: macos-latest
+            args: --target universal-apple-darwin --bundles dmg
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Add macOS universal targets
+        if: matrix.platform == 'macos-latest'
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Release notes from CHANGELOG-V*
+        id: changelog
+        shell: bash
+        run: |
+          ver="${GITHUB_REF_NAME#v}"
+          f="CHANGELOG-V${ver}.md"
+          if [ -f "$f" ]; then
+            {
+              echo "body<<CHANGELOG_EOF"
+              cat "$f"
+              echo "CHANGELOG_EOF"
+            } >> "$GITHUB_OUTPUT"
+            echo "Using release notes from $f"
+          else
+            echo "body=See CHANGELOG.md in the repository." >> "$GITHUB_OUTPUT"
+            echo "warning: $f not found, falling back" >&2
+          fi
+
+      - name: Tauri build & upload bundles
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: ${{ github.ref_name }}
+          releaseBody: ${{ steps.changelog.outputs.body }}
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
+
+      # 便携版 + 源码包：仓库自定义产物，tauri-action 不会生成
+      # 必须 pwsh（PS5.1 会按 ANSI 读脚本里的中文注释，见 MEMORY 硬约束）
+      - name: Assemble portable + source zip
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: pwsh scripts/make-portable.ps1
+
+      - name: Upload portable + source to release
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "$GITHUB_REF_NAME" \
+            .release_tmp/YiziMarkdown_*_x64-portable.zip \
+            .release_tmp/YiziMarkdown_*_source.zip \
+            --clobber

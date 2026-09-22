@@ -1,0 +1,119 @@
+/**
+ * highlight.js 的变量化配色。
+ *
+ * 取代 `highlight.js/styles/github.css`：那个文件把 token 颜色写死成 GitHub 的浅色主题
+ * （`.hljs { color:#24292e; background:#fff }` + 一堆固定 hex），所以预览区的代码块
+ * **不受任何主题影响**，暗色主题下还靠 Tailwind prose 的 `pre code` 规则兜着才没变成黑字黑底。
+ *
+ * 这里把 hljs 的类名映射到 `--code-*` 令牌：
+ *   - 默认值与 github 主题一致 ⇒ 预览区代码块外观不变；
+ *   - 主题覆盖 `--code-*` 后，预览代码块与实时编辑的代码配色会同时跟随。
+ *
+ * 少数罕见类（meta / bullet / subst / addition / deletion 等）按语义就近映射，
+ * 不再追求与 github 逐字节相同 —— 它们本就该跟随主题的语义色。
+ */
+
+/* 基础：底色与文字色跟随主题（原来写死 #fff / #24292e） */
+.hljs {
+  color: var(--editor-text);
+  background: var(--editor-surface);
+}
+
+/* 关键字族 */
+.hljs-doctag,
+.hljs-keyword,
+.hljs-meta .hljs-keyword,
+.hljs-template-tag,
+.hljs-template-variable,
+.hljs-type,
+.hljs-variable.language_ {
+  color: var(--code-keyword);
+}
+
+/* 函数名 / 类名 */
+.hljs-title,
+.hljs-title.class_,
+.hljs-title.class_.inherited__,
+.hljs-title.function_ {
+  color: var(--code-function);
+}
+
+/* 属性 / 选择器 */
+.hljs-attr,
+.hljs-attribute,
+.hljs-selector-attr,
+.hljs-selector-class,
+.hljs-selector-id {
+  color: var(--code-attr);
+}
+
+/* 字面量 / 数字 / 运算符 / 变量 */
+.hljs-literal {
+  color: var(--code-constant);
+}
+.hljs-number,
+.hljs-meta,
+.hljs-section {
+  color: var(--code-number);
+}
+.hljs-operator {
+  color: var(--code-operator);
+}
+.hljs-variable,
+.hljs-params,
+.hljs-property {
+  color: var(--code-variable);
+}
+
+/* 字符串 / 正则 */
+.hljs-regexp,
+.hljs-string,
+.hljs-meta .hljs-string {
+  color: var(--code-string);
+}
+
+/* 内建对象 / 符号 */
+.hljs-built_in,
+.hljs-symbol {
+  color: var(--code-builtin);
+}
+
+/* 注释 */
+.hljs-comment,
+.hljs-code,
+.hljs-formula {
+  color: var(--code-comment);
+}
+
+/* 标签 / 引用 / 选择器 */
+.hljs-name,
+.hljs-quote,
+.hljs-selector-tag,
+.hljs-selector-pseudo {
+  color: var(--code-tag);
+}
+
+/* 文本与强调 */
+.hljs-subst,
+.hljs-emphasis,
+.hljs-strong {
+  color: var(--code-punct);
+}
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 700; }
+
+/* 链接 */
+.hljs-link,
+.hljs-char.escape_ {
+  color: var(--code-link);
+}
+
+/* diff：跟随主题的成功 / 危险色 */
+.hljs-addition {
+  color: var(--success);
+  background-color: color-mix(in srgb, var(--success) 12%, transparent);
+}
+.hljs-deletion {
+  color: var(--danger);
+  background-color: color-mix(in srgb, var(--danger) 12%, transparent);
+}

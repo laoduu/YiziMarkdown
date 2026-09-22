@@ -46,7 +46,7 @@
         "license": "https://github.com/laoduu/YiziMarkdown/blob/main/LICENSE",
         "programmingLanguage": ["TypeScript", "Rust"],
         "screenshot": "https://md.yizigpt.com/assets/index.webp",
-        "version": "0.3.1",
+        "version": "0.3.2",
         "author": {
             "@type": "Organization",
             "name": "YiziPaper",
@@ -74,19 +74,19 @@
 <!-- Hero -->
 <section class="hero">
     <div class="hero-content">
-        <div class="hero-badge"><span class="dot"></span> V0.3.1 · 演示模式 12 种切换动画 · WebDAV 云端存储 · Word/PDF 导出</div>
+        <div class="hero-badge"><span class="dot"></span> V0.3.2 · 实时属性面板 · 主题令牌体系 · HTML 导出大纲</div>
         <h1>既<span style="color: var(--orange);">好看</span>，又<span class="highlight">彪悍</span></h1>
         <p class="hero-sub">一款 AI 加持的跨平台 Markdown 编辑器<br><span class="nowrap">内置大模型助手与类 PPT 演示模式，写作、提炼、汇报一站搞定</span></p>
         <div class="hero-actions">
-            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.3.1/YiziMarkdown_0.3.1_x64-setup.exe" target="_blank" class="btn-primary">
+            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.3.2/YiziMarkdown_0.3.2_x64-setup.exe" target="_blank" class="btn-primary">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.55 10.5 4.5v6.8H3V5.55zm0 12.9 7.5-1.05v-6.3H3v7.35zM11.5 4.3 21 3v8.3h-9.5V4.3zm0 15.4 9.5-1.3V12.7h-9.5v7z"/></svg>
                 Windows 版下载
             </a>
-            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.3.1/YiziMarkdown_0.3.1_universal.dmg" target="_blank" class="btn-secondary">
+            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.3.2/YiziMarkdown_0.3.2_universal.dmg" target="_blank" class="btn-secondary">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 12.54c-.03-3.04 2.48-4.5 2.6-4.57-1.42-2.07-3.62-2.36-4.4-2.39-1.88-.19-3.66 1.1-4.62 1.1-.95 0-2.43-1.08-4-1.05-2.05.03-3.95 1.2-5 3.04-2.14 3.7-.55 9.17 1.53 12.18 1.02 1.46 2.23 3.1 3.83 3.04 1.53-.06 2.11-.99 3.96-.99 1.85 0 2.37.99 4 .96 1.65-.03 2.7-1.49 3.71-2.95 1.17-1.71 1.65-3.37 1.68-3.45-.04-.02-3.22-1.24-3.29-4.92zM14.4 4.2c.85-1.03 1.42-2.46 1.26-3.89-1.22.05-2.7.81-3.58 1.84-.79.91-1.47 2.36-1.29 3.76 1.36.1 2.76-.69 3.61-1.71z"/></svg>
                 macOS 版下载
             </a>
-            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.3.1/YiziMarkdown_0.3.1_x64-portable.zip" target="_blank" class="btn-secondary">
+            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.3.2/YiziMarkdown_0.3.2_x64-portable.zip" target="_blank" class="btn-secondary">
                 <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 7l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                 便携版（解压即用）
             </a>
@@ -332,7 +332,8 @@
     </div>
     <div class="changelog-container">
         <div class="changelog-tabs" id="changelogTabs">
-            <button class="changelog-tab active" data-version="0.3.1">v0.3.1</button>
+            <button class="changelog-tab active" data-version="0.3.2">v0.3.2</button>
+            <button class="changelog-tab" data-version="0.3.1">v0.3.1</button>
             <button class="changelog-tab" data-version="0.3.0">v0.3.0</button>
             <button class="changelog-tab" data-version="0.2.4">v0.2.4</button>
             <button class="changelog-tab" data-version="0.2.3">v0.2.3</button>
@@ -347,12 +348,33 @@
             <button class="changelog-tab" data-version="0.1.3">v0.1.3</button>
         </div>
         <div class="changelog-content" id="changelogContent">
-            <div class="changelog-panel active" data-version="0.3.1">
+            <div class="changelog-panel active" data-version="0.3.2">
+                <div class="changelog-card">
+                    <div class="changelog-card-head">
+                        <div class="changelog-head-left">
+                            <span class="changelog-version">v0.3.2</span>
+                            <span class="changelog-badge">最新</span>
+                        </div>
+                        <span class="changelog-date">2026.09.23</span>
+                    </div>
+                    <div class="changelog-divider"></div>
+                    <ul class="changelog-list">
+                        <li><span class="changelog-tag new">新增</span><strong>实时模式属性面板</strong>：YAML front matter 渲染为 Obsidian 式可编辑属性面板，支持文本 / 数字 / 复选框 / 日期 / 列表等 7 种属性类型，类型按属性名全局记忆</li>
+                        <li><span class="changelog-tag new">新增</span><strong>HTML 导出大纲侧栏</strong>：导出的 HTML 带左侧悬浮圆角大纲卡片，点击直达对应章节（PDF 不受影响）</li>
+                        <li><span class="changelog-tag new">新增</span><strong>WebDAV 加载预设</strong>：云端设置地址框一键填入坚果云地址；目录树支持逐层懒加载展开与面包屑折叠跳转</li>
+                        <li><span class="changelog-tag new">新增</span><strong>Tab 拖动排序</strong>：标签栏按住拖动即可重排，带插入指示与跟手浮层</li>
+                        <li><span class="changelog-tag improve">优化</span><strong>主题令牌体系</strong>：区域 / 装饰 / 效果三层令牌 + check-themes 六项门禁；代码语法高亮首次接入主题配色；字体拆分为界面 / 编辑器 / 预览三通道</li>
+                        <li><span class="changelog-tag improve">优化</span><strong>默认主题改为「液态玻璃 Prism」</strong>并排列表第一位，删除旧液态玻璃主题</li>
+                        <li><span class="changelog-tag fix">修复</span>引用块上下留白统一为半行并去掉强加引号；实时模式公式后内容不渲染；元信息行误显示 H2 折叠胶囊；切换视图模式时被动下滚等问题</li>
+                        <li><span class="changelog-tag improve">优化</span>check-i18n 新增「用到但未定义」检查（静态 388 + 动态 26 键全部已定义），15 语言零缺失</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="changelog-panel" data-version="0.3.1">
                 <div class="changelog-card">
                     <div class="changelog-card-head">
                         <div class="changelog-head-left">
                             <span class="changelog-version">v0.3.1</span>
-                            <span class="changelog-badge">最新</span>
                         </div>
                         <span class="changelog-date">2026.09.19</span>
                     </div>

@@ -15,6 +15,7 @@ import {
   testConnection,
 } from '../lib/webdav'
 import { normalizeBaseUrl } from '../lib/remotePath'
+import { DEFAULT_THEME, orderThemes } from '../lib/themeOrder'
 
 const fallbackFonts = [
   'Consolas', 'Courier New', 'Lucida Console', 'Monaco', 'Menlo',
@@ -35,7 +36,7 @@ const webFonts = [
 
 /** 各面板的默认值（恢复默认时使用） */
 const DEFAULTS_GENERAL = { autoSave: true, autoSaveInterval: 60000, defaultTemplate: '' }
-const DEFAULTS_APPEARANCE = { currentTheme: 'academic', isDark: false }
+const DEFAULTS_APPEARANCE = { currentTheme: DEFAULT_THEME, isDark: false }
 const DEFAULTS_EDITOR = {
   liveAnimationMode: 'blur' as const,
   fontFamily: "'MiSans', 'Mi Sans', system-ui, -apple-system, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif",
@@ -253,7 +254,7 @@ function AppearanceSettings() {
 
   // 加载 theme.json 和 themes/ 目录列表
   useEffect(() => {
-    invokeTauri<string[]>('list_themes').then((l) => setThemeFiles(l || []))
+    invokeTauri<string[]>('list_themes').then((l) => setThemeFiles(orderThemes(l || [])))
     invokeTauri<string>('read_theme_json').then((json) => {
       try { setThemeMeta(JSON.parse(json || '{}')) } catch { setThemeMeta({}) }
     })
@@ -1414,12 +1415,16 @@ function AISettings() {
 
 // ===================== 云端存储（WebDAV）=====================
 
+/** 内置预设：坚果云 WebDAV 根地址（其"起始目录"约定为 /yizimarkdown） */
+const WEBDAV_PRESET_BASE_URL = 'https://dav.jianguoyun.com/dav/'
+
 function CloudSettings() {
   const { t } = useI18n()
   const store = useSettingsStore()
 
   const [baseUrl, setBaseUrl] = useState(store.webdavBaseUrl)
   const [rootPath, setRootPath] = useState(store.webdavRootPath)
+  const [baseUrlFocused, setBaseUrlFocused] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -1487,15 +1492,31 @@ function CloudSettings() {
         <div className="space-y-4">
           <Section title={t('settings.cloudSectionServer')}>
             <Row label={t('settings.cloudBaseUrl')} hint={t('settings.cloudBaseUrlHint')}>
-              <input
-                type="text"
-                value={baseUrl}
-                onChange={(e) => setBaseUrl(e.target.value)}
-                onBlur={(e) => commitBaseUrl(e.target.value)}
-                placeholder={t('settings.cloudBaseUrlPlaceholder')}
-                className="settings-input w-full"
-                style={{ fontFamily: 'var(--font-mono)' }}
-              />
+              {/* 聚焦时才在框内右侧浮出「加载预设」，点一下填入坚果云地址；
+                  平时不占位，避免干扰已配置好的用户 */}
+              <div className="relative w-full">
+                <input
+                  type="text"
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                  onFocus={() => setBaseUrlFocused(true)}
+                  onBlur={(e) => { setBaseUrlFocused(false); commitBaseUrl(e.target.value) }}
+                  placeholder={t('settings.cloudBaseUrlPlaceholder')}
+                  className={`settings-input w-full${baseUrlFocused ? ' pr-20' : ''}`}
+                  style={{ fontFamily: 'var(--font-mono)' }}
+                />
+                {baseUrlFocused && (
+                  <button
+                    type="button"
+                    // 必须阻止默认行为：否则按下瞬间输入框先失焦、按钮在 click 之前就被卸载
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => commitBaseUrl(WEBDAV_PRESET_BASE_URL)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[var(--editor-accent)] hover:underline"
+                  >
+                    {t('settings.cloudLoadPreset')}
+                  </button>
+                )}
+              </div>
             </Row>
             <Row label={t('settings.cloudRootPath')} hint={t('settings.cloudRootPathHint')}>
               <input
@@ -1604,7 +1625,7 @@ export default function SettingsModal({ isOpen, onClose, defaultTab }: SettingsM
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 backdrop-blur-sm" style={{ background: 'var(--overlay-bg)' }} onClick={onClose} />
       <div className="settings-modal-container">
         <div className="settings-modal-header">
           <button onClick={onClose} className="mr-2 p-0.5 rounded hover:bg-[var(--editor-hover)] text-[var(--sidebar-text)]"><ChevronRight size={14} className="rotate-180" /></button>

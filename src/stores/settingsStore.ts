@@ -1,5 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { SlideAnim } from '../lib/slideTiles'
+import type { FrontMatterPropType } from '../lib/frontMatter'
+import { DEFAULT_THEME } from '../lib/themeOrder.ts'
 
 export interface SettingsState {
   // 通用
@@ -62,6 +65,16 @@ export interface SettingsState {
   /** 云端浏览器上次停留的目录，重新打开时恢复 */
   webdavLastPath: string
 
+  // 演示模式（v0.3.1）
+  /** 切换动画变体：在演示模式 HUD 里选择，立即持久化 */
+  slideAnim: SlideAnim
+
+  // 元信息属性（v0.3.2）
+  /** front matter 属性类型：按**属性名**全局存（与 Obsidian 的 types.json 语义一致）。
+   *  刻意不按文件路径索引 —— 项目里没有任何按路径索引的持久化，
+   *  且"未命名新文件"与"云端文档"都没有可靠的本地路径。 */
+  frontMatterTypes: Record<string, FrontMatterPropType>
+
   // AI 面板运行时状态（不持久化）
   /** AI 面板是否打开 */
   aiPanelOpen: boolean
@@ -98,7 +111,7 @@ export const useSettingsStore = create<SettingsState>()(
       mouseSpotlight: true,
 
       // 外观
-      currentTheme: 'academic',
+      currentTheme: DEFAULT_THEME,
       isDark: false,
       userThemeEnabled: false,
       userThemeName: '',
@@ -123,8 +136,15 @@ export const useSettingsStore = create<SettingsState>()(
 
       // WebDAV 云端存储（v0.3.0）
       webdavBaseUrl: '',
-      webdavRootPath: '/',
-      webdavLastPath: '/',
+      webdavRootPath: '/yizimarkdown',
+      // 空串表示"还没浏览过"：云端浏览器据此回落到起始目录，而不是服务器根
+      webdavLastPath: '',
+
+      // 演示模式（v0.3.1）
+      slideAnim: 'cube',
+
+      // 元信息属性（v0.3.2）：属性名 → 类型
+      frontMatterTypes: {},
 
       // AI 面板运行时状态
       aiPanelOpen: false,
@@ -138,7 +158,9 @@ export const useSettingsStore = create<SettingsState>()(
       name: 'yizimarkdown-settings',
       // v1: 自动保存间隔范围改为 5s~180s（旧数据越界需迁移）
       // v2/v3: 涟漪反馈默认开启
-      version: 3,
+      // v4: WebDAV 起始目录默认值改为 /yizimarkdown
+      // v5: 默认主题改为 liquidglass-prism，旧的 liquidglass 主题已删除
+      version: 5,
       migrate: (persisted: unknown) => {
         // 自动迁移旧字体栈到 MiSans 方案
         const oldFont = "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
@@ -154,6 +176,13 @@ export const useSettingsStore = create<SettingsState>()(
           }
           // v2/v3：涟漪反馈默认开启（新功能默认值统一为开启；v3 对存量已关闭的存档再强制一次）
           state.mouseSpotlight = true
+          // v4：起始目录的旧默认值 '/' 迁移为 /yizimarkdown（坚果云预设目录）。
+          // 只认旧默认值本身：用户手填过的路径（含其它值）一律不动。
+          if (state.webdavRootPath === '/') state.webdavRootPath = '/yizimarkdown'
+          // v5：旧的 liquidglass 主题文件已删除。选中它的存档必须改指后继 prism，
+          // 否则 read_theme_css 会取不到文件、主题整块空白。
+          // 只动这一种被删掉的值，用户明确选过的其它主题一概不动。
+          if (state.currentTheme === 'liquidglass') state.currentTheme = DEFAULT_THEME
         }
         return state
       },

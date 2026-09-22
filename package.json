@@ -1,15 +1,17 @@
 {
   "name": "yizimarkdown",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "YiziMarkdown - A sleek Markdown editor",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && node scripts/check-tauri-args.mjs && node scripts/check-i18n.mjs --strict && vite build",
-    "test": "node --test tests/remotePath.test.ts tests/slides.test.ts tests/slideTiles.test.ts",
+    "build": "tsc && node scripts/check-tauri-args.mjs && node scripts/check-i18n.mjs --strict && node scripts/check-themes.mjs && vite build",
+    "test": "node --disable-warning=ExperimentalWarning --experimental-transform-types --test tests/remotePath.test.ts tests/slides.test.ts tests/slideTiles.test.ts tests/frontMatter.test.ts tests/liveBlocks.test.ts tests/themeOrder.test.ts",
     "check:invoke": "node scripts/check-tauri-args.mjs",
     "check:i18n": "node scripts/check-i18n.mjs",
     "check:i18n:strict": "node scripts/check-i18n.mjs --strict",
+    "check:themes": "node scripts/check-themes.mjs",
+    "check:themes:strict": "node scripts/check-themes.mjs --strict",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"

@@ -55,20 +55,19 @@
 }
 
 .editor-content.theme-facebook h1 {
-  font-size: 1.6em; font-weight: 700; margin: 1.2em 0 0.4em;
-  color: #1877F2; letter-spacing: -0.01em;
+  font-size: 1.6em; font-weight: 700; margin: 1.2em 0 0.4em; letter-spacing: -0.01em;
 }
 .editor-content.theme-facebook h2 {
-  font-size: 1.3em; font-weight: 700; margin: 1em 0 0.3em; color: #1665d8;
+  font-size: 1.3em; font-weight: 700; margin: 1em 0 0.3em;
 }
 .editor-content.theme-facebook h3 {
-  font-size: 1.1em; font-weight: 600; margin: 0.9em 0 0.25em; color: #3a5a8a;
+  font-size: 1.1em; font-weight: 600; margin: 0.9em 0 0.25em;
 }
 .editor-content.theme-facebook p {
   margin: 0 0 var(--paragraph-spacing); color: #1c1e21;
 }
 .editor-content.theme-facebook blockquote {
-  border-left: 3px solid #1877F2; padding: 0.8em 1em; margin: 1em 0;
+  border-left: 3px solid #1877F2; padding: 0.5em 1em; margin: 0.5em 0;
   color: #4a6a8a; background: rgba(24, 119, 242, 0.04);
   border-radius: 0 var(--border-radius) var(--border-radius) 0;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
@@ -109,13 +108,10 @@
 
 /* ── 深色模式完整覆盖 ────────────────────────────────────────── */
 .dark .theme-facebook h1 {
-  color: #4da3ff;
 }
 .dark .theme-facebook h2 {
-  color: #6bb3ff;
 }
 .dark .theme-facebook h3 {
-  color: #8ec3ff;
 }
 .dark .theme-facebook p {
   color: #e4e6eb;

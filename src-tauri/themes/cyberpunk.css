@@ -62,7 +62,6 @@
   font-size: 2.2em;
   font-weight: 900;
   margin: 1.5em 0 0.5em;
-  color: #0077b6;
   letter-spacing: -0.02em;
   text-transform: uppercase;
   border-bottom: 2px solid #9b2fa6;
@@ -72,13 +71,11 @@
   font-size: 1.5em;
   font-weight: 800;
   margin: 1.3em 0 0.4em;
-  color: #9b2fa6;
 }
 .editor-content.theme-cyberpunk h3 {
   font-size: 1.25em;
   font-weight: 700;
   margin: 1.2em 0 0.3em;
-  color: #0096c7;
 }
 .editor-content.theme-cyberpunk p {
   margin: 0 0 var(--paragraph-spacing);
@@ -86,8 +83,8 @@
 }
 .editor-content.theme-cyberpunk blockquote {
   border-left: 3px solid #9b2fa6;
-  padding: 0.8em 1em;
-  margin: 1em 0;
+  padding: 0.5em 1em;
+  margin: 0.5em 0;
   color: #4a4a6a;
   background: rgba(155, 47, 166, 0.05);
   border-radius: 0 var(--border-radius) var(--border-radius) 0;
@@ -183,16 +180,13 @@
 
 /* ── 暗色预览覆盖 ────────────────────────────────────────────── */
 .dark .theme-cyberpunk h1 {
-  color: #00f0ff;
   text-shadow: 0 0 10px rgba(0, 240, 255, 0.6), 0 0 30px rgba(0, 240, 255, 0.2);
   border-bottom-color: #ff00ff;
 }
 .dark .theme-cyberpunk h2 {
-  color: #ff00ff;
   text-shadow: 0 0 8px rgba(255, 0, 255, 0.4);
 }
 .dark .theme-cyberpunk h3 {
-  color: #00d4ff;
   text-shadow: 0 0 6px rgba(0, 212, 255, 0.3);
 }
 .dark .theme-cyberpunk p {

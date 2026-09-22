@@ -97,9 +97,17 @@ Abbiamo creato un'esperienza estremamente elegante per la modalità WYSIWYG; sup
 - **Esporta**: Cinque formati: HTML / Markdown / testo semplice / Word (DOCX) / PDF; DOCX usa la semantica nativa di Word (elenchi/tabelle/blocchi di codice/citazioni/elenchi di attività), gli stili delle tabelle corrispondono all'anteprima, le immagini supportano percorsi locali, immagini web e tag HTML `<img>` (larghezza controllabile con l'attributo `width`); il PDF corrisponde all'anteprima con paginazione automatica
 - **Associazione file .md**: Impostalo come editor Markdown predefinito del sistema con un clic nelle impostazioni, doppio clic su .md per aprire direttamente (registro Windows / macOS LaunchServices)
 
+### Archiviazione cloud (WebDAV)
+
+- **Browser dei file cloud**: sfoglia l'albero del server WebDAV dalla scheda "Cloud" nella barra laterale — apri documenti, crea cartelle, rinomina, elimina
+- **Salva nel cloud**: carica un documento locale con un clic (anche le immagini referenziate con percorsi relativi vengono caricate, mantenendo la struttura delle cartelle); per i documenti cloud `Ctrl+S` scrive direttamente sul server
+- **Protezione dai conflitti**: confronta l'ETag del server prima di salvare; se il file è stato modificato su un altro dispositivo un dialogo permette di sovrascrivere o ricaricare — mai una sovrascrittura silenziosa
+- **Credenziali al sicuro**: nome utente e password sono salvati nel portachiavi di sistema (Gestione credenziali di Windows / Portachiavi macOS), mai nei file di configurazione
+- **Compatibilità**: funziona con servizi WebDAV standard come Nutstore, Nextcloud e Synology (si consiglia una password specifica per l'app)
+
 ### Personalizzazione aspetto
 
-- **Quindici temi integrati**: Blu Accademico (predefinito), Arancio Vivace, Tecnologico, Minimalista, Rivista, Naturale, Vetro Liquido, Rosso Litchi, Viola, Cyberpunk, Facebook, Matrix, Menta, Tramonto, Macchina da scrivere retro, ogni tema ha schemi di colori chiaro e scuro
+- **Quindici temi integrati**: Blu Accademico, Arancio Vivace, Tecnologico, Minimalista, Rivista, Naturale, Vetro Liquido Prism (predefinito), Rosso Litchi, Viola, Cyberpunk, Facebook, Matrix, Menta, Tramonto, Macchina da scrivere retro, ogni tema ha schemi di colori chiaro e scuro
 - **Modalità scura / chiara**: Ogni tema ha entrambi gli schemi di colori chiaro e scuro
 - **Personalizzazione font**: Le modalità sorgente e anteprima possono impostare font, dimensione font e interlinea separatamente
 - **CSS personalizzato**: `user.css` sovrascrive dopo tutti i temi, massima priorità
@@ -109,7 +117,7 @@ Abbiamo creato un'esperienza estremamente elegante per la modalità WYSIWYG; sup
 
 - **Modelli documento**: i modelli sono salvati nella directory utente `~/Documents/yizimarkdown/templates/`; basta inserire file `.md` (puoi anche crearli/modificarli in Impostazioni → Modelli, il menu si aggiorna subito); i modelli integrati vengono sincronizzati lì automaticamente al primo avvio, aggiornare/reinstallare non sovrascriverà i tuoi modelli
 - **Sistema scorciatoie**: Pannello configurazione visuale scorciatoie, supporta associazione personalizzata per 30 azioni, registrazione tasti, rilevamento conflitti e ripristino predefiniti
-- **Pannello impostazioni**: Schede Generale, Aspetto, Editor, Modalità in tempo reale, AI, Plugin, Scorciatoie, Modelli, Info e altre, le impostazioni hanno effetto immediato
+- **Pannello impostazioni**: Schede Generale, Aspetto, Editor, Modalità in tempo reale, AI, Cloud, Plugin, Scorciatoie, Modelli, Info e altre, le impostazioni hanno effetto immediato
 
 ---
 
@@ -164,13 +172,13 @@ YiziMarkdown/
 ├── user.css                # Stili personalizzati utente
 ├── keybindings.json        # Configurazione scorciatoie
 ├── themes/                 # File CSS temi
-│   ├── academic.css        # Blu Accademico (predefinito)
+│   ├── academic.css        # Blu Accademico
 │   ├── vibrant.css         # Arancio Vivace
 │   ├── tech.css            # Tecnologico
 │   ├── minimal.css         # Minimalista
 │   ├── magazine.css        # Rivista
 │   ├── nature.css          # Naturale
-│   ├── liquidglass.css     # Vetro Liquido
+│   ├── liquidglass-prism.css # Vetro Liquido Prism (predefinito)
 │   ├── lychee.css          # Rosso Litchi
 │   ├── violet.css          # Viola
 │   ├── cyberpunk.css       # Cyberpunk

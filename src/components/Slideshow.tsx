@@ -6,10 +6,12 @@ import {
   stripFrontMatter, parseFrontMatter, splitSlides, extractNotes, extractDirectives,
   detectLayout, type SlideKind, type SlideLayout,
 } from '../lib/slides'
+import { orderThemes } from '../lib/themeOrder'
 import { enterFullscreen, exitFullscreen, toggleFullscreen } from '../lib/fullscreen'
 import { resolveLocalImageSrc } from '../lib/localImages'
-import { buildTiles, delayFor, impulseVars, tileTotalDuration, tileConfigFor, TILE_ANIM_IDS, TILE_VARIANTS } from '../lib/slideTiles'
+import { buildTiles, delayFor, impulseVars, tileTotalDuration, tileConfigFor, TILE_ANIM_IDS, TILE_VARIANTS, type SlideAnim } from '../lib/slideTiles'
 import { useEditorStore } from '../stores/editorStore'
+import { useSettingsStore } from '../stores/settingsStore'
 import { useI18n } from '../i18n'
 import '../styles/slideshow.css'
 
@@ -37,13 +39,6 @@ interface SlideshowProps {
   isDark: boolean
   onExit: () => void
 }
-
-/** 切换动画变体（柔和型 + 强烈型，见 slideshow.css .ys-anim-*）。
- *  其中 TILE_ANIM_IDS（棋盘/波浪/立方体/爆裂/景深/六边形/三角/百叶窗）走
- *  「瓷砖转场」：整页切成单元、每格持有前后两页的真实 DOM 克隆。 */
-type SlideAnim =
-  | 'slide' | 'fade' | 'zoom' | 'none' | 'dissolve'
-  | 'blinds' | 'checkerboard' | 'cube' | 'cube3d' | 'shatter' | 'hex' | 'depth'
 
 /** 页面元素的状态类：瓷砖转场克隆整页时必须滤掉，否则克隆会命中
  *  ys-past/ys-future（opacity:0 + hidden）或 ys-leaving 等状态规则而变空。 */
@@ -116,9 +111,19 @@ export default function Slideshow({
   const [fragmentsOn, setFragmentsOn] = useState(deckFragmentsInitial)
   // 切换动画变体：柔和型 slide（默认，水平滑动）/ fade（溶解淡入）/ zoom（缩放）/ none（无）
   //            强烈型 dissolve（像素溶解）/ blinds（百叶窗）/ checkerboard（棋盘）/ cube（立方体）
-  // 仅本次播放生效，同主题/明暗；类挂在 .ys-deck 上（ys-anim-*）
-  const [anim, setAnim] = useState<SlideAnim>('slide')
+  // 切换动画：持久化在 settingsStore（zustand persist → localStorage），
+  // 下次进入演示模式沿用上次的选择；类挂在 .ys-deck 上（ys-anim-*）
+  const anim = useSettingsStore((s) => s.slideAnim)
+  const setSlideAnim = useSettingsStore((s) => s.setField)
   const [animMenuOpen, setAnimMenuOpen] = useState(false)
+
+  /**
+   * 演示标题：**front matter 的 `title` 优先**，没有才用文档名（`title` 属性）。
+   * 此前只解析了 author/date，`title` 解析出来却从未使用 ⇒ 元信息里写了 title 也不生效，
+   * HUD 与章节名一律显示文档名。
+   */
+  const docTitle = useMemo(() => parseFrontMatter(content).title || title || '', [content, title])
+
   const slides: Slide[] = useMemo(() => {
     const meta = parseFrontMatter(content)
     slideMetaRef.current = { author: meta.author, date: meta.date }
@@ -172,13 +177,13 @@ export default function Slideshow({
       nums.push(s.kind === 'section' ? sec : 0)
     }
     // 当前页所属章节 = 从第 0 页到第 h 页中最后一个封面/章节页的标题
-    let curChapter = title || ''
+    let curChapter = docTitle
     for (let i = 0; i <= h; i++) {
       const s = slides[i]
       if (s && (s.kind === 'cover' || s.kind === 'section') && s.title) curChapter = s.title
     }
     return { chapter: curChapter, sectionNums: nums }
-  }, [slides, h, title])
+  }, [slides, h, docTitle])
 
   // ===== 片段逐步显示 =====
   // 片段 = 当前页顶层列表项（data-fragment 标记）。
@@ -541,7 +546,7 @@ export default function Slideshow({
     const tauri = (window as any).__TAURI_INTERNALS__
     if (!tauri?.invoke) return
     tauri.invoke('get_platform').then((p: string) => setIsMac(p === 'macos')).catch(() => {})
-    tauri.invoke('list_themes').then((files: string[]) => setThemes(files || [])).catch(() => {})
+    tauri.invoke('list_themes').then((files: string[]) => setThemes(orderThemes(files || []))).catch(() => {})
     tauri.invoke('read_theme_json').then((json: string) => {
       try { setThemeMeta(JSON.parse(json || '{}')) } catch {}
     }).catch(() => {})
@@ -767,19 +772,19 @@ export default function Slideshow({
         <span className="ys-hint">{t('slideshow.hintBar')}</span>
       </div>
 
-      {/* 切换动画菜单：柔和型 + 强烈型两组 */}
+      {/* 切换动画菜单：默认的「卡片推换」放最前，其余按「柔和型 → 强烈型」排列 */}
       {animMenuOpen && (
         <>
           <div className="ys-dismiss" onClick={() => setAnimMenuOpen(false)} />
           <div className="ys-theme-menu">
             {([
+              ['cube', t('slideshow.animCube')],
               ['slide', t('slideshow.animSlide')],
               ['fade', t('slideshow.animFade')],
               ['zoom', t('slideshow.animZoom')],
               ['dissolve', t('slideshow.animDissolve')],
               ['blinds', t('slideshow.animBlinds')],
               ['checkerboard', t('slideshow.animCheckerboard')],
-              ['cube', t('slideshow.animCube')],
               ['cube3d', t('slideshow.animCube3d')],
               ['hex', t('slideshow.animHex')],
               ['shatter', t('slideshow.animShatter')],
@@ -789,7 +794,7 @@ export default function Slideshow({
               <button
                 key={id}
                 className={anim === id ? 'ys-theme-active' : ''}
-                onClick={() => { setAnim(id); setAnimMenuOpen(false) }}
+                onClick={() => { setSlideAnim('slideAnim', id); setAnimMenuOpen(false) }}
               >
                 {anim === id && <Check size={13} />}
                 {label}
@@ -860,7 +865,7 @@ export default function Slideshow({
         </div>
       )}
 
-      <div className="ys-title">{title || ''}</div>
+      <div className="ys-title">{docTitle}</div>
     </div>
   )
 }

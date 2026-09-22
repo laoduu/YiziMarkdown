@@ -107,7 +107,7 @@ Vi har skapat en extremt elegant upplevelse för WYSIWYG-läge; det stöder ocks
 
 ### Utseendeanpassning
 
-- ** femton inbyggda teman**: Akademiskt blå (standard), Dynamisk orange, Tekniskt, Minimalistiskt, Magasin, Natur, Vätske glas, Litchi röd, Viol, Cyberpunk, Facebook, Matrix, Mint, Solnedgång, Retro skrivmaskin, varje med ljust och mörkt färgschema
+- ** femton inbyggda teman**: Akademiskt blå, Dynamisk orange, Tekniskt, Minimalistiskt, Magasin, Natur, Vätske glas Prism (standard), Litchi röd, Viol, Cyberpunk, Facebook, Matrix, Mint, Solnedgång, Retro skrivmaskin, varje med ljust och mörkt färgschema
 - **Mörkt / Ljust läge**: Varje tema har både ljust och mörkt färgschema
 - **Typsnittsanpassning**: Källa och förhandsgranskningläge kan ställa in typsnitt, teckensnittstorlek, radavstånd separat
 - **Anpassad CSS**: `user.css` åsätter efter alla teman, högsta prioritet
@@ -172,13 +172,13 @@ YiziMarkdown/
 ├── user.css                # Anpassade stilar
 ├── keybindings.json        # Genvägsconfiguration
 ├── themes/                 # Tema CSS-filer
-│   ├── academic.css        # Akademiskt blå (standard)
+│   ├── academic.css        # Akademiskt blå
 │   ├── vibrant.css         # Dynamisk orange
 │   ├── tech.css            # Tekniskt
 │   ├── minimal.css         # Minimalistiskt
 │   ├── magazine.css        # Magasin
 │   ├── nature.css          # Natur
-│   ├── liquidglass.css     # Vätske glas
+│   ├── liquidglass-prism.css # Vätske glas Prism (standard)
 │   ├── lychee.css          # Litchi röd
 │   ├── violet.css          # Viol
 │   ├── cyberpunk.css       # Cyberpunk

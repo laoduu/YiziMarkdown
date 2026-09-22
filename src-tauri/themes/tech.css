@@ -70,7 +70,7 @@
 .editor-content.theme-tech blockquote {
   border-left: 3px solid var(--editor-accent);
   padding: 0.5em 1em;
-  margin: 1em 0;
+  margin: 0.5em 0;
   background: var(--editor-surface);
   border-radius: 0 var(--border-radius) var(--border-radius) 0;
 }

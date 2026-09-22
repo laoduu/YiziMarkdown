@@ -58,7 +58,6 @@
   font-size: 1.6em;
   font-weight: 700;
   margin: 1.2em 0 0.3em;
-  color: #5a4a20;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -72,14 +71,12 @@
   font-size: 1.3em;
   font-weight: 700;
   margin: 1em 0 0.25em;
-  color: #6a5a30;
   text-transform: uppercase;
 }
 .editor-content.theme-typewriter h3 {
   font-size: 1.1em;
   font-weight: 700;
   margin: 0.8em 0 0.2em;
-  color: #7a6a40;
 }
 .editor-content.theme-typewriter p {
   margin: 0 0 var(--paragraph-spacing);
@@ -92,8 +89,8 @@
 }
 .editor-content.theme-typewriter blockquote {
   border-left: 2px solid #8b6914;
-  padding: 0.6em 1em;
-  margin: 1em 0;
+  padding: 0.5em 1em;
+  margin: 0.5em 0;
   color: #7a6a50;
   font-style: italic;
   background: rgba(139, 105, 20, 0.04);

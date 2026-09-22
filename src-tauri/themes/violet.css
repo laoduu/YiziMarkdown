@@ -98,7 +98,6 @@
   font-size: 2em;
   font-weight: 700;
   margin: 1.5em 0 0.5em;
-  color: #7209B7;
   letter-spacing: -0.02em;
 }
 /* 二级标题：1.5em，加深紫罗兰，字重 600 */
@@ -106,7 +105,6 @@
   font-size: 1.5em;
   font-weight: 600;
   margin: 1.3em 0 0.4em;
-  color: #5f0899;
   letter-spacing: -0.01em;
 }
 /* 三级标题：1.25em，更深紫罗兰 */
@@ -114,7 +112,6 @@
   font-size: 1.25em;
   font-weight: 600;
   margin: 1.2em 0 0.3em;
-  color: #4e077e;
 }
 /* 段落间距 */
 .theme-violet p {
@@ -123,8 +120,8 @@
 /* 引用块：左边框为紫罗兰主线，文字使用侧栏文字色，与正文区分 */
 .theme-violet blockquote {
   border-left: 3px solid var(--editor-accent);
-  padding-left: 1em;
-  margin: 1em 0;
+  padding: 0.5em 1em;
+  margin: 0.5em 0;
   color: var(--sidebar-text);
 }
 /* 行内代码：等宽字体，字号略小，表面色背景，轻微圆角 */
@@ -203,13 +200,10 @@
 }
 /* ── 深色模式标题/元素覆盖 ────────────────────────────────────── */
 .dark .theme-violet h1 {
-  color: #c084fc;
 }
 .dark .theme-violet h2 {
-  color: #a855f7;
 }
 .dark .theme-violet h3 {
-  color: #9333ea;
 }
 .dark .theme-violet blockquote {
   color: #b088d0;

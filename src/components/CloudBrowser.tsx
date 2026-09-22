@@ -6,7 +6,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  ChevronRight, ChevronUp, Cloud, CloudOff, FileCode, Folder,
+  ChevronRight, ChevronUp, Cloud, CloudOff, FileCode, Folder, FolderOpen,
   Loader2, RefreshCw, FolderPlus, Pencil, Trash2, MoreHorizontal,
 } from 'lucide-react'
 import { useI18n } from '../i18n'
@@ -26,7 +26,21 @@ function isMarkdownFile(name: string): boolean {
   return MARKDOWN_EXTS.some((ext) => lower.endsWith(ext))
 }
 
+/** 只展示文件夹与 Markdown 文件（与本地文件树一致） */
+function isVisible(entry: RemoteEntry): boolean {
+  return entry.isDir || isMarkdownFile(entry.name)
+}
+
+/** 面包屑最多原样显示的层级数，超出则把上级折成「…」 */
+const MAX_CRUMBS = 2
+
 type DialogKind = 'newFolder' | 'rename' | 'delete'
+
+/** 摊平后的树行：目录展开后其子项以更大的 depth 插在后面 */
+type TreeRow =
+  | { kind: 'entry'; key: string; depth: number; entry: RemoteEntry }
+  | { kind: 'loading'; key: string; depth: number }
+  | { kind: 'error'; key: string; depth: number; message: string }
 
 interface CloudBrowserProps {
   /** 打开云端文档（远程路径） */
@@ -53,11 +67,25 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
   const [dialogError, setDialogError] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
+  // ===== 目录树（Obsidian 式就地展开）=====
+  /** 已展开的目录路径 */
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set())
+  /** 子目录内容缓存：展开过的目录不重复请求（无缓存 = 正在拉取） */
+  const [children, setChildren] = useState<Record<string, RemoteEntry[]>>({})
+  /** 子目录拉取失败信息（就地显示，不覆盖整个列表） */
+  const [dirErrors, setDirErrors] = useState<Record<string, string>>({})
+  const [crumbsOpen, setCrumbsOpen] = useState(false)
+
   const load = useCallback(async (target: string) => {
     if (!baseUrl) {
       setEntries([])
       return
     }
+    // 目录内容可能已变（刷新、切换目录、增删改）→ 已展开子树的缓存一律作废，
+    // 否则重命名/删除后展开的旧列表会继续显示已经不存在的条目
+    setExpanded(new Set())
+    setChildren({})
+    setDirErrors({})
     setLoading(true)
     setError(null)
     try {
@@ -107,11 +135,21 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
     }
   }, [menu])
 
+  // 关闭面包屑「…」下拉：点击任意处、按 Esc
+  useEffect(() => {
+    if (!crumbsOpen) return
+    const close = () => setCrumbsOpen(false)
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close() }
+    window.addEventListener('click', close)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('click', close)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [crumbsOpen])
+
   // 只展示文件夹与 Markdown 文件（与本地文件树一致）
-  const visible = useMemo(
-    () => entries.filter((e) => e.isDir || isMarkdownFile(e.name)),
-    [entries]
-  )
+  const visible = useMemo(() => entries.filter(isVisible), [entries])
 
   const goUp = useCallback(() => {
     setPath((p) => parentPath(p))
@@ -124,6 +162,56 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
       onOpenRemote(entry.path)
     }
   }, [onOpenRemote])
+
+  /** 展开 / 收起某个目录；首次展开时按需拉取子项（懒加载，不递归预取） */
+  const toggleDir = useCallback(async (dir: string) => {
+    if (expanded.has(dir)) {
+      setExpanded((prev) => {
+        const next = new Set(prev)
+        next.delete(dir)
+        return next
+      })
+      return
+    }
+    setExpanded((prev) => new Set(prev).add(dir))
+    if (children[dir]) return
+    // 先清掉上次的失败记录：重新展开 = 重试，应回到「加载中」而不是继续显示旧错误
+    setDirErrors((prev) => {
+      const next = { ...prev }
+      delete next[dir]
+      return next
+    })
+    try {
+      const result = await list(baseUrl, dir)
+      setChildren((prev) => ({ ...prev, [dir]: result }))
+    } catch (e) {
+      setDirErrors((prev) => ({ ...prev, [dir]: e instanceof Error ? e.message : String(e) }))
+    }
+  }, [baseUrl, children, expanded])
+
+  /** 当前目录 + 已展开子树 → 待渲染的行（depth 决定缩进与引导线数量） */
+  const rows = useMemo(() => {
+    const out: TreeRow[] = []
+    const walk = (items: RemoteEntry[], depth: number) => {
+      for (const item of items) {
+        out.push({ kind: 'entry', key: item.path, depth, entry: item })
+        if (!item.isDir || !expanded.has(item.path)) continue
+        const failure = dirErrors[item.path]
+        if (failure) {
+          out.push({ kind: 'error', key: `${item.path}#error`, depth: depth + 1, message: failure })
+          continue
+        }
+        const kids = children[item.path]
+        if (!kids) {
+          out.push({ kind: 'loading', key: `${item.path}#loading`, depth: depth + 1 })
+          continue
+        }
+        walk(kids.filter(isVisible), depth + 1)
+      }
+    }
+    walk(visible, 0)
+    return out
+  }, [visible, expanded, children, dirErrors])
 
   const openDialog = (kind: DialogKind, entry?: RemoteEntry) => {
     setDialogError(null)
@@ -178,6 +266,13 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
 
   // ===== 面包屑 =====
   const crumbs = path.split('/').filter(Boolean)
+  // 层级深时把上级折成「…」：常态只留当前目录名，从根上消掉横向滚动条
+  const collapsed = crumbs.length > MAX_CRUMBS
+  const shownCrumbs = (collapsed ? crumbs.slice(-1) : crumbs)
+    .map((seg, i) => ({ seg, depth: collapsed ? crumbs.length : i + 1 }))
+  const hiddenCrumbs = collapsed
+    ? crumbs.slice(0, -1).map((seg, i) => ({ seg, depth: i + 1 }))
+    : []
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -195,7 +290,7 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
           <ChevronUp size={14} />
           <span>..</span>
         </button>
-        <div className="flex-1 flex items-center gap-0.5 overflow-x-auto whitespace-nowrap">
+        <div className="flex-1 flex items-center gap-0.5 min-w-0">
           <button
             onClick={() => setPath('/')}
             className="hover:text-[var(--editor-text)] shrink-0"
@@ -203,18 +298,53 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
           >
             <Cloud size={13} />
           </button>
-          {crumbs.map((seg, i) => {
-            const target = '/' + crumbs.slice(0, i + 1).join('/')
-            return (
-              <span key={target} className="flex items-center gap-0.5 shrink-0">
+          {hiddenCrumbs.length > 0 && (
+            <div className="relative shrink-0">
+              <button
+                // 必须阻止冒泡：否则同一次点击会被下面的 window 监听立刻关掉
+                onClick={(e) => { e.stopPropagation(); setCrumbsOpen((v) => !v) }}
+                title={path}
+                className="flex items-center gap-0.5 px-0.5 rounded hover:bg-[var(--editor-hover)] hover:text-[var(--editor-text)]"
+              >
+                <span>…</span>
                 <ChevronRight size={11} className="opacity-50" />
+              </button>
+              {crumbsOpen && (
+                <div className="absolute left-0 top-full mt-0.5 z-[9500] min-w-[120px] max-w-[200px] py-1
+                  rounded-lg shadow-xl border border-[var(--editor-border)] bg-[var(--editor-bg)] text-[var(--editor-text)]">
+                  {hiddenCrumbs.map((c) => (
+                    <button
+                      key={c.depth}
+                      onClick={() => {
+                        setPath('/' + crumbs.slice(0, c.depth).join('/'))
+                        setCrumbsOpen(false)
+                      }}
+                      className="w-full px-3 py-1 text-left text-xs truncate hover:bg-[var(--editor-hover)]"
+                    >
+                      {c.seg}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {shownCrumbs.map((c) => {
+            const isCurrent = c.depth === crumbs.length
+            return (
+              <span
+                key={c.depth}
+                className={`flex items-center gap-0.5 ${isCurrent ? 'min-w-0 flex-1' : 'shrink-0'}`}
+              >
+                <ChevronRight size={11} className="opacity-50 shrink-0" />
                 <button
-                  onClick={() => setPath(target)}
-                  className={`hover:text-[var(--editor-text)] max-w-[110px] truncate ${
-                    i === crumbs.length - 1 ? 'text-[var(--editor-text)] font-medium' : ''
+                  onClick={() => setPath('/' + crumbs.slice(0, c.depth).join('/'))}
+                  className={`truncate hover:text-[var(--editor-text)] ${
+                    isCurrent
+                      ? 'flex-1 text-left text-[var(--editor-text)] font-medium'
+                      : 'max-w-[110px]'
                   }`}
                 >
-                  {seg}
+                  {c.seg}
                 </button>
               </span>
             )
@@ -261,14 +391,37 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
           </div>
         ) : (
           <div className="py-1">
-            {visible.map((entry) => (
-              <CloudRow
-                key={entry.path}
-                entry={entry}
-                onOpen={() => openEntry(entry)}
-                onMenu={(x, y) => setMenu({ entry, x, y })}
-              />
-            ))}
+            {rows.map((row) => {
+              if (row.kind === 'entry') {
+                return (
+                  <CloudRow
+                    key={row.key}
+                    entry={row.entry}
+                    depth={row.depth}
+                    expanded={expanded.has(row.entry.path)}
+                    onToggle={() => toggleDir(row.entry.path)}
+                    onOpen={() => openEntry(row.entry)}
+                    onMenu={(x, y) => setMenu({ entry: row.entry, x, y })}
+                  />
+                )
+              }
+              // 子目录正在拉取 / 拉取失败：就地占一行，不打断整棵树
+              return (
+                <div
+                  key={row.key}
+                  className={`flex items-stretch ${row.kind === 'error' ? 'text-red-500' : 'text-[var(--sidebar-text)]'}`}
+                >
+                  <TreeGuides depth={row.depth} />
+                  <div className="flex items-center gap-1 py-1 pl-2 pr-2 text-xs min-w-0">
+                    {row.kind === 'loading' ? (
+                      <Loader2 size={12} className="animate-spin opacity-60" />
+                    ) : (
+                      <span className="truncate" title={row.message}>{row.message}</span>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
@@ -369,8 +522,23 @@ function MenuItem({ icon, label, onClick, danger }: {
   )
 }
 
-function CloudRow({ entry, onOpen, onMenu }: {
+/** 逐层一条浅色竖线，把父子层级在视觉上串起来（Obsidian 风格） */
+function TreeGuides({ depth }: { depth: number }) {
+  if (depth <= 0) return null
+  return (
+    <>
+      {Array.from({ length: depth }, (_, i) => (
+        <span key={i} className="w-3.5 shrink-0 border-l border-[var(--editor-border)] opacity-50" />
+      ))}
+    </>
+  )
+}
+
+function CloudRow({ entry, depth, expanded, onToggle, onOpen, onMenu }: {
   entry: RemoteEntry
+  depth: number
+  expanded: boolean
+  onToggle: () => void
   onOpen: () => void
   onMenu: (x: number, y: number) => void
 }) {
@@ -382,24 +550,37 @@ function CloudRow({ entry, onOpen, onMenu }: {
         onMenu(Math.min(e.clientX, window.innerWidth - 160), Math.min(e.clientY, window.innerHeight - 100))
       }}
       title={entry.isDir ? entry.name : `${entry.name} · ${formatSize(entry.size)}`}
-      className="group flex items-center gap-1 py-1 px-2 cursor-pointer
+      className="group flex items-stretch cursor-pointer
         transition-colors duration-100 hover:bg-[var(--editor-hover)] text-[var(--editor-text)]"
     >
-      {entry.isDir
-        ? <Folder size={14} className="text-amber-500 shrink-0" />
-        : <FileCode size={14} className="text-[var(--editor-accent)] opacity-70 shrink-0" />}
-      <span className="flex-1 truncate text-sm">{entry.name}</span>
-      <button
-        onClick={(e) => {
-          e.stopPropagation()
-          const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
-          onMenu(Math.min(r.left, window.innerWidth - 160), r.bottom + 2)
-        }}
-        className="p-0.5 rounded opacity-0 group-hover:opacity-60 hover:!opacity-100
-          text-[var(--sidebar-text)] hover:bg-[var(--editor-bg)] shrink-0"
-      >
-        <MoreHorizontal size={13} />
-      </button>
+      <TreeGuides depth={depth} />
+      <div className="flex items-center gap-1 flex-1 min-w-0 py-1 pl-2 pr-2">
+        {entry.isDir ? (
+          // 文件夹图标本身就是展开开关；点名称仍是「进入该目录」
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggle() }}
+            className="p-0.5 -m-0.5 rounded shrink-0 hover:bg-[var(--editor-bg)]"
+          >
+            {expanded
+              ? <FolderOpen size={14} className="text-[var(--editor-accent)]" />
+              : <Folder size={14} className="text-[var(--editor-accent)]" />}
+          </button>
+        ) : (
+          <FileCode size={14} className="text-[var(--editor-accent)] opacity-70 shrink-0" />
+        )}
+        <span className="flex-1 truncate text-sm">{entry.name}</span>
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+            onMenu(Math.min(r.left, window.innerWidth - 160), r.bottom + 2)
+          }}
+          className="p-0.5 rounded opacity-0 group-hover:opacity-60 hover:!opacity-100
+            text-[var(--sidebar-text)] hover:bg-[var(--editor-bg)] shrink-0"
+        >
+          <MoreHorizontal size={13} />
+        </button>
+      </div>
     </div>
   )
 }

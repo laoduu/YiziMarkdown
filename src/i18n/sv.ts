@@ -344,6 +344,7 @@ export const sv = {
     animFlashCss: 'filter: brightness(1) → 1.5 → 1',
     animGlowCss: 'blur + brightness kombinerat',
     animRippleCss: 'flerstegs blur + brightness',
+    cloudLoadPreset: 'Förval',
   },
   shortcuts: {
     file: 'Fil',
@@ -546,5 +547,19 @@ export const sv = {
     retry: 'Försök igen',
     pathLabel: 'Molnsökväg',
     root: 'Rot',
+  },
+  properties: {
+    title: 'Egenskaper',
+    add: 'Lägg till egenskap',
+    editSource: 'Redigera källkod',
+    deleteProp: 'Ta bort egenskap',
+    blockValue: 'Blockvärde (skrivskyddat)',
+    typeAuto: 'Automatisk',
+    typeText: 'Text',
+    typeNumber: 'Tal',
+    typeCheckbox: 'Kryssruta',
+    typeDate: 'Datum',
+    typeDatetime: 'Datum och tid',
+    typeList: 'Lista',
   },
 }

@@ -108,7 +108,7 @@ Nous avons créé une expérience extrêmement élégante pour le mode WYSIWYG ;
 
 ### Personnalisation de l'apparence
 
-- **Quinze thèmes intégrés** : Académique (défaut), Vibrant Orange, Tech, Minimaliste, Magazine, Nature, Verre Liquide, Litchi Rouge, Violet, Cyberpunk, Facebook, Matrix, Mint Glacé, Coucher de Soleil, Vintage Typewriter, chacun avec deux palettes clair et sombre
+- **Quinze thèmes intégrés** : Académique, Vibrant Orange, Tech, Minimaliste, Magazine, Nature, Verre Liquide Prism (défaut), Litchi Rouge, Violet, Cyberpunk, Facebook, Matrix, Mint Glacé, Coucher de Soleil, Vintage Typewriter, chacun avec deux palettes clair et sombre
 - **Mode sombre / clair** : chaque thème possède deux palettes clair et sombre
 - **Personnalisation des polices** : paramètres de police, taille et interligne séparés pour les modes source et prévisualisation
 - **CSS personnalisé** : `user.css` est appliqué après tous les thèmes, avec la priorité la plus élevée
@@ -173,13 +173,13 @@ YiziMarkdown/
 ├── user.css                # Styles personnalisés utilisateur
 ├── keybindings.json        # Configuration des raccourcis clavier
 ├── themes/                 # Fichiers CSS de thèmes
-│   ├── academic.css        # Académique (défaut)
+│   ├── academic.css        # Académique
 │   ├── vibrant.css         # Vibrant Orange
 │   ├── tech.css            # Tech
 │   ├── minimal.css         # Minimaliste
 │   ├── magazine.css        # Magazine
 │   ├── nature.css          # Nature
-│   ├── liquidglass.css     # Verre Liquide
+│   ├── liquidglass-prism.css # Verre Liquide Prism (défaut)
 │   ├── lychee.css          # Litchi Rouge
 │   ├── violet.css          # Violet
 │   ├── cyberpunk.css       # Cyberpunk

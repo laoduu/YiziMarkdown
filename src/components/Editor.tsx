@@ -12,6 +12,7 @@ import { useSettingsStore } from '../stores/settingsStore'
 import { useEditorStore, type ViewMode } from '../stores/editorStore'
 import { findOutlineByLine, computeOutlineItems } from '../lib/headingId'
 import { liveEditExtension } from '../lib/cm-live-render'
+import { frontMatterField, frontMatterLines } from '../lib/cm-frontmatter'
 import { headingFoldExtension } from '../lib/cm-heading-fold'
 import { slashMenuExtension, slashMenuState, showSlashMenu, hideSlashMenu, slashMenuAction } from '../lib/cm-slash-menu'
 import { selectionToolbarExtension, type SelectionToolbarInfo } from '../lib/cm-selection-toolbar'
@@ -337,7 +338,7 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
     <div className="min-h-full bg-[var(--editor-bg)]" ref={containerRef}>
       <div 
         className={`editor-content prose prose-lg max-w-none theme-${currentTheme}`}
-        style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--preview-font-size, var(--font-size-base))', lineHeight: 'var(--preview-line-height, var(--line-height))' }}
+        style={{ fontFamily: 'var(--font-preview)', fontSize: 'var(--preview-font-size, var(--font-size-base))', lineHeight: 'var(--preview-line-height, var(--line-height))' }}
         dangerouslySetInnerHTML={{ __html: renderedHtml }}
       />
     </div>
@@ -430,7 +431,11 @@ function stripHtml(html: string): string {
 }
 
 
-function buildEditorTheme(isDark: boolean, fontFamily: string, fontSize: string, lineHeight: string, cursorStyle: 'text' | 'bold'): Extension {
+function buildEditorTheme(fontFamily: string, fontSize: string, lineHeight: string, cursorStyle: 'text' | 'bold', liveContent: boolean): Extension {
+  // 内容字体按模式分工（用户明确要求）：
+  //   实时模式 →「预览字体」（--font-preview），源码模式 →「编辑器字体」（--font-editor）
+  // 两者都由 App.tsx 从设置写入；这里保留设置值作为回退，避免变量缺失时字体塌掉。
+  const contentFont = `var(--font-${liveContent ? 'preview' : 'editor'}, ${fontFamily})`
   return EditorView.theme({
     '&.cm-editor': {
       height: '100%',
@@ -440,7 +445,7 @@ function buildEditorTheme(isDark: boolean, fontFamily: string, fontSize: string,
     },
     '&': {
       fontSize: `var(--font-size-base, ${fontSize})`,
-      fontFamily: `var(--font-mono, ${fontFamily})`,
+      fontFamily: contentFont,
       lineHeight: `var(--line-height, ${lineHeight})`,
     },
     '.cm-content': {
@@ -449,7 +454,7 @@ function buildEditorTheme(isDark: boolean, fontFamily: string, fontSize: string,
       margin: '0 auto',
       caretColor: 'var(--editor-cursor)',
       color: 'var(--editor-text)',
-      fontFamily: `var(--font-mono, ${fontFamily})`,
+      fontFamily: contentFont,
     },
     // 加粗模式：插入光标改为块状（主题色半透明，文字透出）
     ...(cursorStyle === 'bold' ? {
@@ -468,10 +473,10 @@ function buildEditorTheme(isDark: boolean, fontFamily: string, fontSize: string,
       outline: 'none',
     },
     '.cm-selectionBackground': {
-      backgroundColor: `${isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)'} !important`,
+      backgroundColor: 'var(--code-selection-bg) !important',
     },
     '.cm-activeLine': {
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+      backgroundColor: 'var(--code-active-line)',
     },
     '.cm-gutters': {
       backgroundColor: 'var(--editor-bg)',
@@ -480,7 +485,7 @@ function buildEditorTheme(isDark: boolean, fontFamily: string, fontSize: string,
       borderRight: '1px solid var(--editor-border)',
     },
     '.cm-activeLineGutter': {
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+      backgroundColor: 'var(--code-active-line)',
     },
     '.cm-foldPlaceholder': {
       backgroundColor: 'var(--editor-hover)',
@@ -508,11 +513,11 @@ function buildEditorTheme(isDark: boolean, fontFamily: string, fontSize: string,
       backgroundColor: 'var(--editor-hover)',
     },
     '.cm-searchMatch': {
-      backgroundColor: 'rgba(255, 213, 0, 0.3)',
-      outline: '1px solid rgba(255, 213, 0, 0.6)',
+      backgroundColor: 'var(--code-search-match)',
+      outline: '1px solid var(--code-search-match-border)',
     },
     '.cm-searchMatch.cm-searchMatch-selected': {
-      backgroundColor: 'rgba(255, 150, 0, 0.4)',
+      backgroundColor: 'var(--code-search-active)',
     },
     '.cm-tooltip': {
       backgroundColor: 'var(--editor-surface)',
@@ -544,7 +549,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [searchMatches, setSearchMatches] = useState<number>(0)
   const [searchIndex, setSearchIndex] = useState<number>(-1)
-  const { fontFamily, fontSize, lineHeight, currentTheme, isDark, showLineNumbers, wordWrap, spellCheck, liveAnimationMode, cursorStyle, mouseSpotlight, enabledPlugins, pluginConfigs } = useSettingsStore()
+  const { fontFamily, fontSize, lineHeight, currentTheme, showLineNumbers, wordWrap, spellCheck, liveAnimationMode, cursorStyle, mouseSpotlight, enabledPlugins, pluginConfigs } = useSettingsStore()
   const viewMode = externalViewMode ?? 'preview'
   const [slashMenuVisible, setSlashMenuVisible] = useState(false)
   const [slashMenuCoords, setSlashMenuCoords] = useState({ left: 0, bottom: 0 })
@@ -757,10 +762,19 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     if (!view) return
 
     // 1. 从旧模式快照当前 top line
+    //
+    // 同时记录「是否本来就在顶部」—— 这一条很关键：
+    // 锚点补偿会把"顶部"换算成"某一行停在视口 1/3 处"，而两种模式的**顶部留白并不相同**
+    // （预览有 .editor-content 的 margin/padding，源码/实时里元信息还占着几行），
+    // 于是同一 source line 在两边的 y 不同 ⇒ 切模式后被被动下滚一段。
+    // 表现就是：明明在顶部，切过去元信息显示不全、预览专门设计的顶部留白被吃掉。
+    // 已经在顶部时**不做任何补偿**（新模式本身就从顶部开始）。
     let savedLine: number | null = null
+    let atTop = false
     if (prev === 'preview') {
       // 从预览快照：找视口顶部 1/3 处的 source-line
       if (pvDom) {
+        atTop = pvDom.scrollTop <= 1
         const wrapTop = pvDom.getBoundingClientRect().top
         const threshold = wrapTop + pvDom.clientHeight / 3
         const list = getPreviewLines(pvDom)
@@ -770,13 +784,16 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       }
     } else {
       // 从编辑器快照：视口顶部 1/3 处的行号
+      atTop = view.scrollDOM.scrollTop <= 1
       const top = view.scrollDOM.scrollTop + view.scrollDOM.clientHeight / 3
       const block = view.lineBlockAtHeight(top)
       savedLine = view.state.doc.lineAt(block.from).number
     }
     if (savedLine == null) return
 
-    // 2. 等 DOM 更新后恢复到目标行
+    // 2. 等 DOM 更新后恢复到目标行（本来在顶部则跳过，见上面 atTop 的说明）
+    if (atTop) return
+
     setTimeout(() => {
       const v = viewRef.current
       const pv = previewScrollRef.current
@@ -997,7 +1014,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         richCompartment.of(viewMode === 'live' ? liveEditExtension() : []),
         history(),
         lineWrappingCompartment.of(wordWrap ? EditorView.lineWrapping : []),
-        themeCompartment.of(buildEditorTheme(isDark, fontFamily, String(fontSize), String(lineHeight), cursorStyle)),
+        themeCompartment.of(buildEditorTheme(fontFamily, String(fontSize), String(lineHeight), cursorStyle, viewMode === 'live')),
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         drawSelection(),
         indentOnInput(),
@@ -1031,6 +1048,10 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
           }
         }),
         markdown({ base: markdownLanguage, codeLanguages: languages }),
+        // 元信息块：解析器不认识 front matter（会被当成分隔线 + setext H2），
+        // 这里用 StateField 判定区间、并给区间内每行套类；源码与实时模式共用。
+        frontMatterField,
+        frontMatterLines,
         keymap.of([
         ...defaultKeymap, ...historyKeymap, ...searchKeymap.filter(k => !(k.key === 'Mod-f' && 'run' in k)), ...completionKeymap, indentWithTab,
         
@@ -1117,9 +1138,9 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     const view = viewRef.current
     if (!view) return
     view.dispatch({
-      effects: themeCompartment.reconfigure(buildEditorTheme(isDark, fontFamily, String(fontSize), String(lineHeight), cursorStyle))
+      effects: themeCompartment.reconfigure(buildEditorTheme(fontFamily, String(fontSize), String(lineHeight), cursorStyle, viewMode === 'live'))
     })
-  }, [isDark, fontFamily, fontSize, lineHeight, cursorStyle, themeCompartment])
+  }, [fontFamily, fontSize, lineHeight, cursorStyle, viewMode, themeCompartment])
 
   // spellCheck 设置变更时动态 reconfigure
   useEffect(() => {

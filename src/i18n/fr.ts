@@ -344,6 +344,7 @@ export const fr = {
     animFlashCss: 'filter: brightness(1) → 1.5 → 1',
     animGlowCss: 'blur + brightness combinés',
     animRippleCss: 'blur + brightness multi-étapes',
+    cloudLoadPreset: 'Préréglage',
   },
   shortcuts: {
     file: 'Fichier',
@@ -546,5 +547,19 @@ export const fr = {
     retry: 'Réessayer',
     pathLabel: 'Chemin cloud',
     root: 'Racine',
+  },
+  properties: {
+    title: 'Propriétés',
+    add: 'Ajouter une propriété',
+    editSource: 'Modifier la source',
+    deleteProp: 'Supprimer la propriété',
+    blockValue: 'Valeur en bloc (lecture seule)',
+    typeAuto: 'Auto',
+    typeText: 'Texte',
+    typeNumber: 'Nombre',
+    typeCheckbox: 'Case à cocher',
+    typeDate: 'Date',
+    typeDatetime: 'Date et heure',
+    typeList: 'Liste',
   },
 }

@@ -107,7 +107,7 @@ We have created an extremely elegant experience for WYSIWYG mode; it also suppor
 
 ### Appearance Customization
 
-- **Fifteen built-in themes**: Academic Blue (default), Vibrant Orange, Tech, Minimalist, Magazine, Nature, Liquid Glass, Lychee Red, Violet, Cyberpunk, Facebook, Matrix, Mint, Sunset, Retro Typewriter, each with light and dark color schemes
+- **Fifteen built-in themes**: Academic Blue, Vibrant Orange, Tech, Minimalist, Magazine, Nature, Liquid Glass Prism (default), Lychee Red, Violet, Cyberpunk, Facebook, Matrix, Mint, Sunset, Retro Typewriter, each with light and dark color schemes
 - **Dark / Light mode**: Each theme has both light and dark color schemes
 - **Font customization**: Source and preview modes can set font, font size, line height separately
 - **Custom CSS**: `user.css` overrides after all themes, highest priority
@@ -172,13 +172,13 @@ YiziMarkdown/
 ├── user.css                # User custom styles
 ├── keybindings.json        # Shortcut key configuration
 ├── themes/                 # Theme CSS files
-│   ├── academic.css        # Academic Blue (default)
+│   ├── academic.css        # Academic Blue
 │   ├── vibrant.css         # Vibrant Orange
 │   ├── tech.css            # Tech
 │   ├── minimal.css         # Minimalist
 │   ├── magazine.css        # Magazine
 │   ├── nature.css          # Nature
-│   ├── liquidglass.css     # Liquid Glass
+│   ├── liquidglass-prism.css # Liquid Glass Prism (default)
 │   ├── lychee.css          # Lychee Red
 │   ├── violet.css          # Violet
 │   ├── cyberpunk.css       # Cyberpunk

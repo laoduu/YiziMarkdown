@@ -39,13 +39,13 @@
     ],
     "desc": "柔和舒适的森林绿调"
   },
-  "liquidglass": {
-    "name": "液态玻璃",
+  "liquidglass-prism": {
+    "name": "液态玻璃 Prism",
     "swatch": [
-      "#f4f8ff",
-      "#d0e0f4"
+      "#eef3fb",
+      "#2563eb"
     ],
-    "desc": "冰蓝通透，磨砂玻璃质感"
+    "desc": "冰蓝玻璃，光影流转"
   },
   "lychee": {
     "name": "荔枝红",
