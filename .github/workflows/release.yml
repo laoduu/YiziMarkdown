@@ -68,6 +68,11 @@ jobs:
           node-version: 24
           cache: npm
 
+      # 必须显式安装：tauri-action 直接跑 `npm run tauri`，
+      # 没有 node_modules 时会得到 "'tauri' is not recognized"（Windows）/ exit 127（macOS）
+      - name: npm ci
+        run: npm ci
+
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
