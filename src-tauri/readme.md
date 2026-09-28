@@ -112,8 +112,8 @@
 - **十五套内置主题**：液态玻璃 Prism（默认）、学术蓝、活力橙、科技感、极简风、杂志感、自然风、荔枝红、紫罗兰、赛博朋克、Facebook、黑客帝国、薄荷冰沙、落日熔金、复古打字机，每套均有亮暗两套配色
 - **深色 / 亮色模式**：每套主题均有亮暗两套配色
 - **字体自定义**：源码和预览模式分别设置字体、字号、行高
-- **自定义 CSS**：`user.css` 覆盖在所有主题之后，优先级最高
-- **主题扩展**：`themes/` 目录放入 `.css` 文件，并在 `themes/theme.json` 中添加主题参数，重启后自动识别
+- **自定义主题**：在 设置 → 外观 → 自定义 CSS 中书写样式并保存，即生成「自定义主题」（以保存时的主题为基底 + 你的 CSS，自动选中）—— 既可以粘贴整份新主题，也可以只微调几个颜色；保存后立即生效，无需重启
+- **主题扩展**：`themes/` 目录放入 `.css` 文件，并在 `themes/theme.json` 中添加主题参数，重启后自动识别；主题令牌体系与设计规范见 `THEME-DESIGN-SPEC.md`
 
 ### 其他
 
@@ -275,13 +275,14 @@ code/
 │   │   ├── StatusBar.tsx   # 底部状态栏
 │   │   └── SettingsModal.tsx # 设置面板
 │   ├── stores/             # Zustand 状态管理
-│   ├── lib/                # 工具库（markdown 渲染、标题 ID）
+│   ├── lib/                # 工具库（markdown 渲染、标题 ID、主题加载）
 │   └── styles/             # 全局样式
 ├── src-tauri/              # Rust 后端
 │   ├── src/main.rs         # Tauri 命令（文件读写、主题加载、注册表等）
 │   ├── icons/              # 应用图标
-│   ├── themes/             # 主题 CSS
+│   ├── themes/             # 主题 CSS（含 theme.json 元数据）
 │   └── templates/          # 文档模板
+├── THEME-DESIGN-SPEC.md    # 主题设计规范（令牌体系 / 新增主题指南）
 └── package.json
 ```
 

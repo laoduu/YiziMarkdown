@@ -45,6 +45,7 @@ import {
 import WindowControls from './WindowControls'
 import { useSettingsStore } from '../stores/settingsStore'
 import { orderThemes } from '../lib/themeOrder'
+import { CUSTOM_THEME, readUserCss } from '../lib/themeLoader'
 import { useI18n } from '../i18n'
 import LinkModal from './LinkModal'
 import ImageModal from './ImageModal'
@@ -120,6 +121,8 @@ export default function Toolbar({
   const { currentTheme, setField } = useSettingsStore()
   const [themeFiles, setThemeFiles] = useState<string[]>([])
   const [themeMeta, setThemeMeta] = useState<Record<string, { name: string }>>({})
+  // 「自定义主题」条目：user.css 非空时才出现在主题菜单末尾（与设置-外观同一逻辑）
+  const [hasUserCss, setHasUserCss] = useState(false)
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [showImageModal, setShowImageModal] = useState(false)
 
@@ -141,10 +144,21 @@ export default function Toolbar({
           if (files) setThemeFiles(orderThemes(files))
           try { setThemeMeta(JSON.parse(json || '{}')) } catch {}
           if (tmpl) setTemplates(tmpl)
+          readUserCss().then((c) => setHasUserCss(!!c.trim())).catch(() => {})
         }
       } catch {}
     }
     load()
+  }, [])
+
+  // user.css 是否非空：每次**打开主题菜单**时重读 —— 保存/清除自定义 CSS 都发生在
+  // 设置面板里，Toolbar 无法感知；挂载时读一次会在「清空后菜单条目不消失」上过期
+  // （与模板菜单「打开即刷新」同一模式，见 refreshTemplates）
+  const refreshUserCssFlag = useCallback(async () => {
+    try {
+      const c = await readUserCss()
+      setHasUserCss(!!c.trim())
+    } catch {}
   }, [])
 
   // 模板列表：设置面板里新建模板后菜单需即时可见，故每次打开菜单都重新读取
@@ -532,10 +546,10 @@ export default function Toolbar({
       <div className="flex items-center gap-px shrink-0">
         {/* 主题切换 */}
         <div className="relative">
-          <ToolbarButton 
-            icon={<Palette size={16} />} 
+          <ToolbarButton
+            icon={<Palette size={16} />}
             tooltip={themeMeta[currentTheme]?.name || (currentTheme === 'academic' ? t('toolbar.academic') : currentTheme)}
-            onClick={() => setShowThemeMenu(!showThemeMenu)} 
+            onClick={() => { setShowThemeMenu(!showThemeMenu); if (!showThemeMenu) refreshUserCssFlag() }}
             accent
           />
           {showThemeMenu && (
@@ -561,6 +575,17 @@ export default function Toolbar({
                   </button>
                   )
                 })}
+                {/* 「自定义主题」= 基底主题 + user.css，user.css 非空时才出现（放最后一条） */}
+                {hasUserCss && (
+                  <button
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={() => { setField('currentTheme', CUSTOM_THEME); setShowThemeMenu(false) }}
+                    className="w-full px-3 py-2 text-sm text-left text-[var(--editor-text)] hover:bg-[var(--editor-hover)] flex items-center gap-2 border-t border-[var(--editor-border)] mt-1 pt-2"
+                  >
+                    {currentTheme === CUSTOM_THEME && <Check size={14} className="text-[var(--editor-accent)]" />}
+                    <span className={currentTheme === CUSTOM_THEME ? 'text-[var(--editor-accent)] font-medium' : ''}>{t('settings.customTheme')}</span>
+                  </button>
+                )}
               </div>
             </>
           )}

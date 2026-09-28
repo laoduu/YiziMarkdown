@@ -20,6 +20,7 @@ import { useEditorStore } from './stores/editorStore'
 import { loadPlugin, unloadPlugin } from './plugins/registry'
 import { useI18n, translate, getCurrentLang } from './i18n'
 import { refreshThemeCursorVars } from './lib/themeCursor'
+import { applyThemeStyles } from './lib/themeLoader'
 // 导出 PDF 用的内联样式（globals.css 已包含 Tailwind prose / 编辑器排版；KaTeX 样式保证公式还原）
 import globalsCss from './styles/globals.css?inline'
 import exportTocCss from './styles/export-toc.css?inline'
@@ -76,7 +77,7 @@ const openFileDialog = async (): Promise<{ name: string; content: string; filePa
 
 function App() {
   const { t } = useI18n()
-  const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, enabledPlugins, pluginConfigs, setField, aiPanelOpen, updateSettings, userThemeEnabled, userThemeName } = useSettingsStore()
+  const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, enabledPlugins, pluginConfigs, setField, aiPanelOpen, updateSettings, userThemeEnabled, userThemeName, customCssBase } = useSettingsStore()
   const {
     activeTabId, currentTab,
     openFile, openRemoteFile, openNewFile, closeTab, switchTab,
@@ -103,48 +104,12 @@ function App() {
   const prevPluginsRef = useRef<string[]>([])
   const pluginsReadyRef = useRef(false)
 
-  // 动态加载主题 CSS + user.css（串行，确保顺序和特异性正确）
+  // 动态加载主题 CSS（含「自定义主题」= 基底主题 + user.css）。
+  // 注入逻辑统一在 lib/themeLoader.ts —— 保存自定义 CSS 的路径复用同一函数；
+  // 历史上两条路径各写一份，保存那条漏了提权 ⇒ 改了 CSS 保存后毫无反应、必须重启。
   useEffect(() => {
-    const loadStyles = async () => {
-      try {
-        const tauri = (window as any).__TAURI_INTERNALS__
-        if (!tauri || typeof tauri.invoke !== 'function') return
-
-        // 第一步：加载并注入主题 CSS
-        const themeCss = await tauri.invoke('read_theme_css', { name: `${currentTheme}.css` }) as string
-        if (themeCss) {
-          // 自动将 CSS 中的主题选择器替换为当前 theme-{currentTheme}
-          const selectorMatch = themeCss.match(/(:root)?\.theme-([a-zA-Z0-9_-]+)/)
-          let processedTheme = themeCss
-          if (selectorMatch) {
-            const detectedName = selectorMatch[2]
-            if (detectedName !== currentTheme) {
-              processedTheme = themeCss
-                .replace(new RegExp(`:root\.theme-${detectedName}`, 'g'), `:root.theme-${currentTheme}`)
-                .replace(new RegExp(`\.theme-${detectedName}(?![a-zA-Z-])`, 'g'), `.theme-${currentTheme}`)
-                .replace(new RegExp(`\.theme-${detectedName}\.dark`, 'g'), `.theme-${currentTheme}.dark`)
-            }
-          }
-          let themeEl = document.getElementById('yizimarkdown-theme-css')
-          if (!themeEl) { themeEl = document.createElement('style'); themeEl.id = 'yizimarkdown-theme-css'; document.head.appendChild(themeEl) }
-          themeEl.textContent = processedTheme
-        }
-
-        // 第二步：加载并注入 user.css（排在主题 CSS 之后）
-        const userCss = await tauri.invoke('read_user_css') as string
-        if (userCss) {
-          // 自动提升 :root { } 的特异性为 :root.theme-xxx { }，使变量覆盖能生效
-          let processedUser = userCss
-            .replace(/:root\s*\{/g, `:root.theme-${currentTheme} {`)
-          let userEl = document.getElementById('yizimarkdown-user-css')
-          if (!userEl) { userEl = document.createElement('style'); userEl.id = 'yizimarkdown-user-css'; }
-          userEl.textContent = processedUser
-          document.head.appendChild(userEl)
-        }
-      } catch {}
-    }
-    loadStyles()
-  }, [currentTheme])
+    applyThemeStyles(currentTheme, customCssBase)
+  }, [currentTheme, customCssBase])
 
   // 应用字体/排版设置到 CSS 变量
   useEffect(() => {

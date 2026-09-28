@@ -568,7 +568,14 @@ const blockDecorField = StateField.define<DecorationSet>({
     if (tr.docChanged || tr.selection) return buildBlockDecorations(tr.state)
     return deco.map(tr.changes)
   },
-  provide: (f) => EditorView.decorations.from(f),
+  provide: (f) => [
+    EditorView.decorations.from(f),
+    // 把 block replace 范围注册为「原子区间」：点击 widget 中间时
+    // skipAtomsForSelection 会把光标推到范围边界（from），而不是走
+    // posAtCoords 对非 Text block 的 PosAssoc(block.to, -1) 分支 ——
+    // 那条路径在被替换行 DOM 不存在时会把光标重映射到上一行（点击错位的次因）。
+    EditorView.atomicRanges.of((view) => view.state.field(f, false) ?? Decoration.none),
+  ],
 })
 
 /* ------------------------------------------------------------------ */
@@ -576,16 +583,22 @@ const blockDecorField = StateField.define<DecorationSet>({
 /* ------------------------------------------------------------------ */
 
 const liveBlocksTheme = EditorView.theme({
+  // ⚠️ 间距必须用 **padding**，不能用 margin：CM6 的高度测量只取
+  // getBoundingClientRect().height（不含 margin，见 @codemirror/view
+  // measureVisibleLineHeights），margin 会让 heightMap 与视觉逐 widget 累积偏移
+  // ⇒ 实时模式点击内容时焦点错位一行（点击第一行、激活第二行）。
+  // padding 在 rect 内 ⇒ 间距进入高度图，posAtCoords 命中准确。
   '.cm-live-block': {
-    margin: '0.6em 0',
-    padding: '0',
+    margin: '0',
+    padding: '0.6em 0',
     cursor: 'text',
   },
   // 元信息属性面板（widget 本体在 cm-properties.ts，内部样式走 Shadow DOM）。
   // 宿主做成"属性面板"观感，与源码模式里元信息块的样式保持一致。
+  // 同上：margin 改 padding（背景/borderLeft 随之覆盖整个占位区，观感不变）。
   '.cm-live-block--properties': {
-    margin: '0.2em 0 0.8em',
-    padding: '6px 0 6px 10px',
+    margin: '0',
+    padding: 'calc(0.2em + 6px) 0 calc(0.8em + 6px) 10px',
     cursor: 'default',
     borderLeft: '2px solid var(--editor-accent)',
     background: 'color-mix(in srgb, var(--editor-text) 4%, transparent)',

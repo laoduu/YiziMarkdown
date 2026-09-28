@@ -1,5 +1,97 @@
 # YiziMarkdown 开发日志
 
+## v0.3.3
+
+> 本版主题：**自定义 CSS 升级为「自定义主题」** —— 保存即生成、自动选中、立即生效；
+> 激活态与观感永远一致。另有实时模式点击定位错位修复（根因：block widget 的 CSS margin
+> 不进 CodeMirror 高度图）、保存前自动清洗、清除按钮二次确认、主题设计规范文档等。
+
+### 追加（2026-09-24）：自定义 CSS 升级为「自定义主题」
+
+**背景（为什么重构）**：原「自定义 CSS」的设计意图是「以更高优先级注入」，但实测
+**注入后毫无反应**。诊断出两层根因：
+
+1. **保存路径与加载路径是两套实现**：`App.tsx` 启动加载会做 `:root` → `:root.theme-x`
+   特异性提升，而 `SettingsModal` 保存时注入的是**原始文本**（少了这一步）⇒
+   `:root { --x }` 的 (0,1,0) 被主题 `:root.theme-x { --x }` 的 (0,2,0) 压过，
+   必须重启（走加载路径）才生效——提示语「保存并重启后生效」掩盖的正是这个 bug
+2. **「最高优先级」从未真正落地**：「排在最后」只能赢**同特异性**的平局；主题普遍用
+   更高特异性的选择器（变量 `:root.theme-<name>` (0,2,0)、元素
+   `.editor-content.theme-<name> <el>` (0,2,1)），用户写最自然的 `:root{}` / 
+   `.editor-content h1{}`（(0,1,0) / (0,1,1)）必然输
+
+**产品语义重构（用户拍板）**：自定义 CSS 不再是「全局补丁」，而是**定义「自定义主题」**：
+
+- **自定义主题 = 基底主题 + user.css**：基底 = 保存时的当前主题（`settingsStore.customCssBase`）。
+  「在织锦上只改一个强调色」得到的是「织锦 + 新色」而不是「默认底 + 新色」
+- **保存即生成并自动选中**：主题列表首位出现「自定义主题」；激活态与观感从此永远一致
+- **user.css 只在自定义主题下生效**（其它主题不叠加）——这是修掉「选了 A 看到 B」恍惚感的关键
+- **清空回落**：清空并保存 ⇒ 条目消失，回落基底主题
+- **三个消费点对齐**（全部「user.css 非空才显示」）：设置面板列表（首位）/
+  右上角调色板菜单（末条 + 分隔线）/ 演示 HUD 菜单（首条）
+
+**实现要点**：
+
+- **选择器归一 + 提权**（`src/lib/userCss.ts`）：粘贴整份主题时 `:root.theme-brocade` 归一为
+  `:root.theme-custom`（只归一不加前缀——双主题类永不匹配，这是首轮实现踩的坑）；微调时
+  裸选择器追加 `:root.theme-custom` 前缀提权。**不用 `!important`**：作用域前缀已能稳定胜出，
+  且用户自己后面的规则仍能覆盖前面的。`@media`/`@supports` 递归改写；
+  `@keyframes`/`@font-face`/`@page` 原样保留（块内容不是选择器）
+- **单一注入入口**（`src/lib/themeLoader.ts` 的 `applyThemeStyles`）：启动加载与保存共用，
+  杜绝「两条路径各写一份、保存那条漏提权」的历史重演
+- **保存前自动清洗**（`sanitizeUserCss`）：剥离行首行号（真实踩坑：从聊天窗口复制主题带着
+  行号，裸数字让 CSS 解析在第一处断掉、其后全部静默失效）与零宽字符。行号剥离带防误伤
+  门槛（>50% 非空行命中才动手；纯数字行保留；`12:` 时间戳形态不匹配）；清洗结果回写文本框
+- **清除按钮 + 二次确认**：复用关闭未保存 tab 的弹窗样式（`tab-close-dialog`）
+- **右上角菜单即时性**：Toolbar 的 `hasUserCss` 原本只在挂载时读一次，设置面板里的保存/清除
+  它感知不到 ⇒ 改为每次打开主题菜单时重读（同模板菜单「打开即刷新」先例）
+- **演示模式**：HUD 主题菜单同样出现「自定义主题」；变量 = 基底变量块 + user.css 变量块
+  （归一后合并），元素规则照旧丢弃
+- persist v5 → **v6**（新增 `customCssBase`，存量存档补默认值）
+- 测试：`tests/userCss.test.ts` 24 条（归一 / 提权 / 清洗），`npm test` 90 → **114 条**
+
+### 修复（2026-09-24）：实时模式点击定位错位一行
+
+**症状**：实时模式点击内容时焦点大概率落到下一行（点第一行、激活第二行），引用、代码块、
+图片等块级元素尤其明显；源码模式正常。
+
+**主根因：block widget 的 CSS `margin` 不进 CodeMirror 高度图**（源码级定位）：
+
+- CM6 高度测量只取 `getBoundingClientRect().height`（**不含 margin**，
+  `@codemirror/view` 的 `measureVisibleLineHeights`）；其 margin 补偿（`spaceAbove`）只在嵌套
+  `BlockWrapperTile` 内部递归时计算，顶层块 widget 恒为 0
+- `cm-live-blocks.ts` 给所有块 widget 宿主设了 `margin: 0.6em 0`（±19px）⇒ heightMap 与视觉
+  **逐 widget 累积偏移** ⇒ `posAtCoords` 按 heightMap 命中 ⇒ 点击视觉第 N 行、焦点在第 N+1 行
+- 未测量区域按 `estimatedHeight`（默认 -1 → 1 行高）估算，图片实际 200–400px ⇒
+  刚滚动到新区域时偏差最大——解释「大概率」而非恒定
+- 引用行本身无 widget（走 lineClass 装饰），但上方有图片/代码块时累积偏移传导——
+  解释「引用也错位」
+
+**次根因**：点击 widget 下半部走 `posAtCoords` 对非 Text block 的 `PosAssoc(block.to, -1)` 分支，
+被替换行 DOM 不存在时 `inlineDOMNearPos` 的 `before` 落到上一行 ⇒ 光标重映射到上一行。
+
+**修法**：
+
+1. `.cm-live-block` / `.cm-live-block--properties` 的 margin 改为等值 padding
+   （padding 在 rect 内 ⇒ 间距进入高度图）；properties 用 `calc()` 保持原占位
+2. block replace 范围注册进 `EditorView.atomicRanges` ⇒ 点击 widget 中间时光标确定推到
+   范围边界，不再走重映射路径
+
+**A/B 实测**（Playwright + 真实 dev server + 真实扩展链路，21 采样点）：margin 版复现
+**14 处错位（全部 +1 行，与用户报告完全一致）**；padding 版 **21/21 全过**。
+用户验收：「测试了，点击定位准了，很好」。
+
+### 追加（2026-09-24）：主题设计规范文档 + 织锦测试主题
+
+- **`THEME-DESIGN-SPEC.md`**（仓库根目录，14 章 + 2 附录）：令牌分层总览、每模块的
+  定义/清单/指引/效果/示例、check-themes 六项门禁、反模式清单、明暗双模式规范、
+  新增主题检查清单；附录 A 令牌总表标注状态（`●` 已接入 / `○` 已声明待接入）
+- **织锦（`brocade.css`）**：纹路 / 流光能力的**开发用测试主题**——第一个使用
+  `--<region>-deco-*`（四区域纹路）与 `--<region>-sheen-*`（工具栏/状态栏流光）的主题，
+  `--texture-grid/dots/paper` 预设的首次真实引用。**不注册 `theme.json`、不随版本发布**
+  （用户明确：测试主题，不作为正式主题发布）；经真实渲染验证（计算样式 + 像素差分）
+- README / help.md 及镜像同步「自定义主题」说明；主题清单保持 15 个口径
+
 ## v0.3.2
 
 > 本版主题：**实时模式属性面板 + 主题令牌体系** —— front matter 按 Obsidian 式属性面板渲染

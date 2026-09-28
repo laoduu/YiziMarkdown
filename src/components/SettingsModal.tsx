@@ -16,6 +16,8 @@ import {
 } from '../lib/webdav'
 import { normalizeBaseUrl } from '../lib/remotePath'
 import { DEFAULT_THEME, orderThemes } from '../lib/themeOrder'
+import { CUSTOM_THEME, applyThemeStyles, readUserCss } from '../lib/themeLoader'
+import { sanitizeUserCss } from '../lib/userCss'
 
 const fallbackFonts = [
   'Consolas', 'Courier New', 'Lucida Console', 'Monaco', 'Menlo',
@@ -215,22 +217,51 @@ function GeneralSettings() {
 }
 
 // ===================== 自定义CSS编辑器 =====================
-function UserCssEditor() {
+function UserCssEditor({ onSaved }: { onSaved?: () => void }) {
   const { t } = useI18n()
+  const currentTheme = useSettingsStore((s) => s.currentTheme)
+  const customCssBase = useSettingsStore((s) => s.customCssBase)
   const [cssContent, setCssContent] = useState('')
   const [saved, setSaved] = useState(false)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
 
   useEffect(() => {
-    invokeTauri<string>('read_user_css').then((c) => setCssContent(c || ''))
+    readUserCss().then(setCssContent)
   }, [])
 
   const handleSave = async () => {
-    await invokeTauri('write_user_css', { content: cssContent })
-    let el = document.getElementById('yizimarkdown-user-css')
-    if (!el) { el = document.createElement('style'); el.id = 'yizimarkdown-user-css'; }
-    el.textContent = cssContent
-    document.head.appendChild(el)  // 移到末尾确保优先级
+    // 保存前清洗：剥离复制污染（行首行号 / 零宽字符），并把清洗结果回写文本框，
+    // 让用户看到「实际保存的内容」—— 否则行号还在框里，下次保存又会带上
+    const cleaned = sanitizeUserCss(cssContent)
+    if (cleaned !== cssContent) setCssContent(cleaned)
+    await invokeTauri('write_user_css', { content: cleaned })
+    const { setField } = useSettingsStore.getState()
+    // 基底 = 保存时所在的主题。已选中自定义主题时沿用原基底，
+    // 否则「在自定义主题上再改一次」会把自定义内容叠到自己身上。
+    const base = currentTheme === CUSTOM_THEME ? customCssBase : currentTheme
+    const alreadyCustom = currentTheme === CUSTOM_THEME
+    setField('customCssBase', base)
+    // 清空自定义 CSS ⇒ 回落到基底主题（否则会停在一个没有内容的「自定义主题」上）
+    setField('currentTheme', cleaned.trim() ? CUSTOM_THEME : base)
+    // 已经选中自定义主题时 currentTheme 不变、App 的 effect 不会重跑，这里显式注入一次
+    if (alreadyCustom && cleaned.trim()) await applyThemeStyles(CUSTOM_THEME, base, cleaned)
     setSaved(true); setTimeout(() => setSaved(false), 2000)
+    onSaved?.()
+  }
+
+  // 清除：先弹二次确认（误点一下就删光 CSS 太危险），确认后才清空文本框 +
+  // 删除 user.css + 立即回落到基底主题（等价于「清空后保存」的一步版）
+  const handleClear = () => setShowClearConfirm(true)
+  const handleClearConfirmed = async () => {
+    setShowClearConfirm(false)
+    setCssContent('')
+    await invokeTauri('write_user_css', { content: '' })
+    const { setField } = useSettingsStore.getState()
+    const base = currentTheme === CUSTOM_THEME ? customCssBase : currentTheme
+    setField('customCssBase', base)
+    setField('currentTheme', base)
+    setSaved(false)
+    onSaved?.()
   }
 
   return (
@@ -238,7 +269,23 @@ function UserCssEditor() {
       <p className="text-[11px] text-[var(--sidebar-text)]">{t('settings.customCssHint')}</p>
       <textarea value={cssContent} onChange={(e) => { setCssContent(e.target.value); setSaved(false) }}
         className="settings-textarea font-mono" rows={6} spellCheck={false} />
-      <button onClick={handleSave} className="settings-btn-primary">{saved ? t('settings.saved') : t('settings.saveCss')}</button>
+      <div className="flex items-center gap-2">
+        <button onClick={handleSave} className="settings-btn-primary">{saved ? t('settings.saved') : t('settings.saveCss')}</button>
+        <button onClick={handleClear} className="settings-btn-secondary">{t('settings.clearCss')}</button>
+      </div>
+      {/* 清除确认弹窗：复用关闭未保存 tab 的弹窗样式（tab-close-dialog） */}
+      {showClearConfirm && (
+        <div className="tab-close-overlay" onClick={() => setShowClearConfirm(false)}>
+          <div className="tab-close-dialog" onClick={(e) => e.stopPropagation()}>
+            <p className="tab-close-dialog-title">{t('settings.clearCssTitle')}</p>
+            <p className="tab-close-dialog-msg">{t('settings.clearCssMsg')}</p>
+            <div className="tab-close-dialog-actions">
+              <button className="tab-close-btn-discard" onClick={handleClearConfirmed}>{t('settings.clearCss')}</button>
+              <button className="tab-close-btn-cancel" onClick={() => setShowClearConfirm(false)}>{t('common.cancel')}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -246,19 +293,25 @@ function UserCssEditor() {
 // ===================== 外观设置（即时生效，只保留恢复默认） =====================
 function AppearanceSettings() {
   const { t } = useI18n()
-  const { currentTheme, isDark, setField } = useSettingsStore()
+  const { currentTheme, isDark, customCssBase, setField } = useSettingsStore()
   const [themeFiles, setThemeFiles] = useState<string[]>([])
   const [themeMeta, setThemeMeta] = useState<Record<string, { name: string; swatch?: string[]; desc?: string }>>({})
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+  const [hasUserCss, setHasUserCss] = useState(false)
 
-  // 加载 theme.json 和 themes/ 目录列表
+  // 加载 theme.json 和 themes/ 目录列表；顺带判断 user.css 是否非空（决定「自定义主题」是否出现）
+  const refreshUserCssFlag = useCallback(() => {
+    readUserCss().then((c) => setHasUserCss(!!c.trim()))
+  }, [])
+
   useEffect(() => {
     invokeTauri<string[]>('list_themes').then((l) => setThemeFiles(orderThemes(l || [])))
     invokeTauri<string>('read_theme_json').then((json) => {
       try { setThemeMeta(JSON.parse(json || '{}')) } catch { setThemeMeta({}) }
     })
-  }, [])
+    refreshUserCssFlag()
+  }, [refreshUserCssFlag])
 
   // 保存 theme.json
   const saveThemeMeta = useCallback(async (updated: Record<string, any>) => {
@@ -269,20 +322,32 @@ function AppearanceSettings() {
   // academic 保底主题
   const academicMeta = { name: t('settings.academic'), swatch: ['#f5f8ff', '#002FA7'], desc: t('settings.academicDesc') }
 
-  // 构建统一主题列表：academic 优先，其余按 theme.json 顺序，未收录的 CSS 文件追加末尾
-  const themeList: { id: string; name: string; swatch: string[]; desc: string; isPreset: boolean }[] = []
+  // 构建统一主题列表：「自定义主题」最前，academic 次之，其余按 theme.json 顺序，未收录的 CSS 文件追加末尾
+  const themeList: { id: string; name: string; swatch: string[]; desc: string; isPreset: boolean; editable: boolean }[] = []
   const cssIds = new Set(themeFiles.map(f => f.replace(/\.css$/, '')))
+  // 「自定义主题」= 基底主题 + user.css。user.css 非空时才有内容；已选中它时也保留，
+  // 否则列表里会一个激活项都没有。
+  if (hasUserCss || currentTheme === CUSTOM_THEME) {
+    themeList.push({
+      id: CUSTOM_THEME,
+      name: t('settings.customTheme'),
+      swatch: themeMeta[customCssBase]?.swatch || ['#e8ecf0', '#c0c8d4'],
+      desc: t('settings.customThemeDesc'),
+      isPreset: true,
+      editable: false, // 合成条目，没有对应的主题文件可改名
+    })
+  }
   // academic 保底
-  themeList.push({ id: 'academic', ...academicMeta, isPreset: true })
+  themeList.push({ id: 'academic', ...academicMeta, isPreset: true, editable: false })
   // theme.json 中的预设主题（跳过 academic）
   for (const [id, meta] of Object.entries(themeMeta)) {
     if (id === 'academic' || !cssIds.has(id)) continue
-    themeList.push({ id, name: meta.name, swatch: meta.swatch || ['#e8ecf0', '#c0c8d4'], desc: meta.desc || t('settings.customTheme'), isPreset: true })
+    themeList.push({ id, name: meta.name, swatch: meta.swatch || ['#e8ecf0', '#c0c8d4'], desc: meta.desc || t('settings.customTheme'), isPreset: true, editable: true })
   }
   // 不在 theme.json 中的 CSS 文件（用户自定义）
   for (const id of cssIds) {
     if (id === 'academic' || themeMeta[id]) continue
-    themeList.push({ id, name: id, swatch: ['#e8ecf0', '#c0c8d4'], desc: t('settings.customTheme'), isPreset: false })
+    themeList.push({ id, name: id, swatch: ['#e8ecf0', '#c0c8d4'], desc: t('settings.customTheme'), isPreset: false, editable: true })
   }
 
   const handleRestore = () => {
@@ -336,9 +401,9 @@ function AppearanceSettings() {
                       onClick={(e) => e.stopPropagation()}
                     />
                   ) : (
-                    <p className="text-xs font-medium text-[var(--editor-text)] truncate cursor-pointer hover:text-[var(--editor-accent)]"
-                      title={t('settings.clickToEditName')}
-                      onClick={(e) => { e.stopPropagation(); startEdit(th.id, th.name) }}>{th.name}</p>
+                    <p className={`text-xs font-medium text-[var(--editor-text)] truncate ${th.editable ? 'cursor-pointer hover:text-[var(--editor-accent)]' : ''}`}
+                      title={th.editable ? t('settings.clickToEditName') : undefined}
+                      onClick={(e) => { if (!th.editable) return; e.stopPropagation(); startEdit(th.id, th.name) }}>{th.name}</p>
                   )}
                   <p className="text-[10px] text-[var(--sidebar-text)] truncate">{th.desc}</p>
                 </button>
@@ -355,7 +420,7 @@ function AppearanceSettings() {
             </Row>
           </Section>
           <Section title={t('settings.customCss')}>
-            <UserCssEditor />
+            <UserCssEditor onSaved={refreshUserCssFlag} />
           </Section>
         </div>
       </div>

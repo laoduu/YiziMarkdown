@@ -1,0 +1,217 @@
+/* ═══════════════════════════════════════════════════════════════
+   织锦 (Brocade) — YiziMarkdown 开发用测试主题（不随版本发布）
+
+   ⚠️ 定位：纹路 / 流光能力的验证样本，**不在 theme.json 注册**，
+   不会出现在设置的主题列表里。要用它：把本文件全文粘到
+   设置 → 外观 → 自定义 CSS（即生成「自定义主题」），或临时注册后手动验证。
+   正式主题请勿把本文件当作发布样例 —— 它的取值服务于「把纹路调到可见」，
+   不代表推荐的视觉强度。
+
+   定位：**纹路（deco）与流光（sheen）能力的活样本**。
+   本主题存在的意义是让「区域纹样」这条通路真正被使用、被看见：
+   改造后 `--<region>-deco-*` / `--<region>-sheen-*` 一直是「接了线没通电」——
+   没有任何主题设过它们，六个纹理预设也零引用。这里把四个区域的纹路
+   与两个区域的流光全部打开。
+
+   视觉语言：米白纸底 + 金线，暗色为深棕底 + 暖金。取色全走令牌。
+
+   纹路说明（纹路走 background-image，是纯 CSS 渐变，不需要图片）：
+     · 顶部工具栏 —— 自定义斜纹（加粗到 2px/10px，12% currentColor，保证可见）
+     · 标签栏     —— 预设 --texture-grid（网格）
+     · 侧边栏     —— 预设 --texture-dots（点阵，径向渐变不自重复，必须给 size）
+     · 状态栏     —— 预设 --texture-paper（细横纹，纸感）
+   流光说明（走区域 ::after 层，z-index:1，在内容之上、下拉菜单之下）：
+     · 工具栏 —— 金线左→右扫过（deco-sweep）
+     · 状态栏 —— 金线右→左扫过（deco-sweep-back）
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 亮色 ────────────────────────────────────────────────────── */
+:root.theme-brocade {
+  /* 基础层 */
+  --editor-bg: #faf6ee;
+  --editor-text: #2f2921;
+  --editor-accent: #a16207;
+  --editor-border: #e6dcc8;
+  --editor-surface: #f4eee2;
+  --editor-hover: rgba(47, 41, 33, 0.04);
+  --editor-selection-bg: rgba(161, 98, 7, 0.22);
+  --editor-cursor: #a16207;
+  --editor-h1: #854d0e;
+  --editor-h2: #a16207;
+  --editor-h3: #b45309;
+  --sidebar-bg: #f5efe2;
+  --sidebar-text: #7d7260;
+  --statusbar-bg: #3a2f1e;
+  --statusbar-text: #f2e8d5;
+
+  /* 区域令牌 */
+  --toolbar-bg: #f7f2e7;
+  --toolbar-fg: #2f2921;
+  --toolbar-fg-muted: #7d7260;
+  --toolbar-border: #e6dcc8;
+  --toolbar-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 4px rgba(122, 90, 20, 0.10);
+
+  --tabbar-bg: #f0e9da;
+  --tabbar-border: #e6dcc8;
+  --tabbar-active-bg: #faf6ee;
+
+  --sidebar-border: #e6dcc8;
+
+  --menu-bg: rgba(255, 253, 248, 0.98);
+  --menu-border: #e6dcc8;
+  --menu-shadow: 0 8px 26px rgba(122, 90, 20, 0.14), 0 2px 8px rgba(0, 0, 0, 0.05);
+
+  --dialog-bg: #fcf9f2;
+  --dialog-border: #e6dcc8;
+  --dialog-shadow: 0 25px 60px rgba(60, 45, 15, 0.22), 0 8px 20px rgba(0, 0, 0, 0.08);
+  --overlay-bg: rgba(45, 35, 15, 0.35);
+
+  /* 预览排版 */
+  --link-color: #a16207;
+  --quote-bar: #ca8a04;
+  --quote-fg: #5c5340;
+  --quote-bg: linear-gradient(160deg, rgba(252, 248, 238, 0.95), rgba(244, 236, 220, 0.8));
+  --table-head-bg: rgba(161, 98, 7, 0.07);
+  --table-border: #e6dcc8;
+  --hr-color: rgba(161, 98, 7, 0.22);
+
+  /* 语法色链（暖金 → 赭石） */
+  --code-keyword: #9a3412;
+  --code-string: #a16207;
+  --code-number: #7c2d12;
+  --code-function: #854d0e;
+  --code-comment: #a89b84;
+
+  /* ── 纹路（与明暗无关：用 currentColor 派生，自动跟随各区域文字色） ── */
+  /* 工具栏：自定义斜纹，比 --texture-diagonal 更粗更实，作为「栏头花纹」的直观样本 */
+  --toolbar-deco-image: repeating-linear-gradient(135deg,
+      color-mix(in srgb, currentColor 12%, transparent) 0 2px, transparent 2px 10px);
+  --toolbar-deco-size: auto;
+  --toolbar-deco-repeat: repeat;
+  --toolbar-deco-blend: normal;
+
+  /* 标签栏：预设网格 */
+  --tabbar-deco-image: var(--texture-grid);
+  --tabbar-deco-size: auto;
+  --tabbar-deco-repeat: repeat;
+  --tabbar-deco-blend: normal;
+
+  /* 侧栏：预设点阵（径向渐变不自重复 ⇒ 必须给 size 才会平铺成点阵） */
+  --sidebar-deco-image: var(--texture-dots);
+  --sidebar-deco-size: 12px 12px;
+  --sidebar-deco-repeat: repeat;
+  --sidebar-deco-blend: normal;
+
+  /* 状态栏：预设纸感细横纹 */
+  --statusbar-deco-image: var(--texture-paper);
+  --statusbar-deco-size: auto;
+  --statusbar-deco-repeat: repeat;
+  --statusbar-deco-blend: normal;
+
+  /* ── 流光（两端必须透明，否则扫过时会看到硬边） ── */
+  --toolbar-sheen-image: linear-gradient(90deg,
+      rgba(234, 179, 8, 0) 0%,
+      rgba(234, 179, 8, 0.28) 35%,
+      rgba(202, 138, 4, 0.32) 55%,
+      rgba(161, 98, 7, 0) 100%);
+  --toolbar-sheen-size: 200% 100%;
+  --toolbar-sheen-anim: deco-sweep 16s ease-in-out infinite;
+
+  --statusbar-sheen-image: linear-gradient(90deg,
+      rgba(240, 200, 96, 0) 0%,
+      rgba(240, 200, 96, 0.34) 40%,
+      rgba(224, 176, 64, 0.38) 60%,
+      rgba(202, 138, 4, 0) 100%);
+  --statusbar-sheen-size: 200% 100%;
+  --statusbar-sheen-anim: deco-sweep-back 18s ease-in-out infinite;
+
+  /* 形状与字体（与明暗无关，只写一次即正确） */
+  --border-radius: 10px;
+  --font-sans: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --font-size-base: 16px;
+  --line-height: 1.8;
+  --paragraph-spacing: 1.5em;
+}
+
+/* ── 暗色 ────────────────────────────────────────────────────── */
+:root.theme-brocade.dark {
+  --editor-bg: #17130d;
+  --editor-text: #ded3bd;
+  --editor-accent: #e0b040;
+  --editor-border: #332b1d;
+  --editor-surface: #211a11;
+  --editor-hover: rgba(255, 255, 255, 0.05);
+  --editor-selection-bg: rgba(224, 176, 64, 0.24);
+  --editor-cursor: #e0b040;
+  --editor-h1: #f0c860;
+  --editor-h2: #e0b040;
+  --editor-h3: #d9a441;
+  --sidebar-bg: #1c160e;
+  --sidebar-text: #8a7d66;
+  --statusbar-bg: #221a10;
+  --statusbar-text: #c9b78f;
+
+  --toolbar-bg: #1c160e;
+  --toolbar-fg: #ded3bd;
+  --toolbar-fg-muted: #8a7d66;
+  --toolbar-border: #2e2617;
+  --toolbar-shadow: inset 0 1px 0 rgba(224, 176, 64, 0.08), 0 1px 3px rgba(0, 0, 0, 0.4);
+
+  --tabbar-bg: #191410;
+  --tabbar-border: #2a2216;
+  --tabbar-active-bg: #211a11;
+
+  --sidebar-border: #2a2216;
+
+  --menu-bg: #221b11;
+  --menu-border: #332b1d;
+  --menu-shadow: 0 8px 26px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.25);
+
+  --dialog-bg: #1e1810;
+  --dialog-border: #332b1d;
+  --dialog-shadow: 0 25px 60px rgba(0, 0, 0, 0.55), 0 8px 20px rgba(0, 0, 0, 0.3);
+  --overlay-bg: rgba(0, 0, 0, 0.55);
+
+  --link-color: #e0b040;
+  --quote-bar: #d9a441;
+  --quote-fg: #b8a582;
+  --quote-bg: linear-gradient(160deg, #241c11, #191410);
+  --table-head-bg: rgba(224, 176, 64, 0.08);
+  --table-border: #2e2617;
+  --hr-color: rgba(224, 176, 64, 0.18);
+
+  --code-keyword: #f0a860;
+  --code-string: #e0b040;
+  --code-number: #d98a4a;
+  --code-function: #f0c860;
+  --code-comment: #7a6f58;
+
+  /* 流光：暗色下略提亮，保证在深底上仍可见 */
+  --toolbar-sheen-image: linear-gradient(90deg,
+      rgba(240, 200, 96, 0) 0%,
+      rgba(240, 200, 96, 0.26) 35%,
+      rgba(224, 176, 64, 0.30) 55%,
+      rgba(224, 176, 64, 0) 100%);
+
+  --statusbar-sheen-image: linear-gradient(90deg,
+      rgba(240, 200, 96, 0) 0%,
+      rgba(240, 200, 96, 0.36) 40%,
+      rgba(224, 176, 64, 0.40) 60%,
+      rgba(202, 138, 4, 0) 100%);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   结构性装饰：只有无法令牌化的部分留在这里（颜色一律走令牌）
+   ═══════════════════════════════════════════════════════════════ */
+.editor-content.theme-brocade h1 {
+  font-size: 2em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 1.5em 0 0.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 2px solid var(--hr-color);
+}
+.editor-content.theme-brocade h2 { font-size: 1.5em; font-weight: 600; margin: 1.3em 0 0.4em; }
+.editor-content.theme-brocade h3 { font-size: 1.25em; font-weight: 600; margin: 1.2em 0 0.3em; }
+.editor-content.theme-brocade p  { margin: 0 0 var(--paragraph-spacing); }

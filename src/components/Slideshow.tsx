@@ -13,6 +13,8 @@ import { buildTiles, delayFor, impulseVars, tileTotalDuration, tileConfigFor, TI
 import { useEditorStore } from '../stores/editorStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useI18n } from '../i18n'
+import { CUSTOM_THEME, readUserCss } from '../lib/themeLoader'
+import { normalizeUserCss } from '../lib/userCss'
 import '../styles/slideshow.css'
 
 function escapeHtml(s: string): string {
@@ -74,6 +76,9 @@ export default function Slideshow({
   const [themes, setThemes] = useState<string[]>([])
   const [themeMeta, setThemeMeta] = useState<Record<string, { name: string }>>({})
   const [themeMenuOpen, setThemeMenuOpen] = useState(false)
+  // 「自定义主题」= 基底主题 + user.css（见 lib/themeLoader.ts）；user.css 非空时菜单里才有它
+  const customCssBase = useSettingsStore((s) => s.customCssBase)
+  const [hasUserCss, setHasUserCss] = useState(false)
   const deckRef = useRef<HTMLDivElement>(null)
 
   // 退出相关
@@ -550,6 +555,7 @@ export default function Slideshow({
     tauri.invoke('read_theme_json').then((json: string) => {
       try { setThemeMeta(JSON.parse(json || '{}')) } catch {}
     }).catch(() => {})
+    readUserCss().then((c) => setHasUserCss(!!c.trim())).catch(() => {})
   }, [])
 
   // 主题继承：只取主题 CSS 的 :root.theme-* 变量定义块，改写为
@@ -558,12 +564,24 @@ export default function Slideshow({
   // 丢弃所有元素规则（.theme-x h1 / .editor-content.theme-x 等），因为部分主题用
   // 未加作用域的选择器（如 .theme-lychee h1）会漏进幻灯片覆盖版式字号/对齐；
   // 幻灯片的字号/对齐/居中一律由 slideshow.css 控制，配色仅通过 CSS 变量继承。
+  // 「自定义主题」= 基底主题 + user.css：基底变量块 + user.css 的变量块（归一到 custom）。
   useEffect(() => {
     const tauri = (window as any).__TAURI_INTERNALS__
     if (!tauri?.invoke) return
-    tauri.invoke('read_theme_css', { name: `${theme}.css` }).then((themeCss: string) => {
+    const isCustom = theme === CUSTOM_THEME
+    const baseName = isCustom ? (customCssBase || 'liquidglass-prism') : theme
+    tauri.invoke('read_theme_css', { name: `${baseName}.css` }).then(async (themeCss: string) => {
       if (!themeCss) return
-      const vars = themeCss
+      // user.css 的变量块（:root / :root.theme-*）也要进幻灯片 —— 它定义的变量
+      // 会覆盖基底主题的；元素规则照旧丢弃（幻灯片版式由 slideshow.css 全权控制）
+      const userRaw = isCustom ? await readUserCss().catch(() => '') : ''
+      const userVars = userRaw
+        ? normalizeUserCss(userRaw, CUSTOM_THEME)
+            .split('}')
+            .filter((part) => /^[^{}]*:root\.theme-/.test(part.slice(0, part.indexOf('{'))))
+            .join('}')
+        : ''
+      const vars = (themeCss + userVars)
         .split('}')
         .filter((part) => /^[^{}]*:root\.theme-/.test(part.slice(0, part.indexOf('{'))))
         .join('}')
@@ -575,7 +593,7 @@ export default function Slideshow({
       if (!el) { el = document.createElement('style'); el.id = 'yizimarkdown-slideshow-theme-css'; document.head.appendChild(el) }
       el.textContent = vars
     }).catch(() => {})
-  }, [theme])
+  }, [theme, customCssBase])
 
   // 卸载时清理注入的主题样式
   useEffect(() => () => {
@@ -809,6 +827,16 @@ export default function Slideshow({
         <>
           <div className="ys-dismiss" onClick={() => setThemeMenuOpen(false)} />
           <div className="ys-theme-menu">
+            {/* 「自定义主题」= 基底主题 + user.css，user.css 非空时才出现在菜单里 */}
+            {hasUserCss && (
+              <button
+                className={CUSTOM_THEME === theme ? 'ys-theme-active' : ''}
+                onClick={() => { setTheme(CUSTOM_THEME); setThemeMenuOpen(false) }}
+              >
+                {CUSTOM_THEME === theme && <Check size={13} />}
+                {t('settings.customTheme')}
+              </button>
+            )}
             {themes.map((file) => {
               const id = file.replace(/\.css$/, '')
               const name = themeMeta[id]?.name || (id === 'academic' ? t('slideshow.academic') : id)

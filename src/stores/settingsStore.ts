@@ -33,6 +33,9 @@ export interface SettingsState {
   isDark: boolean
   userThemeEnabled: boolean
   userThemeName: string
+  /** 「自定义主题」的基底主题：保存自定义 CSS 时快照当时的当前主题（见 lib/themeLoader.ts）。
+   *  有了它，「在织锦上只改一个强调色」得到的才是「织锦 + 新色」而不是「默认底 + 新色」。 */
+  customCssBase: string
 
   // 实时模式动画
   liveAnimationMode: 'blur' | 'flash' | 'glow' | 'ripple'
@@ -115,6 +118,7 @@ export const useSettingsStore = create<SettingsState>()(
       isDark: false,
       userThemeEnabled: false,
       userThemeName: '',
+      customCssBase: DEFAULT_THEME,
 
       // 实时模式动画
       liveAnimationMode: 'blur',
@@ -160,7 +164,8 @@ export const useSettingsStore = create<SettingsState>()(
       // v2/v3: 涟漪反馈默认开启
       // v4: WebDAV 起始目录默认值改为 /yizimarkdown
       // v5: 默认主题改为 liquidglass-prism，旧的 liquidglass 主题已删除
-      version: 5,
+      // v6: 自定义 CSS 升级为「自定义主题」——新增基底主题 customCssBase
+      version: 6,
       migrate: (persisted: unknown) => {
         // 自动迁移旧字体栈到 MiSans 方案
         const oldFont = "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
@@ -183,6 +188,11 @@ export const useSettingsStore = create<SettingsState>()(
           // 否则 read_theme_css 会取不到文件、主题整块空白。
           // 只动这一种被删掉的值，用户明确选过的其它主题一概不动。
           if (state.currentTheme === 'liquidglass') state.currentTheme = DEFAULT_THEME
+          // v6：新增基底主题字段。存量存档没有它 ⇒ 补默认值（旧行为的 user.css 是全局叠加，
+          // 没有「基底」概念，取默认主题是最接近的语义）。
+          if (typeof state.customCssBase !== 'string' || !state.customCssBase) {
+            state.customCssBase = DEFAULT_THEME
+          }
         }
         return state
       },
