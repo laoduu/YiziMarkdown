@@ -1,15 +1,19 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Sun, Moon, Palette, Check, X, ListOrdered, Sparkles } from 'lucide-react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { Sun, Moon, Palette, Check, X, ListOrdered, Sparkles, Type } from 'lucide-react'
 import { renderMarkdown } from '../lib/markdownRenderer'
 import { extendMarkdownIt, postRender as pluginPostRender } from '../plugins/registry'
 import {
-  stripFrontMatter, parseFrontMatter, splitSlides, extractNotes, extractDirectives,
-  detectLayout, type SlideKind, type SlideLayout,
+  stripFrontMatter, parseFrontMatter, splitSlides, splitColumns, extractNotes, extractDirectives,
+  detectLayout, COLUMN_BREAK, type SlideKind, type SlideLayout,
 } from '../lib/slides'
 import { orderThemes } from '../lib/themeOrder'
 import { enterFullscreen, exitFullscreen, toggleFullscreen } from '../lib/fullscreen'
 import { resolveLocalImageSrc } from '../lib/localImages'
 import { buildTiles, delayFor, impulseVars, tileTotalDuration, tileConfigFor, TILE_ANIM_IDS, TILE_VARIANTS, type SlideAnim } from '../lib/slideTiles'
+import {
+  SLIDE_FONT_WEIGHTS, SLIDE_FONT_SCALE, SLIDE_FILL,
+  DEFAULT_SLIDE_TYPOGRAPHY, slideTypographyVars, type SlideFontId,
+} from '../lib/slideTypography'
 import { useEditorStore } from '../stores/editorStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useI18n } from '../i18n'
@@ -30,6 +34,12 @@ interface Slide {
   align?: 'left' | 'center' | 'right'
   /** 该页顶层列表是否参与片段逐步显示（版式 + deck/页级 fragments 指令共同决定） */
   fragmentEligible: boolean
+  /** 分栏（页内 `***` 分隔）：栏数；未分栏时 undefined（= 1 栏） */
+  columns?: number
+  /** 各栏 Markdown 源，仅 columns >= 2 时存在（长度 === columns） */
+  colParts?: string[]
+  /** 页标题（页内第一个标题块）：整页渲染在分栏之上，不参与分栏 */
+  colIntro?: string
 }
 
 interface SlideshowProps {
@@ -45,6 +55,13 @@ interface SlideshowProps {
 /** 页面元素的状态类：瓷砖转场克隆整页时必须滤掉，否则克隆会命中
  *  ys-past/ys-future（opacity:0 + hidden）或 ys-leaving 等状态规则而变空。 */
 const SLIDE_STATE_CLASSES = new Set(['ys-active', 'ys-past', 'ys-future', 'ys-leaving'])
+
+/** 片段 = 顶层列表的直接子 li。分栏页多包一层 .ys-cols > .ys-col，
+ *  同一条选择器在两处使用（打标记 / HUD 开关即时生效），写成常量防止漏改。 */
+const FRAGMENT_ITEM_SELECTOR = [
+  ':scope > ul > li', ':scope > ol > li',
+  ':scope > .ys-cols > .ys-col > ul > li', ':scope > .ys-cols > .ys-col > ol > li',
+].join(', ')
 
 export default function Slideshow({
   content,
@@ -119,8 +136,26 @@ export default function Slideshow({
   // 切换动画：持久化在 settingsStore（zustand persist → localStorage），
   // 下次进入演示模式沿用上次的选择；类挂在 .ys-deck 上（ys-anim-*）
   const anim = useSettingsStore((s) => s.slideAnim)
-  const setSlideAnim = useSettingsStore((s) => s.setField)
+  const setSlideSetting = useSettingsStore((s) => s.setField)
   const [animMenuOpen, setAnimMenuOpen] = useState(false)
+
+  // 演示排版旋钮（字体 / 字重 / 字号 / 页边距）：与 slideAnim 一样持久化在 settingsStore，
+  // 值 → CSS 变量的映射在 lib/slideTypography.ts（纯函数，见 tests/slideTypography.test.ts）。
+  // 变量写成 .yizi-slideshow 根节点的**行内变量**（而非 documentElement）：作用域限定在
+  // 演示子树、退出演示自动失效、不污染预览/编辑器。
+  const [typeMenuOpen, setTypeMenuOpen] = useState(false)
+  const slideFontFamily = useSettingsStore((s) => s.slideFontFamily)
+  const slideFontWeight = useSettingsStore((s) => s.slideFontWeight)
+  const slideFontScale = useSettingsStore((s) => s.slideFontScale)
+  const slideFillWidth = useSettingsStore((s) => s.slideFillWidth)
+  const slideFillHeight = useSettingsStore((s) => s.slideFillHeight)
+  const typographyVars = slideTypographyVars({
+    fontFamily: slideFontFamily,
+    fontWeight: slideFontWeight,
+    fontScale: slideFontScale,
+    fillWidth: slideFillWidth,
+    fillHeight: slideFillHeight,
+  })
 
   /**
    * 演示标题：**front matter 的 `title` 优先**，没有才用文档名（`title` 属性）。
@@ -138,14 +173,29 @@ export default function Slideshow({
     return splitSlides(body).map((src) => {
       const { body: b, notes } = extractNotes(src)
       const { body: b2, directives } = extractDirectives(b)
-      const layout: SlideLayout = detectLayout(b2)
+      // 分栏：`***` = 栏分隔（`---` = 页分隔，已在 splitSlides 消费）。
+      // 页内第一个标题块被抽成 intro（页标题），**不参与分栏** —— 否则标题会落进
+      // 第 1 栏，表现为「左栏带标题、右栏内容顶端高于标题」的错位。
+      // 版式推断用「intro + 各栏重拼」的源：标题仍是首块（cover/content-list 等
+      // 照旧命中），分隔行也不会变成干扰块；未分栏时直接用 b2，与之前逐字节一致。
+      const split = splitColumns(b2)
+      const hasColumns = split.parts.length > 1
+      const layoutSrc = hasColumns
+        ? [split.intro, ...split.parts].filter((s) => s.trim() !== '').join(`\n\n${COLUMN_BREAK}\n\n`)
+        : b2
+      const layout: SlideLayout = detectLayout(layoutSrc)
       const kind = directives.layout || layout.kind
       // 页级 fragments 指令可否决（off 强制不分段；未设置时跟随 HUD 开关）
       const pageFragments = directives.fragments === 'off' ? false
         : directives.fragments === 'on' ? true
         : true
       const fragmentEligible = pageFragments && FRAGMENT_KINDS.includes(kind)
-      return { src: b2, notes, kind, title: layout.title, align: directives.align, fragmentEligible }
+      return {
+        src: b2, notes, kind, title: layout.title, align: directives.align, fragmentEligible,
+        columns: hasColumns ? split.parts.length : undefined,
+        colParts: hasColumns ? split.parts : undefined,
+        colIntro: hasColumns && split.intro ? split.intro : undefined,
+      }
     })
   }, [content])
 
@@ -158,7 +208,17 @@ export default function Slideshow({
     const cache = htmlCacheRef.current
     let html = cache.get(index)
     if (html === undefined) {
-      html = renderMarkdown(slide.src, pluginExtenders)
+      const parts = slide.colParts
+      html = parts
+        // 分栏：每栏各自渲染（各栏的 mermaid / 公式 / 本地图片由 processSection 统一后处理，
+        // 作用域是整页 section ⇒ 栏内元素同样被覆盖）；栏数经 --ys-cols 下发（CSS 见 .ys-cols）。
+        // 页标题（colIntro）**不包 div**、直接作为 .ys-slide 的直接子元素 ——
+        // 这样 `.ys-slide > :first-child` 与各版式的 h2 规则仍能命中它，
+        // 标题的整页样式（含下划线装饰）与不分栏时完全一致。
+        ? `${slide.colIntro ? renderMarkdown(slide.colIntro, pluginExtenders) : ''}<div class="ys-cols" style="--ys-cols:${parts.length}">${
+            parts.map((p) => `<div class="ys-col">${renderMarkdown(p, pluginExtenders)}</div>`).join('')
+          }</div>`
+        : renderMarkdown(slide.src, pluginExtenders)
       // 封面页：拼接 front matter 提供的作者/日期 meta 行
       if (slide.kind === 'cover' && slideMetaRef.current.author) {
         const meta = slideMetaRef.current
@@ -404,6 +464,11 @@ export default function Slideshow({
 
   const onKey = useCallback((e: KeyboardEvent) => {
     const k = e.key
+    // 排版面板里的 select / 滑杆需要方向键（改值），不能被翻页快捷键抢走；
+    // 但 Escape 必须放行 —— 关闭浮层是演示模式的强预期（见下面的分支）。
+    const el = e.target as HTMLElement | null
+    const typing = !!el && (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA')
+    if (typing && k !== 'Escape') return
     if (['ArrowRight', ' ', 'PageDown', 'Enter'].includes(k)) {
       e.preventDefault(); next(); return
     }
@@ -430,10 +495,13 @@ export default function Slideshow({
     if (k === 's' || k === 'S') { e.preventDefault(); setShowNotes((x) => !x); return }
     if (k === '?') { e.preventDefault(); setShowHelp((x) => !x); return }
     if (k === 'Escape') {
+      if (typeMenuOpen) { setTypeMenuOpen(false); return }
+      if (animMenuOpen) { setAnimMenuOpen(false); return }
+      if (themeMenuOpen) { setThemeMenuOpen(false); return }
       if (showHelp) { setShowHelp(false); return }
       requestExit()
     }
-  }, [next, prev, slides.length, requestExit, showHelp, REVEAL_ALL, goTo])
+  }, [next, prev, slides.length, requestExit, showHelp, REVEAL_ALL, goTo, typeMenuOpen, animMenuOpen, themeMenuOpen])
 
   useEffect(() => {
     window.addEventListener('keydown', onKey)
@@ -444,18 +512,29 @@ export default function Slideshow({
   const wheelLockRef = useRef(false)
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
+      // 鼠标在浮层/面板上滚轮：不翻页（否则拖滑杆/翻主题列表时页面会乱翻）
+      const tgt = e.target
+      if (tgt instanceof Element && tgt.closest('.ys-hud-panel, .ys-theme-menu')) return
       if (Math.abs(e.deltaY) < 8) return
       const deck = deckRef.current
       const active = deck?.querySelector<HTMLElement>('.ys-slide.ys-active')
       if (!active) return
-      const canScroll = active.scrollHeight > active.clientHeight + 4
+      // ⚠️ 内边距也计入 scrollHeight：HUD「内容填充高度」会把上下内边距做得很大
+      // （如 50% ⇒ 上下各 25vh）。此时即使内容已完整显示，scrollHeight 仍比
+      // clientHeight 大，于是 canScroll 为真、atBottom 为假 ⇒ 滚轮只滚那段
+      // **空白内边距**而不翻页。所以滚动到底要按「内容底部对齐视口底部」判断：
+      // 扣掉底部内边距才是真实可滚动量（多出的那段只通向空白）。
+      const padBottom = parseFloat(getComputedStyle(active).paddingBottom) || 0
+      const maxScroll = Math.max(0, active.scrollHeight - padBottom - active.clientHeight)
+      const canScroll = maxScroll > 4
       const atTop = active.scrollTop <= 4
-      const atBottom = active.scrollTop + active.clientHeight >= active.scrollHeight - 4
+      const atBottom = active.scrollTop >= maxScroll - 4
       if (e.deltaY > 0) {
         // 向下：内容未滚到底 → 滚动内容；到底 → 下一页
         if (canScroll && !atBottom) {
           e.preventDefault()
-          active.scrollBy(0, e.deltaY)
+          // 夹到 maxScroll：不越过「内容底部对齐视口底部」那条线，避免滚进空白内边距
+          active.scrollBy(0, Math.min(e.deltaY, maxScroll - active.scrollTop))
           return
         }
         if (wheelLockRef.current) return
@@ -653,7 +732,7 @@ export default function Slideshow({
     //    HUD 运行时开关关闭时不打标记（列表整页显示）；重新开启时由
     //    fragmentsOn effect 对当前页补打标记。
     if (slide.fragmentEligible && fragmentsOn) {
-      section.querySelectorAll<HTMLElement>(':scope > ul > li, :scope > ol > li').forEach((li) => {
+      section.querySelectorAll<HTMLElement>(FRAGMENT_ITEM_SELECTOR).forEach((li) => {
         li.setAttribute('data-fragment', '')
       })
     }
@@ -685,7 +764,7 @@ export default function Slideshow({
     const active = deck?.querySelector<HTMLElement>('.ys-slide.ys-active')
     if (!active) return
     if (fragmentsOn) {
-      active.querySelectorAll<HTMLElement>(':scope > ul > li, :scope > ol > li').forEach((li) => {
+      active.querySelectorAll<HTMLElement>(FRAGMENT_ITEM_SELECTOR).forEach((li) => {
         li.setAttribute('data-fragment', '')
         li.classList.remove('ys-fragment-visible')
       })
@@ -698,7 +777,7 @@ export default function Slideshow({
   }, [fragmentsOn, h])
 
   return (
-    <div className={`yizi-slideshow theme-${theme}${dark ? ' dark' : ''}`}>
+    <div className={`yizi-slideshow theme-${theme}${dark ? ' dark' : ''}`} style={typographyVars as CSSProperties}>
       {/* 退出按钮：鼠标活动时显示 */}
       <button
         className="ys-exit-btn"
@@ -715,6 +794,7 @@ export default function Slideshow({
           const active = i === h
           const past = i < h
           const classes = ['ys-slide', `ys-layout-${slide.kind}`]
+          if (slide.columns) classes.push('ys-has-cols')
           if (slide.align) classes.push(`ys-align-${slide.align}`)
           if (active) {
             classes.push('ys-active')
@@ -786,6 +866,13 @@ export default function Slideshow({
           >
             <Sparkles size={14} />
           </button>
+          <button
+            className="ys-icon-btn"
+            title={t('slideshow.toggleTypography')}
+            onClick={(e) => { e.currentTarget.blur(); setTypeMenuOpen((o) => !o) }}
+          >
+            <Type size={14} />
+          </button>
         </div>
         <span className="ys-hint">{t('slideshow.hintBar')}</span>
       </div>
@@ -812,12 +899,95 @@ export default function Slideshow({
               <button
                 key={id}
                 className={anim === id ? 'ys-theme-active' : ''}
-                onClick={() => { setSlideAnim('slideAnim', id); setAnimMenuOpen(false) }}
+                onClick={() => { setSlideSetting('slideAnim', id); setAnimMenuOpen(false) }}
               >
                 {anim === id && <Check size={13} />}
                 {label}
               </button>
             ))}
+          </div>
+        </>
+      )}
+
+      {/* 演示排版菜单：字体 / 字重 / 字号 / 页边距（持久化，下次进入演示沿用） */}
+      {typeMenuOpen && (
+        <>
+          <div className="ys-dismiss" onClick={() => setTypeMenuOpen(false)} />
+          <div className="ys-hud-panel">
+            <div className="ys-hud-panel-title">{t('slideshow.typographyTitle')}</div>
+
+            <label className="ys-hud-row">
+              <span>{t('slideshow.fontFamily')}</span>
+              <select
+                className="ys-hud-select"
+                value={slideFontFamily}
+                onChange={(e) => setSlideSetting('slideFontFamily', e.target.value as SlideFontId)}
+              >
+                <option value="default">{t('slideshow.fontDefault')}</option>
+                <option value="sans">{t('slideshow.fontSans')}</option>
+                <option value="serif">{t('slideshow.fontSerif')}</option>
+                <option value="mono">{t('slideshow.fontMono')}</option>
+              </select>
+            </label>
+
+            <div className="ys-hud-row">
+              <span>{t('slideshow.fontWeight')}</span>
+              <div className="ys-hud-seg">
+                {SLIDE_FONT_WEIGHTS.map((w) => (
+                  <button
+                    key={w}
+                    className={slideFontWeight === w ? 'ys-hud-seg-btn ys-active' : 'ys-hud-seg-btn'}
+                    onClick={(e) => { e.currentTarget.blur(); setSlideSetting('slideFontWeight', w) }}
+                  >
+                    {w}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <label className="ys-hud-row ys-hud-row-col">
+              <span>{t('slideshow.fontSize', { n: Math.round(slideFontScale * 100) })}</span>
+              <input
+                type="range" className="settings-range ys-hud-range"
+                min={SLIDE_FONT_SCALE.min} max={SLIDE_FONT_SCALE.max} step={SLIDE_FONT_SCALE.step}
+                value={slideFontScale}
+                onChange={(e) => setSlideSetting('slideFontScale', Number(e.target.value))}
+              />
+            </label>
+
+            <label className="ys-hud-row ys-hud-row-col">
+              <span>{t('slideshow.fillWidth', { n: Math.round(slideFillWidth) })}</span>
+              <input
+                type="range" className="settings-range ys-hud-range"
+                min={SLIDE_FILL.min} max={SLIDE_FILL.max} step={SLIDE_FILL.step}
+                value={slideFillWidth}
+                onChange={(e) => setSlideSetting('slideFillWidth', Number(e.target.value))}
+              />
+            </label>
+
+            <label className="ys-hud-row ys-hud-row-col">
+              <span>{t('slideshow.fillHeight', { n: Math.round(slideFillHeight) })}</span>
+              <input
+                type="range" className="settings-range ys-hud-range"
+                min={SLIDE_FILL.min} max={SLIDE_FILL.max} step={SLIDE_FILL.step}
+                value={slideFillHeight}
+                onChange={(e) => setSlideSetting('slideFillHeight', Number(e.target.value))}
+              />
+            </label>
+
+            <button
+              className="ys-hud-reset"
+              onClick={(e) => {
+                e.currentTarget.blur()
+                setSlideSetting('slideFontFamily', DEFAULT_SLIDE_TYPOGRAPHY.fontFamily)
+                setSlideSetting('slideFontWeight', DEFAULT_SLIDE_TYPOGRAPHY.fontWeight)
+                setSlideSetting('slideFontScale', DEFAULT_SLIDE_TYPOGRAPHY.fontScale)
+                setSlideSetting('slideFillWidth', DEFAULT_SLIDE_TYPOGRAPHY.fillWidth)
+                setSlideSetting('slideFillHeight', DEFAULT_SLIDE_TYPOGRAPHY.fillHeight)
+              }}
+            >
+              {t('common.restoreDefault')}
+            </button>
           </div>
         </>
       )}
@@ -874,6 +1044,7 @@ export default function Slideshow({
             <p className="ys-card-foot">
               {t('slideshow.helpFragments')}
               {t('slideshow.helpLayouts')}
+              {t('slideshow.helpColumns')}
               {t('slideshow.helpText1')}
               {t('slideshow.helpText2')}
               {t('slideshow.helpText3')}
@@ -893,7 +1064,8 @@ export default function Slideshow({
         </div>
       )}
 
-      <div className="ys-title">{docTitle}</div>
+      {/* 超长文档名被 .ys-title 的单行省略号截断 ⇒ 悬停可看完整值 */}
+      <div className="ys-title" title={docTitle}>{docTitle}</div>
     </div>
   )
 }

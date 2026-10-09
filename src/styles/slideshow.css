@@ -50,11 +50,21 @@
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-  padding: 8vh 9vw;
+  /* 内容区占比（HUD「内容填充宽度 / 高度」）：--ys-fill-w/h 是**小数**占比（0.50~0.95），
+     由 slideshow.css 这里的 padding 把「内容区」收缩成整屏的对应比例。
+     默认 0.82 / 0.84 ⇒ 左右 9vw、上下 8vh，与加入该旋钮前逐像素一致。
+     ⚠️ 用 vw/vh 而不是 %：padding 的纵向百分比是按**宽度**解析的，拿不到高度占比。 */
+  padding: calc(50vh * (1 - var(--ys-fill-h, 0.84))) calc(50vw * (1 - var(--ys-fill-w, 0.82)));
   overflow: auto;
-  font-size: clamp(18px, 2.1vw, 30px);
+  /* 字号：clamp 的下限/上限整体乘缩放系数 —— 保持"窗口越大字号越大"，只换档位 */
+  font-size: clamp(calc(18px * var(--ys-font-scale, 1)), calc(2.1vw * var(--ys-font-scale, 1)), calc(30px * var(--ys-font-scale, 1)));
   line-height: 1.7;
   text-align: left;
+  /* 内容字体 / 字重：默认值来自 globals.css 的 --ys-*（= 预览字体 / 400），HUD 可覆盖。
+     只写在 .ys-slide 上（而不是根节点）—— HUD / 页脚 / 备注面板属于界面外壳，
+     不该跟随"内容字体"旋钮。 */
+  font-family: var(--ys-font-family, var(--font-preview, var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif)));
+  font-weight: var(--ys-font-weight, 400);
   /* ===== "新页加载"动画模型 =====
      新页（incoming/active）：z-index 提到最上层，播放入场动画——
      滑入 / 淡入 / 缩放浮现 / 碎块聚合 / 百叶窗展开 / 立方体旋入。
@@ -634,9 +644,12 @@
   animation-name: ys-cube-out-back;
 }
 
-/* 正文块宽度：块在页面中居中；文字默认左对齐，列表/引用/表格内保持左对齐 */
+/* 正文块宽度：块在页面中居中；文字默认左对齐，列表/引用/表格内保持左对齐。
+   上限原为 66rem —— 现改为 100%：内容宽度由 HUD「内容填充宽度」**唯一**决定
+   （--ys-fill-w 收缩 .ys-slide 的内边距）。留着的 rem 上限会压过填充比例，
+   在宽窗口上让滑块完全看不出变化（这正是「调页边距没效果」的根因）。 */
 .ys-slide > * {
-  max-width: 66rem;
+  max-width: 100%;
   width: 100%;
   margin-left: auto;
   margin-right: auto;
@@ -777,7 +790,13 @@
   margin-right: 0.45em;
 }
 
-/* 代码 */
+/* 代码（行内）：必须能折行 —— issue #5
+   `"{:=^20}".format("python")` 这类**无断点的 token** 会形成单个不可断的行盒，
+   在 .ys-slide{overflow:auto} + .yizi-slideshow{overflow:hidden} 下表现为"被截断"。
+   取值与预览侧主题规则逐字一致（themes/liquidglass-prism.css 的
+   `.editor-content.theme-* code`），保证预览/演示观感一致；
+   box-decoration-break: clone 让折行后每行都带完整内边距与圆角。
+   注：不要写 max-width —— 对 inline 盒无意义，这里靠折行而非裁切。 */
 .ys-slide code {
   background: color-mix(in srgb, var(--editor-accent, #4f46e5) 10%, var(--editor-surface, rgba(128, 128, 128, 0.12)));
   color: var(--editor-accent, #4f46e5);
@@ -787,6 +806,10 @@
   font-size: 0.85em;
   font-weight: 500;
   font-family: var(--font-mono, ui-monospace, 'SF Mono', Consolas, monospace);
+  word-break: break-all;
+  overflow-wrap: break-word;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
 .ys-slide pre {
@@ -795,6 +818,7 @@
   padding: 1.4em 1.6em;
   border-radius: 12px;
   overflow-x: auto;
+  max-width: 100%;   /* 分栏/栅格内也能正常横向滚动，而不是撑破容器 */
   font-size: 0.72em;
   line-height: 1.6;
   text-align: left;   /* 代码块居中，内部内容左对齐 */
@@ -807,6 +831,24 @@
   display: block;
   border: none;
   font-weight: 400;
+  /* 上面的 .ys-slide code 折行规则会连带命中代码块内的 code（选择器更宽）。
+     代码块按"横向滚动"处理（见 .ys-slide pre{overflow-x:auto}）：显式复位，
+     否则长代码行会变成折行、行号和缩进全部错位。 */
+  white-space: pre;
+  word-break: normal;
+  overflow-wrap: normal;
+  -webkit-box-decoration-break: slice;
+  box-decoration-break: slice;
+}
+
+/* 长 URL / 无断点长 token 的纯文本同样会溢出页面（与行内代码同一根因）。
+   只影响"真的放不下"的情形，正常排版逐像素不变（break-word 不做 break-all）。 */
+.ys-slide p,
+.ys-slide li,
+.ys-slide blockquote,
+.ys-slide th,
+.ys-slide td {
+  overflow-wrap: break-word;
 }
 
 /* 引用 */
@@ -901,7 +943,7 @@
 .ys-layout-cover > :not(:first-child):not(.ys-cover-meta) {
   font-size: 1.12em;
   color: var(--sidebar-text, inherit);
-  max-width: 42rem;
+  max-width: 100%;
   margin: 0.35em auto 0;
 }
 
@@ -991,7 +1033,7 @@
   list-style: none;
   padding: 0;
   margin: 0 auto;
-  max-width: 56rem;
+  max-width: 100%;
   counter-reset: ys-agenda;
 }
 
@@ -1019,7 +1061,8 @@
 /* ---- 内容页：标题左上 + 强调下划线，正文左对齐 ---- */
 .ys-layout-content {
   justify-content: flex-start;
-  padding-top: 10vh;
+  /* 正文整体下压一点（原 10vh）：跟随「内容填充高度」缩放，默认值下仍等于 10vh */
+  padding-top: calc(50vh * (1 - var(--ys-fill-h, 0.84)) + 2vh);
 }
 
 .ys-layout-content > * {
@@ -1045,13 +1088,14 @@
 
 .ys-layout-content p,
 .ys-layout-content li {
-  max-width: 58rem;
+  max-width: 100%;
 }
 
 /* ---- 列表内容页：标题左上，列表强调 ---- */
 .ys-layout-content-list {
   justify-content: flex-start;
-  padding-top: 10vh;
+  /* 正文整体下压一点（原 10vh）：跟随「内容填充高度」缩放，默认值下仍等于 10vh */
+  padding-top: calc(50vh * (1 - var(--ys-fill-h, 0.84)) + 2vh);
 }
 
 .ys-layout-content-list h2 {
@@ -1074,13 +1118,14 @@
 .ys-layout-content-list ul,
 .ys-layout-content-list ol {
   font-size: 1.08em;
-  max-width: 54rem;
+  max-width: 100%;
 }
 
 /* ---- 数据表页：标题左上，表格强调表头 ---- */
 .ys-layout-table {
   justify-content: flex-start;
-  padding-top: 10vh;
+  /* 正文整体下压一点（原 10vh）：跟随「内容填充高度」缩放，默认值下仍等于 10vh */
+  padding-top: calc(50vh * (1 - var(--ys-fill-h, 0.84)) + 2vh);
 }
 
 .ys-layout-table h2 {
@@ -1112,7 +1157,8 @@
 /* ---- 路线图页：任务列表大勾选 ---- */
 .ys-layout-roadmap {
   justify-content: flex-start;
-  padding-top: 10vh;
+  /* 正文整体下压一点（原 10vh）：跟随「内容填充高度」缩放，默认值下仍等于 10vh */
+  padding-top: calc(50vh * (1 - var(--ys-fill-h, 0.84)) + 2vh);
 }
 
 .ys-layout-roadmap h2 {
@@ -1134,7 +1180,7 @@
 
 .ys-layout-roadmap ul {
   font-size: 1.08em;
-  max-width: 50rem;
+  max-width: 100%;
 }
 
 .ys-layout-roadmap input[type="checkbox"] {
@@ -1217,7 +1263,11 @@
   text-align: center;
   /* 大引号定位在文本块对角外侧，需留出空间且不被滚动容器裁剪 */
   overflow: visible;
-  padding: 8vh 11vw 14vh;
+  /* 与原 `8vh 11vw 14vh` 等价：上下多留 6vh（大引号空间）、左右多留 2vw，
+     并同样跟随「内容填充比例」缩放，否则金句页上该旋钮静默失效。 */
+  padding: calc(50vh * (1 - var(--ys-fill-h, 0.84)))
+    calc(50vw * (1 - var(--ys-fill-w, 0.82)) + 2vw)
+    calc(50vh * (1 - var(--ys-fill-h, 0.84)) + 6vh);
 }
 
 /* 去掉 blockquote 默认左边竖线、边距与灰化色（基础规则特异性更高，需显式覆盖） */
@@ -1235,7 +1285,7 @@
   font-weight: 500;
   font-style: normal;
   color: var(--editor-text, inherit);
-  max-width: 56rem;
+  max-width: 100%;
   margin-left: auto;
   margin-right: auto;
 }
@@ -1288,7 +1338,7 @@
 }
 
 .ys-layout-code > * {
-  max-width: 72rem;
+  max-width: 100%;
 }
 
 .ys-layout-code pre {
@@ -1301,7 +1351,7 @@
 }
 
 .ys-layout-chart > * {
-  max-width: 72rem;
+  max-width: 100%;
 }
 
 /* ---- 公式页：公式居中放大 ---- */
@@ -1314,6 +1364,62 @@
   font-size: 1.6em;
   margin: 1.5em 0;
   overflow-x: auto;
+}
+
+/* ===== 分栏（页内 `***` 分隔，见 lib/slides.ts splitColumns）=====
+   放在版式段**之后**是刻意的：max-width / 间距必须压过同特异性的
+   .ys-slide > *（同权重后者胜）与更高特异性的 .ys-layout-code > *。
+   栏数由 JS 生成 .ys-cols 时以行内变量 --ys-cols 下发（Slideshow.tsx getSlideHtml）。 */
+.ys-cols {
+  display: grid;
+  grid-template-columns: repeat(var(--ys-cols, 2), minmax(0, 1fr));
+  gap: 2.4vw;
+  align-items: start;
+  width: 100%;
+  max-width: none;   /* 页边距已提供呼吸空间；66rem 会把 3~4 栏压得过窄 */
+  margin: 0 auto;
+  text-align: left;
+}
+
+/* 每栏：min-width:0 是必须的 —— grid 项目默认 min-width:auto，
+   栏内一旦出现宽内容（长代码行 / 宽表格 / 长 URL），该栏会撑破网格溢出页面；
+   置 0 之后 pre 的 overflow-x:auto 才能正常接管横向滚动。 */
+.ys-cols > .ys-col {
+  min-width: 0;
+}
+
+/* 栏内块不再受"页级居中 + 66rem"影响：栏宽即内容宽 */
+.ys-cols > .ys-col > * {
+  max-width: none;
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* 分栏页的页面容器退回单列 flex：
+   figure 版式用 display:grid + `> *:not(:first-child){grid-column:2}` 定位子块，
+   而分栏页只有一个子块（.ys-cols）⇒ 不退回会被塞进 45/55 栅格的右半边，
+   再在右半边里分栏。这里只中和 display / 栅格定位，
+   各版式自身的 justify-content 与对齐覆盖继续生效。 */
+.ys-slide.ys-has-cols {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* 分栏页不使用"首块即主标题"类规则（cover/section/thanks/quote 的
+   `> :first-child` 放大与伪元素装饰）：分栏页首块是栏容器，不是内容。
+   (0,3,0) / (0,3,1) 均压过版式规则的 (0,2,0) / (0,2,1)。 */
+.ys-slide.ys-has-cols > .ys-cols {
+  font-size: 1em;
+  font-weight: inherit;
+  letter-spacing: normal;
+  text-align: left;
+}
+
+.ys-slide.ys-has-cols > .ys-cols::before,
+.ys-slide.ys-has-cols > .ys-cols::after {
+  content: none;   /* 关掉封面下划线 / 对角大引号等挂在"首块"上的装饰 */
 }
 
 /* ===== 对齐覆盖（<!-- align: left|center|right -->） ===== */
@@ -1509,6 +1615,115 @@
 .ys-theme-menu button.ys-theme-active {
   color: var(--editor-accent, #4f46e5);
   font-weight: 600;
+}
+
+/* ===== 演示排版面板（HUD 字体/字重/字号/页边距）=====
+   定位与 z-index 跟 .ys-theme-menu 一致，由 .ys-dismiss 遮罩负责点击外部关闭。
+   滑杆复用 globals.css 的 .settings-range。 */
+.ys-hud-panel {
+  position: fixed;
+  bottom: 48px;
+  right: 24px;
+  width: 268px;
+  padding: 10px 14px 12px;
+  background: var(--editor-surface, #ffffff);
+  border: 1px solid var(--editor-border, rgba(128, 128, 128, 0.3));
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  z-index: 180;
+  font-size: 12px;
+  color: var(--editor-text, inherit);
+  pointer-events: auto;
+}
+
+.ys-hud-panel-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--sidebar-text, rgba(128, 128, 128, 0.8));
+  margin-bottom: 8px;
+}
+
+.ys-hud-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 7px 0;
+}
+
+/* 滑杆行：标签在上、滑杆独占一行（拖拽命中区更大） */
+.ys-hud-row-col {
+  display: block;
+}
+
+.ys-hud-select {
+  background: var(--editor-bg, #ffffff);
+  color: var(--editor-text, inherit);
+  border: 1px solid var(--editor-border, rgba(128, 128, 128, 0.3));
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 12px;
+  font-family: inherit;
+  max-width: 150px;
+}
+
+.ys-hud-range {
+  margin-top: 5px;
+}
+
+/* 字重分段控件 */
+.ys-hud-seg {
+  display: flex;
+  border: 1px solid var(--editor-border, rgba(128, 128, 128, 0.3));
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.ys-hud-seg-btn {
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--editor-border, rgba(128, 128, 128, 0.25));
+  color: var(--editor-text, inherit);
+  font-family: inherit;
+  font-size: 11px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+.ys-hud-seg-btn:last-child {
+  border-right: none;
+}
+
+.ys-hud-seg-btn:hover {
+  background: var(--editor-hover, rgba(128, 128, 128, 0.15));
+}
+
+.ys-hud-seg-btn.ys-active {
+  color: var(--editor-accent, #4f46e5);
+  font-weight: 700;
+}
+
+.ys-hud-seg-btn:focus,
+.ys-hud-seg-btn:focus-visible {
+  outline: none;
+}
+
+.ys-hud-reset {
+  width: 100%;
+  margin-top: 10px;
+  padding: 5px 0;
+  background: var(--editor-surface, rgba(128, 128, 128, 0.12));
+  border: 1px solid var(--editor-border, rgba(128, 128, 128, 0.3));
+  border-radius: 6px;
+  color: var(--sidebar-text, rgba(128, 128, 128, 0.9));
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ys-hud-reset:hover {
+  background: var(--editor-hover, rgba(128, 128, 128, 0.2));
 }
 
 /* 标题（左上角） */

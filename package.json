@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && node scripts/check-tauri-args.mjs && node scripts/check-i18n.mjs --strict && node scripts/check-themes.mjs && vite build",
-    "test": "node --disable-warning=ExperimentalWarning --experimental-transform-types --test tests/remotePath.test.ts tests/slides.test.ts tests/slideTiles.test.ts tests/frontMatter.test.ts tests/liveBlocks.test.ts tests/themeOrder.test.ts tests/userCss.test.ts",
+    "test": "node --disable-warning=ExperimentalWarning --experimental-transform-types --test tests/remotePath.test.ts tests/slides.test.ts tests/slideTypography.test.ts tests/slideTiles.test.ts tests/frontMatter.test.ts tests/liveBlocks.test.ts tests/themeOrder.test.ts tests/userCss.test.ts",
     "check:invoke": "node scripts/check-tauri-args.mjs",
     "check:i18n": "node scripts/check-i18n.mjs",
     "check:i18n:strict": "node scripts/check-i18n.mjs --strict",

@@ -1,11 +1,11 @@
 {
-  "version": 4,
+  "version": 5,
   "skills": [
     {
       "id": "slides-outline",
       "name": "演示稿提炼",
       "summary": "把当前文档提炼为简洁的演示模式 Markdown",
-      "description": "将当前文档提炼为适合演示模式（幻灯片）的精简 Markdown：用 `---` 分页，每页一个要点，语言简练、句式短小，保留核心结论与数据，去掉冗余叙述。片段逐步显示默认关闭，用户要求分段演示时才开启。需要引用当前文档。",
+      "description": "将当前文档提炼为适合演示模式（幻灯片）的精简 Markdown：用 `---` 分页、`***` 分栏（仅用于并排对照页），每页一个要点，语言简练、句式短小，保留核心结论与数据，去掉冗余叙述。片段逐步显示默认关闭，用户明确要求分段演示时才开启。需要引用当前文档。",
       "file": "slides-outline.md",
       "needsDoc": true
     },
@@ -26,12 +26,12 @@
       "needsDoc": false
     },
     {
-  "id": "translate-fulltext",
-  "name": "全文翻译",
-  "summary": "将内容完整翻译为目标语言",
-  "description": "对用户提供的内容进行全文翻译：根据用户指定的或自动判断的目标语言，准确传达原意、语气与情感色彩，保留专有名词、技术术语的规范译法，保持原文风格与 Markdown 排版，代码与命令原样保留，直接输出翻译结果而不附加说明。",
-  "file": "translate-fulltext.md",
-  "needsDoc": true
-}
+      "id": "translate-fulltext",
+      "name": "全文翻译",
+      "summary": "将内容完整翻译为目标语言",
+      "description": "对用户提供的内容进行全文翻译：根据用户指定的或自动判断的目标语言，准确传达原意、语气与情感色彩，保留专有名词、技术术语的规范译法，保持原文风格与 Markdown 排版，代码与命令原样保留，直接输出翻译结果而不附加说明。",
+      "file": "translate-fulltext.md",
+      "needsDoc": true
+    }
   ]
 }

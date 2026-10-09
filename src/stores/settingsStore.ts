@@ -3,6 +3,10 @@ import { persist } from 'zustand/middleware'
 import type { SlideAnim } from '../lib/slideTiles'
 import type { FrontMatterPropType } from '../lib/frontMatter'
 import { DEFAULT_THEME } from '../lib/themeOrder.ts'
+import {
+  DEFAULT_SLIDE_TYPOGRAPHY, DEFAULT_SLIDE_FONT_WEIGHT, SLIDE_FONT_SCALE, SLIDE_FILL,
+  clampNumber, isSlideFontId, type SlideFontId,
+} from '../lib/slideTypography.ts'
 
 export interface SettingsState {
   // 通用
@@ -71,6 +75,19 @@ export interface SettingsState {
   // 演示模式（v0.3.1）
   /** 切换动画变体：在演示模式 HUD 里选择，立即持久化 */
   slideAnim: SlideAnim
+
+  // 演示模式排版（v0.3.3）：HUD 的「字体 / 字重 / 字号 / 内容填充宽度 / 高度」旋钮。
+  // 与 slideAnim 同一模式：在演示 HUD 里改、立即持久化、下次进入演示沿用。
+  // 取值语义与默认值见 lib/slideTypography.ts；缺省值下的渲染与加入旋钮前完全一致。
+  slideFontFamily: SlideFontId
+  /** 字重（100–900，默认 400）：只影响正文，标题自带字重不受影响 */
+  slideFontWeight: number
+  /** 字号缩放（0.7–1.6，默认 1）：乘在 clamp(18px, 2.1vw, 30px) 上 */
+  slideFontScale: number
+  /** 内容区宽度占整屏百分比（50–95，默认 82）：**唯一**的宽度依据 */
+  slideFillWidth: number
+  /** 内容区高度占整屏百分比（50–95，默认 84）：**唯一**的高度依据 */
+  slideFillHeight: number
 
   // 元信息属性（v0.3.2）
   /** front matter 属性类型：按**属性名**全局存（与 Obsidian 的 types.json 语义一致）。
@@ -147,6 +164,13 @@ export const useSettingsStore = create<SettingsState>()(
       // 演示模式（v0.3.1）
       slideAnim: 'cube',
 
+      // 演示模式排版（v0.3.3）
+      slideFontFamily: DEFAULT_SLIDE_TYPOGRAPHY.fontFamily,
+      slideFontWeight: DEFAULT_SLIDE_TYPOGRAPHY.fontWeight,
+      slideFontScale: DEFAULT_SLIDE_TYPOGRAPHY.fontScale,
+      slideFillWidth: DEFAULT_SLIDE_TYPOGRAPHY.fillWidth,
+      slideFillHeight: DEFAULT_SLIDE_TYPOGRAPHY.fillHeight,
+
       // 元信息属性（v0.3.2）：属性名 → 类型
       frontMatterTypes: {},
 
@@ -165,7 +189,9 @@ export const useSettingsStore = create<SettingsState>()(
       // v4: WebDAV 起始目录默认值改为 /yizimarkdown
       // v5: 默认主题改为 liquidglass-prism，旧的 liquidglass 主题已删除
       // v6: 自定义 CSS 升级为「自定义主题」——新增基底主题 customCssBase
-      version: 6,
+      // v7: 演示模式排版旋钮 —— 新增 slideFontFamily / slideFontWeight / slideFontScale / slidePadScale
+      // v8: 「页边距缩放」改为「内容填充宽度/高度」——删去 slidePadScale，新增 slideFillWidth / slideFillHeight
+      version: 8,
       migrate: (persisted: unknown) => {
         // 自动迁移旧字体栈到 MiSans 方案
         const oldFont = "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
@@ -193,6 +219,17 @@ export const useSettingsStore = create<SettingsState>()(
           if (typeof state.customCssBase !== 'string' || !state.customCssBase) {
             state.customCssBase = DEFAULT_THEME
           }
+          // v7：演示模式排版旋钮。存量存档没有这四个键 ⇒ 补默认值。
+          // 字体 id 只认枚举值（手改 localStorage 写入非法值会让 HUD 选择框空白）；
+          // 数值统一收敛到合法区间，避免滑杆越界后 UI 与渲染不一致。
+          if (!isSlideFontId(state.slideFontFamily)) state.slideFontFamily = DEFAULT_SLIDE_TYPOGRAPHY.fontFamily
+          state.slideFontWeight = clampNumber(state.slideFontWeight, 100, 900, DEFAULT_SLIDE_FONT_WEIGHT)
+          state.slideFontScale = clampNumber(state.slideFontScale, SLIDE_FONT_SCALE.min, SLIDE_FONT_SCALE.max, SLIDE_FONT_SCALE.default)
+          // v8：「页边距缩放」被「内容填充宽度/高度」取代 —— slidePadScale 已无消费点，
+          // 直接删掉（留着只会被 persist 反复写回存档）。新键收敛到 50~95。
+          delete (state as Record<string, unknown>).slidePadScale
+          state.slideFillWidth = clampNumber(state.slideFillWidth, SLIDE_FILL.min, SLIDE_FILL.max, SLIDE_FILL.defaultW)
+          state.slideFillHeight = clampNumber(state.slideFillHeight, SLIDE_FILL.min, SLIDE_FILL.max, SLIDE_FILL.defaultH)
         }
         return state
       },

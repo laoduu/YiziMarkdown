@@ -13,6 +13,8 @@
  *       `<!-- layout: xxx -->`      显式指定版式，覆盖自动推断（非法值忽略并回落推断）
  *       `<!-- align: xxx -->`       显式指定对齐方向（left / center / right）
  *       `<!-- fragments: off -->`   关闭该页片段逐步显示（on 恢复）
+ *   - 分栏：页内**单独成行的 `***`**（标准主题分割线）= 栏分隔，与 `---` = 分页配对。
+ *     页内第一个标题块视为**页标题**，不参与分栏（见 splitColumns）。
  *   - 文档顶部 front matter（首个 `--- ... ---` 块）自动剥离：
  *     可提供 title/author/date 供封面页展示；`slideshow-fragments: off`
  *     可整副关闭片段逐步显示（默认开）。不会成为一页幻灯片。
@@ -66,6 +68,81 @@ export function splitSlides(src: string, hor = '---'): string[] {
   // 去掉开头的空页（防 front matter 残留的防御性处理）
   if (slides.length > 1 && slides[0].trim() === '') slides.shift()
   return slides
+}
+
+/** 分栏分隔标记：单独成行的标准主题分割线 `***`
+ *  （`---` 已被 splitSlides 用作分页；`___` / `- - -` 仍是普通分隔线 → <hr>） */
+export const COLUMN_BREAK = '***'
+
+/** 分栏上限：超过则把后续各栏并入最后一栏（一页切太多栏没人看得清）。 */
+export const MAX_COLUMNS = 4
+
+/** 分栏结果：页标题（不参与分栏）+ 各栏正文 */
+export interface ColumnSplit {
+  /** 页标题：页内**第一个标题块**（ATX `#`~`######`）。单独整页渲染，不参与分栏；
+   *  无标题时为空串。为什么必须抽出来 —— 否则标题会落进第 1 栏，
+   *  表现为「左栏带标题、右栏内容顶端高于标题」的错位观感。 */
+  intro: string
+  /** 各栏 Markdown 源；**长度 1 = 未分栏** */
+  parts: string[]
+}
+
+/** 取出页内第一个标题块（ATX 标题单行成块），返回 { intro, body } */
+function splitLeadingHeading(src: string): { intro: string; body: string } {
+  const lines = src.split(/\r?\n/)
+  let i = 0
+  // 跳过前导空行
+  while (i < lines.length && lines[i].trim() === '') i++
+  // 不做 fence 判断：页首第一个非空行若是围栏（```）就不可能是 ATX 标题
+  if (i >= lines.length || !/^#{1,6}\s/.test(lines[i].trim())) return { intro: '', body: src }
+  const intro = lines[i].trim()
+  // 标题行之后的内容：丢掉紧随其后的空行，避免首栏内容以换行开头
+  const rest = lines.slice(i + 1)
+  while (rest.length && rest[0].trim() === '') rest.shift()
+  return { intro, body: rest.join('\n') }
+}
+
+/**
+ * 按 `***`（单独成行）把一页切成多栏。
+ *   - 与 splitSlides 对称：fence 感知（``` 内的 `***` 是内容）、逐字匹配（行内只有 `***`）。
+ *   - **页内第一个标题块会被抽成 `intro`**（页标题），不参与分栏 —— 见 ColumnSplit。
+ *   - 空栏（连续两个 `***`）被丢弃；**parts 长度 1 = 未分栏**。
+ *   - 超过 max：保留前 max-1 栏，其余并入最后一栏并 console.warn
+ *     （与 extractDirectives 的 warn 风格一致）—— 任何内容都不会被丢弃。
+ */
+export function splitColumns(src: string, max = MAX_COLUMNS): ColumnSplit {
+  if (!src) return { intro: '', parts: [''] }
+  const { intro, body } = splitLeadingHeading(src)
+  const lines = body.split(/\r?\n/)
+  const parts: string[] = []
+  let buf: string[] = []
+  let inFence = false
+  const reCol = new RegExp(`^${esc(COLUMN_BREAK)}\\s*$`)
+
+  const push = () => {
+    // 只去掉首尾**空行**（不动行首缩进 —— 缩进的代码块/嵌套列表是合法内容）
+    while (buf.length && buf[0].trim() === '') buf.shift()
+    while (buf.length && buf[buf.length - 1].trim() === '') buf.pop()
+    const s = buf.join('\n')
+    if (s !== '') parts.push(s)
+    buf = []
+  }
+
+  for (const line of lines) {
+    if (/^```/.test(line)) inFence = !inFence
+    if (!inFence && reCol.test(line)) push()
+    else buf.push(line)
+  }
+  push()
+
+  if (!parts.length) return { intro, parts: [''] }
+
+  if (parts.length <= max) return { intro, parts }
+
+  console.warn(`[slideshow] 分栏数 ${parts.length} 超过上限 ${max}，已把后续内容并入第 ${max} 栏。`)
+  const head = parts.slice(0, max - 1)
+  head.push(parts.slice(max - 1).join('\n\n'))
+  return { intro, parts: head }
 }
 
 export interface NotesResult {
@@ -152,6 +229,9 @@ export type BlockType =
   | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
   | 'p' | 'ul' | 'ol' | 'task' | 'quote' | 'table'
   | 'image' | 'formula' | 'code' | 'chart'
+  /** 分栏分隔（`***`）：独占一块、不参与合并 —— 仅用于打断同类型块合并，
+   *  使版式推断不会把跨栏的两个列表当成一个（见 splitColumns）。 */
+  | 'columns'
 
 /** 块级分组结果：类型 + 列表项/图片张数 + 最大嵌套深度（前导缩进空格数） */
 export interface BlockInfo {
@@ -201,6 +281,9 @@ export function scanBlocks(src: string): BlockInfo[] {
     }
     if (/^```/.test(t)) { inFence = true; fenceLang = t.replace(/^```/, '').trim().toLowerCase(); continue }
     if (t === '') continue
+    // 分栏分隔独占一块、不参与合并：否则 pushBlock 会把跨栏的两个同类型块
+    // （如两个列表）合并成一个，版式推断结果随之改变。
+    if (t === COLUMN_BREAK) { blocks.push({ type: 'columns', items: 1, depth: 0 }); continue }
     const heading = t.match(/^#{1,6}\s/)
     if (heading) { blocks.push({ type: `h${heading[0].length - 1}` as BlockType, items: 1, depth: 0 }); continue }
     if (/^>\s?/.test(t)) { pushBlock('quote'); continue }

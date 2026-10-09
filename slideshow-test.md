@@ -128,6 +128,55 @@ $$
 
 ---
 
+## 行内代码折行（issue #5 复现）
+
+`"{:=^20}".format("python")` 这一行应该**整体折行**，不被页面右边缘截断；折行后每一段都带完整的背景与边框（`box-decoration-break: clone`）。
+
+---
+
+## 分栏示例：页标题不参与分栏
+
+上面这个标题是**页标题**，应整页显示在分栏之上，**不会落进左栏**：
+
+- 左侧第一条
+- 左侧第二条
+- 左侧第三条
+
+***
+
+- 右侧第一条
+- 右侧第二条
+
+右栏内容顶端应与左栏**对齐**，而不是高于页标题。
+
+---
+
+## 三栏示例
+
+- 第一栏
+
+***
+
+- 第二栏
+
+***
+
+- 第三栏
+
+---
+
+## 窄栏不被撑破
+
+长 URL：https://example.com/very/long/path/that/should/not/blow/out/the/column/layout/at/any/cost/1234567890
+
+***
+
+```text
+this_is_a_very_long_code_line_that_must_scroll_inside_its_own_column_instead_of_widening_the_grid
+```
+
+---
+
 # 谢谢观看
 
 欢迎随时回来，按 `Esc` 返回编辑

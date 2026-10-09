@@ -402,7 +402,7 @@
         </section>
 
         <!-- ========== 5. 演示模式 ========== -->
-        <section class="help-section" id="slideshow" data-kw="演示 幻灯片 PPT 全屏 分页 版式 layout align 备注 演讲者 滚轮 模板 切换动画 过渡 棋盘格子 百变立方 六角蜂巢 爆裂卡片 纵深穿梭 卡片推换 百叶窗格 高斯溶解 片段 逐步 分步">
+        <section class="help-section" id="slideshow" data-kw="演示 幻灯片 PPT 全屏 分页 分栏 栏 字体 字号 字重 排版 内容填充 填充 宽度 高度 页边距 版式 layout align 备注 演讲者 滚轮 模板 切换动画 过渡 棋盘格子 百变立方 六角蜂巢 爆裂卡片 纵深穿梭 卡片推换 百叶窗格 高斯溶解 片段 逐步 分步">
             <h2><a class="anchor" href="#slideshow">#</a>演示模式（类 PPT）</h2>
             <p class="help-lead">笔记一键变全屏幻灯片。<strong>不需要任何额外格式</strong>——按平时写 Markdown 的习惯写，版式自动推断，配色继承当前主题。</p>
 
@@ -428,6 +428,28 @@
                     <li><code>---</code> 必须单独成行（前后是空行）</li>
                     <li>代码围栏内部的 <code>---</code> 属于代码内容，<strong>不会</strong>分页</li>
                     <li>文档顶部的 front matter（首个 <code>--- ... ---</code> 块）自动忽略，不会成为一页</li>
+                </ul>
+            </div>
+
+            <div class="help-sub" id="slideshow-columns">
+                <h3>分栏</h3>
+                <p>一页内想并排放两块内容，用<strong>单独成行的 <code>***</code></strong>（同样是标准 Markdown 分割线）分栏：</p>
+                <pre><code>## 对比
+
+- 左侧第一条
+- 左侧第二条
+
+***
+
+- 右侧第一条
+- 右侧第二条</code></pre>
+                <ul>
+                    <li><code>---</code> = <strong>分页</strong>，<code>***</code> = <strong>分栏</strong>（同为标准分割线，语义分开）</li>
+                    <li>必须单独成行；代码围栏内部的 <code>***</code> 属于代码内容，<strong>不会</strong>分栏</li>
+                    <li><strong>页内第一个标题</strong>（<code>#</code>~<code>######</code>）视为<strong>页标题</strong>：整页显示在分栏之上，<strong>不参与分栏</strong></li>
+                    <li>其余内容按 <code>***</code> 依次分栏；最多 4 栏，超出时后续内容并入最后一栏（内容不丢）</li>
+                    <li>想给每一栏各写标题，就把页标题写在最前，再在页标题之后开始用 <code>***</code> 分栏</li>
+                    <li>注意：<code>***</code> 从此不再渲染为分隔线，需要页内分隔线请用 <code>___</code> 或 <code>- - -</code></li>
                 </ul>
             </div>
 
@@ -509,7 +531,25 @@
                     <li><code>&lt;!-- align: left|center|right --&gt;</code> 指定整页对齐</li>
                     <li>左下角显示章节名 + 页码页脚，底部主题色进度条随翻页增长</li>
                     <li>配色继承当前主题与明暗，标题颜色随主题变化——<strong>换主题，幻灯片同步换肤</strong></li>
-                    <li><strong>滚轮翻页</strong>：内容可滚动时先滚动内容，到上/下边界再翻页；翻页后短暂锁定防惯性连翻</li>
+                    <li><strong>滚轮翻页</strong>：内容<strong>真正超出可视区</strong>时先滚动内容，到上/下边界再翻页（内容已完整显示则直接翻页）；翻页后短暂锁定防惯性连翻</li>
+                </ul>
+            </div>
+
+            <div class="help-sub" id="slideshow-typography">
+                <h3>排版与内容区（HUD）</h3>
+                <p>播放中点击 HUD 底部的 <code>Aa</code> 图标，即可实时调整演示排版（<strong>持久化</strong>，下次进入演示沿用）：</p>
+                <ul>
+                    <li><strong>字体</strong>：跟随主题 / 无衬线 / 衬线 / 等宽（「跟随主题」= 用设置里的「预览字体」）</li>
+                    <li><strong>字重</strong>：300 / 400 / 500 / 600 / 700（只影响正文，标题自带字重不受影响）</li>
+                    <li><strong>字号</strong>：70% ~ 160%，以现有响应式字号为基准整体缩放</li>
+                    <li><strong>内容填充宽度</strong>：50% ~ 95%，内容区占整屏宽度的比例（默认 82%）</li>
+                    <li><strong>内容填充高度</strong>：50% ~ 95%，内容区占整屏高度的比例（默认 84%）</li>
+                    <li><strong>恢复默认</strong>：一键回到「未调整」状态（等价于从未调整过，不产生任何行内样式）</li>
+                    <li><strong>内容填充宽度 / 高度是内容区大小的唯一依据</strong>：填 80% 就是「内容区占整屏 80%」；
+                        各版式原先写死的行宽上限（66rem / 58rem 等共 9 处）已全部改为跟随它，所以拉动滑杆一定能看到变化</li>
+                    <li>窗口很宽时若觉得正文行太长，把「内容填充宽度」调小（如 55%）即可</li>
+                    <li>字号是<strong>倍率</strong>而非固定像素——窗口越大字越大这一行为保持不变，只换档位</li>
+                    <li>面板里的下拉框 / 滑杆需要方向键时不会被翻页快捷键抢走；<kbd>Esc</kbd> 关闭面板（不会退出演示）</li>
                 </ul>
             </div>
 

@@ -92,6 +92,93 @@
   （用户明确：测试主题，不作为正式主题发布）；经真实渲染验证（计算样式 + 像素差分）
 - README / help.md 及镜像同步「自定义主题」说明；主题清单保持 15 个口径
 
+### 追加（2026-10-09）：演示模式三项 —— 行内代码折行修复 + HUD 排版旋钮 + `***` 分栏
+
+**来源**：用户 issue #5（标题「过长的行内代码会被截断」）—— 正文同时提出了
+「演示模式字体/字形/大小/边距自定义」与「moonslide 式分栏」两项诉求。
+
+**① Bug 修复：演示模式行内代码被截断**
+
+- **根因**：`.ys-slide code` 只声明了颜色/内边距/字号/字体，**没有任何折行属性**。
+  `"{:=^20}".format("python")` 这类无断点 token 会形成一个不可断的行盒，在
+  `.ys-slide{overflow:auto}` + `.yizi-slideshow{overflow:hidden}` 下表现为「被截断」
+- **为什么预览能折行、演示不能**：主题里写的是
+  `.editor-content.theme-<id> code { word-break: break-all; overflow-wrap: break-word;
+  box-decoration-break: clone }`，而演示根节点带 `theme-<id>` 却**不带 `editor-content`**
+  ⇒ 该规则永不命中。修法：把这套属性补到 `.ys-slide code` 上（取值与预览侧逐字一致）
+- **必须的复位**：`.ys-slide code` 的选择器更宽，会连带命中 `pre` 内的 code；
+  `.ys-slide pre code` 显式复位 `white-space: pre` / `word-break: normal` /
+  `box-decoration-break: slice`，否则长代码行会折行、缩进与行号全部错位
+- 长 URL 等无断点**纯文本**同样加了 `overflow-wrap: break-word`（同根因）；
+  `.ys-slide pre` 加 `max-width: 100%` 使分栏内也能正常横向滚动
+- `.ys-title`（左上角文档名）被单行省略号截断 ⇒ 补 `title` 属性，悬停可看完整值
+
+**② 新增：演示 HUD 排版与内容区（字体 / 字重 / 字号 / 内容填充宽度 / 高度）**
+
+- HUD 新增 `Aa` 图标，面板内可实时调整：字体（跟随主题/无衬线/衬线/等宽）、
+  字重（300–700）、字号（70%–160%）、**内容填充宽度/高度（50%–95%）**，带「恢复默认」
+- **内容填充宽度/高度 = 内容区占整屏的比例**，它是内容区大小的**唯一**依据。
+  用户反馈「只调整页边距是不改变视觉效果的」——根因是各版式写死了行宽上限：
+  宽窗口上内容宽度被 rem 上限钉住，页边距怎么调都看不出来。修法：把 **9 处**
+  行宽上限（`.ys-slide > *` 66rem、内容页 `p/li` 58rem、目录 `ol` 56rem、
+  列表页 `ol/ul` 54rem、路线图 `ul` 50rem、封面副文 42rem、引用 `> *` 56rem、
+  代码 `> *` / 图表 `> *` 72rem）**全部改为 100%**，并把 **4 处**写死的
+  `padding-top: 10vh` 改为按填充高度换算 ⇒ 拉动滑杆一定能看到变化
+- **默认值不产出任何行内变量** ⇒ 没调过的演示与本次改动前**逐像素一致**：
+  默认 82%×84% 恰好等于原来的 `9vw` / `8vh` 页边距；4 处 `padding-top` 换算后默认仍为 10vh；
+  `.ys-layout-quote` 的多余留白（左右 +2vw、下方 +6vh）也原样保留
+- 变量写成 `.yizi-slideshow` 根节点的**行内 style**（而非 `documentElement`）：
+  作用域限定在演示子树、退出演示自动失效、不污染预览/编辑器。默认值声明在 `globals.css` 的 `--ys-*`
+- 字体存 **id 而非字体栈**：字体栈将来改名不会让存量存档失效
+- **键盘守卫**：面板里的下拉框/滑杆需要方向键，不能被翻页快捷键抢走（`Esc` 仍关闭面板）；
+  滚轮悬停在面板/菜单上不再误翻页（顺带修掉 `.ys-theme-menu` 的既有问题）
+- persist **v7 → v8**：「页边距缩放」被「内容填充宽度/高度」取代 —— `slidePadScale` 已无消费点，
+  migrate 里显式 `delete`（否则会被 persist 反复写回存档）；新键收敛到 50~95。
+  `clampNumber` 只接受数字与数字字符串，`null`/`''`/布尔一律视为「未设置」
+  —— `Number(null) === 0` 会把缺失的存档静默归零
+- **连带修掉滚轮翻页的一个坑**：内边距也计入 `scrollHeight`，而填充高度会把上下内边距做得很大
+  （50% ⇒ 上下各 25vh）。于是「内容已完整显示」时 `scrollHeight` 仍大于 `clientHeight`，
+  滚轮判定为「可滚动」⇒ 只滚那段**空白内边距**而不翻页（用户实测发现）。修法：
+  可滚动量改为 `max(0, scrollHeight - paddingBottom - clientHeight)`（扣掉底部内边距，
+  即按「内容底部对齐视口底部」判断），并把向下滚动夹在该上界内，不再滚进空白
+
+**③ 新增：`***` 分栏**
+
+- 页内用**单独成行的 `***`**（标准 Markdown 主题分割线）分栏；与 `---` = 分页并列，
+  二者都是标准分割线，语义分开，**零新语法**
+- **不做任何结构推断**（如「同级小标题自动分栏」）：真实文档里同级标题常常只是层级，
+  误判率高且用户无法关闭；显式标记比智能猜测更可预测
+- `splitColumns()` 与 `splitSlides()` 对称：fence 感知（围栏内的 `***` 是内容）、
+  逐字匹配（前导空格不触发）；空栏丢弃；**返回长度 1 = 未分栏**
+- **页标题不参与分栏**：页内**第一个标题块**（`#`~`######`）由 `splitColumns()` 抽成
+  `intro`，作为整页标题渲染在分栏之上。用户反馈：标题若落进第 1 栏，会表现为
+  「左栏带标题、右栏内容顶端高于标题」的错位。页标题**不包 div**、直接作为
+  `.ys-slide` 的直接子元素 ⇒ 各版式的 `h2` 规则与 `> :first-child` 装饰仍能命中它，
+  标题样式与不分栏时完全一致。想给每栏各写标题 ⇒ 把页标题写最前，再在页标题之后 `***`
+- 栏首尾的**空行**会被裁掉（不动行首缩进 —— 缩进的代码块/嵌套列表是合法内容）
+- 最多 4 栏，超出时后续内容**并入最后一栏**并 `console.warn`（内容不丢）
+- `columns` 是 `Slide` 的**独立字段**，不新增 `SlideKind` ⇒ 与 14 种版式正交，
+  `LAYOUT_KINDS.length === 14` 的口径不变
+- `BlockType` 新增 `'columns'` 且**独占一块不参与合并**：否则 `scanBlocks` 会把跨栏的
+  两个同类型块（如两个列表）合并成一个，版式推断结果随之改变
+- 版式推断用「各栏重拼回去」的源，`columns === 1` 时与改动前逐字节一致
+- 片段逐步显示扩展到栏内列表项（分栏页多包一层 `.ys-cols > .ys-col`，
+  选择器抽成 `FRAGMENT_ITEM_SELECTOR` 常量防止两处漏改）
+- `.ys-slide.ys-has-cols` 让页面容器退回单列 flex，避免与 `figure` 版的
+  `display:grid`（45/55 栅格）冲突导致栏容器被塞进右半边
+- **取舍**：`***` 不再渲染为字面 `<hr>`（需要页内分隔线请用 `___` 或 `- - -`）
+- **修掉既有文档 bug**：`docs/slideshow-style-mapping.md` 此前把 `<!-- layout: two-col -->`
+  当示例，而 `two-col` 并不在 `LAYOUT_KINDS` 里（只会 warn 并回落）—— 已改为合法值
+
+**文档与校验**
+
+- `help.md` / `src-tauri/help.md`（两份逐字节同步）：演示模式新增「分栏」「排版与页边距（HUD）」两节
+- `README.md` / `src-tauri/readme.md`、`website/help.html`（`data-kw` 补 分栏/字体/字号/字重/页边距）
+- 新增 `src/lib/slideTypography.ts` + `tests/slideTypography.test.ts`；`tests/slides.test.ts` 扩展
+  `splitColumns` / `scanBlocks` / `detectLayout` 用例（测试总数 131 → 131+15）
+- i18n：15 个语言文件各 +11 键（`check-i18n --strict` 通过，占位符一致）
+- check-themes 无需改动：`--ys-*` 已在 `globals.css` 声明，而该脚本只校验**主题文件**里引用的变量
+
 ## v0.3.2
 
 > 本版主题：**实时模式属性面板 + 主题令牌体系** —— front matter 按 Obsidian 式属性面板渲染

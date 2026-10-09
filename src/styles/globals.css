@@ -47,6 +47,23 @@
   --font-size-base: 16px;
   --line-height: 1.8;
 
+  /* ===== 演示模式排版（HUD 可调，v0.3.3）=====
+     这四个变量由演示 HUD 以**行内变量**挂在 .yizi-slideshow 根节点上
+     （见 components/Slideshow.tsx + lib/slideTypography.ts），只作用于演示子树，
+     退出演示即失效。这里声明"未调整时"的默认值：
+     字体跟随预览字体（--font-preview，主题可覆盖）、缩放系数 1、
+     内容区占整屏 82% × 84%（= 原 `9vw` / `8vh` 页边距）
+     ⇒ 与加入这些旋钮之前的演示渲染完全一致。
+     另注：已在此声明 ⇒ 无需进 check-themes.mjs 的 JS_INJECTED（该白名单只校验
+     **主题文件**里 var() 引用的变量，见 scripts/check-themes.mjs 的 JS_INJECTED）。 */
+  --ys-font-family: var(--font-preview);
+  --ys-font-scale: 1;
+  --ys-font-weight: 400;
+  /* 内容区占整屏的比例（小数）。宽度/高度是**唯一**依据：slideshow.css 里原先
+     写死的 9 处 rem 行宽上限已全部改为 100%，交由这两个变量接管。 */
+  --ys-fill-w: 0.82;
+  --ys-fill-h: 0.84;
+
   /* ===== 效果令牌：圆角阶梯 =====
      主题声明的 --border-radius 语义是「全局圆角半径」（见各主题注释），
      但此前只有主题自身的 .editor-content 消费它，UI 层用写死的 px ⇒ 令牌失效。
