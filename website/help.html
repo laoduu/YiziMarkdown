@@ -778,9 +778,9 @@
         </section>
 
         <!-- ========== 9. 外观与主题 ========== -->
-        <section class="help-section" id="appearance" data-kw="主题 深色 暗色 亮色 外观 字体 字号 行高 自定义 CSS user.css themes F2">
+        <section class="help-section" id="appearance" data-kw="主题 深色 暗色 亮色 外观 自定义 CSS 自定义主题 user.css themes 主题令牌 设计规范 字体 字号 行高 F2">
             <h2><a class="anchor" href="#appearance">#</a>外观与主题</h2>
-            <p class="help-lead">内置 15 套主题，每套均支持亮色与深色双模式。</p>
+            <p class="help-lead">内置 15 套主题，每套均支持亮色与深色双模式；改几笔颜色？保存即生成「自定义主题」。</p>
 
             <div class="help-sub" id="appearance-themes">
                 <h3>主题一览</h3>
@@ -810,10 +810,22 @@
             </div>
 
             <div class="help-sub" id="appearance-custom">
-                <h3>自定义主题与 CSS</h3>
+                <h3>自定义主题（自定义 CSS）</h3>
                 <ul>
-                    <li><strong>自定义主题</strong>：在程序目录 <code>themes/</code> 放入 <code>.css</code> 文件，重启后自动识别。CSS 需用 <code>.editor-content</code> 前缀限定范围，避免影响设置面板</li>
-                    <li><strong>自定义 CSS</strong>：在「设置 → 外观 → 自定义 CSS」中编辑，或直接改程序目录 <code>user.css</code>。它加载在所有主题之后，<strong>优先级最高</strong></li>
+                    <li><strong>保存即生成「自定义主题」</strong>：在「设置 → 外观 → 自定义 CSS」中书写样式并保存，主题列表首位出现「自定义主题」并自动选中 —— 它以<strong>保存时的主题为基底</strong>，叠加你写的 CSS</li>
+                    <li><strong>两种用法都支持</strong>：粘贴整份新主题（选择器里的 <code>:root.theme-xxx</code> 会自动归一到当前生效的主题）；或只写微调，例如 <code>:root { --editor-accent: #e11d48; }</code>（自动提权，稳定压过基底主题）</li>
+                    <li><strong>保存后立即生效，无需重启</strong>；清空内容并保存则条目消失、回落到基底主题。右上角调色板菜单（末条）与演示模式 HUD 主题菜单（首条）里也会出现它</li>
+                    <li><strong>只在选中它时生效</strong>：其它主题不会叠加你的 CSS —— 否则「菜单里选的是 A、看到的却是被覆盖后的 B」，分不清自己选了什么</li>
+                    <li><strong>复制粘贴不怕脏</strong>：从聊天窗口 / AI 回复 / PDF 复制来的行首行号（<code>12 :root { … }</code>）与零宽字符会在保存前自动剥离，文本框里显示的就是实际保存的内容</li>
+                    <li><strong>清除有二次确认</strong>：点「清除」弹出确认框，确认后才删除，避免误点丢样式</li>
+                </ul>
+            </div>
+
+            <div class="help-sub" id="appearance-theme-ext">
+                <h3>主题扩展（themes/ 目录）</h3>
+                <ul>
+                    <li>在程序目录 <code>themes/</code> 放入 <code>.css</code> 文件，并在 <code>themes/theme.json</code> 中登记主题参数，<strong>重启后自动识别</strong>。CSS 需用 <code>.editor-content</code> 前缀限定范围，避免影响设置面板</li>
+                    <li>想给主题换一套气质，推荐先看 <code>THEME-DESIGN-SPEC.md</code>（v0.3.3 新增，14 章 + 2 附录）：令牌分层总览、每类令牌的设计指引、明暗双模式规范、check-themes 门禁与新增主题检查清单，附录还标出每个令牌是「已接入」还是「已声明待接入」</li>
                 </ul>
             </div>
         </section>
@@ -829,7 +841,7 @@
                         <thead><tr><th>分类</th><th>主要能力</th></tr></thead>
                         <tbody>
                             <tr><td>通用</td><td>界面语言（15 种）、自动保存间隔、文件关联、默认模板</td></tr>
-                            <tr><td>外观</td><td>主题选择与管理、深色模式、自定义 CSS</td></tr>
+                            <tr><td>外观</td><td>主题选择与管理、深色模式、自定义 CSS（保存即生成「自定义主题」）</td></tr>
                             <tr><td>编辑器</td><td>源码 / 预览字体字号行高、实时模式动画、拼写检查</td></tr>
                             <tr><td>AI</td><td>供应商与模型、API 密钥、上下文轮数、引用上限</td></tr>
                             <tr><td>云端存储</td><td>WebDAV 服务器地址、凭据（存系统凭据库）、起始目录、测试连接</td></tr>
@@ -928,8 +940,14 @@
             </div>
 
             <div class="help-sub" id="faq-theme">
-                <h3>添加的自定义主题没有出现？</h3>
-                <p>确认文件放在程序目录 <code>themes/</code> 下、扩展名为 <code>.css</code>，然后<strong>重启程序</strong>。CSS 内部记得用 <code>.editor-content</code> 前缀限定范围。</p>
+                <h3>放在 themes/ 目录的主题文件没有出现？</h3>
+                <p>确认文件放在程序目录 <code>themes/</code> 下、扩展名为 <code>.css</code>，并在 <code>themes/theme.json</code> 中登记，然后<strong>重启程序</strong>。CSS 内部记得用 <code>.editor-content</code> 前缀限定范围。（走「设置 → 外观 → 自定义 CSS」保存出来的「自定义主题」是另一回事：保存即生效、不需要重启。）</p>
+            </div>
+
+            <div class="help-sub" id="faq-custom-theme">
+                <h3>自定义主题的样式没生效，或想改回默认？</h3>
+                <p>「自定义主题」= 保存时的主题 + 你的 CSS，<strong>只在选中「自定义主题」时生效</strong>。改了样式记得点「保存 CSS」；想撤回就在同页面点「清除」并确认，条目消失、回落到基底主题。</p>
+                <p>整段样式都不生效，多半是复制时带进了行首行号（<code>12 :root { … }</code>）—— 裸数字会让 CSS 解析在第一处断掉，其后全部静默失效。保存前会自动剥离这类污染与零宽字符；若仍异常，先看文本框里是否还残留数字行号。</p>
             </div>
 
             <div class="help-sub" id="faq-img">
@@ -983,7 +1001,7 @@
         </section>
 
         <!-- ========== 13. 附录 ========== -->
-        <section class="help-section" id="appendix" data-kw="附录 目录结构 文件说明 反馈 issue 开源 更新 升级">
+        <section class="help-section" id="appendix" data-kw="附录 目录结构 文件说明 user.css 自定义主题 主题规范 反馈 issue 开源 更新 升级">
             <h2><a class="anchor" href="#appendix">#</a>附录</h2>
 
             <div class="help-sub" id="appendix-structure">
@@ -994,10 +1012,10 @@
 ├── help.md                 # 帮助文档（软件内可查看）
 ├── welcome.md              # 欢迎文档
 ├── changelog.md            # 开发日志
-├── user.css                # 用户自定义样式（优先级最高）
+├── user.css                # 自定义主题的样式内容（设置里保存的样式）
 ├── keybindings.json        # 快捷键配置
 ├── md-icon.ico             # Markdown 文件关联图标
-├── themes/                 # 主题 CSS（放入 .css 即可扩展）
+├── themes/                 # 主题 CSS（放入 .css 并在 theme.json 登记）
 ├── templates/              # 内置模板（首启同步至用户目录）
 └── skills/                 # 内置技能（首启同步至用户目录）</code></pre>
                 <p>v0.2.3 起技能、v0.2.4 起文档模板的真实存储位置都在用户目录：<code>~/Documents/yizimarkdown/skills/</code> 与 <code>~/Documents/yizimarkdown/templates/</code>，自定义内容请放这里，升级 / 重装不会被覆盖。</p>
