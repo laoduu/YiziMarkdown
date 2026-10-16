@@ -3,7 +3,7 @@
 
 ![image](https://github.com/laoduu/YiziMarkdown/raw/main/docs/index.png)
 
-[简体中文](./readme.md) | [繁體中文](./docs/readme-zh-TW.md) | [English](./docs/readme-en.md) | [日本語](./docs/readme-ja.md) | [한국어](./docs/readme-ko.md) | [Deutsch](./docs/readme-de.md) | [Français](./docs/readme-fr.md) | [Español](./docs/readme-es.md) | [Português](./docs/readme-pt.md) | [Italiano](./docs/readme-it.md) | [Polski](./docs/readme-pl.md) | [Nederlands](./docs/readme-nl.md) | [Türkçe](./docs/readme-tr.md) | [Svenska](./docs/readme-sv.md) | [Українська](./docs/readme-uk.md)
+[简体中文](./readme.md) | [繁體中文](./docs/i18n/readme-zh-TW.md) | [English](./docs/i18n/readme-en.md) | [日本語](./docs/i18n/readme-ja.md) | [한국어](./docs/i18n/readme-ko.md) | [Deutsch](./docs/i18n/readme-de.md) | [Français](./docs/i18n/readme-fr.md) | [Español](./docs/i18n/readme-es.md) | [Português](./docs/i18n/readme-pt.md) | [Italiano](./docs/i18n/readme-it.md) | [Polski](./docs/i18n/readme-pl.md) | [Nederlands](./docs/i18n/readme-nl.md) | [Türkçe](./docs/i18n/readme-tr.md) | [Svenska](./docs/i18n/readme-sv.md) | [Українська](./docs/i18n/readme-uk.md)
 
 **官方网站：** https://md.yizigpt.com
 
@@ -116,7 +116,7 @@
 - **深色 / 亮色模式**：每套主题均有亮暗两套配色
 - **字体自定义**：源码和预览模式分别设置字体、字号、行高
 - **自定义主题**：在 设置 → 外观 → 自定义 CSS 中书写样式并保存，即生成「自定义主题」（以保存时的主题为基底 + 你的 CSS，自动选中）—— 既可以粘贴整份新主题，也可以只微调几个颜色；保存后立即生效，无需重启
-- **主题扩展**：`themes/` 目录放入 `.css` 文件，并在 `themes/theme.json` 中添加主题参数，重启后自动识别；主题令牌体系与设计规范见 `THEME-DESIGN-SPEC.md`
+- **主题扩展**：`themes/` 目录放入 `.css` 文件，并在 `themes/theme.json` 中添加主题参数，重启后自动识别；主题令牌体系与设计规范见 `docs/THEME-DESIGN-SPEC.md`
 
 ### 其他
 
@@ -285,7 +285,7 @@ code/
 │   ├── icons/              # 应用图标
 │   ├── themes/             # 主题 CSS（含 theme.json 元数据）
 │   └── templates/          # 文档模板
-├── THEME-DESIGN-SPEC.md    # 主题设计规范（令牌体系 / 新增主题指南）
+├── docs/                   # 文档（changelog / i18n 多语言 readme / THEME-DESIGN-SPEC.md 主题设计规范）
 └── package.json
 ```
 

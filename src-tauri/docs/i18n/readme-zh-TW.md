@@ -2,7 +2,7 @@
 
 ![image](https://github.com/laoduu/YiziMarkdown/raw/main/docs/index.png)
 
-[简体中文](../readme.md) | [繁體中文](./readme-zh-TW.md) | [English](./readme-en.md) | [日本語](./readme-ja.md) | [한국어](./readme-ko.md) | [Deutsch](./readme-de.md) | [Français](./readme-fr.md) | [Español](./readme-es.md) | [Português](./readme-pt.md) | [Italiano](./readme-it.md) | [Polski](./readme-pl.md) | [Nederlands](./readme-nl.md) | [Türkçe](./readme-tr.md) | [Svenska](./readme-sv.md) | [Українська](./readme-uk.md)
+[简体中文](../../readme.md) | [繁體中文](./readme-zh-TW.md) | [English](./readme-en.md) | [日本語](./readme-ja.md) | [한국어](./readme-ko.md) | [Deutsch](./readme-de.md) | [Français](./readme-fr.md) | [Español](./readme-es.md) | [Português](./readme-pt.md) | [Italiano](./readme-it.md) | [Polski](./readme-pl.md) | [Nederlands](./readme-nl.md) | [Türkçe](./readme-tr.md) | [Svenska](./readme-sv.md) | [Українська](./readme-uk.md)
 
 **官方網站：** https://md.yizigpt.com
 
@@ -110,7 +110,7 @@
 - **深色 / 亮色模式**：每套主題均有亮暗兩套配色
 - **字體定製**：原始碼和預覽模式分別設定字體、字號、行高
 - **自訂主題**：在 設定 → 外觀 → 自訂 CSS 中書寫樣式並儲存，即生成「自訂主題」（以儲存時的主題為基底 + 你的 CSS，自動選中）—— 既可以貼上整份新主題，也可以只微調幾個顏色；儲存後立即生效，無需重啟
-- **主題擴展**：`themes/` 目錄放入 `.css` 檔案，並在 `themes/theme.json` 中添加主題參數，重啟後自動識別；主題令牌體系與設計規範見 `THEME-DESIGN-SPEC.md`
+- **主題擴展**：`themes/` 目錄放入 `.css` 檔案，並在 `themes/theme.json` 中添加主題參數，重啟後自動識別；主題令牌體系與設計規範見 `docs/THEME-DESIGN-SPEC.md`
 
 ### 其他
 
@@ -277,7 +277,7 @@ code/
 │   ├── icons/              # 應用圖示
 │   ├── themes/             # 主題 CSS（含 theme.json 元資料）
 │   └── templates/          # 文件範本
-├── THEME-DESIGN-SPEC.md    # 主題設計規範（令牌體系 / 新增主題指南）
+├── docs/                   # 文件（changelog / i18n 多語言 readme / THEME-DESIGN-SPEC.md 主題設計規範）
 └── package.json
 ```
 

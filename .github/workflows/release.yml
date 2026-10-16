@@ -7,7 +7,7 @@
 #   - YiziMarkdown_<ver>_source.zip      源码包           （Windows 腿，git archive）
 #   - YiziMarkdown_<ver>_universal.dmg   macOS 通用 dmg   （macOS 腿）
 #
-# Release 正文取仓库根的 CHANGELOG-V<ver>.md（与 v0.3.1 手工正文同源）。
+# Release 正文取 docs/changelog/CHANGELOG-V<ver>.md（与 v0.3.1 手工正文同源）。
 # 默认产出【草稿】，在 GitHub 上确认资产无误后再点 Publish。
 #
 # 使用：git tag v0.3.2 && git push origin v0.3.2
@@ -90,7 +90,7 @@ jobs:
         shell: bash
         run: |
           ver="${GITHUB_REF_NAME#v}"
-          f="CHANGELOG-V${ver}.md"
+          f="docs/changelog/CHANGELOG-V${ver}.md"
           if [ -f "$f" ]; then
             {
               echo "body<<CHANGELOG_EOF"
