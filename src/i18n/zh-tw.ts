@@ -88,6 +88,10 @@ export const zhTW = {
     discard: '不儲存',
     cancel: '取消',
     file: '檔案',
+    close: '關閉',
+    closeOthers: '關閉其他',
+    closeRight: '關閉右側',
+    closeAll: '關閉全部',
   },
   statusbar: {
     toggleSidebar: '切換側邊欄',
@@ -108,6 +112,13 @@ export const zhTW = {
     parentDir: '上級目錄',
     emptyFolder: '空資料夾',
     noHeadings: '文件中沒有標題',
+    newFile: '新增檔案',
+    newFolder: '新增資料夾',
+    revealInExplorer: '在檔案總管中顯示',
+    namePlaceholder: '檔案名稱',
+    deleteConfirmTitle: '刪除',
+    deleteConfirmBody: '確定刪除「{name}」？將移至資源回收筒。',
+    openFileGuard: '該檔案正在編輯，請先關閉再操作',
     cloud: '雲端',
   },
   home: {
@@ -118,6 +129,7 @@ export const zhTW = {
     emptyHint: '使用 Ctrl+O 開啟檔案，檔案會出現在這裡',
   },
   editor: {
+    copied: '已複製',
     searchPlaceholder: '搜尋...',
     replace: '替換',
     replacePlaceholder: '替換...',
@@ -401,6 +413,7 @@ export const zhTW = {
     slashMenu: '斜槓選單',
     toggleDevtools: '開發者工具',
     presentSlides: '演示模式',
+    toggleFullscreen: '切換全螢幕',
   },
   app: {
     saved: '已儲存',
@@ -496,6 +509,8 @@ export const zhTW = {
     restore: '還原',
     maximize: '最大化',
     close: '關閉',
+    enterFullscreen: '進入全螢幕',
+    exitFullscreen: '結束全螢幕',
   },
   ai: {
     chat: 'AI 對話',
@@ -579,6 +594,8 @@ export const zhTW = {
     saveFailed: '儲存到雲端失敗：{msg}',
     retry: '重試',
     pathLabel: '雲端路徑',
+    fileNameLabel: '檔案名稱',
+    parentDir: '上級目錄',
     root: '根目錄',
   },
   properties: {

@@ -127,6 +127,50 @@ fn read_directory(path: String) -> Result<Vec<DirEntry>, String> {
     }
 }
 
+// ===== 本地文件管理命令（侧栏右键菜单 v0.3.4）=====
+
+/// 新建文件夹（单层：父目录必须已存在；已存在同名目录时报错）
+#[tauri::command]
+fn create_directory(path: String) -> Result<(), String> {
+    fs::create_dir(&path).map_err(|e| format!("Failed to create directory: {}", e))
+}
+
+/// 重命名（同盘符内移动；前端保证 to 与 from 同父目录）
+#[tauri::command]
+fn rename_path(from: String, to: String) -> Result<(), String> {
+    fs::rename(&from, &to).map_err(|e| format!("Failed to rename: {}", e))
+}
+
+/// 删除到系统回收站（不直接销毁，可在回收站还原）
+#[tauri::command]
+fn delete_to_trash(path: String) -> Result<(), String> {
+    trash::delete(&path).map_err(|e| format!("Failed to move to trash: {}", e))
+}
+
+/// 在系统文件管理器中显示并选中该文件（Windows 资源管理器 / macOS Finder）
+#[tauri::command]
+fn reveal_in_explorer(path: String) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    return Command::new("explorer")
+        .arg(format!("/select,{}", path))
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| format!("Failed to open explorer: {}", e));
+
+    #[cfg(target_os = "macos")]
+    return Command::new("open")
+        .args(["-R", &path])
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| format!("Failed to open Finder: {}", e));
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        let parent = Path::new(&path).parent().unwrap_or_else(|| Path::new("."));
+        open::that(parent).map_err(|e| format!("Failed to open: {}", e))
+    }
+}
+
 // ===== 系统字体 =====
 
 #[cfg(target_os = "windows")]
@@ -1446,6 +1490,10 @@ fn main() {
             save_file,
             save_file_dialog,
             read_directory,
+            create_directory,
+            rename_path,
+            delete_to_trash,
+            reveal_in_explorer,
             get_system_fonts,
             pick_and_read_file,
             pick_image_file,

@@ -102,6 +102,7 @@ interface EditorProps {
   isSearchOpen?: boolean
   viewMode?: ViewMode
   onCursorChange?: (pos: { line: number; column: number }) => void
+  onToast?: (message: string) => void
 }
 
 interface PreviewPaneProps {
@@ -110,9 +111,48 @@ interface PreviewPaneProps {
   onContentChange?: (content: string) => void
   enabledPlugins?: string[]
   pluginConfigs?: Record<string, Record<string, unknown>>
+  onToast?: (message: string) => void
 }
 
-function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = [], pluginConfigs = {} }: PreviewPaneProps) {
+/**
+ * 预览代码块「点击改语言」的写回：把 content 中第 sourceLine 行（1 基）开栏
+ * info 串的首个 token（语言）替换为 newLang，其余 info 保留。
+ * 用 expectedCode 校验目标 fence 的代码体与预览中一致，防止源码已改、
+ * 预览未刷新（防抖窗口）时按旧行号误改到别的代码块。
+ * 返回新内容；无法安全定位时返回 null。
+ */
+function setFenceLanguage(
+  content: string,
+  sourceLine: number,
+  newLang: string,
+  expectedCode?: string
+): string | null {
+  const lines = content.split('\n')
+  const idx = sourceLine - 1
+  const m = lines[idx]?.match(/^(\s{0,3})(`{3,}|~{3,})(.*)$/)
+  if (!m) return null
+  const fence = m[2]
+  const char = fence[0]
+  const minLen = fence.length
+
+  if (expectedCode != null) {
+    const closing = new RegExp(`^ {0,3}\\${char}{${minLen},}\\s*$`)
+    const body: string[] = []
+    for (let i = idx + 1; i < lines.length; i++) {
+      if (closing.test(lines[i])) break
+      body.push(lines[i])
+    }
+    if (body.join('\n').replace(/\n$/, '') !== expectedCode.replace(/\n$/, '')) return null
+  }
+
+  const rest = m[3].trim().split(/\s+/).filter(Boolean).slice(1).join(' ')
+  const info = [newLang.trim(), rest].filter(Boolean).join(' ')
+  lines[idx] = `${m[1]}${fence}${info ? ' ' + info : ''}`
+  return lines.join('\n')
+}
+
+function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = [], pluginConfigs = {}, onToast }: PreviewPaneProps) {
+  const { t } = useI18n()
   // 插件就绪状态：变化时触发 markdown 重新渲染
   const pluginsReady = useEditorStore((s: any) => s._pluginsReady)
 
@@ -265,7 +305,7 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
     })
   }, [renderedHtml, docBaseDir])
 
-  // 代码块增强：添加复制按钮、换行控制、语言标签
+  // 代码块增强：右上角悬浮「换行 / 复制」，右下角可点击编辑的语言标签（Typora 风格）
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
@@ -273,38 +313,38 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
     const codeBlocks = container.querySelectorAll('pre.hljs')
     codeBlocks.forEach((pre) => {
       // 避免重复处理
-      if (pre.querySelector('.code-block-header')) return
+      if (pre.querySelector('.code-block-actions')) return
 
       const code = pre.querySelector('code')
       const lang = pre.getAttribute('data-lang') || ''
+      // fence 令牌注入的源码行号（1 基），用于把语言修改写回源文档
+      const sourceLine = Number(pre.getAttribute('data-source-line') || '0')
       const codeText = code?.textContent || ''
 
-      // 创建头部容器
-      const header = document.createElement('div')
-      header.className = 'code-block-header'
-      header.innerHTML = `
-        <div class="code-block-lang">${lang && lang !== 'auto' ? lang : ''}</div>
-        <div class="code-block-actions">
-          <button class="code-block-wrap-btn" title="切换换行">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 6h18M3 12h12M3 18h6"/>
-            </svg>
-          </button>
-          <button class="code-block-copy-btn" title="复制代码">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-            </svg>
-          </button>
-        </div>
+      // 右上角操作区：悬浮显示，不占文档布局
+      const actions = document.createElement('div')
+      actions.className = 'code-block-actions'
+      actions.innerHTML = `
+        <button class="code-block-wrap-btn" title="切换换行">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18M3 12h12M3 18h6"/>
+          </svg>
+        </button>
+        <button class="code-block-copy-btn" title="复制代码">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+          </svg>
+        </button>
       `
-      pre.insertBefore(header, pre.firstChild)
+      pre.appendChild(actions)
 
       // 复制按钮功能
-      const copyBtn = header.querySelector('.code-block-copy-btn')
+      const copyBtn = actions.querySelector('.code-block-copy-btn')
       copyBtn?.addEventListener('click', async () => {
         try {
           await navigator.clipboard.writeText(codeText)
+          onToast?.(t('editor.copied'))
           copyBtn.innerHTML = `
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="20 6 9 17 4 12"/>
@@ -324,15 +364,55 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
       })
 
       // 换行控制按钮功能
-      const wrapBtn = header.querySelector('.code-block-wrap-btn')
+      const wrapBtn = actions.querySelector('.code-block-wrap-btn')
       wrapBtn?.addEventListener('click', () => {
         const preEl = pre as HTMLElement
         const isWrapped = preEl.style.whiteSpace === 'pre-wrap'
         preEl.style.whiteSpace = isWrapped ? 'pre' : 'pre-wrap'
         wrapBtn.classList.toggle('active', !isWrapped)
       })
+
+      // 右下角语言标签：悬停显现，点击进入行内编辑
+      const langLabel = document.createElement('div')
+      langLabel.className = 'code-block-lang'
+      const langText = lang && lang !== 'auto' ? lang : ''
+      // 未标注语言的 fence 走 hljs 自动检测，标签显示 auto
+      langLabel.textContent = langText || 'auto'
+      if (!langText) langLabel.setAttribute('data-auto', '')
+      pre.appendChild(langLabel)
+
+      langLabel.addEventListener('click', () => {
+        if (langLabel.querySelector('input')) return
+        langLabel.classList.add('editing')
+        const input = document.createElement('input')
+        input.className = 'code-block-lang-input'
+        input.value = langText
+        input.setAttribute('spellcheck', 'false')
+        langLabel.textContent = ''
+        langLabel.appendChild(input)
+        input.focus()
+        input.select()
+
+        let done = false
+        // save=false 为 Esc 取消；提交走 onContentChange，渲染器随后重建整个 pre
+        const finish = (save: boolean) => {
+          if (done) return
+          done = true
+          langLabel.classList.remove('editing')
+          langLabel.textContent = langText || 'auto'
+          if (!langText) langLabel.setAttribute('data-auto', '')
+          if (!save || !sourceLine) return
+          const next = setFenceLanguage(content, sourceLine, input.value.trim(), codeText)
+          if (next != null && next !== content) onContentChange?.(next)
+        }
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') finish(true)
+          else if (e.key === 'Escape') finish(false)
+        })
+        input.addEventListener('blur', () => finish(true))
+      })
     })
-  }, [renderedHtml])
+  }, [renderedHtml, content, onContentChange])
 
   return (
     <div className="min-h-full bg-[var(--editor-bg)]" ref={containerRef}>
@@ -536,7 +616,7 @@ function buildEditorTheme(fontFamily: string, fontSize: string, lineHeight: stri
   })
 }
 
-const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearchToggle, isSearchOpen: externalSearchOpen, viewMode: externalViewMode, onCursorChange }, ref) => {
+const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearchToggle, isSearchOpen: externalSearchOpen, viewMode: externalViewMode, onCursorChange, onToast }, ref) => {
   const { t } = useI18n()
 
   const editorRef = useRef<HTMLDivElement>(null)
@@ -1455,7 +1535,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
 
         {/* 预览面板：永远挂载 */}
         <div ref={previewScrollRef} style={{ flex: viewMode === 'split' ? '1 1 0%' : viewMode === 'preview' ? '1 1 100%' : '0 0 0%', minHeight: 0, overflow: 'auto', pointerEvents: (viewMode === 'edit' || viewMode === 'live') ? 'none' : 'auto' }}>
-          <PreviewPane content={content} currentTheme={currentTheme} onContentChange={onChange} enabledPlugins={enabledPlugins} pluginConfigs={pluginConfigs} />
+          <PreviewPane content={content} currentTheme={currentTheme} onContentChange={onChange} enabledPlugins={enabledPlugins} pluginConfigs={pluginConfigs} onToast={onToast} />
         </div>
       </div>
 

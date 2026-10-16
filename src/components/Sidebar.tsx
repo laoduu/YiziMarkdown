@@ -1,17 +1,26 @@
 import { computeOutlineItems } from '../lib/headingId'
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { 
-  ChevronRight, 
+import {
+  ChevronRight,
   ChevronDown,
   ChevronUp,
   Cloud,
-  Folder, 
+  Folder,
   FolderOpen,
   Hash,
   FileCode,
+  FilePlus2,
+  FolderPlus,
+  Pencil,
+  Trash2,
+  ExternalLink,
+  RefreshCw,
 } from 'lucide-react'
 import { useI18n } from '../i18n'
 import CloudBrowser from './CloudBrowser'
+import Dialog from './Dialog'
+import { openContextMenu, type ContextMenuItem } from './ContextMenu'
+import { invokeTauriOrThrow } from '../lib/tauri'
 
 interface SidebarProps {
   visible: boolean
@@ -44,6 +53,34 @@ function isMarkdownFile(name: string): boolean {
   const lower = name.toLowerCase()
   return MARKDOWN_EXTS.some(ext => lower.endsWith(ext))
 }
+
+/** 用与传入路径一致的分隔符拼接子路径（Windows \，类 Unix /） */
+function joinLocalPath(folder: string, name: string): string {
+  const sep = folder.includes('\\') ? '\\' : '/'
+  return folder.endsWith('\\') || folder.endsWith('/') ? folder + name : folder + sep + name
+}
+
+/** 父目录路径（无分隔符边界时原样返回） */
+function parentOf(p: string): string {
+  const lastSep = Math.max(p.lastIndexOf('\\'), p.lastIndexOf('/'))
+  return lastSep > 0 ? p.substring(0, lastSep) : p
+}
+
+/** 深度优先把指定目录的 children 替换为新列表（返回新树，不改原数组） */
+function updateChildren(nodes: FileNode[], folderPath: string, children: FileNode[]): FileNode[] {
+  return nodes.map(node => {
+    if (node.path === folderPath) {
+      return { ...node, children, loaded: true }
+    }
+    if (node.children) {
+      return { ...node, children: updateChildren(node.children, folderPath, children) }
+    }
+    return node
+  })
+}
+
+/** 本地文件管理对话框类型（侧栏右键菜单 v0.3.4） */
+type LocalDialogKind = 'newFile' | 'newFolder' | 'rename' | 'delete'
 
 // 调用 Tauri read_directory 命令
 async function fetchDirectory(folderPath: string): Promise<FileNode[]> {
@@ -118,22 +155,102 @@ export default function Sidebar({ visible, currentFile, currentFolder, content, 
     } else {
       // 懒加载子目录内容
       const children = await fetchDirectory(folderPath)
-      // 更新 fileTree 中对应节点的 children
-      const updateChildren = (nodes: FileNode[]): FileNode[] =>
-        nodes.map(node => {
-          if (node.path === folderPath) {
-            return { ...node, children, loaded: true }
-          }
-          if (node.children) {
-            return { ...node, children: updateChildren(node.children) }
-          }
-          return node
-        })
-      setFileTree(prev => updateChildren(prev))
+      setFileTree(prev => updateChildren(prev, folderPath, children))
       next.add(folderPath)
       setExpandedFolders(next)
     }
   }, [expandedFolders])
+
+  // ===== 右键菜单 + 本地文件管理（v0.3.4）=====
+  const [dialog, setDialog] = useState<{ kind: LocalDialogKind; node?: FileNode } | null>(null)
+  const [nameInput, setNameInput] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [dialogError, setDialogError] = useState<string | null>(null)
+
+  /** 只刷新目录树当前目录（含已展开子目录），不整界面刷新、不折叠已展开目录 */
+  const refreshTree = useCallback(async () => {
+    if (!currentFolder) return
+    const nodes = await fetchDirectory(currentFolder)
+    setFileTree(nodes)
+    for (const dir of expandedFolders) {
+      const kids = await fetchDirectory(dir)
+      setFileTree(prev => updateChildren(prev, dir, kids))
+    }
+  }, [currentFolder, expandedFolders])
+
+  const openLocalDialog = (kind: LocalDialogKind, node?: FileNode) => {
+    setDialogError(null)
+    setDialog({ kind, node })
+    setNameInput(kind === 'rename' && node ? node.name : '')
+  }
+
+  /** 目标（含其子树）是否正被当前打开文件占用 —— 重命名/删除会造成 tab 路径失效，拒绝并提示 */
+  const isOpenTarget = (p: string) => {
+    if (!currentFile) return false
+    if (currentFile === p) return true
+    const sep = p.includes('\\') ? '\\' : '/'
+    return currentFile.startsWith(p + sep)
+  }
+
+  /** 文件/文件夹行右键 */
+  const openNodeMenu = (node: FileNode, x: number, y: number) => {
+    const items: ContextMenuItem[] = []
+    if (node.type === 'file') {
+      items.push({ key: 'open', icon: <FileCode size={13} />, label: t('cloud.open'), onClick: () => onFileSelect(node.path) })
+    }
+    items.push(
+      { key: 'rename', icon: <Pencil size={13} />, label: t('cloud.rename'), onClick: () => openLocalDialog('rename', node) },
+      { key: 'reveal', icon: <ExternalLink size={13} />, label: t('sidebar.revealInExplorer'), onClick: () => { void invokeTauriOrThrow('reveal_in_explorer', { path: node.path }) } },
+      { key: 'delete', icon: <Trash2 size={13} />, label: t('cloud.delete'), danger: true, separatorBefore: true, onClick: () => openLocalDialog('delete', node) },
+    )
+    openContextMenu(x, y, items)
+  }
+
+  /** 文件树空白处右键（无目录时无菜单 —— 原生已被全局屏蔽，表现即「无反应」） */
+  const openBlankMenu = (e: React.MouseEvent) => {
+    if (!currentFolder || isRemote) return
+    e.preventDefault()
+    e.stopPropagation()
+    openContextMenu(e.clientX, e.clientY, [
+      { key: 'newFile', icon: <FilePlus2 size={13} />, label: t('sidebar.newFile'), onClick: () => openLocalDialog('newFile') },
+      { key: 'newFolder', icon: <FolderPlus size={13} />, label: t('sidebar.newFolder'), onClick: () => openLocalDialog('newFolder') },
+      { key: 'refresh', icon: <RefreshCw size={13} />, label: t('cloud.refresh'), onClick: () => { void refreshTree() } },
+    ])
+  }
+
+  const runLocalDialog = async () => {
+    if (!dialog || !currentFolder) return
+    const node = dialog.node
+    const name = nameInput.trim()
+    setBusy(true)
+    setDialogError(null)
+    try {
+      if (dialog.kind === 'newFile') {
+        if (!name) throw new Error(t('sidebar.namePlaceholder'))
+        // 不带已知后缀时自动补 .md
+        const fileName = /\.(md|markdown|txt)$/i.test(name) ? name : `${name}.md`
+        await invokeTauriOrThrow('save_file', { path: joinLocalPath(currentFolder, fileName), content: '' })
+      } else if (dialog.kind === 'newFolder') {
+        if (!name) throw new Error(t('cloud.folderNamePlaceholder'))
+        await invokeTauriOrThrow('create_directory', { path: joinLocalPath(currentFolder, name) })
+      } else if (dialog.kind === 'rename' && node) {
+        if (!name) throw new Error(t('cloud.newNamePlaceholder'))
+        if (isOpenTarget(node.path)) throw new Error(t('sidebar.openFileGuard'))
+        const target = joinLocalPath(parentOf(node.path), name)
+        if (target !== node.path) {
+          await invokeTauriOrThrow('rename_path', { from: node.path, to: target })
+        }
+      } else if (dialog.kind === 'delete' && node) {
+        if (isOpenTarget(node.path)) throw new Error(t('sidebar.openFileGuard'))
+        await invokeTauriOrThrow('delete_to_trash', { path: node.path })
+      }
+      setDialog(null)
+      await refreshTree()
+    } catch (e) {
+      setDialogError(e instanceof Error ? e.message : String(e))
+    }
+    setBusy(false)
+  }
 
   // 进入上级目录
   const goUp = useCallback(() => {
@@ -180,7 +297,7 @@ export default function Sidebar({ visible, currentFile, currentFolder, content, 
         ) : activeTab === 'cloud' ? (
           <CloudBrowser onOpenRemote={onOpenRemote} onRequestSettings={onRequestSettings} />
         ) : (
-          <>
+          <div className="min-h-full" onContextMenu={openBlankMenu}>
             {/* 目录导航栏 */}
             <FolderPathNav
               currentFolder={isRemote ? null : currentFolder}
@@ -208,11 +325,74 @@ export default function Sidebar({ visible, currentFile, currentFolder, content, 
                     onToggleFolder={toggleSubFolder}
                     onFileSelect={onFileSelect}
                     depth={0}
+                    onNodeMenu={openNodeMenu}
                   />
                 ))}
               </div>
             )}
-          </>
+
+            {/* 新建文件 / 新建文件夹 / 重命名 */}
+            <Dialog
+              open={dialog?.kind === 'newFile' || dialog?.kind === 'newFolder' || dialog?.kind === 'rename'}
+              onClose={() => setDialog(null)}
+              title={dialog?.kind === 'rename'
+                ? t('cloud.rename')
+                : dialog?.kind === 'newFolder' ? t('cloud.newFolder') : t('sidebar.newFile')}
+              width={320}
+            >
+              <input
+                autoFocus
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { void runLocalDialog() } }}
+                placeholder={dialog?.kind === 'rename'
+                  ? t('cloud.newNamePlaceholder')
+                  : dialog?.kind === 'newFolder' ? t('cloud.folderNamePlaceholder') : t('sidebar.namePlaceholder')}
+                className="settings-input w-full mb-3"
+              />
+              {dialogError && <p className="text-[11px] text-red-500 mb-2 break-words">{dialogError}</p>}
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setDialog(null)} className="settings-btn-secondary">{t('cloud.cancel')}</button>
+                <button
+                  onClick={() => { void runLocalDialog() }}
+                  disabled={busy || !nameInput.trim()}
+                  className="settings-btn-primary"
+                  style={busy || !nameInput.trim() ? { opacity: 0.5 } : undefined}
+                >
+                  {dialog?.kind === 'rename' ? t('cloud.renameConfirm') : t('cloud.create')}
+                </button>
+              </div>
+            </Dialog>
+
+            {/* 删除确认（本地，移入回收站） */}
+            <Dialog
+              open={dialog?.kind === 'delete'}
+              onClose={() => setDialog(null)}
+              title={t('sidebar.deleteConfirmTitle')}
+              width={340}
+            >
+              <p className="text-[13px] text-[var(--editor-text)] mb-1">
+                {t('sidebar.deleteConfirmBody', { name: dialog?.node?.name ?? '' })}
+              </p>
+              {dialog?.node?.type === 'folder' && (
+                <p className="text-[12px] text-red-500 mb-1">
+                  {t('cloud.deleteConfirmFolder', { name: dialog.node.name })}
+                </p>
+              )}
+              {dialogError && <p className="text-[11px] text-red-500 mb-2 break-words">{dialogError}</p>}
+              <div className="flex justify-end gap-2 mt-3">
+                <button onClick={() => setDialog(null)} className="settings-btn-secondary">{t('cloud.cancel')}</button>
+                <button
+                  onClick={() => { void runLocalDialog() }}
+                  disabled={busy}
+                  className="settings-btn-primary"
+                  style={{ background: '#dc2626', ...(busy ? { opacity: 0.5 } : {}) }}
+                >
+                  {t('cloud.delete')}
+                </button>
+              </div>
+            </Dialog>
+          </div>
         )}
       </div>
     </div>
@@ -280,10 +460,12 @@ interface FileNodeItemProps {
   onToggleFolder: (path: string) => void
   onFileSelect: (path: string) => void
   depth: number
+  /** 行右键（v0.3.4）：在 Sidebar 里弹出该节点的操作菜单 */
+  onNodeMenu?: (node: FileNode, x: number, y: number) => void
 }
 
-function FileNodeItem({ 
-  node, currentFile, expandedFolders, onToggleFolder, onFileSelect, depth 
+function FileNodeItem({
+  node, currentFile, expandedFolders, onToggleFolder, onFileSelect, depth, onNodeMenu
 }: FileNodeItemProps) {
   const { t } = useI18n()
   const isExpanded = expandedFolders.has(node.path)
@@ -301,6 +483,12 @@ function FileNodeItem({
     <div>
       <div
         onClick={handleClick}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          // 阻止冒泡到文件树空白处的菜单
+          e.stopPropagation()
+          onNodeMenu?.(node, e.clientX, e.clientY)
+        }}
         className={`
           flex items-center gap-1 py-1 px-2 cursor-pointer
           transition-colors duration-100

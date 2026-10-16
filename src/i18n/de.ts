@@ -89,6 +89,10 @@ export const de = {
     discard: 'Nicht speichern',
     cancel: 'Abbrechen',
     file: 'Datei',
+    close: 'Schließen',
+    closeOthers: 'Andere schließen',
+    closeRight: 'Rechte schließen',
+    closeAll: 'Alle schließen',
   },
   statusbar: {
     toggleSidebar: 'Seitenleiste umschalten',
@@ -110,6 +114,13 @@ export const de = {
     parentDir: 'Übergeordneter Ordner',
     emptyFolder: 'Leerer Ordner',
     noHeadings: 'Keine Überschriften in diesem Dokument',
+    newFile: 'Neue Datei',
+    newFolder: 'Neuer Ordner',
+    revealInExplorer: 'im Explorer anzeigen',
+    namePlaceholder: 'Dateiname',
+    deleteConfirmTitle: 'Löschen',
+    deleteConfirmBody: '"{name}" löschen? Es wird in den Papierkorb verschoben.',
+    openFileGuard: 'Datei ist geöffnet — bitte zuerst schließen',
   },
   home: {
     hint: 'Klicken Sie auf eine Datei zum Öffnen oder drücken Sie Ctrl+N für eine neue Datei',
@@ -119,6 +130,7 @@ export const de = {
     emptyHint: 'Drücken Sie Ctrl+O zum Öffnen — die Datei erscheint hier',
   },
   editor: {
+    copied: 'Kopiert',
     searchPlaceholder: 'Suchen...',
     replace: 'Ersetzen',
     replacePlaceholder: 'Ersetzen...',
@@ -388,6 +400,7 @@ export const de = {
     slashMenu: 'Slash-Menü',
     toggleDevtools: 'Entwicklertools',
     presentSlides: 'Präsentation',
+    toggleFullscreen: 'Vollbild umschalten',
   },
   app: {
     saved: 'Gespeichert',
@@ -479,6 +492,8 @@ export const de = {
     restore: 'Wiederherstellen',
     maximize: 'Maximieren',
     close: 'Schließen',
+    enterFullscreen: 'Vollbild',
+    exitFullscreen: 'Vollbild beenden',
   },
   ai: {
     chat: 'KI-Chat',
@@ -562,6 +577,8 @@ export const de = {
     saveFailed: 'Speichern in der Cloud fehlgeschlagen: {msg}',
     retry: 'Wiederholen',
     pathLabel: 'Cloud-Pfad',
+    fileNameLabel: 'Dateiname',
+    parentDir: 'Übergeordneter Ordner',
     root: 'Stamm',
   },
   properties: {

@@ -71,6 +71,8 @@ export interface SettingsState {
   webdavRootPath: string
   /** 云端浏览器上次停留的目录，重新打开时恢复 */
   webdavLastPath: string
+  /** 「保存到云端」对话框上次成功保存到的目录，重新打开时作为默认落点 */
+  webdavSaveLastDir: string
 
   // 演示模式（v0.3.1）
   /** 切换动画变体：在演示模式 HUD 里选择，立即持久化 */
@@ -160,6 +162,8 @@ export const useSettingsStore = create<SettingsState>()(
       webdavRootPath: '/yizimarkdown',
       // 空串表示"还没浏览过"：云端浏览器据此回落到起始目录，而不是服务器根
       webdavLastPath: '',
+      // 空串表示"还没云端保存过"：保存对话框据此回落到浏览器目录
+      webdavSaveLastDir: '',
 
       // 演示模式（v0.3.1）
       slideAnim: 'cube',
@@ -191,7 +195,8 @@ export const useSettingsStore = create<SettingsState>()(
       // v6: 自定义 CSS 升级为「自定义主题」——新增基底主题 customCssBase
       // v7: 演示模式排版旋钮 —— 新增 slideFontFamily / slideFontWeight / slideFontScale / slidePadScale
       // v8: 「页边距缩放」改为「内容填充宽度/高度」——删去 slidePadScale，新增 slideFillWidth / slideFillHeight
-      version: 8,
+      // v9: 新增 webdavSaveLastDir —— 云端保存对话框记住上次成功保存的目录
+      version: 9,
       migrate: (persisted: unknown) => {
         // 自动迁移旧字体栈到 MiSans 方案
         const oldFont = "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
@@ -230,6 +235,8 @@ export const useSettingsStore = create<SettingsState>()(
           delete (state as Record<string, unknown>).slidePadScale
           state.slideFillWidth = clampNumber(state.slideFillWidth, SLIDE_FILL.min, SLIDE_FILL.max, SLIDE_FILL.defaultW)
           state.slideFillHeight = clampNumber(state.slideFillHeight, SLIDE_FILL.min, SLIDE_FILL.max, SLIDE_FILL.defaultH)
+          // v9：新增云端保存记忆目录。存量存档没有它 ⇒ 补空串（空串 = 还没保存过，回落浏览器目录）
+          if (typeof state.webdavSaveLastDir !== 'string') state.webdavSaveLastDir = ''
         }
         return state
       },

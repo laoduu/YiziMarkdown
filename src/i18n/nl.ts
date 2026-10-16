@@ -89,6 +89,10 @@ export const nl = {
     discard: 'Niet opslaan',
     cancel: 'Annuleren',
     file: 'bestand',
+    close: 'Sluiten',
+    closeOthers: 'Sluit anderen',
+    closeRight: 'Sluit rechts',
+    closeAll: 'Sluit alles',
   },
   statusbar: {
     toggleSidebar: 'Zijbalk wisselen',
@@ -110,6 +114,13 @@ export const nl = {
     parentDir: 'Bovenliggende map',
     emptyFolder: 'Lege map',
     noHeadings: 'Geen koppen in dit document',
+    newFile: 'Nieuw bestand',
+    newFolder: 'Nieuwe map',
+    revealInExplorer: 'Tonen in Verkenner',
+    namePlaceholder: 'Bestandsnaam',
+    deleteConfirmTitle: 'Verwijderen',
+    deleteConfirmBody: '"{name}" verwijderen? Wordt naar de Prullenbak verplaatst.',
+    openFileGuard: 'Bestand is geopend — sluit het eerst',
   },
   home: {
     hint: 'Klik op een bestand om te openen, of Ctrl+N voor een nieuw bestand',
@@ -119,6 +130,7 @@ export const nl = {
     emptyHint: 'Druk op Ctrl+O om een bestand te openen — het verschijnt hier',
   },
   editor: {
+    copied: 'Gekopieerd',
     searchPlaceholder: 'Zoeken...',
     replace: 'Vervangen',
     replacePlaceholder: 'Vervangen door...',
@@ -388,6 +400,7 @@ export const nl = {
     slashMenu: 'Slash-menu',
     toggleDevtools: 'Ontwikkelaarstools',
     presentSlides: 'Presentatie',
+    toggleFullscreen: 'Volledig scherm in-/uitschakelen',
   },
   app: {
     saved: 'Opgeslagen',
@@ -479,6 +492,8 @@ export const nl = {
     restore: 'Herstellen',
     maximize: 'Maximaliseren',
     close: 'Sluiten',
+    enterFullscreen: 'Volledig scherm',
+    exitFullscreen: 'Volledig scherm afsluiten',
   },
   ai: {
     chat: 'AI-chat',
@@ -562,6 +577,8 @@ export const nl = {
     saveFailed: 'Opslaan naar cloud mislukt: {msg}',
     retry: 'Opnieuw proberen',
     pathLabel: 'Cloudpad',
+    fileNameLabel: 'Bestandsnaam',
+    parentDir: 'Bovenliggende map',
     root: 'Hoofdmap',
   },
   properties: {

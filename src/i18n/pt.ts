@@ -89,6 +89,10 @@ export const pt = {
     discard: 'Não salvar',
     cancel: 'Cancelar',
     file: 'arquivo',
+    close: 'Fechar',
+    closeOthers: 'Fechar os outros',
+    closeRight: 'Fechar à direita',
+    closeAll: 'Fechar tudo',
   },
   statusbar: {
     toggleSidebar: 'Alternar barra lateral',
@@ -109,6 +113,13 @@ export const pt = {
     parentDir: 'Diretório superior',
     emptyFolder: 'Pasta vazia',
     noHeadings: 'Sem títulos neste documento',
+    newFile: 'Novo arquivo',
+    newFolder: 'Nova pasta',
+    revealInExplorer: 'Mostrar no Explorador',
+    namePlaceholder: 'Nome do arquivo',
+    deleteConfirmTitle: 'Excluir',
+    deleteConfirmBody: 'Excluir "{name}"? Será movido para a Lixeira.',
+    openFileGuard: 'O arquivo está aberto — feche-o primeiro',
     cloud: 'Nuvem',
   },
   home: {
@@ -119,6 +130,7 @@ export const pt = {
     emptyHint: 'Pressione Ctrl+O para abrir um arquivo — ele aparecerá aqui',
   },
   editor: {
+    copied: 'Copiado',
     searchPlaceholder: 'Buscar...',
     replace: 'Substituir',
     replacePlaceholder: 'Substituir por...',
@@ -388,6 +400,7 @@ export const pt = {
     slashMenu: 'Menu de barra',
     toggleDevtools: 'Ferramentas do desenvolvedor',
     presentSlides: 'Apresentação',
+    toggleFullscreen: 'Alternar tela cheia',
   },
   app: {
     saved: 'Salvo',
@@ -479,6 +492,8 @@ export const pt = {
     restore: 'Restaurar',
     maximize: 'Maximizar',
     close: 'Fechar',
+    enterFullscreen: 'Tela cheia',
+    exitFullscreen: 'Sair da tela cheia',
   },
   ai: {
     chat: 'Chat IA',
@@ -562,6 +577,8 @@ export const pt = {
     saveFailed: 'Falha ao salvar na nuvem: {msg}',
     retry: 'Tentar novamente',
     pathLabel: 'Caminho na nuvem',
+    fileNameLabel: 'Nome do arquivo',
+    parentDir: 'Diretório superior',
     root: 'Raiz',
   },
   properties: {

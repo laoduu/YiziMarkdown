@@ -1,44 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Minus, Square, X, Copy } from 'lucide-react'
+import { Minus, Square, X, Copy, Maximize, Minimize2 } from 'lucide-react'
 import { useI18n } from '../i18n'
-
-type WindowCtrl = {
-  minimize: () => Promise<void>
-  maximize: () => Promise<void>
-  unmaximize: () => Promise<void>
-  toggleMaximize: () => Promise<boolean>
-  close: () => Promise<void>
-  startDragging: () => Promise<void>
-  isMaximized: () => Promise<boolean>
-  isFullscreen: () => Promise<boolean>
-  getPlatform: () => Promise<string>
-} | null
-
-const getTauriWindow = (): WindowCtrl => {
-  try {
-    const internals = (window as any).__TAURI_INTERNALS__
-    if (!internals) return null
-
-    // Use the metadata to get current window label
-    const label = internals.metadata?.currentWindow?.label || 'main'
-
-    const invoke = internals.invoke.bind(internals)
-
-    return {
-      minimize: () => invoke('plugin:window|minimize', { label }),
-      maximize: () => invoke('plugin:window|maximize', { label }),
-      unmaximize: () => invoke('plugin:window|unmaximize', { label }),
-      toggleMaximize: () => invoke('toggle_window_size'),
-      close: () => invoke('plugin:window|close', { label }),
-      startDragging: () => invoke('plugin:window|start_dragging', { label }),
-      isMaximized: () => invoke('plugin:window|is_maximized', { label }),
-      isFullscreen: () => invoke('plugin:window|is_fullscreen', { label }),
-      getPlatform: () => invoke('get_platform'),
-    }
-  } catch {
-    return null
-  }
-}
+import { windowOps } from '../lib/windowOps'
 
 interface WindowControlsProps {
   isDark?: boolean
@@ -47,60 +10,59 @@ interface WindowControlsProps {
 export default function WindowControls({ }: WindowControlsProps) {
   const { t } = useI18n()
   const [isMaximized, setIsMaximized] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const [isMac, setIsMac] = useState(false)
 
-  const checkMaximized = useCallback(async (win: WindowCtrl) => {
-    if (!win) return
+  const checkWindow = useCallback(async () => {
     try {
-      const result = isMac ? await win.isFullscreen() : await win.isMaximized()
-      setIsMaximized(result)
+      // mac：最大化概念不存在（中键 = 原生全屏），沿用「全屏态显示还原图标」；
+      // Windows：两个态都轮询（全屏按钮态需要 HTML5 感知的 isFullscreen）
+      const [maxed, fs] = await Promise.all([windowOps.isMaximized(), windowOps.isFullscreen()])
+      setIsMaximized(maxed)
+      setIsFullscreen(fs)
     } catch {}
-  }, [isMac])
+  }, [])
 
   useEffect(() => {
-    const win = getTauriWindow()
-    if (!win) return
-
-    win.getPlatform().then((p) => setIsMac(p === 'macos'))
-
-    checkMaximized(win)
-
-    // Poll maximized state every 500ms
-    const interval = setInterval(() => checkMaximized(win), 500)
+    windowOps.getPlatform().then((p) => setIsMac(p === 'macos'))
+    checkWindow()
+    // Poll window state every 500ms
+    const interval = setInterval(() => checkWindow(), 500)
     return () => clearInterval(interval)
-  }, [checkMaximized])
+  }, [checkWindow])
 
   const handleMinimize = async () => {
-    const win = getTauriWindow()
-    if (win) try { await win.minimize() } catch {}
+    try { await windowOps.minimize() } catch {}
   }
 
   const handleMaximize = async () => {
-    const win = getTauriWindow()
-    if (win) try { const v = await win.toggleMaximize(); setIsMaximized(v) } catch {}
+    try { const v = await windowOps.toggleMaximize(); setIsMaximized(v) } catch {}
+  }
+
+  const handleToggleFullscreen = async () => {
+    try { const v = await windowOps.toggleFullscreen(); setIsFullscreen(v) } catch {}
   }
 
   const handleClose = async () => {
-    const win = getTauriWindow()
-    if (win) try { await win.close() } catch {}
+    try { await windowOps.close() } catch {}
   }
 
   // Export drag handler for parent to use on toolbar
   if (typeof window !== 'undefined') {
     (window as any).__TAURI_START_DRAG = async () => {
-      const win = getTauriWindow()
-      if (win) {
-        try { await win.startDragging() } catch {}
-      }
+      try { await windowOps.startDragging() } catch {}
     }
   }
+
+  // 通用按钮样式：w-9（用户实测反馈再收紧一档；四钮共 144px）
+  const btn = 'w-9 h-11 flex items-center justify-center hover:bg-[var(--editor-hover)] text-[var(--editor-text)] transition-colors'
 
   return (
     <div className="flex items-center h-full">
       <button
         onMouseDown={(e) => e.stopPropagation()}
         onClick={handleMinimize}
-        className="w-11 h-11 flex items-center justify-center hover:bg-[var(--editor-hover)] text-[var(--editor-text)] transition-colors"
+        className={btn}
         title={t('window.minimize')}
       >
         <Minus size={16} />
@@ -108,15 +70,29 @@ export default function WindowControls({ }: WindowControlsProps) {
       <button
         onMouseDown={(e) => e.stopPropagation()}
         onClick={handleMaximize}
-        className="w-11 h-11 flex items-center justify-center hover:bg-[var(--editor-hover)] text-[var(--editor-text)] transition-colors"
-        title={isMaximized ? t('window.restore') : t('window.maximize')}
+        className={btn}
+        title={isMac
+          // mac：中键实际是原生全屏切换（toggle_window_size 的 mac 分支），如实标注
+          ? (isFullscreen ? t('window.exitFullscreen') : t('window.enterFullscreen'))
+          : (isMaximized ? t('window.restore') : t('window.maximize'))}
       >
-        {isMaximized ? <Copy size={14} /> : <Square size={12} />}
+        {isMaximized || (isMac && isFullscreen) ? <Copy size={14} /> : <Square size={12} />}
       </button>
+      {/* 全屏按钮：仅 Windows —— mac 的中键本身就是全屏，不设重复入口 */}
+      {!isMac && (
+        <button
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={handleToggleFullscreen}
+          className={btn}
+          title={isFullscreen ? t('window.exitFullscreen') : t('window.enterFullscreen')}
+        >
+          {isFullscreen ? <Minimize2 size={14} /> : <Maximize size={13} />}
+        </button>
+      )}
       <button
         onMouseDown={(e) => e.stopPropagation()}
         onClick={handleClose}
-        className="w-11 h-11 flex items-center justify-center hover:bg-red-500 hover:text-white text-[var(--editor-text)] transition-colors"
+        className="w-9 h-11 flex items-center justify-center hover:bg-red-500 hover:text-white text-[var(--editor-text)] transition-colors"
         title={t('window.close')}
       >
         <X size={16} />

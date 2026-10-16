@@ -455,7 +455,9 @@ export default function Slideshow({
         if (isFullscreen && !currentFs) {
           await tauri.invoke('plugin:window|set_fullscreen', { label, fullscreen: true })
         } else if (!isFullscreen && isMaximized) {
-          await tauri.invoke('toggle_window_size')
+          // set 语义（幂等）：toggle_window_size 是切换，会在 fullscreen.ts 的
+          // toggleFullscreen 已恢复最大化之后又把最大化取消掉
+          await tauri.invoke('plugin:window|maximize', { label })
         }
       } catch {}
     }

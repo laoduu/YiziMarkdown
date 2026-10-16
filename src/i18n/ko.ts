@@ -89,6 +89,10 @@ export const ko = {
     discard: '저장 안 함',
     cancel: '취소',
     file: '파일',
+    close: '닫기',
+    closeOthers: '다른 탭 닫기',
+    closeRight: '오른쪽 탭 닫기',
+    closeAll: '모두 닫기',
   },
   statusbar: {
     toggleSidebar: '사이드바 전환',
@@ -109,6 +113,13 @@ export const ko = {
     parentDir: '상위 디렉터리',
     emptyFolder: '빈 폴더',
     noHeadings: '문서에 제목이 없습니다',
+    newFile: '새 파일',
+    newFolder: '새 폴더',
+    revealInExplorer: '탐색기에서 표시',
+    namePlaceholder: '파일 이름',
+    deleteConfirmTitle: '삭제',
+    deleteConfirmBody: '"{name}"을(를) 삭제할까요? 휴지통으로 이동됩니다.',
+    openFileGuard: '이 파일이 열려 있어 먼저 닫아야 합니다',
     cloud: '클라우드',
   },
   home: {
@@ -119,6 +130,7 @@ export const ko = {
     emptyHint: 'Ctrl+O로 파일을 열면 여기에 표시됩니다',
   },
   editor: {
+    copied: '복사됨',
     searchPlaceholder: '검색...',
     replace: '바꾸기',
     replacePlaceholder: '바꿀 내용...',
@@ -388,6 +400,7 @@ export const ko = {
     slashMenu: '슬래시 메뉴',
     toggleDevtools: '개발자 도구',
     presentSlides: '프레젠테이션',
+    toggleFullscreen: '전체 화면 전환',
   },
   app: {
     saved: '저장되었습니다',
@@ -479,6 +492,8 @@ export const ko = {
     restore: '복원',
     maximize: '최대화',
     close: '닫기',
+    enterFullscreen: '전체 화면',
+    exitFullscreen: '전체 화면 종료',
   },
   ai: {
     chat: 'AI 채팅',
@@ -562,6 +577,8 @@ export const ko = {
     saveFailed: '클라우드 저장 실패: {msg}',
     retry: '다시 시도',
     pathLabel: '클라우드 경로',
+    fileNameLabel: '파일 이름',
+    parentDir: '상위 디렉터리',
     root: '루트',
   },
   properties: {

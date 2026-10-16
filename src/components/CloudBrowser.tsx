@@ -4,16 +4,17 @@
  * 只负责「浏览 + 打开 + 云端侧管理操作」；文档的读写（含图片镜像）由
  * `lib/webdav` 与 `App.tsx` 的打开/保存流程处理。
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  ChevronRight, ChevronUp, Cloud, CloudOff, FileCode, Folder, FolderOpen,
+  ChevronDown, ChevronRight, ChevronUp, Cloud, CloudOff, FileCode, FilePlus2, Folder, FolderOpen,
   Loader2, RefreshCw, FolderPlus, Pencil, Trash2, MoreHorizontal,
 } from 'lucide-react'
 import { useI18n } from '../i18n'
 import Dialog from './Dialog'
+import { openContextMenu, type ContextMenuItem } from './ContextMenu'
 import { useSettingsStore } from '../stores/settingsStore'
 import {
-  list, mkdir, move, remove,
+  list, mkdir, move, remove, save,
   WEBDAV_DIR_CHANGED_EVENT,
   type RemoteEntry,
 } from '../lib/webdav'
@@ -34,7 +35,7 @@ function isVisible(entry: RemoteEntry): boolean {
 /** 面包屑最多原样显示的层级数，超出则把上级折成「…」 */
 const MAX_CRUMBS = 2
 
-type DialogKind = 'newFolder' | 'rename' | 'delete'
+type DialogKind = 'newFile' | 'newFolder' | 'rename' | 'delete'
 
 /** 摊平后的树行：目录展开后其子项以更大的 depth 插在后面 */
 type TreeRow =
@@ -60,12 +61,10 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
   const [entries, setEntries] = useState<RemoteEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [menu, setMenu] = useState<{ entry: RemoteEntry; x: number; y: number } | null>(null)
   const [dialog, setDialog] = useState<{ kind: DialogKind; entry?: RemoteEntry } | null>(null)
   const [nameInput, setNameInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [dialogError, setDialogError] = useState<string | null>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
 
   // ===== 目录树（Obsidian 式就地展开）=====
   /** 已展开的目录路径 */
@@ -119,21 +118,6 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
     window.addEventListener(WEBDAV_DIR_CHANGED_EVENT, onDirChanged)
     return () => window.removeEventListener(WEBDAV_DIR_CHANGED_EVENT, onDirChanged)
   }, [path, load])
-
-  // 关闭右键菜单：点击任意处、滚动、按 Esc
-  useEffect(() => {
-    if (!menu) return
-    const close = () => setMenu(null)
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close() }
-    window.addEventListener('click', close)
-    window.addEventListener('scroll', close, true)
-    window.addEventListener('keydown', onKey)
-    return () => {
-      window.removeEventListener('click', close)
-      window.removeEventListener('scroll', close, true)
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [menu])
 
   // 关闭面包屑「…」下拉：点击任意处、按 Esc
   useEffect(() => {
@@ -217,7 +201,19 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
     setDialogError(null)
     setDialog({ kind, entry })
     setNameInput(kind === 'rename' && entry ? entry.name : '')
-    setMenu(null)
+  }
+
+  /** 行右键 / 行尾「…」按钮共用：打开 / 重命名 / 删除（danger） */
+  const openEntryMenu = (entry: RemoteEntry, x: number, y: number) => {
+    const items: ContextMenuItem[] = []
+    if (!entry.isDir) {
+      items.push({ key: 'open', icon: <FileCode size={13} />, label: t('cloud.open'), onClick: () => onOpenRemote(entry.path) })
+    }
+    items.push(
+      { key: 'rename', icon: <Pencil size={13} />, label: t('cloud.rename'), onClick: () => openDialog('rename', entry) },
+      { key: 'delete', icon: <Trash2 size={13} />, label: t('cloud.delete'), danger: true, separatorBefore: true, onClick: () => openDialog('delete', entry) },
+    )
+    openContextMenu(x, y, items)
   }
 
   /** 目标目录：新建文件夹/重命名都在当前目录内 */
@@ -227,7 +223,13 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
     setBusy(true)
     setDialogError(null)
     try {
-      if (dialog.kind === 'newFolder') {
+      if (dialog.kind === 'newFile') {
+        if (!name) throw new Error(t('sidebar.namePlaceholder'))
+        // 不带已知后缀时自动补 .md（与本地新建文件一致）
+        const fileName = /\.(md|markdown|txt)$/i.test(name) ? name : `${name}.md`
+        // create=true（If-None-Match）：已存在同名文件会报冲突，避免静默覆盖
+        await save(baseUrl, joinPath(path, fileName), '', null, true, null)
+      } else if (dialog.kind === 'newFolder') {
         if (!name) throw new Error(t('cloud.folderNamePlaceholder'))
         await mkdir(baseUrl, joinPath(path, name))
       } else if (dialog.kind === 'rename' && dialog.entry) {
@@ -367,8 +369,18 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
         </button>
       </div>
 
-      {/* 内容 */}
-      <div className="flex-1 overflow-auto min-h-0">
+      {/* 内容（空白处右键 = 新建文件 / 新建文件夹 / 刷新；行右键由 CloudRow 自行 stopPropagation 接管） */}
+      <div
+        className="flex-1 overflow-auto min-h-0"
+        onContextMenu={(e) => {
+          e.preventDefault()
+          openContextMenu(e.clientX, e.clientY, [
+            { key: 'newFile', icon: <FilePlus2 size={13} />, label: t('sidebar.newFile'), onClick: () => openDialog('newFile') },
+            { key: 'newFolder', icon: <FolderPlus size={13} />, label: t('cloud.newFolder'), onClick: () => openDialog('newFolder') },
+            { key: 'refresh', icon: <RefreshCw size={13} />, label: t('cloud.refresh'), onClick: () => load(path) },
+          ])
+        }}
+      >
         {loading && entries.length === 0 ? (
           <div className="py-8 text-center text-sm text-[var(--sidebar-text)]">
             <Loader2 size={18} className="mx-auto mb-2 animate-spin opacity-50" />
@@ -401,7 +413,7 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
                     expanded={expanded.has(row.entry.path)}
                     onToggle={() => toggleDir(row.entry.path)}
                     onOpen={() => openEntry(row.entry)}
-                    onMenu={(x, y) => setMenu({ entry: row.entry, x, y })}
+                    onMenu={openEntryMenu}
                   />
                 )
               }
@@ -426,28 +438,13 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
         )}
       </div>
 
-      {/* 右键 / 更多 菜单 */}
-      {menu && (
-        <div
-          ref={menuRef}
-          className="fixed z-[9500] min-w-[140px] py-1 rounded-lg shadow-xl
-            border border-[var(--editor-border)] bg-[var(--editor-bg)] text-[var(--editor-text)]"
-          style={{ left: menu.x, top: menu.y }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {!menu.entry.isDir && (
-            <MenuItem icon={<FileCode size={13} />} label={t('cloud.open')} onClick={() => { onOpenRemote(menu.entry.path); setMenu(null) }} />
-          )}
-          <MenuItem icon={<Pencil size={13} />} label={t('cloud.rename')} onClick={() => openDialog('rename', menu.entry)} />
-          <MenuItem icon={<Trash2 size={13} />} label={t('cloud.delete')} danger onClick={() => openDialog('delete', menu.entry)} />
-        </div>
-      )}
-
       {/* 新建文件夹 / 重命名 */}
       <Dialog
-        open={dialog?.kind === 'newFolder' || dialog?.kind === 'rename'}
+        open={dialog?.kind === 'newFile' || dialog?.kind === 'newFolder' || dialog?.kind === 'rename'}
         onClose={() => setDialog(null)}
-        title={dialog?.kind === 'rename' ? t('cloud.rename') : t('cloud.newFolder')}
+        title={dialog?.kind === 'rename'
+          ? t('cloud.rename')
+          : dialog?.kind === 'newFile' ? t('sidebar.newFile') : t('cloud.newFolder')}
         width={320}
       >
         <input
@@ -455,7 +452,9 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
           value={nameInput}
           onChange={(e) => setNameInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') runDialog() }}
-          placeholder={dialog?.kind === 'rename' ? t('cloud.newNamePlaceholder') : t('cloud.folderNamePlaceholder')}
+          placeholder={dialog?.kind === 'rename'
+            ? t('cloud.newNamePlaceholder')
+            : dialog?.kind === 'newFile' ? t('sidebar.namePlaceholder') : t('cloud.folderNamePlaceholder')}
           className="settings-input w-full mb-3"
         />
         {dialogError && <p className="text-[11px] text-red-500 mb-2 break-words">{dialogError}</p>}
@@ -504,24 +503,6 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
   )
 }
 
-function MenuItem({ icon, label, onClick, danger }: {
-  icon: React.ReactNode
-  label: string
-  onClick: () => void
-  danger?: boolean
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left
-        hover:bg-[var(--editor-hover)] ${danger ? 'text-red-500' : 'text-[var(--editor-text)]'}`}
-    >
-      {icon}
-      <span>{label}</span>
-    </button>
-  )
-}
-
 /** 逐层一条浅色竖线，把父子层级在视觉上串起来（Obsidian 风格） */
 function TreeGuides({ depth }: { depth: number }) {
   if (depth <= 0) return null
@@ -540,14 +521,16 @@ function CloudRow({ entry, depth, expanded, onToggle, onOpen, onMenu }: {
   expanded: boolean
   onToggle: () => void
   onOpen: () => void
-  onMenu: (x: number, y: number) => void
+  onMenu: (entry: RemoteEntry, x: number, y: number) => void
 }) {
   return (
     <div
       onClick={onOpen}
       onContextMenu={(e) => {
         e.preventDefault()
-        onMenu(Math.min(e.clientX, window.innerWidth - 160), Math.min(e.clientY, window.innerHeight - 100))
+        // 阻止冒泡到内容容器的空白处菜单
+        e.stopPropagation()
+        onMenu(entry, e.clientX, e.clientY)
       }}
       title={entry.isDir ? entry.name : `${entry.name} · ${formatSize(entry.size)}`}
       className="group flex items-stretch cursor-pointer
@@ -556,24 +539,31 @@ function CloudRow({ entry, depth, expanded, onToggle, onOpen, onMenu }: {
       <TreeGuides depth={depth} />
       <div className="flex items-center gap-1 flex-1 min-w-0 py-1 pl-2 pr-2">
         {entry.isDir ? (
-          // 文件夹图标本身就是展开开关；点名称仍是「进入该目录」
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggle() }}
-            className="p-0.5 -m-0.5 rounded shrink-0 hover:bg-[var(--editor-bg)]"
-          >
+          // 与本地文件树统一：名称前的展开三角；点名称仍是「进入该目录」
+          <>
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggle() }}
+              className="p-0.5 -m-0.5 rounded shrink-0 hover:bg-[var(--editor-bg)]"
+            >
+              {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </button>
             {expanded
-              ? <FolderOpen size={14} className="text-[var(--editor-accent)]" />
-              : <Folder size={14} className="text-[var(--editor-accent)]" />}
-          </button>
+              ? <FolderOpen size={14} className="text-[var(--editor-accent)] shrink-0" />
+              : <Folder size={14} className="text-[var(--editor-accent)] shrink-0" />}
+          </>
         ) : (
-          <FileCode size={14} className="text-[var(--editor-accent)] opacity-70 shrink-0" />
+          // 与文件夹行的三角位对齐（本地文件树同款占位）
+          <>
+            <span className="w-3.5 shrink-0" />
+            <FileCode size={14} className="text-[var(--editor-accent)] opacity-70 shrink-0" />
+          </>
         )}
         <span className="flex-1 truncate text-sm">{entry.name}</span>
         <button
           onClick={(e) => {
             e.stopPropagation()
             const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
-            onMenu(Math.min(r.left, window.innerWidth - 160), r.bottom + 2)
+            onMenu(entry, r.left, r.bottom + 2)
           }}
           className="p-0.5 rounded opacity-0 group-hover:opacity-60 hover:!opacity-100
             text-[var(--sidebar-text)] hover:bg-[var(--editor-bg)] shrink-0"

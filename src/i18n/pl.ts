@@ -89,6 +89,10 @@ export const pl = {
     discard: 'Nie zapisuj',
     cancel: 'Anuluj',
     file: 'plik',
+    close: 'Zamknij',
+    closeOthers: 'Zamknij pozostałe',
+    closeRight: 'Zamknij po prawej',
+    closeAll: 'Zamknij wszystko',
   },
   statusbar: {
     toggleSidebar: 'Przełącz panel boczny',
@@ -109,6 +113,13 @@ export const pl = {
     parentDir: 'Katalog nadrzędny',
     emptyFolder: 'Pusty folder',
     noHeadings: 'Brak nagłówków w tym dokumencie',
+    newFile: 'Nowy plik',
+    newFolder: 'Nowy folder',
+    revealInExplorer: 'Pokaż w Eksploratorze',
+    namePlaceholder: 'Nazwa pliku',
+    deleteConfirmTitle: 'Usuń',
+    deleteConfirmBody: 'Usunąć "{name}"? Zostanie przeniesione do Kosza.',
+    openFileGuard: 'Plik jest otwarty — najpierw go zamknij',
     cloud: 'Chmura',
   },
   home: {
@@ -119,6 +130,7 @@ export const pl = {
     emptyHint: 'Naciśnij Ctrl+O, aby otworzyć plik — pojawi się tutaj',
   },
   editor: {
+    copied: 'Skopiowano',
     searchPlaceholder: 'Szukaj...',
     replace: 'Zamień',
     replacePlaceholder: 'Zamień na...',
@@ -388,6 +400,7 @@ export const pl = {
     slashMenu: 'Menu ukośnika',
     toggleDevtools: 'Narzędzia deweloperskie',
     presentSlides: 'Prezentacja',
+    toggleFullscreen: 'Przełącz pełny ekran',
   },
   app: {
     saved: 'Zapisano',
@@ -479,6 +492,8 @@ export const pl = {
     restore: 'Przywróć',
     maximize: 'Maksymalizuj',
     close: 'Zamknij',
+    enterFullscreen: 'Pełny ekran',
+    exitFullscreen: 'Opuść pełny ekran',
   },
   ai: {
     chat: 'Czat AI',
@@ -562,6 +577,8 @@ export const pl = {
     saveFailed: 'Nie udało się zapisać w chmurze: {msg}',
     retry: 'Ponów',
     pathLabel: 'Ścieżka w chmurze',
+    fileNameLabel: 'Nazwa pliku',
+    parentDir: 'Katalog nadrzędny',
     root: 'Katalog główny',
   },
   properties: {

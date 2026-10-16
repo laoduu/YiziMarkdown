@@ -89,6 +89,10 @@ export const tr = {
     discard: 'Kaydetme',
     cancel: 'İptal',
     file: 'dosya',
+    close: 'Kapat',
+    closeOthers: 'Diğerlerini kapat',
+    closeRight: 'Sağdakileri kapat',
+    closeAll: 'Tümünü kapat',
   },
   statusbar: {
     toggleSidebar: 'Kenar çubuğunu değiştir',
@@ -109,6 +113,13 @@ export const tr = {
     parentDir: 'Üst dizin',
     emptyFolder: 'Boş klasör',
     noHeadings: 'Bu belgede başlık yok',
+    newFile: 'Yeni dosya',
+    newFolder: 'Yeni klasör',
+    revealInExplorer: 'Gezginde göster',
+    namePlaceholder: 'Dosya adı',
+    deleteConfirmTitle: 'Sil',
+    deleteConfirmBody: '"{name}" silinsin mi? Geri Dönüşüm Kutusu\'na taşınacak.',
+    openFileGuard: 'Dosya açık — önce kapatın',
     cloud: 'Bulut',
   },
   home: {
@@ -119,6 +130,7 @@ export const tr = {
     emptyHint: 'Bir dosya açmak için Ctrl+O — burada görünecek',
   },
   editor: {
+    copied: 'Kopyalandı',
     searchPlaceholder: 'Ara...',
     replace: 'Değiştir',
     replacePlaceholder: 'Değiştirilecek...',
@@ -388,6 +400,7 @@ export const tr = {
     slashMenu: 'Eğik çizgi menüsü',
     toggleDevtools: 'Geliştirici araçları',
     presentSlides: 'Sunum',
+    toggleFullscreen: 'Tam ekranı aç/kapat',
   },
   app: {
     saved: 'Kaydedildi',
@@ -479,6 +492,8 @@ export const tr = {
     restore: 'Geri yükle',
     maximize: 'Büyüt',
     close: 'Kapat',
+    enterFullscreen: 'Tam ekran',
+    exitFullscreen: 'Tam ekrandan çık',
   },
   ai: {
     chat: 'AI sohbet',
@@ -562,6 +577,8 @@ export const tr = {
     saveFailed: 'Buluta kaydedilemedi: {msg}',
     retry: 'Yeniden dene',
     pathLabel: 'Bulut yolu',
+    fileNameLabel: 'Dosya adı',
+    parentDir: 'Üst dizin',
     root: 'Kök',
   },
   properties: {

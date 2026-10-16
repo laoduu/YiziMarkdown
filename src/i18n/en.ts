@@ -88,6 +88,10 @@ export const en = {
     discard: "Don't Save",
     cancel: 'Cancel',
     file: 'file',
+    close: 'Close',
+    closeOthers: 'Close Others',
+    closeRight: 'Close to the Right',
+    closeAll: 'Close All',
   },
   statusbar: {
     toggleSidebar: 'Toggle Sidebar',
@@ -109,6 +113,13 @@ export const en = {
     parentDir: 'Parent Directory',
     emptyFolder: 'Empty folder',
     noHeadings: 'No headings in this document',
+    newFile: 'New File',
+    newFolder: 'New Folder',
+    revealInExplorer: 'Show in Explorer',
+    namePlaceholder: 'File name',
+    deleteConfirmTitle: 'Delete',
+    deleteConfirmBody: 'Delete "{name}"? It will be moved to the Recycle Bin.',
+    openFileGuard: 'This file is open — close it first',
   },
   home: {
     hint: 'Click a file to open, or press Ctrl+N for a new file',
@@ -118,6 +129,7 @@ export const en = {
     emptyHint: 'Press Ctrl+O to open a file — it will appear here',
   },
   editor: {
+    copied: 'Copied',
     searchPlaceholder: 'Search...',
     replace: 'Replace',
     replacePlaceholder: 'Replace...',
@@ -403,6 +415,7 @@ export const en = {
     slashMenu: 'Slash Menu',
     toggleDevtools: 'Developer Tools',
     presentSlides: 'Present',
+    toggleFullscreen: 'Toggle Fullscreen',
   },
   app: {
     saved: 'Saved',
@@ -498,6 +511,8 @@ export const en = {
     restore: 'Restore',
     maximize: 'Maximize',
     close: 'Close',
+    enterFullscreen: 'Enter Fullscreen',
+    exitFullscreen: 'Exit Fullscreen',
   },
   ai: {
     chat: 'AI Chat',
@@ -581,6 +596,8 @@ export const en = {
     saveFailed: 'Failed to save to cloud: {msg}',
     retry: 'Retry',
     pathLabel: 'Cloud path',
+    fileNameLabel: 'File name',
+    parentDir: 'Parent Directory',
     root: 'Root',
   },
   properties: {

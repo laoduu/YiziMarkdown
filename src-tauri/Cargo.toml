@@ -1,6 +1,6 @@
 [package]
 name = "yizimarkdown"
-version = "0.3.3"
+version = "0.3.4"
 description = "YiziMarkdown - A sleek Markdown editor"
 authors = ["You"]
 license = ""
@@ -42,6 +42,8 @@ zip = { version = "2", default-features = false, features = ["deflate"] }
 # 两者均已在 Cargo.lock 中（quick-xml 经 plist、percent-encoding 经 url 传递），不引入新 crate
 quick-xml = "0.39"
 percent-encoding = "2"
+# 侧栏右键「删除」走系统回收站（可在回收站还原，不直接销毁）
+trash = "3"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.52"

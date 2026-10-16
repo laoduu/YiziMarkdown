@@ -22,6 +22,23 @@ function injectSourceLineMap(md: MarkdownIt): void {
   })
 }
 
+// ---- 自定义渲染规则：把 data-source-line 带进 fence 的 <pre> 输出 ----
+// highlight() 返回的是完整 <pre> 字符串，markdown-it 对以 <pre 开头的结果原样输出，
+// 令牌属性（含 core 注入的 data-source-line）不会合并进来，这里在默认规则外包一层补上。
+// 必须在插件扩展之前安装：mermaid 等插件以本规则为 defaultFence 包装，非 mermaid fence 仍会经过这里。
+function injectFenceSourceLine(md: MarkdownIt): void {
+  const defaultFence = md.renderer.rules.fence
+    || function (tokens, idx, options, _env, self) {
+      return self.renderToken(tokens, idx, options)
+    }
+  md.renderer.rules.fence = function (tokens, idx, options, env, self) {
+    const html = defaultFence(tokens, idx, options, env, self)
+    const line = tokens[idx].attrGet('data-source-line')
+    if (!line) return html
+    return html.replace(/^<pre\b/, `<pre data-source-line="${line}"`)
+  }
+}
+
 // ---- 自定义渲染规则：标题加唯一 ID ----
 function injectHeadingIds(md: MarkdownIt): void {
   const defaultHeadingOpen = md.renderer.rules.heading_open || function(tokens, idx, options, _env, self) {
@@ -83,6 +100,7 @@ export function createMarkdownIt(
 
   md.use(taskLists, { enabled: true, label: true, labelAfter: true })
   injectSourceLineMap(md)
+  injectFenceSourceLine(md)
   injectHeadingIds(md)
 
   // 注入插件扩展

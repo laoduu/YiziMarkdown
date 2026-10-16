@@ -21,6 +21,10 @@ import { loadPlugin, unloadPlugin } from './plugins/registry'
 import { useI18n, translate, getCurrentLang } from './i18n'
 import { refreshThemeCursorVars } from './lib/themeCursor'
 import { applyThemeStyles } from './lib/themeLoader'
+import { deriveDocumentTitle } from './lib/docTitle'
+import CloudSaveDialog from './components/CloudSaveDialog'
+import { ContextMenuHost } from './components/ContextMenu'
+import { windowOps } from './lib/windowOps'
 // 导出 PDF 用的内联样式（globals.css 已包含 Tailwind prose / 编辑器排版；KaTeX 样式保证公式还原）
 import globalsCss from './styles/globals.css?inline'
 import exportTocCss from './styles/export-toc.css?inline'
@@ -167,6 +171,19 @@ function App() {
     loadKeybindings().then(() => shortcutsReadyRef.current = true)
   }, [])
 
+  // 屏蔽 webview 原生右键菜单（v0.3.4 右键菜单体系）：
+  // capture 阶段统一 preventDefault，各功能区再用自定义菜单（ContextMenuHost）接管；
+  // 编辑器内容与所有输入框豁免 —— 原生菜单里的复制/粘贴在 WebView2 里无法用 JS 可靠复刻。
+  useEffect(() => {
+    const onContextMenu = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null
+      if (target?.closest('input, textarea, [contenteditable="true"], [contenteditable=""]')) return
+      e.preventDefault()
+    }
+    document.addEventListener('contextmenu', onContextMenu, true)
+    return () => document.removeEventListener('contextmenu', onContextMenu, true)
+  }, [])
+
   // 全局快捷键（通过 keybindings 模块统一管理）
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -203,6 +220,7 @@ function App() {
           window.dispatchEvent(ev)
           break
         }
+        case 'toggleFullscreen': { void windowOps.toggleFullscreen(); break }
         case 'toggleDevtools': {
           const tauri = (window as any).__TAURI_INTERNALS__
           if (tauri && tauri.invoke) {
@@ -482,7 +500,9 @@ function App() {
     const tauri = (window as any).__TAURI_INTERNALS__
     if (!tauri || typeof tauri.invoke !== 'function') return
     try {
-      const filePath = await tauri.invoke('save_file_dialog') as string | null
+      // 默认名从文档推导：元信息 title → 第一个标题行 → untitled.md
+      const defaultName = (deriveDocumentTitle(tab.content) || 'untitled') + '.md'
+      const filePath = await tauri.invoke('save_file_dialog', { fileName: defaultName }) as string | null
       if (!filePath) return  // 用户取消
       // 用 OrThrow：写盘失败必须让用户看到，不能静默当作已保存
       await invokeTauriOrThrow<void>('save_file', { path: filePath, content: tab.content })
@@ -568,26 +588,30 @@ function App() {
   const handleSaveToCloud = useCallback(() => {
     const tab = currentTab()
     if (!tab) return
-    const { webdavBaseUrl, webdavLastPath } = useSettingsStore.getState()
+    const { webdavBaseUrl, webdavLastPath, webdavSaveLastDir } = useSettingsStore.getState()
     if (!webdavBaseUrl) {
       setSettingsDefaultTab('cloud')
       setIsSettingsOpen(true)
       return
     }
     // 已经是云端文档 → 默认路径就填它当前的远程路径（再按一次回车 = 保存回原处）
-    // 否则用当前浏览的云端目录 + 文件名
+    // 否则起始目录优先级：上次云端保存的目录 → 云端浏览器停留目录 → 根
     // 注意必须用 joinPath：webdavLastPath 来自目录条目、带结尾斜杠（/Notes/），
     // 朴素拼接会得到 /Notes//doc.md，导致 tab 记的远程路径与云端列表不一致
     const existing = tab.remote?.path ? canonicalRemotePath(tab.remote.path) : null
-    const name = tab.filePath ? (tab.filePath.split(/[\\/]/).pop() || 'untitled.md') : 'untitled.md'
+    const name = tab.filePath
+      ? (tab.filePath.split(/[\\/]/).pop() || 'untitled.md')
+      : ((deriveDocumentTitle(tab.content) || 'untitled') + '.md')
+    const startDir = webdavSaveLastDir || webdavLastPath || '/'
     setCloudSaveError(null)
     setCloudSave({
       tabId: tab.id,
-      path: existing ?? joinPath(webdavLastPath || '/', name),
+      path: existing ?? joinPath(startDir, name),
     })
   }, [currentTab])
 
-  const runCloudSave = useCallback(async () => {
+  /** overridePath：CloudSaveDialog 确认时回传的组合路径（绕开 state 异步更新的时差） */
+  const runCloudSave = useCallback(async (overridePath?: string) => {
     if (!cloudSave) return
     const store = useEditorStore.getState()
     const tab = store.tabs.find(t => t.id === cloudSave.tabId)
@@ -595,7 +619,7 @@ function App() {
     const baseUrl = useSettingsStore.getState().webdavBaseUrl
     // 规范化用户手输的路径：折叠重复斜杠、消解 ./..，
     // 否则 tab 上记的远程身份会与云端列表返回的路径不一致，再次打开就会多开一个 tab
-    const remotePath = canonicalRemotePath(cloudSave.path)
+    const remotePath = canonicalRemotePath(overridePath ?? cloudSave.path)
     if (!remotePath || remotePath === '/') {
       setCloudSaveError(t('cloud.invalidPath'))
       return
@@ -640,6 +664,9 @@ function App() {
       store.updateTabFilePath(tab.id, opened.cachePath)
       store.setTabRemote(tab.id, { path: remotePath, etag: opened.etag })
       store.markTabSaved(tab.id)
+
+      // 记住本次落点目录：下次「保存到云端」从这里开始，不用从头再点一遍
+      useSettingsStore.getState().setField('webdavSaveLastDir', parentPath(remotePath))
 
       // 通知云端浏览器：该目录多了一个文件，若正在浏览就自动刷新
       notifyRemoteDirChanged(parentPath(remotePath))
@@ -745,11 +772,11 @@ function App() {
     const tab = currentTab()
     if (!tab) return
 
-    let baseName = 'document'
+    // 有路径沿用文件名；无路径从文档推导（元信息 title → 第一个标题行），推不出用 document
+    let baseName = tab.filePath
+      ? tab.filePath.split('\\').pop()?.replace(/\.[^/.]+$/, '') || 'document'
+      : (deriveDocumentTitle(tab.content) || 'document')
     let ext = 'txt'
-    if (tab.filePath) {
-      baseName = tab.filePath.split('\\').pop()?.replace(/\.[^/.]+$/, '') || 'document'
-    }
 
     switch (format) {
       case 'html': ext = 'html'; break
@@ -923,6 +950,7 @@ function App() {
               onSearchToggle={handleSearchToggle}
               viewMode={viewMode}
               onCursorChange={(pos) => setCursorPosition({ line: pos.line, column: pos.column })}
+              onToast={showToast}
             />
           )}
         </div>
@@ -978,37 +1006,15 @@ function App() {
         </div>
       </Dialog>
 
-      {/* 另存到云端：输入远程路径 */}
-      <Dialog
+      {/* 另存到云端：目录浏览器式选点（面包屑导航 + 文件夹列表 + 文件名输入） */}
+      <CloudSaveDialog
         open={cloudSave !== null}
+        initialPath={cloudSave?.path ?? '/'}
+        busy={cloudSaveBusy}
+        error={cloudSaveError}
         onClose={() => setCloudSave(null)}
-        title={t('cloud.saveToCloudTitle')}
-        width={380}
-      >
-        <label className="text-[12px] text-[var(--editor-text)] block mb-1">{t('cloud.pathLabel')}</label>
-        <input
-          autoFocus
-          value={cloudSave?.path ?? ''}
-          onChange={(e) => setCloudSave((s) => (s ? { ...s, path: e.target.value } : s))}
-          onKeyDown={(e) => { if (e.key === 'Enter') runCloudSave() }}
-          placeholder="/Notes/文档.md"
-          className="settings-input w-full mb-2"
-          style={{ fontFamily: 'var(--font-mono)' }}
-        />
-        <p className="text-[11px] text-[var(--sidebar-text)] mb-2">{t('cloud.saveToCloudHint')}</p>
-        {cloudSaveError && <p className="text-[11px] text-red-500 mb-2 break-words">{cloudSaveError}</p>}
-        <div className="flex justify-end gap-2">
-          <button onClick={() => setCloudSave(null)} className="settings-btn-secondary">{t('cloud.cancel')}</button>
-          <button
-            onClick={runCloudSave}
-            disabled={cloudSaveBusy || !cloudSave?.path.trim()}
-            className="settings-btn-primary"
-            style={cloudSaveBusy || !cloudSave?.path.trim() ? { opacity: 0.5 } : undefined}
-          >
-            {cloudSaveBusy ? t('cloud.saving') : t('cloud.upload')}
-          </button>
-        </div>
-      </Dialog>
+        onConfirm={(fullPath) => { void runCloudSave(fullPath) }}
+      />
       
 
       
@@ -1062,6 +1068,9 @@ function App() {
           onExit={() => setIsSlideshow(false)}
         />
       )}
+
+      {/* 全应用共享右键菜单宿主（各功能区 openContextMenu 弹出） */}
+      <ContextMenuHost />
     </div>
   )
 }

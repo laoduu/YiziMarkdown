@@ -41,8 +41,13 @@ import {
   Download,
   LayoutTemplate,
   CloudUpload,
+  Square,
+  X,
+  Maximize,
 } from 'lucide-react'
 import WindowControls from './WindowControls'
+import { windowOps } from '../lib/windowOps'
+import { openContextMenu } from './ContextMenu'
 import { useSettingsStore } from '../stores/settingsStore'
 import { orderThemes } from '../lib/themeOrder'
 import { CUSTOM_THEME, readUserCss } from '../lib/themeLoader'
@@ -71,25 +76,7 @@ interface ToolbarProps {
   onRedo?: () => void
 }
 
-type WindowCtrl = {
-  toggleMaximize: () => Promise<boolean>
-  isMaximized: () => Promise<boolean>
-} | null
-
-const getTauriWindow = (): WindowCtrl => {
-  try {
-    const internals = (window as any).__TAURI_INTERNALS__
-    if (!internals) return null
-    const label = internals.metadata?.currentWindow?.label || 'main'
-    const invoke = internals.invoke.bind(internals)
-    return {
-      toggleMaximize: () => invoke('toggle_window_size'),
-      isMaximized: () => invoke('plugin:window|is_maximized', { label }),
-    }
-  } catch { return null }
-}
-
-export default function Toolbar({ 
+export default function Toolbar({
   onNew, onNewFromTemplate, onOpen, onSave, onSaveAs, onSaveToCloud, onToggleSidebar, onToggleDark, onUndo, onRedo,
   onInsertMarkdown, onExport, onSearch, onSettings, onPresent, onAIChat,
   isDark,
@@ -172,10 +159,15 @@ export default function Toolbar({
     } catch {}
   }, [])
 
-  // 空白处双击最大化/还原
+  // 空白处双击最大化/还原（mac = 原生全屏切换，随 toggle_window_size 平台语义）
   const handleDoubleClick = useCallback(async () => {
-    const win = getTauriWindow()
-    if (win) try { await win.toggleMaximize() } catch {}
+    try { await windowOps.toggleMaximize() } catch {}
+  }, [])
+
+  // 平台（顶栏右键菜单按平台裁剪：mac 无「最大化」心智）
+  const [isMac, setIsMac] = useState(false)
+  useEffect(() => {
+    windowOps.getPlatform().then((p) => setIsMac(p === 'macos')).catch(() => {})
   }, [])
 
   // 窗口宽度检测，自动收折/展开格式工具栏
@@ -194,16 +186,52 @@ export default function Toolbar({
   }, [])
 
   return (
-    <div 
+    <div
       className="toolbar"
       onMouseDown={(e) => {
+        if (e.button !== 0) return
         if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('.relative')) return
-        const drag = (window as any).__TAURI_START_DRAG
-        if (drag) drag()
+        // 不能立即 startDragging：OS 拖动循环会吞掉双击的第二次点击（双击最大化因此从未生效）。
+        // 位移超过阈值才真正启动拖动（与 TabBar 拖拽同款手法），纯双击不受影响。
+        const startX = e.clientX
+        const startY = e.clientY
+        let dragging = false
+        const onMove = (ev: MouseEvent) => {
+          if (dragging) return
+          if (Math.abs(ev.clientX - startX) < 4 && Math.abs(ev.clientY - startY) < 4) return
+          dragging = true
+          cleanup()
+          const drag = (window as any).__TAURI_START_DRAG
+          if (drag) drag()
+        }
+        const cleanup = () => {
+          window.removeEventListener('mousemove', onMove)
+          window.removeEventListener('mouseup', onUp)
+        }
+        const onUp = () => cleanup()
+        window.addEventListener('mousemove', onMove)
+        window.addEventListener('mouseup', onUp)
       }}
       onDoubleClick={(e) => {
         if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('.relative')) return
         handleDoubleClick()
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        // 打开前查一次窗口状态，决定「最大化/还原」与「全屏」标签；mac 无「最大化」项
+        void Promise.all([windowOps.isMaximized(), windowOps.isFullscreen()]).then(([maxed, fs]) => {
+          const items = [
+            { key: 'minimize', icon: <Minus size={13} />, label: t('window.minimize'), onClick: () => { void windowOps.minimize() } },
+            ...(!isMac ? [{
+              key: 'maximize', icon: <Square size={11} />,
+              label: maxed ? t('window.restore') : t('window.maximize'),
+              onClick: () => { void windowOps.toggleMaximize() },
+            }] : []),
+            { key: 'fullscreen', icon: <Maximize size={12} />, label: fs ? t('window.exitFullscreen') : t('window.enterFullscreen'), onClick: () => { void windowOps.toggleFullscreen() } },
+            { key: 'close', icon: <X size={13} />, label: t('window.close'), danger: true, separatorBefore: true, onClick: () => { void windowOps.close() } },
+          ]
+          openContextMenu(e.clientX, e.clientY, items)
+        })
       }}
     >
       {/* 左侧：品牌 + 格式按钮，允许溢出裁剪 */}

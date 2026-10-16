@@ -89,6 +89,10 @@ export const ja = {
     discard: '保存しない',
     cancel: 'キャンセル',
     file: 'ファイル',
+    close: '閉じる',
+    closeOthers: '他を閉じる',
+    closeRight: '右側を閉じる',
+    closeAll: 'すべて閉じる',
   },
   statusbar: {
     toggleSidebar: 'サイドバーを切り替え',
@@ -109,6 +113,13 @@ export const ja = {
     parentDir: '親ディレクトリ',
     emptyFolder: '空のフォルダー',
     noHeadings: 'このドキュメントに見出しはありません',
+    newFile: '新規ファイル',
+    newFolder: '新規フォルダ',
+    revealInExplorer: 'エクスプローラーで表示',
+    namePlaceholder: 'ファイル名',
+    deleteConfirmTitle: '削除',
+    deleteConfirmBody: '「{name}」を削除しますか？ごみ箱へ移動されます。',
+    openFileGuard: 'このファイルは開いているため、先に閉じてください',
     cloud: 'クラウド',
   },
   home: {
@@ -119,6 +130,7 @@ export const ja = {
     emptyHint: 'Ctrl+O でファイルを開くとここに表示されます',
   },
   editor: {
+    copied: 'コピーしました',
     searchPlaceholder: '検索...',
     replace: '置換',
     replacePlaceholder: '置換...',
@@ -388,6 +400,7 @@ export const ja = {
     slashMenu: 'スラッシュメニュー',
     toggleDevtools: '開発者ツール',
     presentSlides: 'プレゼンテーション',
+    toggleFullscreen: '全画面切り替え',
   },
   app: {
     saved: '保存しました',
@@ -479,6 +492,8 @@ export const ja = {
     restore: '元に戻す',
     maximize: '最大化',
     close: '閉じる',
+    enterFullscreen: '全画面表示',
+    exitFullscreen: '全画面解除',
   },
   ai: {
     chat: 'AI チャット',
@@ -562,6 +577,8 @@ export const ja = {
     saveFailed: 'クラウドへの保存に失敗しました：{msg}',
     retry: '再試行',
     pathLabel: 'クラウドパス',
+    fileNameLabel: 'ファイル名',
+    parentDir: '親ディレクトリ',
     root: 'ルート',
   },
   properties: {

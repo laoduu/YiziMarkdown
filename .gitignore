@@ -27,6 +27,7 @@ _diag_build.bat
 tauri-build.log
 tauri-dev.log
 tauri-dev.log.err
+tauri-dev.err.log
 .mimocode/
 
 # 分发产物

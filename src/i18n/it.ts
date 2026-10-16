@@ -89,6 +89,10 @@ export const it = {
     discard: 'Non salvare',
     cancel: 'Annulla',
     file: 'file',
+    close: 'Chiudi',
+    closeOthers: 'Chiudi gli altri',
+    closeRight: 'Chiudi a destra',
+    closeAll: 'Chiudi tutti',
   },
   statusbar: {
     toggleSidebar: 'Attiva/disattiva barra laterale',
@@ -109,6 +113,13 @@ export const it = {
     parentDir: 'Directory superiore',
     emptyFolder: 'Cartella vuota',
     noHeadings: 'Nessun titolo in questo documento',
+    newFile: 'Nuovo file',
+    newFolder: 'Nuova cartella',
+    revealInExplorer: 'Mostra in Esplora risorse',
+    namePlaceholder: 'Nome del file',
+    deleteConfirmTitle: 'Elimina',
+    deleteConfirmBody: 'Eliminare "{name}"? Verrà spostato nel Cestino.',
+    openFileGuard: 'File aperto — chiuderlo prima',
     cloud: 'Cloud',
   },
   home: {
@@ -119,6 +130,7 @@ export const it = {
     emptyHint: 'Premi Ctrl+O per aprire un file: apparirà qui',
   },
   editor: {
+    copied: 'Copiato',
     searchPlaceholder: 'Cerca...',
     replace: 'Sostituisci',
     replacePlaceholder: 'Sostituisci con...',
@@ -388,6 +400,7 @@ export const it = {
     slashMenu: 'Menu barra',
     toggleDevtools: 'Strumenti di sviluppo',
     presentSlides: 'Presentazione',
+    toggleFullscreen: 'Attiva/disattiva schermo intero',
   },
   app: {
     saved: 'Salvato',
@@ -479,6 +492,8 @@ export const it = {
     restore: 'Ripristina',
     maximize: 'Massimizza',
     close: 'Chiudi',
+    enterFullscreen: 'Schermo intero',
+    exitFullscreen: 'Esci da schermo intero',
   },
   ai: {
     chat: 'Chat IA',
@@ -562,6 +577,8 @@ export const it = {
     saveFailed: 'Salvataggio nel cloud non riuscito: {msg}',
     retry: 'Riprova',
     pathLabel: 'Percorso cloud',
+    fileNameLabel: 'Nome file',
+    parentDir: 'Directory superiore',
     root: 'Radice',
   },
   properties: {

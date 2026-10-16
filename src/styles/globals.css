@@ -787,27 +787,69 @@ a {
   overflow-x: auto;
 }
 
-/* 代码块头部：语言标签 + 操作按钮 */
-.code-block-header {
+/* 代码块悬浮控件：右上角「换行/复制」，右下角语言标签（Typora 风格，悬停显现，无背景条） */
+.code-block-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 12px;
-  background: rgba(0, 0, 0, 0.03);
-  border-bottom: 1px solid var(--editor-border);
-  font-size: 12px;
+  gap: 4px;
+  z-index: 2;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
 }
 
 .code-block-lang {
-  color: var(--sidebar-text);
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  z-index: 2;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
   font-family: var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  color: var(--sidebar-text);
+  background: color-mix(in srgb, var(--editor-surface) 78%, transparent);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  user-select: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s, background-color 0.15s, color 0.15s;
 }
 
-.code-block-actions {
-  display: flex;
-  gap: 4px;
+/* 悬停代码块或正在编辑语言时显现；隐藏态不拦截文本选区与点击 */
+.editor-content pre:hover .code-block-actions,
+.code-block-actions:focus-within,
+.editor-content pre:hover .code-block-lang,
+.code-block-lang.editing {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* 未标注语言的 fence 走自动检测，标签以弱化样式提示 */
+.code-block-lang[data-auto] {
+  color: color-mix(in srgb, var(--sidebar-text) 55%, transparent);
+}
+
+.code-block-lang:hover {
+  background: color-mix(in srgb, var(--editor-surface) 92%, transparent);
+  color: var(--editor-text);
+}
+
+.code-block-lang-input {
+  width: 72px;
+  max-width: 40vw;
+  border: none;
+  outline: none;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--editor-text);
+  text-transform: none;
 }
 
 .code-block-wrap-btn,
@@ -815,11 +857,12 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border: none;
   border-radius: var(--radius-xs);
-  background: transparent;
+  background: color-mix(in srgb, var(--editor-surface) 78%, transparent);
+  backdrop-filter: blur(4px);
   color: var(--sidebar-text);
   cursor: pointer;
   transition: background-color 0.15s, color 0.15s;
@@ -827,23 +870,13 @@ a {
 
 .code-block-wrap-btn:hover,
 .code-block-copy-btn:hover {
-  background: rgba(0, 0, 0, 0.08);
+  background: color-mix(in srgb, var(--editor-surface) 92%, transparent);
   color: var(--editor-text);
 }
 
 .code-block-wrap-btn.active {
-  background: var(--editor-accent);
-  color: white;
-}
-
-/* 暗色模式代码块 */
-.dark .code-block-header {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.dark .code-block-wrap-btn:hover,
-.dark .code-block-copy-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--editor-accent) 16%, transparent);
+  color: var(--editor-accent);
 }
 
 .editor-content a {

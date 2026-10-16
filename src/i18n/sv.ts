@@ -89,6 +89,10 @@ export const sv = {
     discard: 'Spara inte',
     cancel: 'Avbryt',
     file: 'fil',
+    close: 'Stäng',
+    closeOthers: 'Stäng övriga',
+    closeRight: 'Stäng till höger',
+    closeAll: 'Stäng alla',
   },
   statusbar: {
     toggleSidebar: 'Växla sidofält',
@@ -110,6 +114,13 @@ export const sv = {
     parentDir: 'Överordnad mapp',
     emptyFolder: 'Tom mapp',
     noHeadings: 'Inga rubriker i detta dokument',
+    newFile: 'Ny fil',
+    newFolder: 'Ny mapp',
+    revealInExplorer: 'Visa i Utforskaren',
+    namePlaceholder: 'Filnamn',
+    deleteConfirmTitle: 'Ta bort',
+    deleteConfirmBody: 'Ta bort "{name}"? Flyttas till papperskorgen.',
+    openFileGuard: 'Filen är öppen — stäng den först',
   },
   home: {
     hint: 'Klicka på en fil för att öppna, eller Ctrl+N för en ny fil',
@@ -119,6 +130,7 @@ export const sv = {
     emptyHint: 'Tryck Ctrl+O för att öppna en fil — den visas här',
   },
   editor: {
+    copied: 'Kopierad',
     searchPlaceholder: 'Sök...',
     replace: 'Ersätt',
     replacePlaceholder: 'Ersätt med...',
@@ -388,6 +400,7 @@ export const sv = {
     slashMenu: 'Snedstrecksmeny',
     toggleDevtools: 'Utvecklarverktyg',
     presentSlides: 'Presentation',
+    toggleFullscreen: 'Växla helskärm',
   },
   app: {
     saved: 'Sparad',
@@ -479,6 +492,8 @@ export const sv = {
     restore: 'Återställ',
     maximize: 'Maximera',
     close: 'Stäng',
+    enterFullscreen: 'Helskärm',
+    exitFullscreen: 'Avsluta helskärm',
   },
   ai: {
     chat: 'AI-chatt',
@@ -562,6 +577,8 @@ export const sv = {
     saveFailed: 'Kunde inte spara till molnet: {msg}',
     retry: 'Försök igen',
     pathLabel: 'Molnsökväg',
+    fileNameLabel: 'Filnamn',
+    parentDir: 'Överordnad mapp',
     root: 'Rot',
   },
   properties: {

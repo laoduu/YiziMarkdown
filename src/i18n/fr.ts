@@ -89,6 +89,10 @@ export const fr = {
     discard: 'Ne pas enregistrer',
     cancel: 'Annuler',
     file: 'fichier',
+    close: 'Fermer',
+    closeOthers: 'Fermer les autres',
+    closeRight: 'Fermer ceux à droite',
+    closeAll: 'Tout fermer',
   },
   statusbar: {
     toggleSidebar: 'Afficher/Masquer la barre latérale',
@@ -109,6 +113,13 @@ export const fr = {
     parentDir: 'Dossier parent',
     emptyFolder: 'Dossier vide',
     noHeadings: 'Aucun titre dans ce document',
+    newFile: 'Nouveau fichier',
+    newFolder: 'Nouveau dossier',
+    revealInExplorer: 'Afficher dans l\'Explorateur',
+    namePlaceholder: 'Nom du fichier',
+    deleteConfirmTitle: 'Supprimer',
+    deleteConfirmBody: 'Supprimer « {name} » ? Il sera déplacé vers la corbeille.',
+    openFileGuard: 'Fichier ouvert — fermez-le d\'abord',
     cloud: 'Cloud',
   },
   home: {
@@ -119,6 +130,7 @@ export const fr = {
     emptyHint: 'Appuyez sur Ctrl+O pour ouvrir un fichier — il apparaîtra ici',
   },
   editor: {
+    copied: 'Copié',
     searchPlaceholder: 'Rechercher...',
     replace: 'Remplacer',
     replacePlaceholder: 'Remplacer par...',
@@ -388,6 +400,7 @@ export const fr = {
     slashMenu: 'Menu slash',
     toggleDevtools: 'Outils de développement',
     presentSlides: 'Présentation',
+    toggleFullscreen: 'Basculer le plein écran',
   },
   app: {
     saved: 'Enregistré',
@@ -479,6 +492,8 @@ export const fr = {
     restore: 'Restaurer',
     maximize: 'Agrandir',
     close: 'Fermer',
+    enterFullscreen: 'Plein écran',
+    exitFullscreen: 'Quitter le plein écran',
   },
   ai: {
     chat: 'Chat IA',
@@ -562,6 +577,8 @@ export const fr = {
     saveFailed: 'Échec de l\'enregistrement dans le cloud : {msg}',
     retry: 'Réessayer',
     pathLabel: 'Chemin cloud',
+    fileNameLabel: 'Nom du fichier',
+    parentDir: 'Dossier parent',
     root: 'Racine',
   },
   properties: {

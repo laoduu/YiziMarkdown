@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Home, Code, Columns2, Eye, Check, Sparkles, Presentation, ChevronsRight } from 'lucide-react'
+import { X, Home, Code, Columns2, Eye, Check, Sparkles, Presentation, ChevronsRight, FilePlus2 } from 'lucide-react'
 import { useEditorStore, SaveStatus } from '../stores/editorStore'
 import { useI18n } from '../i18n'
+import { openContextMenu } from './ContextMenu'
 
 interface TabBarProps {
   onNew: () => void
@@ -113,14 +114,47 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
     return () => { if (justSavedTimer.current) clearTimeout(justSavedTimer.current) }
   }, [tabs, clearJustSaved])
 
-  const handleClose = (tabId: string, e: React.MouseEvent) => {
-    e.stopPropagation()
+  /** 请求关闭单个 tab（未保存则弹确认）；关闭按钮 / 中键 / 双击 / 右键菜单共用 */
+  const requestClose = (tabId: string) => {
     const tab = tabs.find(t => t.id === tabId)
     if (tab && !tab.isSaved) {
       setPendingCloseId(tabId)
     } else {
       closeTab(tabId)
     }
+  }
+
+  const handleClose = (tabId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    requestClose(tabId)
+  }
+
+  // ===== 批量关闭（tab 右键菜单 v0.3.4）=====
+  /** 待确认关闭的未保存 tab 队列：确认/放弃一个后由 handleConfirmClose 推进下一个 */
+  const closeQueueRef = useRef<string[]>([])
+
+  /** 批量关闭：已保存的直接关，未保存的按顺序走确认流（取消则终止剩余） */
+  const closeMany = (ids: string[]) => {
+    const unsaved: string[] = []
+    for (const id of ids) {
+      const tab = tabs.find(t => t.id === id)
+      if (tab && !tab.isSaved) unsaved.push(id)
+      else closeTab(id)
+    }
+    closeQueueRef.current = unsaved
+    if (unsaved.length > 0) setPendingCloseId(unsaved[0])
+  }
+
+  /** tab 右键菜单 */
+  const openTabMenu = (tabId: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    const idx = tabs.findIndex(t => t.id === tabId)
+    openContextMenu(e.clientX, e.clientY, [
+      { key: 'close', icon: <X size={13} />, label: t('tabbar.close'), onClick: () => requestClose(tabId) },
+      { key: 'closeOthers', label: t('tabbar.closeOthers'), onClick: () => closeMany(tabs.filter(t => t.id !== tabId).map(t => t.id)) },
+      { key: 'closeRight', label: t('tabbar.closeRight'), onClick: () => closeMany(tabs.slice(idx + 1).map(t => t.id)) },
+      { key: 'closeAll', label: t('tabbar.closeAll'), onClick: () => closeMany(tabs.map(t => t.id)) },
+    ])
   }
 
   // 鼠标中键点击关闭 tab
@@ -218,13 +252,33 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
     } else if (action === 'discard') {
       closeTab(tabId)
     }
+
+    // 批量关闭队列：确认/放弃一个后继续弹下一个；取消则终止剩余
+    if (action === 'cancel') {
+      closeQueueRef.current = []
+    } else {
+      closeQueueRef.current = closeQueueRef.current.filter(id => id !== tabId)
+      const next = closeQueueRef.current[0]
+      if (next) setPendingCloseId(next)
+    }
   }
 
   const dragTab = drag ? tabs.find(t => t.id === drag.id) : null
 
   return (
     <div className="tab-bar">
-      <div ref={tabListRef} className="flex items-center min-w-0 flex-1 overflow-x-auto tab-list">
+      <div
+        ref={tabListRef}
+        className="flex items-center min-w-0 flex-1 overflow-x-auto tab-list"
+        onContextMenu={(e) => {
+          // tab / 首页 / 新建按钮上不弹空白菜单（tab 有自己的菜单）
+          if ((e.target as HTMLElement).closest('.tab-item')) return
+          e.preventDefault()
+          openContextMenu(e.clientX, e.clientY, [
+            { key: 'newFile', icon: <FilePlus2 size={13} />, label: t('sidebar.newFile'), onClick: onNew },
+          ])
+        }}
+      >
         <button
           onClick={() => switchTab(null)}
           className={`tab-item ${activeTabId === null ? 'tab-item-active' : ''}`}
@@ -245,6 +299,7 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
             }}
             onAuxClick={(e) => handleAuxClick(tab.id, e)}
             onDoubleClick={(e) => handleClose(tab.id, e)}
+            onContextMenu={(e) => openTabMenu(tab.id, e)}
             className={`tab-item ${activeTabId === tab.id ? 'tab-item-active' : ''}${
               drag?.id === tab.id ? ' tab-item-dragging' : ''}${
               dropTarget?.id === tab.id ? (dropTarget.after ? ' tab-drop-after' : ' tab-drop-before') : ''}`}

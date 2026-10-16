@@ -89,6 +89,10 @@ export const uk = {
     discard: 'Не зберігати',
     cancel: 'Скасувати',
     file: 'файл',
+    close: 'Закрити',
+    closeOthers: 'Закрити інші',
+    closeRight: 'Закрити праворуч',
+    closeAll: 'Закрити всі',
   },
   statusbar: {
     toggleSidebar: 'Перемкнути бічну панель',
@@ -109,6 +113,13 @@ export const uk = {
     parentDir: 'Батьківська тека',
     emptyFolder: 'Порожня тека',
     noHeadings: 'У цьому документі немає заголовків',
+    newFile: 'Новий файл',
+    newFolder: 'Нова папка',
+    revealInExplorer: 'Показати у Провіднику',
+    namePlaceholder: 'Назва файлу',
+    deleteConfirmTitle: 'Видалити',
+    deleteConfirmBody: 'Видалити «{name}»? буде переміщено до кошика.',
+    openFileGuard: 'Файл відкрито — спершу закрийте його',
     cloud: 'Хмара',
   },
   home: {
@@ -119,6 +130,7 @@ export const uk = {
     emptyHint: 'Натисніть Ctrl+O, щоб відкрити файл — він з\'явиться тут',
   },
   editor: {
+    copied: 'Скопійовано',
     searchPlaceholder: 'Пошук...',
     replace: 'Замінити',
     replacePlaceholder: 'Замінити на...',
@@ -388,6 +400,7 @@ export const uk = {
     slashMenu: 'Меню слеша',
     toggleDevtools: 'Інструменти розробника',
     presentSlides: 'Презентація',
+    toggleFullscreen: 'Переключити повний екран',
   },
   app: {
     saved: 'Збережено',
@@ -479,6 +492,8 @@ export const uk = {
     restore: 'Відновити',
     maximize: 'Розгорнути',
     close: 'Закрити',
+    enterFullscreen: 'На весь екран',
+    exitFullscreen: 'Вийти з повного екрана',
   },
   ai: {
     chat: 'AI-чат',
@@ -562,6 +577,8 @@ export const uk = {
     saveFailed: 'Не вдалося зберегти в хмару: {msg}',
     retry: 'Повторити',
     pathLabel: 'Хмарний шлях',
+    fileNameLabel: 'Ім\'я файлу',
+    parentDir: 'Батьківська тека',
     root: 'Корінь',
   },
   properties: {

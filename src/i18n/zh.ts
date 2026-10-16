@@ -88,6 +88,10 @@ export const zh = {
     discard: '不保存',
     cancel: '取消',
     file: '文件',
+    close: '关闭',
+    closeOthers: '关闭其他',
+    closeRight: '关闭右侧',
+    closeAll: '关闭全部',
   },
   statusbar: {
     toggleSidebar: '切换侧边栏',
@@ -109,6 +113,13 @@ export const zh = {
     parentDir: '上级目录',
     emptyFolder: '空文件夹',
     noHeadings: '文档中没有标题',
+    newFile: '新建文件',
+    newFolder: '新建文件夹',
+    revealInExplorer: '在资源管理器中显示',
+    namePlaceholder: '文件名',
+    deleteConfirmTitle: '删除',
+    deleteConfirmBody: '确定删除「{name}」？将移入回收站。',
+    openFileGuard: '该文件正在编辑，请先关闭后再操作',
   },
   home: {
     hint: '点击文件打开，或使用 Ctrl+N 新建文件',
@@ -118,6 +129,7 @@ export const zh = {
     emptyHint: '使用 Ctrl+O 打开文件，文件会出现在这里',
   },
   editor: {
+    copied: '已复制',
     searchPlaceholder: '搜索...',
     replace: '替换',
     replacePlaceholder: '替换...',
@@ -403,6 +415,7 @@ export const zh = {
     slashMenu: '斜杠菜单',
     toggleDevtools: '开发者工具',
     presentSlides: '演示模式',
+    toggleFullscreen: '切换全屏',
   },
   app: {
     saved: '已保存',
@@ -498,6 +511,8 @@ export const zh = {
     restore: '还原',
     maximize: '最大化',
     close: '关闭',
+    enterFullscreen: '进入全屏',
+    exitFullscreen: '退出全屏',
   },
   ai: {
     chat: 'AI 对话',
@@ -581,6 +596,8 @@ export const zh = {
     saveFailed: '保存到云端失败：{msg}',
     retry: '重试',
     pathLabel: '云端路径',
+    fileNameLabel: '文件名',
+    parentDir: '上级目录',
     root: '根目录',
   },
   properties: {

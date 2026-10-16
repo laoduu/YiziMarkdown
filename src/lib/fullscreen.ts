@@ -8,6 +8,33 @@
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+/** 当前是否处于全屏（HTML5 或原生）。
+ *  HTML5 全屏时原生 is_fullscreen 不置位，必须先查 DOM 再查原生。 */
+export async function isFullscreenActive(): Promise<boolean> {
+  if (document.fullscreenElement) return true
+  try {
+    const internals = (window as any).__TAURI_INTERNALS__
+    if (internals?.invoke) {
+      const label = internals.metadata?.currentWindow?.label || 'main'
+      return !!(await internals.invoke('plugin:window|is_fullscreen', { label }))
+    }
+  } catch {}
+  return false
+}
+
+async function isWindowMaximized(): Promise<boolean> {
+  try {
+    const internals = (window as any).__TAURI_INTERNALS__
+    if (!internals?.invoke) return false
+    const label = internals.metadata?.currentWindow?.label || 'main'
+    return !!(await internals.invoke('plugin:window|is_maximized', { label }))
+  } catch { return false }
+}
+
+// toggleFullscreen 专用的最大化记忆：进入前记录，退出后恢复（set 语义，幂等）。
+// 直调 enter/exitFullscreen 的消费方（演示模式）自行管理窗口状态，不受此标记影响。
+let toggleSavedMaximized = false
+
 /** 进入全屏 */
 export async function enterFullscreen(): Promise<boolean> {
   const internals = (window as any).__TAURI_INTERNALS__
@@ -71,39 +98,28 @@ export async function exitFullscreen(): Promise<boolean> {
   return false
 }
 
-/** 切换全屏 */
+/** 切换全屏。
+ *  修复（v0.3.4）：从最大化进入时必须先取消最大化——WebView2 的 HTML5 fullscreen
+ *  从最大化窗口触发只能「小窗全屏」（表现为任务栏变黑但窗口底部不顶满，即实测的假全屏）；
+ *  退出后恢复进入前的最大化状态（与演示模式的存/恢复范式一致）。 */
 export async function toggleFullscreen(): Promise<boolean> {
-  // 方法一：HTML5 Fullscreen 切换
-  try {
-    if (document.fullscreenElement) {
-      await document.exitFullscreen()
-      await sleep(100)
-      return true
-    }
-    await document.documentElement.requestFullscreen()
-    await sleep(100)
-    return !!document.fullscreenElement
-  } catch {}
-
-  // 方法二：Tauri 降级
-  try {
-    const internals = (window as any).__TAURI_INTERNALS__
-    if (internals?.invoke) {
-      const label = internals.metadata?.currentWindow?.label || 'main'
-      const fs = await internals.invoke('plugin:window|is_fullscreen', { label }) as boolean
-      if (fs) {
-        await internals.invoke('plugin:window|set_fullscreen', { label, fullscreen: false })
-      } else {
-        const maximized = await internals.invoke('plugin:window|is_maximized', { label })
-        if (maximized) {
-          await internals.invoke('plugin:window|unmaximize', { label })
-          await sleep(120)
+  if (await isFullscreenActive()) {
+    const ok = await exitFullscreen()
+    if (toggleSavedMaximized) {
+      toggleSavedMaximized = false
+      try {
+        const internals = (window as any).__TAURI_INTERNALS__
+        if (internals?.invoke) {
+          const label = internals.metadata?.currentWindow?.label || 'main'
+          if (!(await internals.invoke('plugin:window|is_maximized', { label }))) {
+            await internals.invoke('plugin:window|maximize', { label })
+          }
         }
-        await internals.invoke('plugin:window|set_fullscreen', { label, fullscreen: true })
-      }
-      await sleep(150)
-      return await internals.invoke('plugin:window|is_fullscreen', { label }) as boolean
+      } catch {}
     }
-  } catch {}
-  return false
+    return ok
+  }
+  // 记录进入前状态：必须在 enterFullscreen 取消最大化之前
+  toggleSavedMaximized = await isWindowMaximized()
+  return enterFullscreen()
 }
