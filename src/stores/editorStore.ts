@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { canonicalRemotePath } from '../lib/remotePath'
+import { canonicalRemotePath } from '../lib/remotePath.ts'
 
 export type SaveStatus = 'saved' | 'unsaved' | 'just-saved'
 

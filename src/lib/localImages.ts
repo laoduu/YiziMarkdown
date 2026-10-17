@@ -4,7 +4,7 @@
  * - 相对路径优先基于**当前文档所在目录**解析（云端文档的本地镜像也走这条路径）
  * - 没有文档目录时（如模板预览，filePath 为 null）回退到模板目录
  */
-import { invokeTauri } from './tauri'
+import { invokeTauri } from './tauri.ts'
 
 let cachedTemplatesDir: string | null | undefined
 

@@ -729,7 +729,7 @@ export default function Toolbar({
       <ImageModal
         open={showImageModal}
         onClose={() => setShowImageModal(false)}
-        onConfirm={(md) => onInsertMarkdown(md)}
+        onConfirm={(md) => onInsertMarkdown(`\n${md}\n`)}
       />
     </div>
   )

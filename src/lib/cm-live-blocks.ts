@@ -11,6 +11,9 @@ import { syntaxTree } from '@codemirror/language'
 // 带 .ts 扩展名：本模块要能被 `node --test` 直接加载（tests/liveBlocks.test.ts），
 // 而 Node 的 ESM 解析器不做扩展名补全（见 lib/remotePath.ts 的同类说明）。
 import { useSettingsStore } from '../stores/settingsStore.ts'
+import { useEditorStore } from '../stores/editorStore.ts'
+import { resolveLocalImageSrc } from './localImages.ts'
+import { invokeTauri } from './tauri.ts'
 import { StateField } from '@codemirror/state'
 import type { EditorState } from '@codemirror/state'
 import type { Range } from '@codemirror/state'
@@ -173,15 +176,34 @@ class ImageWidget extends WidgetType {
     const wrap = document.createElement('div')
     wrap.className = 'cm-live-block cm-live-block--image'
     const img = document.createElement('img')
-    img.src = this.src
     img.alt = this.alt
     img.loading = 'lazy'
     img.draggable = false
-    img.onerror = () => {
+    const fail = () => {
       wrap.classList.add('cm-live-block--broken')
       wrap.textContent = '[image: ' + (this.alt || this.src) + ']'
     }
+    img.onerror = fail
     wrap.appendChild(img)
+    if (/^(https?:|data:|blob:)/i.test(this.src)) {
+      img.src = this.src
+    } else {
+      // 本地路径：先解析为 dataURL、**解析成功后才第一次赋 src**。
+      // ⚠️ 绝不能先把原始本地路径赋给 src：WebView 会把它当相对 URL 请求 → 立即 404 触发
+      // onerror → 占位逻辑 textContent=… 把 img 从 DOM 里销毁 → 之后异步拿到 dataURL 再赋也无效
+      //（真实竞态：mock 瞬间返回时能抢赢，真实 Tauri IPC 几十毫秒必输）。
+      const store = useEditorStore.getState()
+      const tab = store.tabs.find((t) => t.id === store.activeTabId)
+      let baseDir: string | null = null
+      if (tab?.filePath) {
+        const sep = Math.max(tab.filePath.lastIndexOf('\\'), tab.filePath.lastIndexOf('/'))
+        baseDir = sep > 0 ? tab.filePath.substring(0, sep) : null
+      }
+      resolveLocalImageSrc(this.src, baseDir)
+        .then((resolved) => resolved ? invokeTauri<string>('read_image_base64', { path: resolved }) : null)
+        .then((dataUrl) => { if (dataUrl) img.src = dataUrl; else fail() })
+        .catch(fail)
+    }
     return wrap
   }
   ignoreEvent(): boolean { return false }

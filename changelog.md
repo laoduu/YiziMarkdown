@@ -192,6 +192,27 @@
 - 教训：给「基础态/默认态」加过渡时，务必确认没有更靠后的通配符规则（`.x *`）覆盖它 ——
   同特异性下源顺序靠后者胜
 
+### 修 live 模式插入图片不渲染（2026-10-17 实施）
+
+- **主因 · 插入不带换行**：图片确认后走 insertMarkdown 默认模式原样插在光标处 →
+  图片落在文本行内，而 live 的块级图片 widget 只认「整行纯图片」（IMAGE_RE）⇒ 原文显示；
+  且光标停在图片行尾，caret-reveal 把独立成行的图片也显示为源码 ⇒ 双重「没渲染」
+- **修法**：图片插入改为 `\n![alt](src)\n` 包裹（与 mermaid/表格的插入惯例一致）——
+  图片独立成行 + 光标落到下一行 ⇒ **插入后立即渲染**，无需点击别处
+- **次因 · 本地路径未解析**：live 的 ImageWidget 直接 `img.src = 原文`，本地路径（`E:\..`、相对路径）
+  被 WebView 当相对 URL 解析必然 404（预览有 resolveLocalImageSrc + read_image_base64 转 dataURL，
+  live 缺失）。修法：widget toDOM 补同款解析（baseDir 取当前文档目录；云端文档走本地镜像同款）；
+  网络/data/blob 地址直接用原 src；解析失败回落 onerror 占位
+- **二次修复 · onerror 竞态**（首版补解析后仍不生效的真实原因）：首版实现先 `img.src = 原始本地路径`
+  再异步解析 —— 无效路径让 WebView 立即 404 触发 `onerror`，占位逻辑 `textContent=…` 把 `<img>`
+  从 DOM 里销毁，随后异步 dataURL 赋 src 已无对象。mock 瞬间返回能抢赢、真实 Tauri IPC
+  几十毫秒必输（headless 测试因此假通过）。修法：**本地路径解析成功后才第一次赋 src**，
+  解析失败才走占位；网络/data/blob 仍直接赋。慢速 mock（200ms 延迟）实测：解析期间无占位、完成后 dataURL 渲染 ✓
+- 导入链补 `.ts` 扩展名（editorStore→remotePath、localImages→tauri）保持 node --test 可加载
+- 已知限制：正文行内手写的 `![x](y)`（非独立成行）live 仍显示原文 —— 块级 widget 不覆盖行内
+  场景（cm-live-blocks 既有注释：inline replace 在混合 decoration 场景不可靠），为与预览的
+  已知差异，后续需要时做行内图片 widget
+
 ### 右键菜单体系（2026-10-16 实施）
 
 - 全应用屏蔽 webview 原生右键；**编辑器内容与所有输入框豁免**（复制/粘贴依赖原生菜单，WebView2 无法用 JS 可靠复刻粘贴）
