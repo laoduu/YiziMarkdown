@@ -71,6 +71,49 @@ function taskCheckboxWidget(checked: boolean) {
 const fencedLine = lineClass('cm-md-fenced-line')
 const headingLine = (level: number) => lineClass(`cm-md-heading-line cm-md-heading-line-${level}`)
 
+// 脚注装饰：编号与预览全面对齐 —— markdown-it-footnote 按「引用首次出现顺序」重编号
+// （字面标签 [^abc] 也渲染为 [1]），live 用同款全文编号映射 + widget 渲染，两模式同号同观感。
+class FnRefWidget extends WidgetType {
+  constructor(readonly num: number) { super() }
+  toDOM() {
+    const sup = document.createElement('sup')
+    sup.className = 'cm-md-footnote-ref'
+    sup.textContent = `[${this.num}]`
+    return sup
+  }
+  eq(other: FnRefWidget) { return other.num === this.num }
+  ignoreEvent() { return true }
+}
+
+class FnDefMarkWidget extends WidgetType {
+  constructor(readonly num: number) { super() }
+  toDOM() {
+    const el = document.createElement('span')
+    el.className = 'cm-md-footnote-def-mark'
+    el.textContent = `${this.num}.`
+    return el
+  }
+  eq(other: FnDefMarkWidget) { return other.num === this.num }
+  ignoreEvent() { return true }
+}
+
+const fnDefLine = lineClass('cm-md-footnote-def')
+const fnSepLine = lineClass('cm-md-footnote-sep')
+
+// ---- 行内 HTML 配对标签（<sup>1</sup> 等）：与预览 html:true 行为对齐 ----
+// 白名单 = 预览里有视觉语义的常用行内标签；白名单外标签保持原文（不猜渲染）。
+const HTML_TAG_RE = new RegExp(`<(/?)(${['sup', 'sub', 'u', 'mark', 'kbd', 'small', 'del', 'ins', 'b', 'strong', 'i', 'em', 's', 'strike'].join('|')})(?:\\s[^>]*)?>`, 'gi')
+
+/** 行内代码区间（同行成对反引号）：脚注/HTML 扫描需跳过 —— 预览不渲染代码内容里的语法 */
+function inlineCodeSpans(text: string): Array<[number, number]> {
+  const spans: Array<[number, number]> = []
+  const re = /`[^`]*`/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text))) spans.push([m.index, m.index + m[0].length])
+  return spans
+}
+const inSpans = (spans: Array<[number, number]>, i: number) => spans.some(([a, b]) => i >= a && i < b)
+
 const hideDeco = Decoration.mark({ class: 'cm-md-hiding-span' })
 
 const HEADING_LEVELS: Record<string, number> = {
@@ -239,6 +282,92 @@ function buildDecorations(view: EditorView): DecorationSet {
       },
     })
   }
+  // 脚注：lezer-markdown 的 GFM 扩展集不含 footnote，[^n] 语法不产生树节点 ⇒ 树迭代之外
+  // 按行正则扫描。与 caret-reveal 模型一致：光标所在行显示原始语法（保持可编辑）。
+  // 全文预扫：① 引用编号映射（按首次出现顺序，与 markdown-it-footnote 同款）；
+  // ② 第一个定义行的位置（其上加分隔线，对齐预览 footnotes-sep）。
+  const refOrder = new Map<string, number>()
+  let firstDefLineIdx = -1
+  {
+    let inFence = false
+    const allLines = view.state.doc.toString().split('\n')
+    for (let i = 0; i < allLines.length; i++) {
+      const lineText = allLines[i]
+      if (/^\s{0,3}(?:```|~~~)/.test(lineText)) { inFence = !inFence; continue }
+      if (inFence) continue
+      const isDefMark = /^\[\^[^\]]+\]:/.test(lineText)
+      if (isDefMark && firstDefLineIdx < 0) firstDefLineIdx = i
+      const codeSpans = inlineCodeSpans(lineText)
+      const refRe = /\[\^([^\]\s]+)\]/g
+      let m: RegExpExecArray | null
+      while ((m = refRe.exec(lineText))) {
+        if (isDefMark && m.index === 0) continue  // 定义行自身的标记不算引用
+        if (inSpans(codeSpans, m.index)) continue // 行内代码里的不算
+        if (!refOrder.has(m[1])) refOrder.set(m[1], refOrder.size + 1)
+      }
+    }
+  }
+  for (const range of view.visibleRanges) {
+    let pos = range.from
+    while (pos <= range.to) {
+      const line = view.state.doc.lineAt(pos)
+      pos = line.to + 1
+      const caretTouches = line.number >= fromLine && line.number <= toLine
+      const text = line.text
+      const codeSpans = inlineCodeSpans(text)
+      const defMatch = text.match(/^\[\^([^\]]+)\]:\s?/)
+      // 定义行的行类/分隔线**恒定**（不随 caret 进出）：字号行距稳定 ⇒ 无高度跳变，
+      // 光标进出定义区时下方内容不再位移（否则点按瞬间的坐标映射会失准）
+      if (defMatch) {
+        ranges.push(fnDefLine.range(line.from))
+        if (line.number - 1 === firstDefLineIdx) ranges.push(fnSepLine.range(line.from))
+        if (!caretTouches) {
+          // 「[^n]: 」记号替换为与预览一致的序号「n.」；caret 行显示原始语法（可编辑）
+          const num = refOrder.get(defMatch[1]) ?? 0
+          ranges.push(Decoration.replace({ widget: new FnDefMarkWidget(num) }).range(line.from, line.from + defMatch[0].length))
+        }
+      }
+      if (caretTouches) continue
+      let scanFrom = defMatch ? defMatch[0].length : 0
+      const refRe = /\[\^([^\]\s]+)\]/g
+      refRe.lastIndex = scanFrom
+      let m: RegExpExecArray | null
+      while ((m = refRe.exec(text))) {
+        if (defMatch && m.index === 0) continue  // 定义行自身的标记已由序号 widget 接管
+        if (inSpans(codeSpans, m.index)) continue
+        const num = refOrder.get(m[1]) ?? 0
+        const s = line.from + m.index
+        const e = s + m[0].length
+        ranges.push(Decoration.replace({ widget: new FnRefWidget(num) }).range(s, e))
+      }
+      // 行内 HTML 配对标签：隐藏开/闭记号，内容按标签语义渲染
+      const opens = new Map<string, number[]>()
+      HTML_TAG_RE.lastIndex = 0
+      let hm: RegExpExecArray | null
+      while ((hm = HTML_TAG_RE.exec(text))) {
+        if (inSpans(codeSpans, hm.index)) continue
+        const tag = hm[2].toLowerCase()
+        if (!hm[1]) {
+          const arr = opens.get(tag) || []
+          arr.push(hm.index)
+          opens.set(tag, arr)
+        } else {
+          const arr = opens.get(tag)
+          if (arr && arr.length) {
+            const openIdx = arr.pop()!
+            const openLen = (text.slice(openIdx).match(/^<[^>]*>/) || [''])[0].length
+            const openEndAbs = line.from + openIdx + openLen
+            const closeStartAbs = line.from + hm.index
+            ranges.push(hideDeco.range(openEndAbs - openLen, openEndAbs))
+            ranges.push(hideDeco.range(closeStartAbs, closeStartAbs + hm[0].length))
+            if (closeStartAbs > openEndAbs) {
+              ranges.push(Decoration.mark({ class: `cm-md-html-${tag}` }).range(openEndAbs, closeStartAbs))
+            }
+          }
+        }
+      }
+    }
+  }
   // 按 from 排序，同 from 时 line decoration (side < 0) 排在 mark decoration (side >= 0) 之前
   ranges.sort((a, b) => a.from - b.from || a.value.startSide - b.value.startSide)
   return Decoration.set(ranges)
@@ -338,6 +467,24 @@ export const liveEditTheme = EditorView.theme({
   // 任务列表：隐藏标记，由 widget 插入真实 checkbox
   '.cm-md-task-item': { paddingLeft: '0' },
   '.cm-md-task-item-checked': { paddingLeft: '0' },
+  // 脚注：上标引用 [n] 与定义条目 —— 样式与预览全面对齐（链接色、小字号、无下划线）
+  '.cm-md-footnote-ref': { verticalAlign: 'super', fontSize: '0.8em', fontWeight: '600', color: 'var(--code-link)', textDecoration: 'none', margin: '0 1px', cursor: 'pointer' },
+  '.cm-md-footnote-def': { fontSize: '0.85em', lineHeight: '1.55', opacity: '0.9', paddingLeft: '1.8em', position: 'relative' },
+  '.cm-md-footnote-def-mark': { position: 'absolute', left: '0.4em', color: 'var(--code-link)', fontWeight: '600' },
+  // 首个定义行上方的分隔线（对齐预览 footnotes-sep）。
+  // 用 padding-top 而非 margin-top：margin 在行盒之外、不属于任何行，
+  // 点进间隙时 CM 的 posAtCoords 只能就近吸附 ⇒ 光标定位漂移；padding 属于行盒，点击必命中本行。
+  '.cm-md-footnote-sep': { borderTop: '1px solid var(--code-comment)', paddingTop: '0.8em' },
+  // 行内 HTML 配对标签的语义渲染（标签记号已隐藏）
+  '.cm-md-html-sup': { verticalAlign: 'super', fontSize: '0.8em' },
+  '.cm-md-html-sub': { verticalAlign: 'sub', fontSize: '0.8em' },
+  '.cm-md-html-u, .cm-md-html-ins': { textDecoration: 'underline' },
+  '.cm-md-html-s, .cm-md-html-del, .cm-md-html-strike': { textDecoration: 'line-through' },
+  '.cm-md-html-b, .cm-md-html-strong': { fontWeight: '700' },
+  '.cm-md-html-i, .cm-md-html-em': { fontStyle: 'italic' },
+  '.cm-md-html-small': { fontSize: '0.85em' },
+  '.cm-md-html-mark': { backgroundColor: 'color-mix(in srgb, #ffd54d 35%, transparent)' },
+  '.cm-md-html-kbd': { fontFamily: 'var(--font-mono)', backgroundColor: 'var(--code-inline-bg)', padding: '0.1em 0.35em', borderRadius: '4px', fontSize: '0.85em' },
   // 标记过渡动画：默认隐藏（caret不在行上时）
   '.cm-md-hiding-span': {
     opacity: '0',

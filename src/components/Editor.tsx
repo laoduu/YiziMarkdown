@@ -85,9 +85,42 @@ import { useI18n } from '../i18n'
 //   { tag: tags.invalid, color: '#ff0000' },
 // ])
 
+/** 脚注插入（学术引用流）：正文光标/选区末尾插 `[^n]`（选中文本保留），文末确保 `[^n]: ` 定义行，
+ *  光标落到定义行尾 —— 点击后直接开始写文献条目。n 取现有 [^n] 最大编号 +1。
+ *  间隔：文末已是定义行 → 单换行（脚注区成块，条目间不空行）；否则空一行与正文分隔。
+ *  边界：光标落在文档末尾空白区时引用贴正文末尾、定义吸掉尾随空白紧跟正文（避免重叠变更）。 */
+export function insertFootnoteAtView(view: EditorView): void {
+  const doc = view.state.doc.toString()
+  const nums = [...doc.matchAll(/\[\^(\d+)\]/g)].map((m) => parseInt(m[1], 10))
+  const n = (nums.length ? Math.max(...nums) : 0) + 1
+  const ref = `[^${n}]`
+  const def = `[^${n}]: `
+  const trimmedLen = doc.replace(/\s+$/, '').length
+  const docEnd = view.state.doc.length
+  const trimmedLines = doc.slice(0, trimmedLen).split('\n')
+  const lastTrimmedLine = trimmedLines[trimmedLines.length - 1] || ''
+  const gap = /^\[\^[^\]]+\]:/.test(lastTrimmedLine) ? '\n' : '\n\n'
+  const at = Math.min(view.state.selection.main.to, trimmedLen)
+  const atTail = at === trimmedLen
+  // 两种文档尾形态：有尾随空白 → 定义替换尾随空白；无 → 定义紧跟正文（at 与定义同点时合并为单变更）
+  const changes = docEnd > trimmedLen
+    ? (atTail
+        ? [{ from: trimmedLen, to: docEnd, insert: `${ref}${gap}${def}` }]
+        : [{ from: at, insert: ref }, { from: trimmedLen, to: docEnd, insert: `${gap}${def}` }])
+    : (atTail
+        ? [{ from: at, insert: `${ref}${gap}${def}` }]
+        : [{ from: at, insert: ref }, { from: docEnd, insert: `${gap}${def}` }])
+  view.dispatch({
+    changes,
+    selection: { anchor: trimmedLen + ref.length + gap.length + def.length },
+  })
+  view.focus()
+}
+
 export interface EditorRef {
-  insertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'link') => void
+  insertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'link' | 'tag') => void
   insertCodeBlock: () => void
+  insertFootnote: () => void
   toggleSearch: () => void
   navigateToLine: (target: { id: string; line: number }) => void
   getScrollDoms: () => { editor: HTMLElement | null; preview: HTMLElement | null }
@@ -414,13 +447,68 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
     })
   }, [renderedHtml, content, onContentChange])
 
+  // ===== 脚注引用悬浮预览：hover 上标 → 浮窗显示文末定义（免跳转）；点击仍走锚点跳转 =====
+  // 取材：直接克隆文末定义 <li>（预览 DOM 里必然存在），去掉返回链与 id 后注入浮窗。
+  const [fnPreview, setFnPreview] = useState<null | { x: number; y: number; html: string; placeAbove: boolean }>(null)
+  const fnHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    const show = (a: HTMLAnchorElement) => {
+      const hash = a.getAttribute('href') || ''
+      if (!hash.startsWith('#fn')) return
+      const li = container.querySelector<HTMLElement>(hash)
+      if (!li) return
+      const clone = li.cloneNode(true) as HTMLElement
+      clone.querySelector('.footnote-backref')?.remove()  // 返回链在浮窗里无意义
+      clone.removeAttribute('id')                          // 防锚点 id 重复
+      const r = a.getBoundingClientRect()
+      const placeAbove = r.bottom + 170 > window.innerHeight && r.top > 170
+      const x = Math.max(8, Math.min(r.left, window.innerWidth - 396))
+      setFnPreview({ x, y: placeAbove ? r.top - 6 : r.bottom + 6, html: clone.innerHTML, placeAbove })
+    }
+    const onOver = (e: MouseEvent) => {
+      const a = (e.target as HTMLElement).closest?.('.footnote-ref a') as HTMLAnchorElement | null
+      if (!a) return  // 非脚注目标：不取消宽限定时器（否则移开后 mouseover 会把收起定时清掉，浮窗永不关）
+      if (fnHideTimer.current) { clearTimeout(fnHideTimer.current); fnHideTimer.current = null }
+      show(a)
+    }
+    const onOut = (e: MouseEvent) => {
+      const a = (e.target as HTMLElement).closest?.('.footnote-ref a')
+      const to = e.relatedTarget as HTMLElement | null
+      if (!a || (to && a.contains(to))) return
+      // 移入浮窗由浮窗自身 onMouseEnter 取消宽限；移开即收
+      fnHideTimer.current = setTimeout(() => setFnPreview(null), 120)
+    }
+    container.addEventListener('mouseover', onOver)
+    container.addEventListener('mouseout', onOut)
+    // 滚动 / 内容重渲染时浮窗位置即刻过期：直接收
+    const onScroll = () => setFnPreview(null)
+    window.addEventListener('scroll', onScroll, true)
+    return () => {
+      container.removeEventListener('mouseover', onOver)
+      container.removeEventListener('mouseout', onOut)
+      window.removeEventListener('scroll', onScroll, true)
+    }
+  }, [])
+  useEffect(() => { setFnPreview(null) }, [renderedHtml])
+
   return (
     <div className="min-h-full bg-[var(--editor-bg)]" ref={containerRef}>
-      <div 
+      <div
         className={`editor-content prose prose-lg max-w-none theme-${currentTheme}`}
         style={{ fontFamily: 'var(--font-preview)', fontSize: 'var(--preview-font-size, var(--font-size-base))', lineHeight: 'var(--preview-line-height, var(--line-height))' }}
         dangerouslySetInnerHTML={{ __html: renderedHtml }}
       />
+      {fnPreview && (
+        <div
+          className={`fn-preview-popover ${fnPreview.placeAbove ? 'place-above' : ''}`}
+          style={{ left: fnPreview.x, top: fnPreview.y }}
+          onMouseEnter={() => { if (fnHideTimer.current) { clearTimeout(fnHideTimer.current); fnHideTimer.current = null } }}
+          onMouseLeave={() => setFnPreview(null)}
+          dangerouslySetInnerHTML={{ __html: fnPreview.html }}
+        />
+      )}
     </div>
   )
 }
@@ -907,7 +995,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   }, [viewMode, getPreviewLines, findNearestLine])
 
   useImperativeHandle(ref, () => ({
-    insertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'link') => {
+    insertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'link' | 'tag') => {
       const view = viewRef.current
       if (!view) return
       const { from, to } = view.state.selection.main
@@ -938,6 +1026,21 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
           insertText = markdown
           newFrom = from + markdown.length
           newTo = from + markdown.length
+        }
+      } else if (mode === 'tag') {
+        // HTML 标签对包裹（如 <sup></sup>）：按第一个 >< 边界拆成开/闭标签。
+        // 无选中：插入完整标签对，光标落在标签中间；有选中：包住选中内容并保持选中（与粗体等同款）。
+        const cut = markdown.indexOf('><') + 1
+        const open = cut > 0 ? markdown.slice(0, cut) : markdown
+        const close = cut > 0 ? markdown.slice(cut) : ''
+        if (selectedText) {
+          insertText = `${open}${selectedText}${close}`
+          newFrom = from + open.length
+          newTo = newFrom + selectedText.length
+        } else {
+          insertText = markdown
+          newFrom = from + open.length
+          newTo = newFrom
         }
       } else if (mode === 'link') {
         if (selectedText) {
@@ -986,6 +1089,11 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         })
       }
       view.focus()
+    },
+    insertFootnote: () => {
+      const view = viewRef.current
+      if (!view) return
+      insertFootnoteAtView(view)
     },
     toggleSearch: () => {
       setInternalSearchOpen(prev => !prev)
@@ -1459,6 +1567,8 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         break
       }
       case 'horizontalRule': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '\n---\n' }, selection: { anchor: newFrom + 5, head: newFrom + 5 } }); break
+      case 'columnBreak': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '\n***\n' }, selection: { anchor: newFrom + 5, head: newFrom + 5 } }); break
+      case 'footnote': insertFootnoteAtView(view); break
     }
 
     view.focus()

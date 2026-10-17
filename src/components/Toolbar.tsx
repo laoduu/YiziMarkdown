@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { 
   FilePlus2,
   SaveAll, 
@@ -14,6 +14,8 @@ import {
   Bold,
   Italic,
   Strikethrough,
+  Superscript,
+  TextQuote,
   Code,
   Code2,
   Link,
@@ -29,6 +31,7 @@ import {
   Sigma,
   Workflow,
   Pi,
+  Columns2,
   FunctionSquare,
   CheckSquare,
   FileText as FileTextIcon,
@@ -65,7 +68,9 @@ interface ToolbarProps {
   onSaveToCloud: () => void
   onToggleSidebar: () => void
   onToggleDark: () => void
-  onInsertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'link') => void
+  onInsertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'link' | 'tag') => void
+  /** 插入脚注（正文 [^n] + 文末定义行），逻辑在编辑器内（EditorRef.insertFootnote） */
+  onInsertFootnote: () => void
   onExport: (format: 'html' | 'md' | 'txt' | 'docx' | 'pdf') => void
   onSearch: () => void
   onSettings: () => void
@@ -76,9 +81,16 @@ interface ToolbarProps {
   onRedo?: () => void
 }
 
+/** 格式工具栏自动收折阈值：窗口内宽低于此值自动收起。
+ *  实测（playwright @1400px）全量展开需 ≈1310px（brand 109 + 文件按钮区 + 格式条 533
+ *  + 右组 + 窗口控件 144 + 间距/内边距），低于它必然拥挤 —— 阈值取 1320，「放得下才展开」。
+ *  1320 以下若用户手动展开，则进入压缩带：格式条参与 flex 压缩（见 .fmt-strip，
+ *  刻意不加 flex-shrink:0），品牌名同时缩为 YiziMD（见 .brand-name）。 */
+const AUTO_COLLAPSE_THRESHOLD = 1320
+
 export default function Toolbar({
   onNew, onNewFromTemplate, onOpen, onSave, onSaveAs, onSaveToCloud, onToggleSidebar, onToggleDark, onUndo, onRedo,
-  onInsertMarkdown, onExport, onSearch, onSettings, onPresent, onAIChat,
+  onInsertMarkdown, onInsertFootnote, onExport, onSearch, onSettings, onPresent, onAIChat,
   isDark,
 }: ToolbarProps) {
   const { t } = useI18n()
@@ -95,17 +107,15 @@ export default function Toolbar({
   const [showTablePicker, setShowTablePicker] = useState(false)
   const [tablePickerPos, setTablePickerPos] = useState({top: 0, left: 0})
   const [tablePickerSize, setTablePickerSize] = useState({rows: 0, cols: 0})
-  const tableBtnRef = useRef<HTMLDivElement>(null)
   const [showMathMenu, setShowMathMenu] = useState(false)
   const [mathMenuPos, setMathMenuPos] = useState({top: 0, left: 0})
-  const mathBtnRef = useRef<HTMLDivElement>(null)
   const [showCodeMenu, setShowCodeMenu] = useState(false)
   const [codeMenuPos, setCodeMenuPos] = useState({top: 0, left: 0})
-  const codeBtnRef = useRef<HTMLDivElement>(null)
   const codeHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const tableHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const mathHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showThemeMenu, setShowThemeMenu] = useState(false)
-  const { currentTheme, setField } = useSettingsStore()
+  const { currentTheme, setField, formatManuallyCollapsed } = useSettingsStore()
   const [themeFiles, setThemeFiles] = useState<string[]>([])
   const [themeMeta, setThemeMeta] = useState<Record<string, { name: string }>>({})
   // 「自定义主题」条目：user.css 非空时才出现在主题菜单末尾（与设置-外观同一逻辑）
@@ -113,9 +123,41 @@ export default function Toolbar({
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [showImageModal, setShowImageModal] = useState(false)
 
-  // 格式工具栏收折状态
-  const [isFormatCollapsed, setIsFormatCollapsed] = useState(false)
-  const AUTO_COLLAPSE_THRESHOLD = 900
+  // 格式工具栏收折状态：两个来源任一为真即收起 ——
+  // - widthCollapsed：宽度自动策略，只随窗口 resize 变化（防 icon 挤压）
+  // - formatManuallyCollapsed：用户主动收折，持久化于 settingsStore，无视宽窄保持收起，
+  //   直到用户主动展开时清除 —— 此后回到宽度自动策略
+  const [widthCollapsed, setWidthCollapsed] = useState(window.innerWidth < AUTO_COLLAPSE_THRESHOLD)
+  const isFormatCollapsed = formatManuallyCollapsed || widthCollapsed
+
+  // 窗口物理宽度是否低于阈值（只随 resize 变化，手动展开不改动它）：
+  // 驱动品牌名 YiziMarkdown ⇄ YiziMD —— 仅在「格式条展开 && 物理窄窗」（即压缩带）时缩名让位
+  const [viewportNarrow, setViewportNarrow] = useState(window.innerWidth < AUTO_COLLAPSE_THRESHOLD)
+
+  // 动画序号：收折/展开任一状态变化都 +1，重挂载内容行以重放级联
+  //（展开 = 依次浮现，收折 = 逆向依次退场，见 globals.css .fmt-cascade）。
+  // 初始 0 = 应用启动不播动画（首次出现不抢戏）。
+  // 用 useLayoutEffect（非 useEffect）：重挂载必须发生在状态切换首帧绘制之前，
+  // 否则旧内容会先画一帧再被级联替掉 —— 肉眼可见的闪一下。
+  const [animSeq, setAnimSeq] = useState(0)
+  const fmtInnerRef = useRef<HTMLDivElement>(null)
+  const prevCollapsedRef = useRef(isFormatCollapsed)
+  useLayoutEffect(() => {
+    if (prevCollapsedRef.current !== isFormatCollapsed) setAnimSeq(s => s + 1)
+    prevCollapsedRef.current = isFormatCollapsed
+  }, [isFormatCollapsed])
+
+  // 级联标号：给内容行每个子元素标 --i（正向序）与 --ri（反向序）——
+  // 展开按 --i 自左向右浮现，收折按 --ri 自右向左退回。useLayoutEffect 保证首帧前就绪。
+  useLayoutEffect(() => {
+    const el = fmtInnerRef.current
+    if (!el) return
+    const kids = Array.from(el.children) as HTMLElement[]
+    kids.forEach((c, i) => {
+      c.style.setProperty('--i', String(i))
+      c.style.setProperty('--ri', String(kids.length - 1 - i))
+    })
+  }, [animSeq])
 
   // 动态加载主题列表和元信息 + 模板列表
   useEffect(() => {
@@ -170,17 +212,14 @@ export default function Toolbar({
     windowOps.getPlatform().then((p) => setIsMac(p === 'macos')).catch(() => {})
   }, [])
 
-  // 窗口宽度检测，自动收折/展开格式工具栏
+  // 窗口宽度检测：widthCollapsed（收折策略）与 viewportNarrow（品牌缩名）都只随 resize 变化 ——
+  // 手动收折的持久化状态不参与，放大 / 最大化 / 全屏都不会把「用户主动收起」顶开
   useEffect(() => {
     const handleResize = () => {
-      const width = window.innerWidth
-      if (width < AUTO_COLLAPSE_THRESHOLD) {
-        setIsFormatCollapsed(true)
-      } else {
-        setIsFormatCollapsed(false)
-      }
+      const narrow = window.innerWidth < AUTO_COLLAPSE_THRESHOLD
+      setWidthCollapsed(narrow)
+      setViewportNarrow(narrow)
     }
-    handleResize()
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
@@ -236,10 +275,16 @@ export default function Toolbar({
     >
       {/* 左侧：品牌 + 格式按钮，允许溢出裁剪 */}
       <div className="flex items-center gap-px overflow-hidden min-w-0 flex-1">
-        <span className="text-[15px] font-extrabold tracking-tight text-[var(--editor-accent)] select-none mr-1.5 shrink-0">YiziMarkdown</span>
+        {/* 品牌名：压缩带（格式条展开 && 物理窄窗）时 YiziMarkdown ⇄ YiziMD，见 globals.css .brand-name */}
+        <span
+          className={`brand-name text-[15px] font-extrabold tracking-tight text-[var(--editor-accent)] select-none mr-1.5 shrink-0 ${!isFormatCollapsed && viewportNarrow ? 'short' : ''}`}
+        >
+          <span className="brand-full-wrap"><span className="brand-full">YiziMarkdown</span></span>
+          <span className="brand-short">YiziMD</span>
+        </span>
         <ToolbarButton icon={<FilePlus2 size={16} />} tooltip={t('toolbar.newFile')} onClick={onNew} accent />
         <div 
-          className="relative" 
+          className="relative flex min-w-0" 
           ref={templateBtnRef}
           onMouseEnter={() => {
             if (templateHideTimerRef.current) {
@@ -297,7 +342,7 @@ export default function Toolbar({
         <ToolbarButton icon={<SaveAll size={16} />} tooltip={t('toolbar.saveAs')} onClick={onSaveAs} accent />
         <ToolbarButton icon={<CloudUpload size={16} />} tooltip={t('toolbar.saveToCloud')} onClick={onSaveToCloud} accent />
         <div 
-          className="relative" 
+          className="relative flex min-w-0" 
           ref={exportBtnRef}
           onMouseEnter={() => {
             if (exportHideTimerRef.current) {
@@ -370,30 +415,50 @@ export default function Toolbar({
         <ToolbarButton icon={<Redo2 size={16} />} tooltip={t('toolbar.redo')} onClick={() => onRedo?.()} accent />
         <ToolbarButton icon={<Search size={16} />} tooltip={t('toolbar.search')} onClick={onSearch} accent />
         <ToolbarDivider />
-        {/* 格式工具栏收折按钮 */}
-        <ToolbarButton 
-          icon={isFormatCollapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />} 
-          tooltip={isFormatCollapsed ? t('toolbar.expandFormat') : t('toolbar.collapseFormat')} 
-          onClick={() => setIsFormatCollapsed(!isFormatCollapsed)} 
+        {/* 格式工具栏收折按钮（雪佛龙交叉旋转换向，见 globals.css .fmt-chev） */}
+        <ToolbarButton
+          icon={
+            <span className={`fmt-chev ${isFormatCollapsed ? 'collapsed' : ''}`}>
+              <ChevronsLeft size={16} className="chev-open" />
+              <ChevronsRight size={16} className="chev-close" />
+            </span>
+          }
+          tooltip={isFormatCollapsed ? t('toolbar.expandFormat') : t('toolbar.collapseFormat')}
+          onClick={() => {
+            if (isFormatCollapsed) {
+              // 主动展开：清手动标记并当下展开（widthCollapsed 一并清，否则窄窗下会被宽度策略立刻压回）；此后宽度策略随 resize 重新接管
+              setField('formatManuallyCollapsed', false)
+              setWidthCollapsed(false)
+            } else {
+              // 主动收折：持久化，之后无视窗口宽窄（放大 / 最大化 / 全屏都不再自动展开）
+              setField('formatManuallyCollapsed', true)
+            }
+          }}
           accent
         />
-        {!isFormatCollapsed && (
-          <>
+        {/* 格式条：始终挂载，用 0fr↔1fr 网格宽度过渡做收折/展开（动画设计见 globals.css .fmt-strip） */}
+        <div className={`fmt-strip ${isFormatCollapsed ? '' : 'open'}`}>
+          <div
+            ref={fmtInnerRef}
+            key={animSeq}
+            className={animSeq > 0 ? 'fmt-strip-inner fmt-cascade' : 'fmt-strip-inner'}
+          >
             <ToolbarButton icon={<Bold size={16} />} tooltip={t('toolbar.bold')} onClick={() => onInsertMarkdown('**', 'wrap')} />
             <ToolbarButton icon={<Italic size={16} />} tooltip={t('toolbar.italic')} onClick={() => onInsertMarkdown('*', 'wrap')} />
             <ToolbarButton icon={<Strikethrough size={16} />} tooltip={t('toolbar.strikethrough')} onClick={() => onInsertMarkdown('~~', 'wrap')} />
-        <div 
-          className="relative" 
-          ref={codeBtnRef}
-          onMouseEnter={() => {
+            <ToolbarButton icon={<Superscript size={16} />} tooltip={t('toolbar.superscript')} onClick={() => onInsertMarkdown('<sup></sup>', 'tag')} />
+            <ToolbarButton icon={<TextQuote size={16} />} tooltip={t('toolbar.footnote')} onClick={onInsertFootnote} />
+        <div
+          className="relative flex min-w-0"
+          onMouseEnter={(e) => {
             if (codeHideTimerRef.current) {
               clearTimeout(codeHideTimerRef.current)
               codeHideTimerRef.current = null
             }
-            if (codeBtnRef.current) {
-              const rect = codeBtnRef.current.getBoundingClientRect()
-              setCodeMenuPos({ top: rect.bottom + 4, left: rect.left })
-            }
+            // 用事件自带 currentTarget 定位，不读 ref —— ref 在收折/展开重挂载后可能短暂失联
+            //（回归教训：ref.current 为 null 时菜单落到 (0,0)，currentTarget 永远是活节点）
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+            setCodeMenuPos({ top: rect.bottom + 4, left: rect.left })
             setShowCodeMenu(true)
           }}
           onMouseLeave={() => {
@@ -450,18 +515,16 @@ export default function Toolbar({
         <ToolbarDivider />
         <ToolbarButton icon={<Link size={16} />} tooltip={t('toolbar.link')} onClick={() => setShowLinkModal(true)} />
         <ToolbarButton icon={<Image size={16} />} tooltip={t('toolbar.image')} onClick={() => setShowImageModal(true)} />
-        <div 
-          className="relative" 
-          ref={tableBtnRef}
-          onMouseEnter={() => {
+        <div
+          className="relative flex min-w-0"
+          onMouseEnter={(e) => {
             if (tableHideTimerRef.current) {
               clearTimeout(tableHideTimerRef.current)
               tableHideTimerRef.current = null
             }
-            if (tableBtnRef.current) {
-              const rect = tableBtnRef.current.getBoundingClientRect()
-              setTablePickerPos({ top: rect.bottom + 4, left: rect.left })
-            }
+            // 定位走 currentTarget，理由同代码块菜单
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+            setTablePickerPos({ top: rect.bottom + 4, left: rect.left })
             setTablePickerSize({rows: 0, cols: 0})
             setShowTablePicker(true)
           }}
@@ -526,48 +589,62 @@ export default function Toolbar({
             </div>
           )}
         </div>
-        <div className="relative" ref={mathBtnRef}>
-          <ToolbarButton 
-            icon={<Sigma size={16} />} 
-            tooltip={t('toolbar.math')} 
-            onClick={() => {
-              if (mathBtnRef.current) {
-                const rect = mathBtnRef.current.getBoundingClientRect()
-                setMathMenuPos({ top: rect.bottom + 4, left: rect.left })
-              }
-              setShowMathMenu(!showMathMenu)
-            }} 
+        <div
+          className="relative flex min-w-0"
+          onMouseEnter={(e) => {
+            if (mathHideTimerRef.current) {
+              clearTimeout(mathHideTimerRef.current)
+              mathHideTimerRef.current = null
+            }
+            // 定位走 currentTarget，理由同代码块菜单（ref 在重挂载后可能失联）
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+            setMathMenuPos({ top: rect.bottom + 4, left: rect.left })
+            setShowMathMenu(true)
+          }}
+          onMouseLeave={() => {
+            mathHideTimerRef.current = setTimeout(() => {
+              setShowMathMenu(false)
+            }, 100)
+          }}
+        >
+          <ToolbarButton
+            icon={<Sigma size={16} />}
+            tooltip={t('toolbar.math')}
+            onClick={() => {}}
             accent
           />
           {showMathMenu && (
-            <>
-              <div 
-                className="fixed inset-0 z-40" 
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={() => setShowMathMenu(false)}
+            <div
+              className="fixed py-1 w-40 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50"
+              style={{ top: mathMenuPos.top, left: mathMenuPos.left }}
+              onMouseEnter={() => {
+                if (mathHideTimerRef.current) {
+                  clearTimeout(mathHideTimerRef.current)
+                  mathHideTimerRef.current = null
+                }
+              }}
+              onMouseLeave={() => {
+                setShowMathMenu(false)
+              }}
+            >
+              <ExportMenuItem
+                icon={<Pi size={14} />}
+                label={t('toolbar.mathInline')}
+                onClick={() => { onInsertMarkdown('$', 'wrap'); setShowMathMenu(false) }}
               />
-              <div 
-                className="fixed py-1 w-40 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50"
-                style={{ top: mathMenuPos.top, left: mathMenuPos.left }}
-              >
-                <ExportMenuItem 
-                  icon={<Pi size={14} />} 
-                  label={t('toolbar.mathInline')} 
-                  onClick={() => { onInsertMarkdown('$', 'wrap'); setShowMathMenu(false) }} 
-                />
-                <ExportMenuItem 
-                  icon={<FunctionSquare size={14} />} 
-                  label={t('toolbar.mathBlock')} 
-                  onClick={() => { onInsertMarkdown('\n$$\n公式\n$$\n'); setShowMathMenu(false) }} 
-                />
-              </div>
-            </>
+              <ExportMenuItem
+                icon={<FunctionSquare size={14} />}
+                label={t('toolbar.mathBlock')}
+                onClick={() => { onInsertMarkdown('\n$$\n公式\n$$\n'); setShowMathMenu(false) }}
+              />
+            </div>
           )}
         </div>
         <ToolbarButton icon={<Workflow size={16} />} tooltip={t('toolbar.mermaid')} onClick={() => onInsertMarkdown('\n```mermaid\ngraph LR\n  A[开始] --> B[结束]\n```\n')} />
         <ToolbarButton icon={<Minus size={16} />} tooltip={t('toolbar.horizontalRule')} onClick={() => onInsertMarkdown('\n---\n')} />
-          </>
-        )}
+        <ToolbarButton icon={<Columns2 size={16} />} tooltip={t('toolbar.columnBreak')} onClick={() => onInsertMarkdown('\n***\n')} />
+          </div>
+        </div>
       </div>
 
       {/* 右侧工具组：永远不被压缩 */}
@@ -587,13 +664,14 @@ export default function Toolbar({
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => setShowThemeMenu(false)}
               />
-              <div className="absolute top-full right-0 mt-1 py-1 w-48 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50">
-                {themeFiles.map((file) => {
+              <div className="theme-menu absolute top-full right-0 mt-1 py-1 w-48 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50">
+                {themeFiles.map((file, idx) => {
                   const id = file.replace(/\.css$/, '')
                   const name = themeMeta[id]?.name || (id === 'academic' ? t('toolbar.academic') : id)
                   return (
                   <button
                     key={file}
+                    style={{ '--i': idx } as React.CSSProperties}
                     onMouseDown={(e) => e.stopPropagation()}
                     onClick={() => { setField('currentTheme', id); setShowThemeMenu(false) }}
                     className="w-full px-3 py-2 text-sm text-left text-[var(--editor-text)] hover:bg-[var(--editor-hover)] flex items-center gap-2"
@@ -606,6 +684,7 @@ export default function Toolbar({
                 {/* 「自定义主题」= 基底主题 + user.css，user.css 非空时才出现（放最后一条） */}
                 {hasUserCss && (
                   <button
+                    style={{ '--i': themeFiles.length } as React.CSSProperties}
                     onMouseDown={(e) => e.stopPropagation()}
                     onClick={() => { setField('currentTheme', CUSTOM_THEME); setShowThemeMenu(false) }}
                     className="w-full px-3 py-2 text-sm text-left text-[var(--editor-text)] hover:bg-[var(--editor-hover)] flex items-center gap-2 border-t border-[var(--editor-border)] mt-1 pt-2"
@@ -659,7 +738,7 @@ export default function Toolbar({
 interface ToolbarButtonProps {
   icon: React.ReactNode
   tooltip: string
-  onClick: () => void
+  onClick: (e: React.MouseEvent) => void
   active?: boolean
   accent?: boolean
 }

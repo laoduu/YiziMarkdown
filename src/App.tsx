@@ -692,7 +692,7 @@ function App() {
     }
   }, [openFile])
 
-  const handleInsertMarkdown = useCallback((markdown: string, mode?: 'wrap' | 'prefix' | 'link') => {
+  const handleInsertMarkdown = useCallback((markdown: string, mode?: 'wrap' | 'prefix' | 'link' | 'tag') => {
     // 代码块特殊处理：光标定位到两个 ``` 之间
     if (markdown === '\n```\n\n```\n') {
       editorRef.current?.insertCodeBlock()
@@ -886,6 +886,7 @@ function App() {
         onToggleSidebar={() => setSidebarVisible(!sidebarVisible)}
         onToggleDark={() => setField('isDark', !isDark)}
         onInsertMarkdown={handleInsertMarkdown}
+        onInsertFootnote={() => editorRef.current?.insertFootnote()}
         onSaveAs={handleSaveAs}
         onSaveToCloud={handleSaveToCloud}
         onExport={(format) => { handleExport(format) }}

@@ -13,7 +13,7 @@ import {
   Bold, Italic, Strikethrough, Code,
   Quote, ListOrdered, List, CheckSquare,
   Heading1, Heading2, Heading3, Code2,
-  Table, Link, Image, Minus,
+  Table, Link, Image, Minus, Columns2, TextQuote,
 } from 'lucide-react'
 import { useI18n } from '../i18n'
 
@@ -51,6 +51,8 @@ const ALL_MENU_ITEMS: SlashMenuItem[] = [
   { id: 'link',          labelKey: 'slashmenu.link',          icon: <Link size={18} />,           shortcut: 'Ctrl+K' },
   { id: 'image',         labelKey: 'slashmenu.image',         icon: <Image size={18} />,          keywordsKey: 'slashmenu.imageKeywords' },
   { id: 'horizontalRule',labelKey: 'slashmenu.horizontalRule', icon: <Minus size={18} />,          shortcut: 'Ctrl+L' },
+  { id: 'columnBreak',   labelKey: 'slashmenu.columnBreak',    icon: <Columns2 size={18} />,     keywordsKey: 'slashmenu.columnBreakKeywords' },
+  { id: 'footnote',      labelKey: 'slashmenu.footnote',       icon: <TextQuote size={18} />,    keywordsKey: 'slashmenu.footnoteKeywords' },
 ]
 
 /* ------------------------------------------------------------------ */

@@ -97,6 +97,11 @@ export interface SettingsState {
    *  且"未命名新文件"与"云端文档"都没有可靠的本地路径。 */
   frontMatterTypes: Record<string, FrontMatterPropType>
 
+  // 工具栏（v0.3.4）
+  /** 格式工具栏「用户主动收折」标记：持久化，收起后无视窗口宽窄（放大/最大化/全屏都不自动展开），
+   *  直到用户主动展开时清除 —— 此后回到按窗口宽窄的自动策略（见 components/Toolbar.tsx） */
+  formatManuallyCollapsed: boolean
+
   // AI 面板运行时状态（不持久化）
   /** AI 面板是否打开 */
   aiPanelOpen: boolean
@@ -178,6 +183,9 @@ export const useSettingsStore = create<SettingsState>()(
       // 元信息属性（v0.3.2）：属性名 → 类型
       frontMatterTypes: {},
 
+      // 工具栏（v0.3.4）：格式工具栏手动收折（false = 跟随窗口宽窄自动策略）
+      formatManuallyCollapsed: false,
+
       // AI 面板运行时状态
       aiPanelOpen: false,
       aiPendingAction: null,
@@ -196,7 +204,8 @@ export const useSettingsStore = create<SettingsState>()(
       // v7: 演示模式排版旋钮 —— 新增 slideFontFamily / slideFontWeight / slideFontScale / slidePadScale
       // v8: 「页边距缩放」改为「内容填充宽度/高度」——删去 slidePadScale，新增 slideFillWidth / slideFillHeight
       // v9: 新增 webdavSaveLastDir —— 云端保存对话框记住上次成功保存的目录
-      version: 9,
+      // v10: 格式工具栏「手动收折」持久化 —— 新增 formatManuallyCollapsed
+      version: 10,
       migrate: (persisted: unknown) => {
         // 自动迁移旧字体栈到 MiSans 方案
         const oldFont = "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
@@ -237,6 +246,8 @@ export const useSettingsStore = create<SettingsState>()(
           state.slideFillHeight = clampNumber(state.slideFillHeight, SLIDE_FILL.min, SLIDE_FILL.max, SLIDE_FILL.defaultH)
           // v9：新增云端保存记忆目录。存量存档没有它 ⇒ 补空串（空串 = 还没保存过，回落浏览器目录）
           if (typeof state.webdavSaveLastDir !== 'string') state.webdavSaveLastDir = ''
+          // v10：格式工具栏手动收折标记。存量存档没有它 ⇒ 补 false（维持宽度自动策略）
+          if (typeof state.formatManuallyCollapsed !== 'boolean') state.formatManuallyCollapsed = false
         }
         return state
       },

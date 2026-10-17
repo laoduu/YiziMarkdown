@@ -1,7 +1,8 @@
 import MarkdownIt from 'markdown-it'
 import taskLists from 'markdown-it-task-lists'
+import footnote from 'markdown-it-footnote'
 import hljs from 'highlight.js'
-import { generateHeadingId } from './headingId'
+import { generateHeadingId } from './headingId.ts'
 import { splitFrontMatter } from './frontMatter.ts'
 
 // ---- Core ruler：给块级元素注入 data-source-line 属性 ----
@@ -99,6 +100,8 @@ export function createMarkdownIt(
   })
 
   md.use(taskLists, { enabled: true, label: true, labelAfter: true })
+  // 脚注（学术引用）：[^n] 上标 → 点击跳文末定义，定义带 ↩ 返回链（markdown-it-footnote 原生行为）
+  md.use(footnote)
   injectSourceLineMap(md)
   injectFenceSourceLine(md)
   injectHeadingIds(md)

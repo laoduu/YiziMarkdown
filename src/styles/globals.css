@@ -532,6 +532,196 @@ a {
   animation: var(--statusbar-sheen-anim);
 }
 
+/* ===== 格式工具栏收折/展开动画 =====
+   设计口径：简洁、低调、优雅 —— 宽度揭幕为主，细节只在细看时出现。
+   注意：内容行/子元素在静止态一律 transform: none（动画结束即回归），
+   否则会给内部 position:fixed 的下拉菜单（代码/公式/表格）制造包含块。 */
+/* 宽度揭幕：0fr↔1fr 网格轨道过渡（WebView2 ≥107 / WKWebView ≥16 支持；
+   不支持的环境退化为直接切换，状态始终正确）。
+   刻意不加 flex-shrink:0 —— 压缩带（窄窗手动展开）里格式条必须参与 flex 压缩：
+   1fr 轨道跟随被压窄的容器，内部按钮整体等比收窄，而不是右侧被硬裁切。
+   收/开同为 260ms —— 收折即展开的逆向（用户口径），不做不对称时长。 */
+/* 宽度收放：transition 由「过渡到的目标状态」上的声明决定 ——
+   展开 = 过渡到 .open（用 .open 的 transition，无延迟，260ms）；
+   收起 = 过渡回基础态（用基础态的 transition，延迟 300ms 让级联渐隐先播完再收宽）。
+   这样两者可分别控制：收起时宽度在级联期间保持全宽，按钮才能被看见向左渐隐，
+   而不是一收折就被 overflow:hidden 裁没（实测：grid-template-columns 实际会瞬间跳变，
+   不靠它的插值，靠「延迟期间保持旧值」来撑住可见窗口）。 */
+/* ⚠️ 必须用 `.toolbar .fmt-strip`（0,2,0）而非 `.fmt-strip`（0,1,0）——
+   否则会被 `.theme-transition *`（0,1,0，源顺序更靠后）的
+   `transition: background-color...` 覆盖掉 grid-template-columns 过渡，
+   导致收折宽度瞬间跳变、级联渐隐被 overflow:hidden 裁没（真实 bug）。 */
+.toolbar .fmt-strip {
+  display: grid;
+  grid-template-columns: 0fr;
+  overflow: hidden;
+  transition: grid-template-columns 200ms cubic-bezier(0.4, 0, 0.2, 1) 300ms;
+}
+.fmt-strip {
+  display: grid;
+  grid-template-columns: 0fr;
+  overflow: hidden;
+}
+.fmt-strip.open {
+  grid-template-columns: 1fr;
+  transition: grid-template-columns 260ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* 内容行显隐：
+   展开 —— 宽度先行，内容迟 70ms 浮现（宽度给足空间，内容才登场）。
+   收起 —— 与展开镜像：子项按 --ri 自右向左依次渐隐（forwards 停在 opacity:0 不弹回），
+   叠加宽度自右向左收窄；级联播完（~340ms）后内容行整体隐藏，恢复不可聚焦。
+   ⚠️ 收起会重挂载内容行（animSeq key）—— 新元素没有初始值变化，transition 不触发、
+   若沿用基础态 opacity:0 则「出生即隐形」⇒ 肉眼只见瞬间收没（真实回归 bug）。
+   故收起态必须显式 opacity:1 起步，并用 animation 做「播完再隐藏」（transition 对新元素无效）。 */
+.fmt-strip-inner {
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 160ms ease 30ms, visibility 0s linear 260ms;
+}
+.fmt-strip.open .fmt-strip-inner {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 160ms ease 70ms, visibility 0s;
+}
+/* 收起态：级联期间保持可见（子项才看得到渐隐），340ms 后隐藏。
+   仅 fmt-cascade 生效 —— 首次启动的收起态无 fmt-cascade，走基础态隐藏，保持不可聚焦。 */
+.fmt-strip:not(.open) .fmt-strip-inner.fmt-cascade {
+  opacity: 1;
+  visibility: visible;
+  animation: fmt-inner-collapse 340ms linear both;
+}
+@keyframes fmt-inner-collapse {
+  0%, 98% { opacity: 1; visibility: visible; }
+  100% { opacity: 1; visibility: hidden; }
+}
+/* 级联（应用启动不播）：展开时子元素按 --i 依次延迟 10ms，
+   自收折按钮一侧向右逐个浮现 + 5px 微移 —— 像从收折按钮里「流」出来；
+   收折 = 同一动画逆向：按 --ri 自右向左依次退回收折按钮（TS 侧同时标 --i/--ri）。
+   fill-mode：展开用 backwards（transform 结束归 none，见下方包含块 bug）；
+   收折必须 forwards —— 否则子项播完回弹到 opacity:1，在内容行隐藏前会「重新冒出来」。 */
+.fmt-cascade > * {
+  animation: fmt-btn-in 180ms cubic-bezier(0.25, 0.1, 0.25, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 10ms);
+}
+.fmt-strip:not(.open) .fmt-cascade > * {
+  animation-name: fmt-btn-out;
+  animation-delay: calc(var(--ri, 0) * 10ms);
+  animation-fill-mode: forwards;
+}
+@keyframes fmt-btn-in {
+  from { opacity: 0; transform: translateX(-5px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes fmt-btn-out {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateX(-5px); }
+}
+/* 收折按钮雪佛龙：两枚图标同位叠放交叉淡换 + 90° 微旋，方向切换不再是硬切 */
+.fmt-chev {
+  position: relative;
+  width: 16px;
+  height: 16px;
+}
+.fmt-chev > svg {
+  position: absolute;
+  inset: 0;
+  transition: opacity 160ms ease, transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.fmt-chev .chev-open  { opacity: 1; transform: rotate(0deg); }
+.fmt-chev .chev-close { opacity: 0; transform: rotate(90deg); }
+.fmt-chev.collapsed .chev-open  { opacity: 0; transform: rotate(-90deg); }
+.fmt-chev.collapsed .chev-close { opacity: 1; transform: rotate(0deg); }
+/* ===== 主题菜单：与格式工具栏同风格的级联展开 =====
+   面板淡入下滑 + 菜单项自上而下依次浮现（--i 由 TS 侧按序标号）。
+   菜单为条件渲染，每次打开都是全新挂载 ⇒ 动画自动重放，无需 remount 技巧。
+   面板动画不设 fill-mode（自然态即终态，结束不残留 transform）；菜单项用 backwards
+   在 stagger 延迟期间保持 from 态（不抢跳）。 */
+.theme-menu {
+  animation: menu-panel-in 140ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+.theme-menu > * {
+  animation: menu-item-in 160ms cubic-bezier(0.25, 0.1, 0.25, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 8ms);
+}
+@keyframes menu-panel-in {
+  from { opacity: 0; transform: translateY(-4px); }
+}
+@keyframes menu-item-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+/* 品牌名窄屏适配：YiziMarkdown ⇄ YiziMD（仅压缩带 = 格式条展开 && 物理窄窗时触发）。
+   两段文本同叠一个网格单元：长名走 0fr↔1fr 轨道收放（与格式条同一手法，邻位元素平滑让位），
+   短名同位交叉淡入 —— 首四字母「Yizi」重叠，视觉上即「Markdown 缩为 MD」。 */
+.brand-name {
+  display: inline-grid;
+  grid-template-columns: auto;
+}
+.brand-full-wrap {
+  grid-area: 1 / 1;
+  display: grid;
+  grid-template-columns: 1fr;
+  overflow: hidden;
+  transition: grid-template-columns 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.brand-name.short .brand-full-wrap { grid-template-columns: 0fr; }
+.brand-full {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 1;
+  transition: opacity 140ms ease;
+}
+.brand-name.short .brand-full { opacity: 0; transition-delay: 40ms; }
+.brand-short {
+  grid-area: 1 / 1;
+  justify-self: start;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 140ms ease 60ms, visibility 0s;
+}
+.brand-name.short .brand-short { opacity: 1; visibility: visible; }
+/* ===== 脚注引用悬浮预览（预览面板）=====
+   hover 上标 → 浮窗显示文末定义；点击仍走锚点跳转，两者互补。
+   动画只用 opacity（不用 transform）—— place-above 的 translateY(-100%) 定位不能被动画覆盖。
+   fixed 定位 + window scroll capture 收起：滚动即过期，不做跟随（浮窗是瞬时预览，不是停靠面板）。 */
+.fn-preview-popover {
+  position: fixed;
+  z-index: 30;
+  max-width: 380px;
+  max-height: 240px;
+  overflow: auto;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--editor-text);
+  background: var(--editor-surface);
+  border: 1px solid var(--editor-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
+  animation: fn-pop-in 150ms ease;
+}
+.fn-preview-popover.place-above { transform: translateY(calc(-100% - 6px)); }
+.fn-preview-popover p { margin: 0 0 0.5em; }
+.fn-preview-popover p:last-child { margin-bottom: 0; }
+@keyframes fn-pop-in {
+  from { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fn-preview-popover { animation: none !important; }
+}
+/* 尊重系统「减少动态效果」：全部动画/过渡关停，只保留状态切换 */
+@media (prefers-reduced-motion: reduce) {
+  .fmt-strip, .fmt-strip-inner, .fmt-chev > svg,
+  .brand-full-wrap, .brand-full, .brand-short { transition: none !important; }
+  .fmt-cascade > *, .theme-menu, .theme-menu > * { animation: none !important; }
+}
+
 /* ===== 通用装饰动画 =====
    主题通过 --<region>-sheen-anim 直接引用，无需自带 @keyframes。
    全部只动 background-position / opacity，不碰 transform ⇒ 不影响布局与命中测试。 */
@@ -886,6 +1076,34 @@ a {
 
 .editor-content a:hover {
   text-decoration: underline;
+}
+
+/* ===== 脚注 =====
+   特异性：主题注入在 head 末尾，用 `.editor-content.theme-x p` (0,2,1) 给每段加
+   paragraph-spacing —— 与旧脚注规则 (0,2,1) 持平但后到者胜 ⇒ 有 <p> 的条目被顶出行距。
+   脚注规则一律再加一层类抬到 (0,3,1)，稳压主题；空条目无 <p> 所以此前不受影响。 */
+/* 上标引用：本身已是「上移 + 缩小 + 加粗」的高亮，hover 不加下划线（避免误读为普通强调） */
+.editor-content p .footnote-ref a,
+.editor-content p .footnote-ref a:hover {
+  text-decoration: none;
+  font-weight: 600;
+}
+/* 文末脚注区：小字号 + 紧行距 —— 参考文献是辅助信息，不与正文等量齐观 */
+.editor-content section.footnotes {
+  font-size: 0.85em;
+  line-height: 1.55;
+}
+.editor-content .footnotes-sep { margin-top: 2em; }
+.editor-content .footnotes-list { margin: 0.6em 0 0; padding-left: 1.6em; }
+.editor-content .footnotes-list .footnote-item { margin: 0; }
+.editor-content .footnotes-list .footnote-item p {
+  margin: 0 0 0.1em;
+  line-height: 1.55;
+  font-size: inherit;
+}
+.editor-content .footnotes-list .footnote-item p .footnote-backref,
+.editor-content .footnotes-list .footnote-item p .footnote-backref:hover {
+  text-decoration: none;
 }
 
 .editor-content img {

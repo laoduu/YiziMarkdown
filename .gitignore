@@ -40,3 +40,6 @@ releases/
 # 发布临时产物与本地工作区记忆
 .release_tmp/
 .workbuddy/
+
+# Playwright CLI 测试产物（自动化验证会话）
+.playwright-cli/
