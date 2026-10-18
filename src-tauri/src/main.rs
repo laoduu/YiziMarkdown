@@ -790,6 +790,95 @@ fn get_app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
 
+/// 获取当前运行形态，决定这个 exe 能不能走官方 updater
+///
+/// - `nsis`：NSIS 安装版 —— updater 唯一支持的目标（安装包会装回同一目录）
+/// - `msi`：MSI 安装版 —— MSI 线已废弃，**必须单独识别出来**：NSIS 安装包按用户级装到
+///   `%LOCALAPPDATA%`，若对 MSI 版放行，用户会被装成第二份而不是被更新
+/// - `portable`：便携版或无法确认 —— 不在卸载注册表里，无法被覆盖更新
+///
+/// 判定不只看注册表有没有键，还要**当前 exe 确实跑在那个安装目录里**：同一台机器可能既装
+/// 过安装版、又跑着别处的便携版副本，只认注册表就会更新错目标。
+#[tauri::command]
+fn get_install_kind() -> String {
+    #[cfg(target_os = "windows")]
+    {
+        detect_windows_install_kind()
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        // macOS 只发 dmg，清单里也没有 darwin 键，一律按不可自动更新对待
+        String::from("portable")
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn detect_windows_install_kind() -> String {
+    use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ};
+    use winreg::RegKey;
+
+    const UNINSTALL: &str = r"Software\Microsoft\Windows\CurrentVersion\Uninstall";
+    const PRODUCT_NAME: &str = "YiziMarkdown";
+
+    // 注册表里的 InstallLocation 常带引号（"D:\Program Files\YiziMarkdown"）或尾部分隔符
+    fn norm_dir(s: &str) -> String {
+        s.trim()
+            .trim_matches('"')
+            .trim_end_matches(|c| c == '\\' || c == '/')
+            .to_lowercase()
+    }
+
+    let Ok(exe) = std::env::current_exe() else {
+        return String::from("portable");
+    };
+    let Some(parent) = exe.parent() else {
+        return String::from("portable");
+    };
+    let exe_dir = norm_dir(&parent.to_string_lossy());
+
+    // 1) NSIS 安装版：卸载项的键名就是 productName，卸载器是 uninstall.exe
+    for hive in [HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE] {
+        let path = format!(r"{UNINSTALL}\{PRODUCT_NAME}");
+        let Ok(key) = RegKey::predef(hive).open_subkey_with_flags(&path, KEY_READ) else {
+            continue;
+        };
+        let uninstall: String = key.get_value("UninstallString").unwrap_or_default();
+        let loc: String = key.get_value("InstallLocation").unwrap_or_default();
+        if uninstall.to_lowercase().contains("uninstall.exe")
+            && !loc.is_empty()
+            && norm_dir(&loc) == exe_dir
+        {
+            return String::from("nsis");
+        }
+    }
+
+    // 2) MSI 安装版：卸载项是 GUID 键，DisplayName 才是 productName，卸载走 msiexec
+    for hive in [HKEY_LOCAL_MACHINE, HKEY_CURRENT_USER] {
+        let Ok(uninstall) = RegKey::predef(hive).open_subkey_with_flags(UNINSTALL, KEY_READ) else {
+            continue;
+        };
+        for name in uninstall.enum_keys().flatten() {
+            let Ok(entry) = uninstall.open_subkey_with_flags(&name, KEY_READ) else {
+                continue;
+            };
+            let display: String = entry.get_value("DisplayName").unwrap_or_default();
+            if display != PRODUCT_NAME {
+                continue;
+            }
+            let uninst: String = entry.get_value("UninstallString").unwrap_or_default();
+            let loc: String = entry.get_value("InstallLocation").unwrap_or_default();
+            if uninst.to_lowercase().contains("msiexec")
+                && !loc.is_empty()
+                && norm_dir(&loc) == exe_dir
+            {
+                return String::from("msi");
+            }
+        }
+    }
+
+    String::from("portable")
+}
+
 /// 切换窗口最大化/全屏：macOS 用原生全屏，其他平台用最大化
 /// 返回切换后是否处于全屏/最大化状态
 #[tauri::command]
@@ -1475,6 +1564,8 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        // 在线更新（v0.3.4）：pubkey / endpoints / installMode 都在 tauri.conf.json 的 plugins.updater
+        .plugin(tauri_plugin_updater::Builder::new().build())
         // PDF 导出：隐藏窗口通过 yiziexport 自定义协议加载内联 HTML（WebView2 不支持直接导航 data: URL）
         .manage(ExportHtmlState(std::sync::Mutex::new(String::new())))
         .register_uri_scheme_protocol("yiziexport", |ctx, _request| {
@@ -1508,6 +1599,7 @@ fn main() {
             read_readme,
             read_help,
             get_app_version,
+            get_install_kind,
             toggle_window_size,
             get_platform,
             open_in_app,
@@ -1737,5 +1829,50 @@ mod tests {
         use std::io::Read as _;
         zip.by_name("word/document.xml").unwrap().read_to_string(&mut doc).unwrap();
         assert_eq!(doc.matches("rIdImg").count(), 3, "document.xml 图片引用数不对: {}", doc);
+    }
+
+    /// 在线更新的配置发出去就改不了：公钥被编进 exe。这条测试把 tauri.conf.json 的
+    /// plugins.updater 按**插件自己的 Config** 反序列化一遍 —— 能过就说明运行期不会因
+    /// 配置缺字段而启动失败；再把 pubkey 解 base64、按 minisign 公钥结构验一遍，
+    /// 挡住「把 .pub 原文又编码一次」这类错误（.pub 内容本身就是 base64）。
+    #[test]
+    fn updater_config_is_loadable_and_pubkey_is_minisign() {
+        let raw = include_str!("../tauri.conf.json");
+        let conf: serde_json::Value =
+            serde_json::from_str(raw).expect("tauri.conf.json 不是合法 JSON");
+        let updater = conf
+            .get("plugins")
+            .and_then(|p| p.get("updater"))
+            .cloned()
+            .expect("缺少 plugins.updater（插件已注册，缺 pubkey 会导致启动失败）");
+
+        // 用插件自己的 Config 反序列化，字段名/必需项由插件说了算，不靠我们猜
+        let cfg: tauri_plugin_updater::Config =
+            serde_json::from_value(updater).expect("plugins.updater 无法被插件解析");
+
+        use base64::Engine as _;
+        let decoded = base64::engine::general_purpose::STANDARD
+            .decode(&cfg.pubkey)
+            .expect("pubkey 不是合法 base64");
+        let decoded = String::from_utf8(decoded).expect("pubkey 解 base64 后不是 UTF-8");
+        assert!(
+            decoded.starts_with("untrusted comment: minisign public key"),
+            "pubkey 解 base64 后不是 minisign 公钥文本：{decoded:?}"
+        );
+        let lines: Vec<&str> = decoded.lines().collect();
+        assert_eq!(lines.len(), 2, "minisign 公钥应为两行：{decoded:?}");
+        assert_eq!(
+            lines[1].len(),
+            56,
+            "minisign 公钥第二行应为 56 字符（2 字节算法 + 8 字节 key id + 32 字节密钥）"
+        );
+
+        assert!(
+            !cfg.endpoints.is_empty(),
+            "plugins.updater.endpoints 为空：用户永远检查不到更新"
+        );
+        for url in &cfg.endpoints {
+            assert_eq!(url.scheme(), "https", "endpoints 必须是 https：{url}");
+        }
     }
 }

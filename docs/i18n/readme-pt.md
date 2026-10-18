@@ -239,7 +239,6 @@ npm run tauri:build
 
 Artefatos de construção:
 - Executável portátil: `src-tauri/target/release/yizimarkdown.exe`
-- Pacote MSI: `src-tauri/target/release/bundle/msi/`
 - Pacote NSIS: `src-tauri/target/release/bundle/nsis/`
 
 Após a construção, copie manualmente o executável e os arquivos de recursos para o diretório `public/YiziMarkdown-vX.X.X/` para distribuição.

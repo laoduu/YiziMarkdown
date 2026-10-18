@@ -241,7 +241,6 @@ npm run tauri:build
 
 Build-resultaten:
 - Portable exe: `src-tauri/target/release/yizimarkdown.exe`
-- MSI-installatiepakket: `src-tauri/target/release/bundle/msi/`
 - NSIS-installatiepakket: `src-tauri/target/release/bundle/nsis/`
 
 Kopieer na het bouwen handmatig de exe en bronbestanden naar de map `public/YiziMarkdown-vX.X.X/` voor distributie.

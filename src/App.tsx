@@ -8,7 +8,7 @@ import TabBar from './components/TabBar'
 import HomePage from './components/HomePage'
 import Slideshow from './components/Slideshow'
 import AIChatPanel from './components/AIChatPanel'
-import { PanelLeftClose, PanelLeft } from 'lucide-react'
+import { PanelLeftClose, PanelLeft, Loader2 } from 'lucide-react'
 import { invokeTauri, invokeTauriOrThrow } from './lib/tauri'
 import { openRemote, save as saveToCloud, notifyRemoteDirChanged } from './lib/webdav'
 import { parentPath, joinPath, baseName, canonicalRemotePath } from './lib/remotePath'
@@ -17,6 +17,9 @@ import Dialog from './components/Dialog'
 import { useSettingsStore } from './stores/settingsStore'
 import { loadKeybindings, resolveAction, getKeybindingsMap, formatKey, SHORTCUT_ACTIONS } from './lib/keybindings'
 import { useEditorStore } from './stores/editorStore'
+import {
+  onEditorStorageWarning, getLastEditorStorageWarning, type EditorStorageWarning,
+} from './lib/editorStorage'
 import { loadPlugin, unloadPlugin } from './plugins/registry'
 import { useI18n, translate, getCurrentLang } from './i18n'
 import { refreshThemeCursorVars } from './lib/themeCursor'
@@ -79,6 +82,17 @@ const openFileDialog = async (): Promise<{ name: string; content: string; filePa
   })
 }
 
+/** 从磁盘恢复正文的超时上限：网络盘 / 已拔出的移动盘可能长时间不返回，不能让它一直卡住界面 */
+const RESTORE_TIMEOUT_MS = 10000
+const withTimeout = <T,>(p: Promise<T | null>, ms: number): Promise<T | null> =>
+  new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(null), ms)
+    p.then(
+      (v) => { clearTimeout(timer); resolve(v) },
+      () => { clearTimeout(timer); resolve(null) }
+    )
+  })
+
 function App() {
   const { t } = useI18n()
   const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, enabledPlugins, pluginConfigs, setField, aiPanelOpen, updateSettings, userThemeEnabled, userThemeName, customCssBase } = useSettingsStore()
@@ -93,6 +107,8 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [settingsDefaultTab, setSettingsDefaultTab] = useState<string | undefined>(undefined)
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false })
+  /** 本地缓存持久化降级 / 写入失败的说明（常驻状态栏，不随时间消失） */
+  const [storageWarning, setStorageWarning] = useState<string | null>(null)
   const [showShortcutsPanel, setShowShortcutsPanel] = useState(false)
   const [isSlideshow, setIsSlideshow] = useState(false)
   const [currentFolder, setCurrentFolder] = useState<string | null>(null)
@@ -133,8 +149,15 @@ function App() {
 
   // 自动保存（仅已保存过的文件）
   const activeTab = useEditorStore(s => s.tabs.find(t => t.id === s.activeTabId) ?? null)
+  /**
+   * 正文还没从磁盘恢复回来的活动标签页（只有「本地缓存配额降级」后才会出现）。
+   * 此刻内存里的内容是占位空串，所以恢复完成前**不能挂编辑器、也不能保存**。
+   */
+  const activePending = useEditorStore(s => s.pendingContentLoads.find(p => p.id === s.activeTabId) ?? null)
   useEffect(() => {
     if (!activeTab || !activeTab.filePath || activeTab.isSaved) return
+    // 正文待恢复时禁止自动保存：内容还是占位空串，写下去就是把文件清空
+    if (activePending) return
     
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
     
@@ -162,7 +185,7 @@ function App() {
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
     }
-  }, [activeTab?.content, activeTab?.filePath, activeTab?.isSaved])
+  }, [activeTab?.content, activeTab?.filePath, activeTab?.isSaved, activePending?.id])
 
   const shortcutsReadyRef = useRef(false)
 
@@ -468,10 +491,68 @@ function App() {
     setTimeout(() => setToast({ message: '', visible: false }), 2000)
   }, [])
 
+  // ===== 本地缓存降级 / 写入失败：必须让用户看见 =====
+  // 配额满时 localStorage 会静默拒写（zustand 默认实现不捕获），用户继续打字、重启后才发现
+  // 内容没了 —— 这正是本次要修的问题之一。降级只报一次（见 lib/editorStorage.ts），
+  // 但状态栏上的提示常驻，不随时间消失。
+  useEffect(() => {
+    const show = (w: EditorStorageWarning) => {
+      const msg = translate(
+        getCurrentLang(),
+        w.level === 'lost' ? 'app.storageLostUnsaved' : 'app.storageDegraded'
+      )
+      setStorageWarning(msg)
+      showToast(msg)
+    }
+    // 订阅之前可能就已经降级了：启动期的第一次写入（旧数据迁移）就可能失败，
+    // 那时界面还没挂载，事件没人接。补报一次。
+    const already = getLastEditorStorageWarning()
+    if (already) show(already)
+    return onEditorStorageWarning(show)
+  }, [showToast])
+
+  // ===== 正文未缓存的标签页：从磁盘恢复 =====
+  // 只有「配额降级放弃了可省缓存」后才会出现这种情况。恢复到就绪之前编辑器不挂载，
+  // 也禁止保存：此刻内存里是占位空串，一旦写盘就会把用户的文件截断。
+  useEffect(() => {
+    if (!activePending) return
+    let cancelled = false
+    const read = activePending.filePath
+      ? withTimeout(invokeTauri<{ content: string }>('read_file', { path: activePending.filePath }), RESTORE_TIMEOUT_MS)
+      : Promise.resolve(null)
+
+    read.then((result) => {
+      // 恢复期间用户可能已经自己动了（在别处关掉该标签页 / 直接开始输入）
+      if (cancelled) return
+      const store = useEditorStore.getState()
+      const tr = (key: string, params?: Record<string, string | number>) =>
+        translate(getCurrentLang(), key, params)
+      if (result && typeof result.content === 'string') {
+        store.setTabContent(activePending.id, result.content)
+        if (!activePending.recoverable) {
+          // 磁盘上只有最后一次保存的版本：据实标记为已保存（内容与磁盘一致），
+          // 并把「未保存的修改没能恢复」明确告诉用户，不让界面看起来什么都没发生
+          store.markTabSaved(activePending.id)
+          showToast(tr('app.restoreFellBack', { name: activePending.name }))
+        }
+      } else {
+        store.forceCloseTab(activePending.id)
+        showToast(tr('app.restoreUnreadable', { name: activePending.name }))
+      }
+    })
+    return () => { cancelled = true }
+  }, [activePending?.id, showToast]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // 保存：有路径直接保存，无路径触发另存为
   const handleSaveFile = useCallback(async () => {
     const tab = currentTab()
     if (!tab) return
+
+    // 正文待从磁盘恢复时禁止保存：此刻内容是占位空串，写盘会把用户的文件清空
+    if (useEditorStore.getState().pendingContentLoads.some(p => p.id === tab.id)) {
+      showToast(translate(getCurrentLang(), 'app.restoring'))
+      return
+    }
 
     if (!tab.filePath) {
       // 无文件名 → 触发另存为
@@ -942,6 +1023,16 @@ function App() {
           {/* 首页 or 编辑器 */}
           {activeTabId === null ? (
             <HomePage onOpenFile={handleOpenRecent} />
+          ) : activePending ? (
+            // 正文正从磁盘恢复：先不挂编辑器 —— 否则空内容会先进 CodeMirror，
+            // 等恢复回来的正文再同步过去就与视图对不上了（编辑器有焦点时它还会跳过同步）
+            <div
+              className="flex-1 flex items-center justify-center gap-2 text-sm"
+              style={{ background: 'var(--editor-bg)', color: 'var(--editor-text)', opacity: 0.6 }}
+            >
+              <Loader2 size={14} className="animate-spin" />
+              <span>{t('app.restoring')}</span>
+            </div>
           ) : (
             <Editor 
               ref={editorRef}
@@ -978,6 +1069,7 @@ function App() {
         onTogglePreview={(preview: boolean) => useEditorStore.getState().updateViewMode(preview ? 'preview' : 'edit')}
         onToggleSidebar={() => setSidebarVisible(!sidebarVisible)}
         onOpenAbout={() => { setSettingsDefaultTab('about'); setIsSettingsOpen(true) }}
+        storageWarning={storageWarning}
       />
       
       <SettingsModal 

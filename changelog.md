@@ -4,23 +4,220 @@
 
 > 本节为**未开发完成的备忘**，仅记录待办，发布前需整理成正式版本说明。
 
-### 待办 · 发布流水线产出的正文需手工替换（2026-10-09 记）
+### 既定分工：`changelog.md` 记过程，`docs/changelog/` 记结果（2026-10-18 定）
 
-**`.github/workflows/release.yml` 自动产出的 Release 正文是偏技术的详细版，发布前要手工换成用户向的简短版。**
+> 原「发布流水线产出的正文需手工替换」（2026-10-09 记）由本次分工**消解**：
+> 采下面第 2 案，`docs/changelog/CHANGELOG-V*.md` 自身改为用户向简短定位。
 
-- **现状**：流水线用 `docs/changelog/CHANGELOG-V<ver>.md` 当 draft 正文，而该文件按约定写的是**详细技术实现**
-  （v0.3.1 163 行 / v0.3.2 96 行）；线上实际发布的却是**简短用户向**正文
-  （新增功能 / Bug 修复 / 优化 / 其他）——两者并不是同一份，因为流水线是后来才加的
-- **v0.3.3 的实际操作**：推 tag → 等流水线跑完（5 个资产就绪）→ 手工替换 draft 正文再 Publish：
-  ```bash
-  gh release edit v0.3.3 --notes-file <简短正文.md> --draft=false --latest
-  ```
-- **可选的彻底自动化方案（择一）**：
-  1. 新增独立文件（如 `RELEASE-NOTES-v<ver>.md`）承载简短正文，并改流水线**优先读它**、
-     缺失时回退到 `docs/changelog/CHANGELOG-V<ver>.md`（不动现有 `docs/changelog/CHANGELOG-V*` 的详细定位）
-  2. 把 `docs/changelog/CHANGELOG-V<ver>.md` 本身就改成简短用户向定位，详细内容只留在本文件
-     —— 代价：与 v0.3.1 / v0.3.2 的「详细」定位不一致
-- **正文口径**：只说**用户能感知的变化**（新增 / 优化 / 修复），少讲技术实现
+**两份 changelog 读者不同，不要互相替代：**
+
+| 文件 | 读者 | 内容 |
+|---|---|---|
+| `changelog.md`（根） | 开发者 / agent | **完整技术记录**：根因、方案取舍、被否的方案与原因、实现细节、测试与门禁数据、踩过的坑 —— 为下一个改动的人服务 |
+| `docs/changelog/CHANGELOG-V<ver>.md` | **用户** | **简短用户向**：只讲用户能感知的变化，按 新增功能 / 优化 / 修复 三个维度罗列，弱化技术表述 |
+
+- **风格基准**：GitHub Release 正文 / tag 说明的写法 —— 一句话一条，简短直白；
+  不写根因、不写实现、不出现内部文件与函数名。**自查标准：用户看完能否知道
+  「这个版本让我多做了什么 / 少受了什么罪」**
+- **同一份文件两处复用**（这正是它必须用户向的原因）：
+  1. `.github/workflows/release.yml` → GitHub Release 正文（**不再需要手工替换**）
+  2. `scripts/make-manifest.mjs --notes` → 写进 `latest.json` 的 `notes`，
+     **直接显示在应用内更新弹窗**（v0.3.4 起首次生效）
+- **命名沿用现有**：`docs/changelog/CHANGELOG-V<ver>.md`（大写 `CHANGELOG` + `V`）——
+  上述两个消费点都按此路径拼字符串，改名要同时改两处（Linux CI 区分大小写，别只改本地）
+- **维度取舍**：三个维度按需出现，没有内容的直接不写；若整版都是用户无感的内部重构，
+  就写一句「本版以内部改进为主，界面无变化」
+- **迁移状态**：
+  - `V0.1.7 ~ V0.3.3` 保持现状（**技术版**），**不做回填**。2026-10-18 实测核查推翻了
+    「精简它们很安全」这个初始判断：逐版本比对行数后发现**8 个版本的 `docs/changelog/`
+    比根 `changelog.md` 的对应小节还长**（0.2.3 差 103 行 / 0.3.0 差 68 行 / 0.3.1 差 60 行 /
+    0.2.1 与 0.2.4 各差 23 行 / 0.3.3 差 18 行 / 0.1.10 差 4 行 / 0.1.9 差 1 行）。
+    内容是同一版本的两种写法：根里把「踩坑记录」压缩成一句话一条，这些文件里则展开成
+    `现象 / 根因 / 解决方案 / 教训` —— **事实根里有，展开的细节只在这些文件里**
+  - 而它们的**唯一消费者是按 tag 发布的那个版本**（`release.yml` 读 `CHANGELOG-V${ver}.md`、
+    `make-manifest.mjs` 读 `--notes`），历史文件**没有任何自动化读取者**。
+    回填只有「目录口径统一」一个收益，却要付出真实的细节损失 —— 不划算，故不做
+  - 用户向正文**已在 GitHub Release 上**长期可查（那也是用户实际读到的位置）；
+    另注 `v0.1.10` **没有对应的 GitHub Release**（tag 列表从 v0.1.9 跳到 v0.2.1），无从回填
+  - **`V0.3.4` 起按新标准写**。它又是第一个带在线更新的版本，
+    这份文件会**首次出现在应用内更新弹窗里**，用户向定位必须贯彻
+
+### 在线更新（方案定稿）+ 废弃 MSI 线（2026-10-18）
+
+**① 方案定稿**
+
+- **形态**：Tauri 官方 `tauri-plugin-updater` + 火山 TOS 上的静态 `latest.json`；整包下载
+  （Windows NSIS 实测 7.6MB）→ 签名校验 → 一键静默安装 → 自动重启
+- **「逐文件增量」被否**：前端 8.5MB 被编进 20.8MB 的 exe，UI/逻辑任何改动都会改变 exe；
+  exe 同级的散资源（themes/templates/skills/docs 等）总共只有 ~0.8MB，且本来就在安装包内。
+  逐文件增量省不下东西；真正能压下载量的只有二进制差分，而它**会破坏 macOS 的 app 签名** ——
+  高风险低收益，不做
+- **覆盖范围**：只做 **Windows NSIS 安装版**。便携版与安装版用的是同一个 exe，
+  且便携版无法走官方 updater ⇒ 便携版用户在界面侧被识别（注册表卸载项）后**静默不检查**，
+  并在「检查更新」处给出「便携版请手动下载新版」的诚实说明
+- **更新说明**：复用 `docs/changelog/CHANGELOG-V*.md`，由 `scripts/make-manifest.mjs` 写进 `notes`
+- **平台键两个都给**：`windows-x86_64-nsis` 与 `windows-x86_64` 指向同一个安装包。
+  updater 按 `{os}-{arch}-{installer}` → `{os}-{arch}` 查找，而 installer 来自**编译期烙进 exe 的
+  bundle_type**；便携版与安装版同源，这个值是否可靠不能确定，所以两个键都写、不赌它
+- **⚠️ 发布顺序**：已发布版本是 **0.3.3**，0.3.4 尚未发布 ⇒ **0.3.4 就是第一个带 updater 的版本**
+  （当前工作版顺势带上即可）；用户手动装过 0.3.4 之后，**0.3.5 起才真正自动更新**。
+  在 0.3.4 之前的版本里补 updater 是无效的——它们已经发出去了
+- **签名密钥**：`tauri signer generate` 生成；公钥进 `tauri.conf.json`、私钥进 CI secret
+  **并离线备份**。私钥丢失 = 已安装用户**永久**无法更新，只能手动重装
+
+**② 废弃 MSI 线**（Windows 用户只需要一种安装包，MSI 一直多余；为在线更新也只留 NSIS 一条路）
+
+- `.github/workflows/release.yml`：`--bundles nsis,msi` → `--bundles nsis`，资产注释 5 个 → 4 个
+- README（根 `README.md` + `src-tauri/readme.md` + 14 语言 × 2 份副本，共 30 个文件）的
+  「构建产物」列表删掉 MSI 一行
+- **待办**：本地 `npm run tauri:build` 仍会产出 MSI —— `bundle.targets: "all"` 无法按平台区分，
+  动它会连带 macOS 的 dmg。要一并停掉需新增 `tauri.windows.conf.json` 写
+  `{"bundle":{"targets":["nsis"]}}`，并同步上述 30 个文档。本次「谨慎起见」只动了 CI
+
+**③ 批次 1 已落地**（不依赖密钥的部分）
+
+- **`scripts/check-version.mjs`**：package.json / tauri.conf.json / Cargo.toml 三处版本号一致性门禁，
+  已接进 `npm run build`。不查的后果非常隐蔽 —— 界面显示的版本读 Cargo.toml，
+  而 updater 比较版本读 tauri.conf.json，不一致就会出现「提示有新版，更新完版本号却没变」
+- `src/lib/update.ts` + `tests/update.test.ts`：版本比较（含预发布与 v 前缀）、是否提示、
+  跳过指定版本、下载进度（总大小未知返回 null，界面画不确定态而不是假装 0%）、大小格式化
+- `src/lib/updateManifest.ts` + `tests/updateManifest.test.ts`：`latest.json` 构造与校验
+  （版本号去 v、平台键去重、签名/地址非空 —— 宁可构建期报错，也不要发出一份客户端读不懂的清单）
+- `scripts/make-manifest.mjs`：读 `.sig` 内容（不是路径）+ 更新说明 → 生成 `latest.json`
+  （`npm run make:manifest`；签名缺失、产物缺失、版本号与 tauri.conf.json 不一致都会明确提示）
+- 单测 184 → 210
+
+**④ 批次 2 已落地：插件与配置接入**（2026-10-18 实施）
+
+- `src-tauri/Cargo.toml` 加 `tauri-plugin-updater`；`main.rs` 注册
+  `tauri_plugin_updater::Builder::new().build()`
+- `tauri.conf.json` 的 `plugins.updater`：真实 pubkey + `endpoints`（**暂为占位地址，待 TOS 桶地址**）
+  + `windows.installMode: "passive"`；`capabilities/default.json` 加 `updater:default`
+- ⚠️ **pubkey 的格式是个坑**：`tauri signer generate` 产出的 `.pub` 文件内容**本身就是 base64**
+  （单行 152 字节、无尾换行）。插件侧是「base64 解码 → minisign 公钥文本 → `PublicKey::decode`」，
+  所以配置里要填的是**文件内容原样**，绝不能再 base64 一次 —— 双重编码解出来不是 minisign 文本，
+  而公钥会被编进 exe，发出去就改不了
+- ⚠️ **`pubkey` 在插件配置里是必需字段**（`Config` 的 `pubkey: String` 没有 `#[serde(default)]`）：
+  一旦注册该插件而配置里没有 pubkey，应用会**启动失败**。所以「注册插件」与「填 pubkey」必须同批完成
+- **不做 `tauri-plugin-process`**（推翻原计划）：`updater.rs::updater_parameters()` 给 NSIS 传的是
+  `/P /UPDATE /R /ARGS …`（`restart_after_install` 默认 true），**装完安装器自己会重启应用**，
+  前端不需要调 `relaunch()`。少一个依赖、少一条权限
+- ⚠️ **`on_before_exit` 不能当「未保存内容」守卫**（推翻原计划）：类型是 `Arc<dyn Fn()>`，
+  **不能取消安装**；而且插件的 `updater_builder()` 已用 `cleanup_before_exit()` 占了它，
+  `UpdaterBuilder::on_before_exit` 是 **replace** 语义，用了还会顶掉 Tauri 自己的清理。
+  守卫必须放在**前端**、且在调用安装之前。另注意 Windows 上安装走 `std::process::exit(0)`，
+  没有任何优雅退出
+- **`createUpdaterArtifacts` 只在发版时打开**：新增 `src-tauri/tauri.updater.conf.json`，
+  CI 用 `--config src-tauri/tauri.updater.conf.json` 合并。若写进 `tauri.conf.json`，构建会强制要求
+  签名私钥，连带把本地 `npm run tauri:build` 也卡死（已实测 `--config` 同时支持内联 JSON 与文件）
+- **新命令 `get_install_kind`**（取代原计划的布尔 `is_installed_build`）：返回
+  `nsis` / `msi` / `portable`。判据是「注册表里有卸载项 **且当前 exe 确实跑在那个安装目录里**」——
+  实机核查发现本机同时存在 **HKCU 的 NSIS 0.3.1** 与 **HKLM 的 MSI 0.3.3**，只认 HKCU 一把键会判错
+- ⚠️ **MSI 安装版必须单独识别**（原计划只区分「安装版 / 便携版」）：NSIS 安装包按用户级装到
+  `%LOCALAPPDATA%`，而 MSI 的 `InstallLocation` 是 `D:\Program Files\…`；若对 MSI 版放行，
+  用户会被**装成第二份**而不是被更新
+- ✅ **但 NSIS 安装器自己会处理旧 MSI**（读 Tauri 的 `installer.nsi` 模板确认）：安装器枚举
+  `HKLM\…\Uninstall`，按 `DisplayName` + `Publisher`（实机值 = `YiziMarkdown` + `yizimarkdown`，正好命中）
+  找到 WiX 安装项、且 `UninstallString` 含 `msiexec` 时，**先卸载旧 MSI 再装**（模板 L190–215）。
+  所以**不需要**让老用户先手动卸载；界面与发行说明可以照实写「安装时会自动卸载旧版」
+- **安装目录**：NSIS 默认按 `currentUser` 装到 `%LOCALAPPDATA%\YiziMarkdown`，但会
+  `RestorePreviousInstallLocation` 复用旧的 NSIS 安装目录（模板 L509–528）。只有「此前只装过 MSI」
+  的机器会落到 `%LOCALAPPDATA%`，属正常迁移
+- **`scripts/check-updater.mjs`**：发版前门禁，校验 pubkey（解 base64 后必须是两行 minisign 公钥、
+  第二行 56 字符）、endpoints（非占位、https）、installMode。**故意不并进 `npm run build`**
+  —— 本地构建不需要真实 endpoint，天天红着的门禁只会被无视；它由 `release.yml` 的 `test` 作业调用，
+  在昂贵的 Rust 构建之前挡住
+- **验证**：新增 Rust 测试 `updater_config_is_loadable_and_pubkey_is_minisign` —— 把
+  `tauri.conf.json` 的 `plugins.updater` 交给**插件自己的 `Config`** 反序列化（能过即说明运行期不会因
+  缺字段而启动失败），再校验 pubkey 解 base64 后的 minisign 结构。Rust 58 passed / JS 210 pass，
+  `npm run build` 通过
+- **待办**：① `endpoints` 仍是占位地址，需 TOS 桶真实地址；② `requireSignedVersion` **暂不开启**
+  —— 它要求签名里带版本号，而我们的签名产物还没实际见过。等首个 `.sig` 出来、确认 tauri-cli 2.11.2
+  确实记录了版本号之后再开，否则会变成「永远拒绝更新」，同样不可远程修复
+
+### 持久化两处老问题：写入放大 + 配额静默失败（2026-10-18 实施）
+
+**两个问题是同一个根因**：`editorStore` 的 `partialize` 把**所有**标签页正文拼成一份 JSON，
+而 zustand 默认持久化每次 `set` 都把它整串 `JSON.stringify` + 整串写入。于是：
+
+1. **写入放大**：每敲一个字符都要把所有打开文档重新序列化并整串落盘，成本随
+   「打开的文档数 × 文档大小」线性增长，而真正变化的只有那一个字符。
+2. **配额静默失败**：localStorage 有配额（WebView2 按来源计量）。超限时 `setItem` 抛
+   `QuotaExceededError`；`createJSONStorage` 的 `setItem` 里**没有任何 try/catch**，
+   zustand 4.5.7 的 `persistImpl` 还会把它**同步抛回调用 `set` 的地方**（CodeMirror 的
+   updateListener ⇒ 每个字符抛一次）。抛也好吞也好，**界面毫无提示**：持久化事实上停了，
+   用户继续打字，重启后才发现内容没了。
+
+**方案：给 `editorStore` 换一个自定义 `PersistStorage`（新增 `src/lib/editorStorage.ts`）**
+
+- **正文按标签页拆键**：`yizimarkdown-editor` 只放清单（标签页元信息 + 活动页 + 最近文件），
+  正文各自放 `yizimarkdown-editor:doc:<tabId>`。
+- **只写正文真正变化的那个**：`planEditorStorage` 拿「已知内容键 → 正文」做 `===` 比较。
+  未变化的标签页其正文是**同一个字符串引用**（展开对象保留原引用），比较是 O(1) ——
+  不能为了判断"变没变"反而把所有正文读一遍比一遍，那等于没修。
+- **配额失败按「内容的可替代性」降级**（`level: degraded | lost`）：先放弃磁盘上**已有权威副本**的
+  正文（已保存文件的内容、云端文档的本地镜像 —— 镜像在 config 目录，是持久目录，见
+  `remote_cache.rs:99`），保住真正不可再生的部分（未保存 / 未命名文档），再重试一次。
+  `isRecoverableFromDisk()` 是这条判据的唯一出处。
+- **绝不允许「键里没有、清单里也没有」**：正文要么在独立键里、要么内嵌进清单兜底（写入失败时），
+  读取时**内嵌优先**（内嵌的一定更新）。**为什么必须这么严**：标签页若「显示为空、却标记已保存」，
+  用户顺手一个 Ctrl+S 就把磁盘上的文件截断成 0 字节 —— 修「静默丢数据」绝不能引入「静默毁文件」。
+- **旧数据自动迁移**：清单里内嵌的正文在 `getItem` 时就地迁到独立键；写不进去就先留在清单里，
+  下次再迁。迁移失败不能反而把正文弄丢。
+- **界面必须看得见**：降级/失败经 `onEditorStorageWarning` 报到状态栏（常驻警示标记，悬停给全文）
+  并弹一次 toast。**只在「首次降级」与「升级为 lost」各报一次** —— 配额满时每个字符都会写失败，
+  每次都报会把界面刷爆，反而让用户学会无视它。另有 `getLastEditorStorageWarning()` 供界面补报
+  「订阅之前就已降级」（启动期那次写入就可能失败，那时界面还没挂载，纯事件会丢掉这条）。
+- **正文没缓存的标签页**（只会在降级后出现）：`merge` 把它们收进 `pendingContentLoads`（**不持久化**），
+  界面从磁盘恢复。恢复期间**不挂编辑器**（编辑器有焦点时外部同步会跳过 dispatch，让空内容先进
+  CodeMirror，恢复回来的正文就和视图对不上了）、**禁止保存与自动保存**（内容是占位空串）。
+  恢复失败或超时（10s：网络盘/已拔出的移动盘可能长时间不返回）就移除该标签页并说明；
+  磁盘上只剩旧版本的（未保存的修改真丢了）改成载入磁盘版本并**明确告知**，不装作什么都没发生。
+
+**被否的方案**（记下免得下次重走）：
+
+- **干脆不缓存「已保存文件」的正文**（稳态占用最小，连配额压力都没有）：会改变所有人的恢复语义 ——
+  重启后每个干净标签页都要读一次盘，网络盘/已拔出移动盘会卡住甚至失败；而这些标签页今天靠缓存
+  瞬间恢复。降级是少数派路径，不能拿多数派路径去换它。
+- **事前估容量**（如 `navigator.storage.estimate()`）：它量的是 Cache/IndexedDB 配额，不是
+  localStorage 的，估不准反而会得出错误的"够用"结论。
+- **把降级状态持久化**（下次启动直接进降级模式）：没有可靠的解除条件，会永久停在降级。改为进程内
+  状态 —— 每次启动重新尝试，最多每会话报一次。
+
+**测试与门禁（第一轮）**：新增 `tests/editorStorage.test.ts`（17 例）。其中配额这条少数派路径用带配额的假存储
+**真跑**：断言「可省正文被放弃、未保存正文照旧落盘」「腾不出空间时正文退回内嵌清单并升级为 lost」
+「降级只报一次、升级严重程度才再报」。`npm test` 227 通过 / 0 失败；`npm run build` 通过。
+
+**顺带定下（批次 3 用）**：更新前的「未保存内容守卫」**不做**阻断式弹窗。证据：
+(1) 正文是**每次按键同步**落 localStorage 的（`Editor.tsx` 的 updateListener → `App.tsx`
+→ `updateContent`；那个 150ms debounce 只作用于预览渲染）；(2) 全仓**零** `beforeunload`/`pagehide`
+监听，而 Windows 安装走 `std::process::exit(0)` ⇒ 硬退出与正常关窗在数据上**等价**，弹窗保护不了任何东西。
+改为：更新卡片里一行说明「编辑会自动恢复」，且**安装前清掉待执行的 `autoSaveTimerRef`**。
+**注意联动**：若持久化已降级到 `lost`，重启有可能真的丢未保存内容 —— 那种情况下更新提示要不要更硬，
+留给批次 3 决定。
+
+**实测复验（用户手动跑配额路径，2026-10-18，第二轮）**：把 localStorage 用一次性键填满后再打字，
+发现**每个字符都在控制台报一条「清单写入失败」**，界面上却没有任何提示。暴露出三个新问题，都已修：
+
+1. **清单写失败只记录、不报警**（第一轮的设计）。而清单比单份正文大 ⇒ 配额快满时会出现
+   「正文挤得下、清单挤不下」这种组合：正文键照旧写成功（于是不触发降级），清单却每次按键都失败，
+   用户侧完全静默 —— 正是这轮要消灭的那种失败模式。
+   ⇒ **正文键与清单键任一写失败都走同一套**：降级 + 放弃可省正文腾空间 + 重试一次 + 报一次警。
+   清单写失败同样是配额满的信号，没理由区别对待。
+2. **失败日志逐字符刷屏**：`console.error` 每个字符一条（打二十个字符就是二十条堆栈），真正的现场
+   被淹掉。⇒ 清单写失败只记**第一次**（恢复后允许再记一次）；报警本身早就是「每级一次」。
+   首次降级时另打**一条**诊断：`当前占用 N 个键 / M 字符，已放弃 K 个可省正文键`。
+3. **内嵌兜底没有体积上限**：把一大段正文塞进清单，等于把刚修掉的写入放大又请回来（清单每次按键都要
+   重写）。⇒ 内嵌只对 `INLINE_CONTENT_LIMIT`（4KB）以内的正文生效，超出的只报警（`lost`）。
+
+**WebView2 实测配额**：二分法测 `localStorage.setItem('filler', 'x'.repeat(lo))` 的最大
+`lo ≈ 5,238,000` 字符 —— 即 Chromium 的 10MB 按 **UTF-16 码元 2 字节**计（10MB / 2 ≈ 5,242,880
+字符，差额被应用自身数据占掉）。此前只写「约 5–10MB」，现在有准确数字。
+
+**测试与门禁（第二轮）**：`tests/editorStorage.test.ts` 增至 20 例，新增「清单写失败同样按配额耗尽
+处理」「清单写失败不再逐字符刷日志（断言 `console.error` / `console.warn` 各只调一次）」
+「内嵌兜底有体积上限」。假存储加了 `failFor` 钩子，用来复现「正文挤得下、清单挤不下」。
+`npm test` 230 通过 / 0 失败。
 
 ### 提词备注：同屏可见改为可控 + 模板改动曾被覆盖（2026-10-18 实施）
 

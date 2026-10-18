@@ -421,6 +421,11 @@ export const zh = {
     toggleFullscreen: '切换全屏',
   },
   app: {
+    restoring: '正在恢复内容…',
+    storageDegraded: '本地缓存空间不足：已停止缓存「已保存文件」的正文（磁盘上的文件不受影响），未保存的修改仍在缓存中。',
+    storageLostUnsaved: '本地缓存写入失败，未保存的修改可能无法在重启后恢复，请立即按 Ctrl+S 保存。',
+    restoreFellBack: '{name} 的未保存修改未能恢复，已改为载入磁盘上的版本。',
+    restoreUnreadable: '{name} 无法读取，已从标签栏移除。',
     saved: '已保存',
     savedAs: '已另存为 {name}',
     exported: '已导出 {name}',

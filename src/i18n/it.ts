@@ -406,6 +406,11 @@ export const it = {
     toggleFullscreen: 'Attiva/disattiva schermo intero',
   },
   app: {
+    restoring: 'Ripristino del contenuto…',
+    storageDegraded: 'La cache locale è piena: il contenuto dei file salvati non viene più memorizzato nella cache (i file su disco non sono interessati). Le modifiche non salvate restano in cache.',
+    storageLostUnsaved: 'Scrittura nella cache locale non riuscita: le modifiche non salvate potrebbero non sopravvivere a un riavvio. Premi subito Ctrl+S.',
+    restoreFellBack: 'Non è stato possibile ripristinare le modifiche non salvate di {name}; è stata caricata la versione su disco.',
+    restoreUnreadable: 'Impossibile leggere {name}: è stato rimosso dalla barra delle schede.',
     saved: 'Salvato',
     savedAs: 'Salvato come {name}',
     exported: '{name} esportato',

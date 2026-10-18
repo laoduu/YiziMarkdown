@@ -406,6 +406,11 @@ export const tr = {
     toggleFullscreen: 'Tam ekranı aç/kapat',
   },
   app: {
+    restoring: 'İçerik geri yükleniyor…',
+    storageDegraded: 'Yerel önbellek dolu: kaydedilmiş dosyaların içeriği artık önbelleğe alınmıyor (disk üzerindeki dosyalar etkilenmez). Kaydedilmemiş değişiklikler önbelleğe alınmaya devam eder.',
+    storageLostUnsaved: 'Yerel önbelleğe yazma başarısız — kaydedilmemiş değişiklikler yeniden başlatmadan sonra korunmayabilir. Şimdi Ctrl+S tuşlarına basın.',
+    restoreFellBack: '{name} dosyasının kaydedilmemiş değişiklikleri geri yüklenemedi; bunun yerine diskteki sürüm yüklendi.',
+    restoreUnreadable: '{name} okunamadı ve sekme çubuğundan kaldırıldı.',
     saved: 'Kaydedildi',
     savedAs: '{name} olarak kaydedildi',
     exported: '{name} dışa aktarıldı',

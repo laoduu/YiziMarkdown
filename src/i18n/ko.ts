@@ -406,6 +406,11 @@ export const ko = {
     toggleFullscreen: '전체 화면 전환',
   },
   app: {
+    restoring: '내용을 복원하는 중…',
+    storageDegraded: '로컬 캐시 공간이 부족합니다: 저장된 파일의 본문은 더 이상 캐시되지 않습니다(디스크의 파일은 영향을 받지 않습니다). 저장하지 않은 변경 사항은 계속 캐시됩니다.',
+    storageLostUnsaved: '로컬 캐시 쓰기에 실패했습니다. 저장하지 않은 변경 사항은 다시 시작한 뒤 복원되지 않을 수 있으니 지금 Ctrl+S를 누르세요.',
+    restoreFellBack: '{name}의 저장하지 않은 변경 사항을 복원하지 못해 디스크의 버전을 불러왔습니다.',
+    restoreUnreadable: '{name}을(를) 읽을 수 없어 탭 표시줄에서 제거했습니다.',
     saved: '저장되었습니다',
     savedAs: '{name}(으)로 저장되었습니다',
     exported: '{name} 내보내기 완료',

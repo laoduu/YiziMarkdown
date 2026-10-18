@@ -239,7 +239,6 @@ npm run tauri:build
 
 建置產物：
 - 便攜版 exe：`src-tauri/target/release/yizimarkdown.exe`
-- MSI 安裝包：`src-tauri/target/release/bundle/msi/`
 - NSIS 安裝包：`src-tauri/target/release/bundle/nsis/`
 
 建置後手動複製 exe 和資源檔案到 `public/YiziMarkdown-vX.X.X/` 目錄分發。

@@ -406,6 +406,11 @@ export const de = {
     toggleFullscreen: 'Vollbild umschalten',
   },
   app: {
+    restoring: 'Inhalt wird wiederhergestellt…',
+    storageDegraded: 'Lokaler Cache ist voll: Die Inhalte gespeicherter Dateien werden nicht mehr zwischengespeichert (Dateien auf der Festplatte sind nicht betroffen). Ungespeicherte Änderungen werden weiterhin zwischengespeichert.',
+    storageLostUnsaved: 'Schreiben in den lokalen Cache fehlgeschlagen – ungespeicherte Änderungen überstehen einen Neustart möglicherweise nicht. Jetzt Ctrl+S drücken.',
+    restoreFellBack: 'Ungespeicherte Änderungen von {name} konnten nicht wiederhergestellt werden; stattdessen wurde die Version auf der Festplatte geladen.',
+    restoreUnreadable: '{name} konnte nicht gelesen werden und wurde aus der Tab-Leiste entfernt.',
     saved: 'Gespeichert',
     savedAs: 'Gespeichert als {name}',
     exported: '{name} exportiert',

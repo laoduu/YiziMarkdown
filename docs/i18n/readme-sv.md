@@ -240,7 +240,6 @@ npm run tauri:build
 
 Byggprodukter:
 - Portabel exe: `src-tauri/target/release/yizimarkdown.exe`
-- MSI-installationsprogram: `src-tauri/target/release/bundle/msi/`
 - NSIS-installationsprogram: `src-tauri/target/release/bundle/nsis/`
 
 Bygg kopierar manuellt exe och resursfiler till `public/YiziMarkdown-vX.X.X/`-katalogen för distribution.

@@ -1,6 +1,6 @@
 import { invokeTauri } from '../lib/tauri'
 import { useState, useEffect } from 'react'
-import { FileText, Clock, Check, FolderOpen, Save, PanelLeftClose, Eye, Code } from 'lucide-react'
+import { FileText, Clock, Check, FolderOpen, Save, PanelLeftClose, Eye, Code, TriangleAlert } from 'lucide-react'
 import { useI18n } from '../i18n'
 
 interface StatusBarProps {
@@ -14,12 +14,14 @@ interface StatusBarProps {
   onTogglePreview?: (preview: boolean) => void
   onToggleSidebar?: () => void
   onOpenAbout?: () => void
+  /** 本地缓存降级 / 写入失败的说明；非空时状态栏常驻一个警示标记，悬停即全文 */
+  storageWarning?: string | null
 }
 
 export default function StatusBar({
   wordCount, readingTime, cursorLine, cursorColumn,
   filePath, isSaved,
-  isPreviewMode, onTogglePreview, onToggleSidebar, onOpenAbout,
+  isPreviewMode, onTogglePreview, onToggleSidebar, onOpenAbout, storageWarning,
 }: StatusBarProps) {
   const { t } = useI18n()
   const [version, setVersion] = useState('')
@@ -84,6 +86,13 @@ export default function StatusBar({
           <><Save size={12} /><span>{t('statusbar.unsaved')}</span></>
         )}
       </div>
+
+      {/* 本地缓存降级/写入失败：常驻提示，不随时间消失（配额满时持久化会静默失效） */}
+      {storageWarning && (
+        <div className="flex items-center" style={{ color: 'var(--danger)' }} title={storageWarning}>
+          <TriangleAlert size={12} />
+        </div>
+      )}
 
       <div className="flex items-center gap-1.5"><span>Markdown</span></div>
       <div className="flex items-center gap-1.5"><span>UTF-8</span></div>

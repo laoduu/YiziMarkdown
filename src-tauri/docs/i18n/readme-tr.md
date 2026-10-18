@@ -239,7 +239,6 @@ npm run tauri:build
 
 Oluşturulan dosyalar:
 - Taşınabilir exe: `src-tauri/target/release/yizimarkdown.exe`
-- MSI kurulum paketi: `src-tauri/target/release/bundle/msi/`
 - NSIS kurulum paketi: `src-tauri/target/release/bundle/nsis/`
 
 Oluşturma sonrası exe ve kaynak dosyaları `public/YiziMarkdown-vX.X.X/` dizinine manuel olarak kopyalayarak dağıtın.

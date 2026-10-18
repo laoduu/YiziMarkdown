@@ -406,6 +406,11 @@ export const ja = {
     toggleFullscreen: '全画面切り替え',
   },
   app: {
+    restoring: '内容を復元しています…',
+    storageDegraded: 'ローカルキャッシュの空き容量が不足しています：保存済みファイルの本文はキャッシュされなくなりました（ディスク上のファイルには影響しません）。未保存の変更は引き続きキャッシュされます。',
+    storageLostUnsaved: 'ローカルキャッシュへの書き込みに失敗しました。未保存の変更は再起動後に復元できない可能性があります。すぐに Ctrl+S で保存してください。',
+    restoreFellBack: '{name} の未保存の変更を復元できなかったため、ディスク上のバージョンを読み込みました。',
+    restoreUnreadable: '{name} を読み込めなかったため、タブバーから削除しました。',
     saved: '保存しました',
     savedAs: '{name} として保存しました',
     exported: '{name} をエクスポートしました',

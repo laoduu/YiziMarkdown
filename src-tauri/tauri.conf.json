@@ -74,6 +74,15 @@
   "plugins": {
     "shell": {
       "open": true
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM1NzJFNEYwODdDRThGREMKUldUY2o4Nkg4T1J5TlR4cnlaS1VKc054eE5iQW9BSHF0VmkrYldEbzFRRTZEbHN1Sm96ank1TUsK",
+      "endpoints": [
+        "https://REPLACE-BUCKET.tos-cn-beijing.volces.com/updates/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }

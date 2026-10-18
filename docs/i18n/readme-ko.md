@@ -241,7 +241,6 @@ npm run tauri:build
 
 빌드 결과물：
 - 포터블 exe：`src-tauri/target/release/yizimarkdown.exe`
-- MSI 설치 패키지：`src-tauri/target/release/bundle/msi/`
 - NSIS 설치 패키지：`src-tauri/target/release/bundle/nsis/`
 
 빌드 후 exe와 리소스 파일을 수동으로 `public/YiziMarkdown-vX.X.X/` 디렉토리에 복사하여 배포합니다.

@@ -1,6 +1,10 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { canonicalRemotePath } from '../lib/remotePath.ts'
+import {
+  createEditorStorage, isRecoverableFromDisk, META_KEY,
+  type PendingContentLoad, type PersistedEditorState,
+} from '../lib/editorStorage.ts'
 
 export type SaveStatus = 'saved' | 'unsaved' | 'just-saved'
 
@@ -71,6 +75,15 @@ interface EditorState {
   activeHeadingId: string | null
   /** 运行时状态：插件是否已加载就绪（不持久化） */
   _pluginsReady: boolean
+  /**
+   * 运行时状态：正文未缓存、待从磁盘恢复的标签页（不持久化）。
+   * 这些标签页的 `content` 只是占位空串，**恢复完成前必须禁止保存**：
+   * 否则会把空串写回磁盘，把用户的文件截断。
+   * 详见 `lib/editorStorage.ts` 的「配额降级」说明。
+   */
+  pendingContentLoads: PendingContentLoad[]
+  /** 从磁盘恢复正文。恢复后该标签页不再属于待恢复集合，正文重新纳入缓存 */
+  setTabContent: (tabId: string, content: string) => void
 }
 
 export const useEditorStore = create<EditorState>()(
@@ -82,6 +95,7 @@ export const useEditorStore = create<EditorState>()(
       cursorPosition: { line: 1, column: 1 },
       activeHeadingId: null,
       _pluginsReady: false,
+      pendingContentLoads: [],
 
       currentTab: () => {
         const { tabs, activeTabId } = get()
@@ -177,7 +191,10 @@ export const useEditorStore = create<EditorState>()(
             newActiveId = newTabs[newTabs.length - 1].id
           }
         }
-        set({ tabs: newTabs, activeTabId: newActiveId })
+        set({
+          tabs: newTabs, activeTabId: newActiveId,
+          pendingContentLoads: get().pendingContentLoads.filter(p => p.id !== tabId),
+        })
       },
 
       forceCloseTab: (tabId: string) => {
@@ -191,7 +208,10 @@ export const useEditorStore = create<EditorState>()(
           else if (idx < newTabs.length) newActiveId = newTabs[idx].id
           else newActiveId = newTabs[newTabs.length - 1].id
         }
-        set({ tabs: newTabs, activeTabId: newActiveId })
+        set({
+          tabs: newTabs, activeTabId: newActiveId,
+          pendingContentLoads: get().pendingContentLoads.filter(p => p.id !== tabId),
+        })
       },
 
       switchTab: (tabId) => {
@@ -213,12 +233,26 @@ export const useEditorStore = create<EditorState>()(
       },
 
       updateContent: (content) => {
-        const { tabs, activeTabId } = get()
+        const { tabs, activeTabId, pendingContentLoads } = get()
         const tab = tabs.find(t => t.id === activeTabId)
         // 内容未变化时（如外部同步回写）不标记为未保存
         if (!tab || tab.content === content) return
         set({
           tabs: tabs.map(t => t.id === activeTabId ? { ...t, content, isSaved: false, saveStatus: 'unsaved' } : t),
+          // 用户在这个标签页里输入了 ⇒ 内存内容成为权威版本，不再等磁盘恢复。
+          // 若仍留在待恢复集合里，partialize 会把正文当"未缓存"丢掉 —— 用户刚敲的字反而不落盘。
+          pendingContentLoads: pendingContentLoads.some(p => p.id === activeTabId)
+            ? pendingContentLoads.filter(p => p.id !== activeTabId)
+            : pendingContentLoads,
+        })
+      },
+
+      setTabContent: (tabId, content) => {
+        const { tabs, pendingContentLoads } = get()
+        if (!tabs.some(t => t.id === tabId)) return
+        set({
+          tabs: tabs.map(t => t.id === tabId ? { ...t, content } : t),
+          pendingContentLoads: pendingContentLoads.filter(p => p.id !== tabId),
         })
       },
 
@@ -292,11 +326,17 @@ export const useEditorStore = create<EditorState>()(
       setCursorPosition: (position) => set({ cursorPosition: position }),
     }),
     {
-      name: 'yizimarkdown-editor',
-      partialize: (state) => ({
+      name: META_KEY,
+      // 自定义存储层：正文按标签页拆键、只写正文真正变化的那一个，
+      // 并在配额耗尽时按「内容的可替代性」降级。为什么不能用默认的整串 JSON 持久化，
+      // 以及降级与恢复的完整约定，见 lib/editorStorage.ts 头部说明。
+      storage: createEditorStorage(),
+      partialize: (state): PersistedEditorState => ({
         tabs: state.tabs.map(t => ({
           id: t.id, name: t.name, filePath: t.filePath,
-          content: t.content, isSaved: t.isSaved,
+          // 待从磁盘恢复的正文写 null：此刻内存里是占位空串，写下去会覆盖磁盘上的真实内容
+          content: state.pendingContentLoads.some(p => p.id === t.id) ? null : t.content,
+          isSaved: t.isSaved,
           saveStatus: t.saveStatus,
           viewMode: t.viewMode,
           // 远程身份必须持久化：漏掉会让重启后的云端文档退化成"本地文件"，
@@ -306,15 +346,29 @@ export const useEditorStore = create<EditorState>()(
         activeTabId: state.activeTabId,
         recentFiles: state.recentFiles,
       }),
-      // 兼容旧版本持久化数据：saveStatus 缺失时按 isSaved 推断；remote 缺失即普通本地文件
+      // 合并持久化数据。兼容旧版本：saveStatus 缺失时按 isSaved 推断；remote 缺失即普通本地文件。
+      // 正文为 null 的标签页（本地缓存里没有）交给界面从磁盘恢复，见 pendingContentLoads
       merge: (persisted, current) => {
-        const p = (persisted ?? {}) as Partial<EditorState>
-        const tabs = (p.tabs ?? []).map(t => ({
-          ...t,
-          saveStatus: t.saveStatus ?? (t.isSaved ? 'saved' : 'unsaved'),
-          remote: t.remote ?? undefined,
-        }))
-        return { ...current, ...p, tabs }
+        const p = (persisted ?? {}) as Partial<PersistedEditorState>
+        const pendingContentLoads: PendingContentLoad[] = []
+        const tabs: FileTab[] = (p.tabs ?? []).map(t => {
+          const saveStatus = t.saveStatus ?? (t.isSaved ? 'saved' : 'unsaved')
+          if (t.content === null) {
+            // 磁盘上有权威副本 ⇒ 只是缓存里没有；没有副本（未命名）⇒ 上次写入失败，内容真丢了。
+            // 两种都不能让标签页「看起来已保存、内容却是空的」—— 那样用户一按 Ctrl+S 就把文件截断
+            pendingContentLoads.push({
+              id: t.id, name: t.name, filePath: t.filePath,
+              recoverable: isRecoverableFromDisk({ filePath: t.filePath, saveStatus }),
+            })
+          }
+          return {
+            id: t.id, name: t.name, filePath: t.filePath,
+            content: t.content ?? '',
+            isSaved: t.isSaved, saveStatus, viewMode: t.viewMode,
+            remote: t.remote ?? undefined,
+          }
+        })
+        return { ...current, ...p, tabs, pendingContentLoads }
       },
     }
   )

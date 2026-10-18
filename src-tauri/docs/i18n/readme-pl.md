@@ -239,7 +239,6 @@ npm run tauri:build
 
 Artefakty buildu:
 - wersja przenośna exe: `src-tauri/target/release/yizimarkdown.exe`
-- pakiet instalacyjny MSI: `src-tauri/target/release/bundle/msi/`
 - pakiet instalacyjny NSIS: `src-tauri/target/release/bundle/nsis/`
 
 Po zbudowaniu ręcznie skopiuj exe i pliki zasobów do katalogu `public/YiziMarkdown-vX.X.X/` do dystrybucji.

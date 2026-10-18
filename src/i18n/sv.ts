@@ -406,6 +406,11 @@ export const sv = {
     toggleFullscreen: 'Växla helskärm',
   },
   app: {
+    restoring: 'Återställer innehåll…',
+    storageDegraded: 'Den lokala cachen är full: innehållet i sparade filer cachelagras inte längre (filerna på disken påverkas inte). Osparade ändringar cachelagras fortfarande.',
+    storageLostUnsaved: 'Kunde inte skriva till den lokala cachen – osparade ändringar kanske inte överlever en omstart. Tryck Ctrl+S nu.',
+    restoreFellBack: 'Osparade ändringar i {name} kunde inte återställas; versionen på disken lästes in i stället.',
+    restoreUnreadable: '{name} kunde inte läsas och togs bort från flikraden.',
     saved: 'Sparad',
     savedAs: 'Sparad som {name}',
     exported: '{name} exporterad',

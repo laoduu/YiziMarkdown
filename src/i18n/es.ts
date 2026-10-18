@@ -406,6 +406,11 @@ export const es = {
     toggleFullscreen: 'Alternar pantalla completa',
   },
   app: {
+    restoring: 'Restaurando contenido…',
+    storageDegraded: 'La caché local está llena: el contenido de los archivos guardados ya no se almacena en caché (los archivos del disco no se ven afectados). Los cambios sin guardar siguen en caché.',
+    storageLostUnsaved: 'Falló la escritura en la caché local: los cambios sin guardar podrían no sobrevivir a un reinicio. Pulsa Ctrl+S ahora.',
+    restoreFellBack: 'No se pudieron restaurar los cambios sin guardar de {name}; en su lugar se cargó la versión del disco.',
+    restoreUnreadable: 'No se pudo leer {name} y se eliminó de la barra de pestañas.',
     saved: 'Guardado',
     savedAs: 'Guardado como {name}',
     exported: '{name} exportado',

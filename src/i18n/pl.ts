@@ -406,6 +406,11 @@ export const pl = {
     toggleFullscreen: 'Przełącz pełny ekran',
   },
   app: {
+    restoring: 'Przywracanie zawartości…',
+    storageDegraded: 'Lokalny cache jest pełny: zawartość zapisanych plików nie jest już buforowana (pliki na dysku nie są naruszone). Niezapisane zmiany nadal są buforowane.',
+    storageLostUnsaved: 'Zapis do lokalnego cache nie powiódł się — niezapisane zmiany mogą nie przetrwać ponownego uruchomienia. Naciśnij teraz Ctrl+S.',
+    restoreFellBack: 'Nie udało się przywrócić niezapisanych zmian w {name}; wczytano wersję z dysku.',
+    restoreUnreadable: 'Nie można odczytać {name} — karta została usunięta z paska kart.',
     saved: 'Zapisano',
     savedAs: 'Zapisano jako {name}',
     exported: 'Wyeksportowano {name}',

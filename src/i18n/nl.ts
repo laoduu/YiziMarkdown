@@ -406,6 +406,11 @@ export const nl = {
     toggleFullscreen: 'Volledig scherm in-/uitschakelen',
   },
   app: {
+    restoring: 'Inhoud wordt hersteld…',
+    storageDegraded: 'De lokale cache is vol: de inhoud van opgeslagen bestanden wordt niet meer gecachet (bestanden op schijf blijven onaangetast). Niet-opgeslagen wijzigingen worden nog wel gecachet.',
+    storageLostUnsaved: 'Schrijven naar de lokale cache is mislukt — niet-opgeslagen wijzigingen overleven een herstart mogelijk niet. Druk nu op Ctrl+S.',
+    restoreFellBack: 'Niet-opgeslagen wijzigingen van {name} konden niet worden hersteld; in plaats daarvan is de versie op schijf geladen.',
+    restoreUnreadable: '{name} kon niet worden gelezen en is uit de tabbalk verwijderd.',
     saved: 'Opgeslagen',
     savedAs: 'Opgeslagen als {name}',
     exported: '{name} geëxporteerd',

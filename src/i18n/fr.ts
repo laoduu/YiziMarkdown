@@ -406,6 +406,11 @@ export const fr = {
     toggleFullscreen: 'Basculer le plein écran',
   },
   app: {
+    restoring: 'Restauration du contenu…',
+    storageDegraded: "Le cache local est plein : le contenu des fichiers enregistrés n'est plus mis en cache (les fichiers sur le disque ne sont pas affectés). Les modifications non enregistrées restent en cache.",
+    storageLostUnsaved: "Échec de l'écriture dans le cache local — les modifications non enregistrées pourraient ne pas survivre à un redémarrage. Appuyez maintenant sur Ctrl+S.",
+    restoreFellBack: "Les modifications non enregistrées de {name} n'ont pas pu être restaurées ; la version présente sur le disque a été chargée à la place.",
+    restoreUnreadable: "{name} n'a pas pu être lu et a été retiré de la barre d'onglets.",
     saved: 'Enregistré',
     savedAs: 'Enregistré sous {name}',
     exported: '{name} exporté',

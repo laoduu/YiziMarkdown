@@ -1,14 +1,20 @@
 # 推送 v* 标签时自动构建并创建 GitHub Release（草稿）。
 #
-# 资产与历史手工发布一致（5 个）：
+# 资产（4 个，v0.3.4 起不再发布 MSI）：
 #   - YiziMarkdown_<ver>_x64-setup.exe   NSIS 安装包      （Windows 腿）
-#   - YiziMarkdown_<ver>_x64_zh-CN.msi   WiX MSI          （Windows 腿）
 #   - YiziMarkdown_<ver>_x64-portable.zip 便携版          （Windows 腿，make-portable.ps1）
 #   - YiziMarkdown_<ver>_source.zip      源码包           （Windows 腿，git archive）
 #   - YiziMarkdown_<ver>_universal.dmg   macOS 通用 dmg   （macOS 腿）
 #
-# Release 正文取 docs/changelog/CHANGELOG-V<ver>.md（与 v0.3.1 手工正文同源）。
+# Release 正文取 docs/changelog/CHANGELOG-V<ver>.md —— 该文件是**用户向简短版**，
+# 与根 changelog.md 的完整技术记录分工（口径见 changelog.md「既定分工」）。
+# 同一份文件也被 scripts/make-manifest.mjs 用作应用内更新说明的 notes，所以它必须用户向。
 # 默认产出【草稿】，在 GitHub 上确认资产无误后再点 Publish。
+#
+# 在线更新（v0.3.4 起）：Windows 腿经 --config 打开 createUpdaterArtifacts，额外产出
+# YiziMarkdown_<ver>_x64-setup.exe.sig（minisign 签名，私钥来自 secrets.TAURI_SIGNING_PRIVATE_KEY）。
+# 该 .sig 与安装包一起上传火山 TOS 供 latest.json 引用；留在 GitHub Release 上无害。
+# installMode 是 passive ⇒ 用户装完由 NSIS 的 /R 自动重启，前端不需要调 relaunch()。
 #
 # 使用：git tag v0.3.2 && git push origin v0.3.2
 
@@ -48,6 +54,11 @@ jobs:
       - name: npm run build (gates)
         run: npm run build
 
+      # 在线更新的 pubkey / endpoints 发出去就改不了（公钥被编进 exe，改不了 = 用户只能手动重装），
+      # 所以同样放在昂贵的 Rust 构建之前挡住。故意不进 npm run build，见 scripts/check-updater.mjs
+      - name: Check updater config (pubkey / endpoints)
+        run: node scripts/check-updater.mjs
+
   build:
     name: Build (${{ matrix.platform }})
     needs: test
@@ -57,7 +68,10 @@ jobs:
         include:
           - platform: windows-latest
             # CLI 只认 msi / nsis（wix 是工具名，不是 bundle 名）
-            args: --bundles nsis,msi
+            # MSI 线已废弃：Windows 只发 NSIS，在线更新也只用它（见 changelog.md）
+            # --config 只在发版时打开 createUpdaterArtifacts。它会让构建强制要求签名私钥，
+            # 写进 tauri.conf.json 会连带把本地 npm run tauri:build 也卡死，所以按需合并
+            args: --bundles nsis --config src-tauri/tauri.updater.conf.json
           - platform: macos-latest
             args: --target universal-apple-darwin --bundles dmg
     runs-on: ${{ matrix.platform }}
@@ -107,6 +121,9 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 只有 Windows 腿真正用到（macOS 腿没有 createUpdaterArtifacts）。
+          # 私钥是无密码的，所以绝不能设 TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: ${{ github.ref_name }}

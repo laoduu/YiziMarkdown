@@ -406,6 +406,11 @@ export const pt = {
     toggleFullscreen: 'Alternar tela cheia',
   },
   app: {
+    restoring: 'Restaurando conteúdo…',
+    storageDegraded: 'O cache local está cheio: o conteúdo dos arquivos salvos não é mais armazenado em cache (os arquivos no disco não são afetados). As alterações não salvas continuam em cache.',
+    storageLostUnsaved: 'Falha ao gravar no cache local — as alterações não salvas podem não sobreviver a uma reinicialização. Pressione Ctrl+S agora.',
+    restoreFellBack: 'Não foi possível restaurar as alterações não salvas de {name}; a versão do disco foi carregada no lugar.',
+    restoreUnreadable: 'Não foi possível ler {name} e ele foi removido da barra de abas.',
     saved: 'Salvo',
     savedAs: 'Salvo como {name}',
     exported: '{name} exportado',

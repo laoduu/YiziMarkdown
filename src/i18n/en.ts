@@ -421,6 +421,11 @@ export const en = {
     toggleFullscreen: 'Toggle Fullscreen',
   },
   app: {
+    restoring: 'Restoring content…',
+    storageDegraded: 'Local cache is full: contents of saved files are no longer cached (files on disk are unaffected). Unsaved changes are still cached.',
+    storageLostUnsaved: 'Local cache write failed — unsaved changes may not survive a restart. Press Ctrl+S now.',
+    restoreFellBack: '{name} had unsaved changes that could not be restored; the version on disk was loaded instead.',
+    restoreUnreadable: '{name} could not be read and was removed from the tab bar.',
     saved: 'Saved',
     savedAs: 'Saved as {name}',
     exported: 'Exported {name}',

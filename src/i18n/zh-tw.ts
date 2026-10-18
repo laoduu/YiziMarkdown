@@ -419,6 +419,11 @@ export const zhTW = {
     toggleFullscreen: '切換全螢幕',
   },
   app: {
+    restoring: '正在還原內容…',
+    storageDegraded: '本機快取空間不足：已停止快取「已儲存檔案」的正文（磁碟上的檔案不受影響），未儲存的修改仍在快取中。',
+    storageLostUnsaved: '本機快取寫入失敗，未儲存的修改可能無法在重新啟動後還原，請立即按 Ctrl+S 儲存。',
+    restoreFellBack: '{name} 的未儲存修改未能還原，已改為載入磁碟上的版本。',
+    restoreUnreadable: '{name} 無法讀取，已從分頁列移除。',
     saved: '已儲存',
     savedAs: '已另存為 {name}',
     exported: '已匯出 {name}',

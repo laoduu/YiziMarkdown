@@ -240,7 +240,6 @@ npm run tauri:build
 
 Artifact build:
 - Exe portatile: `src-tauri/target/release/yizimarkdown.exe`
-- Pacchetto installatore MSI: `src-tauri/target/release/bundle/msi/`
 - Pacchetto installatore NSIS: `src-tauri/target/release/bundle/nsis/`
 
 Dopo la compilazione, copia manualmente l'exe e i file risorse nella directory `public/YiziMarkdown-vX.X.X/` per la distribuzione.
