@@ -4,6 +4,43 @@
 
 > 本节为**未开发完成的备忘**，仅记录待办，发布前需整理成正式版本说明。
 
+### 0.3.4 发布 + 在线更新实测通过（批次 4-丁，2026-10-18 实测）
+
+**① 0.3.4 走 CI 发布，资产与清单逐项核过**
+
+6 个资产（NSIS `setup.exe` + `.sig` + `latest.json` + 便携版 + 源码包 + dmg），**没有任何 MSI** ✓。匿名（不带 token）拉取端点、签名、安装包全部 HTTP 200 ✓；清单两个平台键都是 **tag 固定 URL**（`releases/download/v0.3.4/...`，不是 `latest/download/...`）✓；清单里的签名与 Release 上的 `.sig` **逐字一致** ✓（不一致的表现是用户端"签名校验失败"）；Release 正文 == 清单 notes == `docs/changelog/CHANGELOG-V0.3.4.md`（三者 3216 字符完全相同）✓。
+
+**草稿不是 Latest**：CI 产出的是草稿，必须先人工 Publish，否则 `/releases/latest/download/latest.json` 一直指向上一个 Latest（4-丙里写下的这条规矩，本次由实测确认）。
+
+**② 本机清理：MSI 0.3.3 与 NSIS 0.3.1 遗留的"双记录"**
+
+用户用系统卸载器卸掉 MSI 0.3.3 后，剩下 HKCU 的 NSIS 0.3.1 记录 + `D:\Program Files\YiziMarkdown` 残留。清理前发现一件要命的事：那个目录的 `themes/` 里有 **36 个 css 从没随任何版本发布过**（把全历史 `src-tauri/themes` 的文件名单抽出来比对确认），它们**是用户自己的主题** —— 因为 `list_themes()` / `read_theme_css()` 读的是 `get_app_root()`（exe 所在目录），往那儿放 css 就会生效。所以流程是**先备份再删**：
+
+- 备份 `%USERPROFILE%\Documents\yizimarkdown-0.3.1-backup\`（40 文件，逐项字节对账）+ 注册表键 `.reg` 导出
+- 备份后：删键、删残留目录、删指向已消失 exe 的开始菜单快捷方式
+- **保留** `%LOCALAPPDATA%\com.yizimarkdown.editor\EBWebView`（标签页自动恢复与会话设置的载体）
+
+**③ 安装形态实测判定为 `nsis` ⇒ 自动更新放行**
+
+判据两条同时成立：注册表卸载项的 `InstallLocation` 与运行中 exe 所在目录一致 ✓。
+
+**④ 0.3.5-beta.1 实测：0.3.4 应用内一键更新全链路通过（用户确认"很丝滑"）**
+
+beta 的发布方式做到**不碰 main**：提版提交放在临时分支 `beta-0.3.5`，**只推 tag** `v0.3.5-beta.1`（远端 main 全程停在 `f68a118`）；CI 构建草稿 → 人工 Publish（`prerelease: false`）→ 占住 Latest。
+
+- 清单核对：`version=0.3.5-beta.1`、两个平台键都是 tag 固定 URL、签名与 `.sig` 逐字一致、notes 与 `CHANGELOG-V0.3.5-beta.1.md` 相同 ✓
+- **产物名带预发布后缀**（`YiziMarkdown_0.3.5-beta.1_x64-setup.exe`）—— CI 里"用 glob 取实际产物名、不拼字符串"的决定，被这一版证明是必要的
+- 实测链路：状态栏「有新版本」→ 更新说明（与应用内文案同源）→ 下载约 8 MB → 签名校验 → **被动模式安装**（无向导、不问目录）→ **自动重开** → 版本号变 `0.3.5-beta.1` ✓
+- 更新后复核：**原地更新**（目录没变）、exe `FileVersion` 已变、**用户自加的 36 个主题全部留存**、`user.css` / `keybindings.json` **未被重写**（mtime 仍是首次安装时间；二者内容与随包资源逐字节相同，说明安装器是"按内容差异覆盖"）、EBWebView 完好（标签页与设置没丢）
+- ⚠️ **新发现的隐患**：`user.css` / `keybindings.json` 是**随包资源**，一旦用户自定义过，更新时会被随包版本覆盖（本例因为没自定义过才看不出来）。列入遗留
+- 收尾：删除 beta Release（`--cleanup-tag`）、删除临时分支、版本号回退 `0.3.4`；`/releases/latest` 落回 `v0.3.4` ✓
+
+**⑤ 三条开发期经验（都不是产品缺陷，但会浪费很多时间）**
+
+- **dev 版与安装版不能同时开**：同一个 identifier ⇒ 同一个 WebView2 配置目录，后启动的那个拿不到用户数据目录而失败（本次表现就是 dev 客户端 exit code 1）
+- 安装/更新时会**关闭同名进程**（都叫 `yizimarkdown.exe`）—— dev 客户端会被安装器顺手收走，不是它崩了
+- 验端点的坑：GitHub 的 Release 资产响应是 `Content-Type: application/octet-stream`，PowerShell 下 `Invoke-WebRequest` 的 `.Content` 是**字节数组**，必须先 `[Text.Encoding]::UTF8.GetString()` 解码再解析，否则会得到"版本为空"的假象（一度误判成 CDN 缓存）
+
 ### 分发改用 GitHub Releases：端点落定、CI 补上 latest.json、MSI 彻底退场（批次 4-丙，2026-10-18 实施）
 
 **① 端点从 TOS 换成 GitHub —— 这是「发出去就改不了」的那一类配置**
