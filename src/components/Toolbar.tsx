@@ -54,6 +54,7 @@ import { openContextMenu } from './ContextMenu'
 import { useSettingsStore } from '../stores/settingsStore'
 import { orderThemes } from '../lib/themeOrder'
 import { CUSTOM_THEME, readUserCss } from '../lib/themeLoader'
+import { COLUMN_REGION_SNIPPET } from '../lib/slides'
 import { useI18n } from '../i18n'
 import LinkModal from './LinkModal'
 import ImageModal from './ImageModal'
@@ -68,7 +69,7 @@ interface ToolbarProps {
   onSaveToCloud: () => void
   onToggleSidebar: () => void
   onToggleDark: () => void
-  onInsertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'link' | 'tag') => void
+  onInsertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'link' | 'tag' | 'block') => void
   /** 插入脚注（正文 [^n] + 文末定义行），逻辑在编辑器内（EditorRef.insertFootnote） */
   onInsertFootnote: () => void
   onExport: (format: 'html' | 'md' | 'txt' | 'docx' | 'pdf') => void
@@ -642,7 +643,7 @@ export default function Toolbar({
         </div>
         <ToolbarButton icon={<Workflow size={16} />} tooltip={t('toolbar.mermaid')} onClick={() => onInsertMarkdown('\n```mermaid\ngraph LR\n  A[开始] --> B[结束]\n```\n')} />
         <ToolbarButton icon={<Minus size={16} />} tooltip={t('toolbar.horizontalRule')} onClick={() => onInsertMarkdown('\n---\n')} />
-        <ToolbarButton icon={<Columns2 size={16} />} tooltip={t('toolbar.columnBreak')} onClick={() => onInsertMarkdown('\n***\n')} />
+        <ToolbarButton icon={<Columns2 size={16} />} tooltip={t('toolbar.columnBreak')} onClick={() => onInsertMarkdown(COLUMN_REGION_SNIPPET, 'block')} />
           </div>
         </div>
       </div>

@@ -14,6 +14,10 @@ import {
   SLIDE_FONT_WEIGHTS, SLIDE_FONT_SCALE, SLIDE_FILL,
   DEFAULT_SLIDE_TYPOGRAPHY, slideTypographyVars, type SlideFontId,
 } from '../lib/slideTypography'
+import {
+  DEFAULT_SLIDE_COL_ALIGN, DEFAULT_SLIDE_COL_STYLE,
+  resolveColAlign, colAlignClass, colStyleClass,
+} from '../lib/slideColumns'
 import { useEditorStore } from '../stores/editorStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useI18n } from '../i18n'
@@ -40,6 +44,10 @@ interface Slide {
   colParts?: string[]
   /** 页标题（页内第一个标题块）：整页渲染在分栏之上，不参与分栏 */
   colIntro?: string
+  /** 栏前文案（圈定写法里，第一个 `***` 之前的内容）：页级，整页横跨 */
+  colBefore?: string
+  /** 栏后文案（圈定写法里，最后一个 `***` 之后的内容）：页级，整页横跨 */
+  colAfter?: string
 }
 
 interface SlideshowProps {
@@ -63,6 +71,9 @@ const FRAGMENT_ITEM_SELECTOR = [
   ':scope > .ys-cols > .ys-col > ul > li', ':scope > .ys-cols > .ys-col > ol > li',
 ].join(', ')
 
+/** 按 S 时本页无备注 ⇒ 提示停留时长（毫秒）。够看清即可，不必等人点掉 */
+const NOTES_HINT_MS = 2200
+
 export default function Slideshow({
   content,
   title,
@@ -82,7 +93,14 @@ export default function Slideshow({
   })
   const [h, setH] = useState(0)
   const [showHelp, setShowHelp] = useState(false)
-  const [showNotes, setShowNotes] = useState(false)
+  // 提词备注：**与幻灯片同屏显示**（不像 PPT 有副屏演示者视图），单屏投影时观众必然看得到。
+  // 因此默认收在屏幕左缘外，鼠标移到左缘热区（.ys-notes-edge）才滑出；notesPinned = 按 S 锁定常显。
+  const [notesPinned, setNotesPinned] = useState(false)
+  // 按 S 时当前页没有备注 ⇒ 短暂提示一下。
+  // 为什么需要：HUD 的「备注」按钮是 `cur?.notes &&` 才渲染的，无备注时按钮不出现、
+  // 按 S 又毫无反应 —— 用户据此以为「没有演讲者备注这个功能」（实际反馈过）。
+  const [notesHint, setNotesHint] = useState(false)
+  const notesHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // 平台：macOS（WKWebView）上翻面族的"方块感"需要 tile 层实体化（背景+边框+
   // 更大缩小幅度）才可见——face 背景与页面同色在 WebKit 3D 变换中无对比。
   // Windows（WebView2）走原版视觉，不加任何分支类。
@@ -157,6 +175,15 @@ export default function Slideshow({
     fillHeight: slideFillHeight,
   })
 
+  // 分栏旋钮（v0.3.4）：栏内对齐 / 分栏样式，与排版旋钮同源（settingsStore 持久化）。
+  // slideColAlign 是 HUD **全局默认**：与页级 <!-- align: xxx --> 的合成发生在渲染处
+  // （resolveColAlign，页级优先），CSS 只认合成后的 ys-col-align-* 一个来源。
+  const slideColAlign = useSettingsStore((s) => s.slideColAlign)
+  const slideColStyle = useSettingsStore((s) => s.slideColStyle)
+  // 分栏样式作用于**整副演示**（所有页同时生效）⇒ 挂在根节点；默认 card，
+  // 仅用户显式选「无」时为空串（不产出 class）
+  const colStyleCls = colStyleClass(slideColStyle)
+
   /**
    * 演示标题：**front matter 的 `title` 优先**，没有才用文档名（`title` 属性）。
    * 此前只解析了 author/date，`title` 解析出来却从未使用 ⇒ 元信息里写了 title 也不生效，
@@ -173,15 +200,18 @@ export default function Slideshow({
     return splitSlides(body).map((src) => {
       const { body: b, notes } = extractNotes(src)
       const { body: b2, directives } = extractDirectives(b)
-      // 分栏：`***` = 栏分隔（`---` = 页分隔，已在 splitSlides 消费）。
+      // 分栏：`***` = 栏区边界 / 栏分隔（`---` = 页分隔，已在 splitSlides 消费）。
       // 页内第一个标题块被抽成 intro（页标题），**不参与分栏** —— 否则标题会落进
       // 第 1 栏，表现为「左栏带标题、右栏内容顶端高于标题」的错位。
-      // 版式推断用「intro + 各栏重拼」的源：标题仍是首块（cover/content-list 等
+      // 圈定写法（≥3 条 `***`，见 COLUMN_REGION_MIN）时，栏区**之外**的内容是
+      // before / after，同样按页级渲染（引言 / 落款）。
+      // 版式推断用「intro + 栏外文案 + 各栏重拼」的源：标题仍是首块（cover/content-list 等
       // 照旧命中），分隔行也不会变成干扰块；未分栏时直接用 b2，与之前逐字节一致。
       const split = splitColumns(b2)
       const hasColumns = split.parts.length > 1
       const layoutSrc = hasColumns
-        ? [split.intro, ...split.parts].filter((s) => s.trim() !== '').join(`\n\n${COLUMN_BREAK}\n\n`)
+        ? [split.intro, split.before, ...split.parts, split.after]
+            .filter((s) => s.trim() !== '').join(`\n\n${COLUMN_BREAK}\n\n`)
         : b2
       const layout: SlideLayout = detectLayout(layoutSrc)
       const kind = directives.layout || layout.kind
@@ -195,6 +225,8 @@ export default function Slideshow({
         columns: hasColumns ? split.parts.length : undefined,
         colParts: hasColumns ? split.parts : undefined,
         colIntro: hasColumns && split.intro ? split.intro : undefined,
+        colBefore: hasColumns && split.before ? split.before : undefined,
+        colAfter: hasColumns && split.after ? split.after : undefined,
       }
     })
   }, [content])
@@ -215,9 +247,16 @@ export default function Slideshow({
         // 页标题（colIntro）**不包 div**、直接作为 .ys-slide 的直接子元素 ——
         // 这样 `.ys-slide > :first-child` 与各版式的 h2 规则仍能命中它，
         // 标题的整页样式（含下划线装饰）与不分栏时完全一致。
-        ? `${slide.colIntro ? renderMarkdown(slide.colIntro, pluginExtenders) : ''}<div class="ys-cols" style="--ys-cols:${parts.length}">${
+        // 栏外文案（colBefore / colAfter）则**包一层 .ys-col-aside**：它是页级内容，
+        // 必须与页标题区分开，否则「栏内对齐」那几条针对页级子元素的规则会连它一起改
+        // （见 slideshow.css 的 .ys-col-aside 说明）。
+        ? `${slide.colIntro ? renderMarkdown(slide.colIntro, pluginExtenders) : ''}${
+            slide.colBefore ? `<div class="ys-col-aside">${renderMarkdown(slide.colBefore, pluginExtenders)}</div>` : ''
+          }<div class="ys-cols" style="--ys-cols:${parts.length}">${
             parts.map((p) => `<div class="ys-col">${renderMarkdown(p, pluginExtenders)}</div>`).join('')
-          }</div>`
+          }</div>${
+            slide.colAfter ? `<div class="ys-col-aside">${renderMarkdown(slide.colAfter, pluginExtenders)}</div>` : ''
+          }`
         : renderMarkdown(slide.src, pluginExtenders)
       // 封面页：拼接 front matter 提供的作者/日期 meta 行
       if (slide.kind === 'cover' && slideMetaRef.current.author) {
@@ -494,16 +533,25 @@ export default function Slideshow({
       }).finally(() => setTimeout(() => { toggleIntentRef.current = false }, 400))
       return
     }
-    if (k === 's' || k === 'S') { e.preventDefault(); setShowNotes((x) => !x); return }
+    if (k === 's' || k === 'S') {
+      e.preventDefault()
+      if (cur?.notes) { setNotesPinned((x) => !x); return }
+      // 本页无备注：提示一下，别让按键石沉大海（见 notesHint 的注释）
+      setNotesHint(true)
+      if (notesHintTimerRef.current) clearTimeout(notesHintTimerRef.current)
+      notesHintTimerRef.current = setTimeout(() => setNotesHint(false), NOTES_HINT_MS)
+      return
+    }
     if (k === '?') { e.preventDefault(); setShowHelp((x) => !x); return }
     if (k === 'Escape') {
       if (typeMenuOpen) { setTypeMenuOpen(false); return }
       if (animMenuOpen) { setAnimMenuOpen(false); return }
       if (themeMenuOpen) { setThemeMenuOpen(false); return }
       if (showHelp) { setShowHelp(false); return }
+      if (notesPinned) { setNotesPinned(false); return }   // 先收起锁定的备注，再退出
       requestExit()
     }
-  }, [next, prev, slides.length, requestExit, showHelp, REVEAL_ALL, goTo, typeMenuOpen, animMenuOpen, themeMenuOpen])
+  }, [next, prev, slides.length, requestExit, showHelp, REVEAL_ALL, goTo, typeMenuOpen, animMenuOpen, themeMenuOpen, cur, notesPinned])
 
   useEffect(() => {
     window.addEventListener('keydown', onKey)
@@ -715,10 +763,11 @@ export default function Slideshow({
     }
   }, [h, REVEAL_ALL])
 
-  // 卸载时清理 leaving / flip 定时器
+  // 卸载时清理 leaving / flip / 备注提示定时器
   useEffect(() => () => {
     if (leavingTimerRef.current) clearTimeout(leavingTimerRef.current)
     if (flipTimerRef.current) clearTimeout(flipTimerRef.current)
+    if (notesHintTimerRef.current) clearTimeout(notesHintTimerRef.current)
   }, [])
 
   // section 挂载后处理：片段标记 + 插件 + 图片（按 section 粒度，data-processed 防重复）
@@ -779,7 +828,7 @@ export default function Slideshow({
   }, [fragmentsOn, h])
 
   return (
-    <div className={`yizi-slideshow theme-${theme}${dark ? ' dark' : ''}`} style={typographyVars as CSSProperties}>
+    <div className={`yizi-slideshow theme-${theme}${dark ? ' dark' : ''}${colStyleCls ? ` ${colStyleCls}` : ''}`} style={typographyVars as CSSProperties}>
       {/* 退出按钮：鼠标活动时显示 */}
       <button
         className="ys-exit-btn"
@@ -796,7 +845,13 @@ export default function Slideshow({
           const active = i === h
           const past = i < h
           const classes = ['ys-slide', `ys-layout-${slide.kind}`]
-          if (slide.columns) classes.push('ys-has-cols')
+          if (slide.columns) {
+            classes.push('ys-has-cols')
+            // 栏内对齐：页级 <!-- align: xxx --> 覆盖 HUD 全局默认（resolveColAlign 合成，
+            // 合成后只剩一个来源 ⇒ CSS 只认 ys-col-align-*）。左对齐也照发 class：
+            // 它没有对应规则（默认零变化），但保持三值对称，选择器可 grep、后续可扩展。
+            classes.push(colAlignClass(resolveColAlign(slideColAlign, slide.align)))
+          }
           if (slide.align) classes.push(`ys-align-${slide.align}`)
           if (active) {
             classes.push('ys-active')
@@ -837,7 +892,7 @@ export default function Slideshow({
       {/* HUD */}
       <div className="ys-hud">
         {cur?.notes && (
-          <button className="ys-hud-btn" onClick={(e) => { e.currentTarget.blur(); setShowNotes((x) => !x) }}>{t('slideshow.notes')}</button>
+          <button className="ys-hud-btn" onClick={(e) => { e.currentTarget.blur(); setNotesPinned((x) => !x) }}>{t('slideshow.notes')}</button>
         )}
         <div className="ys-hud-ctrl">
           <button
@@ -977,6 +1032,45 @@ export default function Slideshow({
               />
             </label>
 
+            {/* 分栏：栏内对齐 / 分栏样式（仅作用于用 `***` 分栏的页；非分栏页不受影响） */}
+            <div className="ys-hud-row">
+              <span>{t('slideshow.colAlign')}</span>
+              <div className="ys-hud-seg">
+                {([
+                  ['left', t('slideshow.colAlignLeft')],
+                  ['center', t('slideshow.colAlignCenter')],
+                  ['right', t('slideshow.colAlignRight')],
+                ] as const).map(([id, label]) => (
+                  <button
+                    key={id}
+                    className={slideColAlign === id ? 'ys-hud-seg-btn ys-active' : 'ys-hud-seg-btn'}
+                    onClick={(e) => { e.currentTarget.blur(); setSlideSetting('slideColAlign', id) }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="ys-hud-row">
+              <span>{t('slideshow.colStyle')}</span>
+              <div className="ys-hud-seg">
+                {([
+                  ['none', t('slideshow.colStyleNone')],
+                  ['line', t('slideshow.colStyleLine')],
+                  ['card', t('slideshow.colStyleCard')],
+                ] as const).map(([id, label]) => (
+                  <button
+                    key={id}
+                    className={slideColStyle === id ? 'ys-hud-seg-btn ys-active' : 'ys-hud-seg-btn'}
+                    onClick={(e) => { e.currentTarget.blur(); setSlideSetting('slideColStyle', id) }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <button
               className="ys-hud-reset"
               onClick={(e) => {
@@ -986,6 +1080,8 @@ export default function Slideshow({
                 setSlideSetting('slideFontScale', DEFAULT_SLIDE_TYPOGRAPHY.fontScale)
                 setSlideSetting('slideFillWidth', DEFAULT_SLIDE_TYPOGRAPHY.fillWidth)
                 setSlideSetting('slideFillHeight', DEFAULT_SLIDE_TYPOGRAPHY.fillHeight)
+                setSlideSetting('slideColAlign', DEFAULT_SLIDE_COL_ALIGN)
+                setSlideSetting('slideColStyle', DEFAULT_SLIDE_COL_STYLE)
               }}
             >
               {t('common.restoreDefault')}
@@ -1055,16 +1151,23 @@ export default function Slideshow({
         </div>
       )}
 
-      {/* 备注面板 */}
-      {showNotes && cur?.notes && (
-        <div className="ys-notes-panel">
-          <div className="ys-notes-head">
-            <span>{t('slideshow.notesTitle')}</span>
-            <button onClick={() => setShowNotes(false)}>{t('slideshow.close')}</button>
+      {/* 提词备注：默认收在屏幕左缘外，鼠标移到左缘热区（.ys-notes-edge，纯 CSS :hover）
+          或按 `S` 锁定（notesPinned）才滑出 —— 它与幻灯片同屏，观众看得到，见 CSS 里的说明 */}
+      {cur?.notes && (
+        <>
+          <div className="ys-notes-edge" />
+          <div className={`ys-notes-panel${notesPinned ? ' ys-pinned' : ''}`}>
+            <div className="ys-notes-head">
+              <span>{t('slideshow.notesTitle')}</span>
+              <button onClick={() => setNotesPinned(false)}>{t('slideshow.close')}</button>
+            </div>
+            <div className="ys-notes-body">{cur.notes}</div>
           </div>
-          <div className="ys-notes-body">{cur.notes}</div>
-        </div>
+        </>
       )}
+
+      {/* 本页无备注时按 S 的短暂提示：HUD 按钮此时不出现，若按键毫无反应会让人以为没有这个功能 */}
+      {notesHint && <div className="ys-notes-hint">{t('slideshow.notesEmpty')}</div>}
 
       {/* 超长文档名被 .ys-title 的单行省略号截断 ⇒ 悬停可看完整值 */}
       <div className="ys-title" title={docTitle}>{docTitle}</div>

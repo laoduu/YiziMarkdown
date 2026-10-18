@@ -692,7 +692,7 @@ function App() {
     }
   }, [openFile])
 
-  const handleInsertMarkdown = useCallback((markdown: string, mode?: 'wrap' | 'prefix' | 'link' | 'tag') => {
+  const handleInsertMarkdown = useCallback((markdown: string, mode?: 'wrap' | 'prefix' | 'link' | 'tag' | 'block') => {
     // 代码块特殊处理：光标定位到两个 ``` 之间
     if (markdown === '\n```\n\n```\n') {
       editorRef.current?.insertCodeBlock()

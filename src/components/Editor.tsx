@@ -15,6 +15,7 @@ import { liveEditExtension } from '../lib/cm-live-render'
 import { frontMatterField, frontMatterLines } from '../lib/cm-frontmatter'
 import { headingFoldExtension } from '../lib/cm-heading-fold'
 import { slashMenuExtension, slashMenuState, showSlashMenu, hideSlashMenu, slashMenuAction } from '../lib/cm-slash-menu'
+import { COLUMN_REGION_SNIPPET, COLUMN_REGION_CURSOR } from '../lib/slides'
 import { selectionToolbarExtension, type SelectionToolbarInfo } from '../lib/cm-selection-toolbar'
 import SlashMenu from './SlashMenu'
 import SelectionToolbar from './SelectionToolbar'
@@ -118,7 +119,7 @@ export function insertFootnoteAtView(view: EditorView): void {
 }
 
 export interface EditorRef {
-  insertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'link' | 'tag') => void
+  insertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'link' | 'tag' | 'block') => void
   insertCodeBlock: () => void
   insertFootnote: () => void
   toggleSearch: () => void
@@ -995,7 +996,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   }, [viewMode, getPreviewLines, findNearestLine])
 
   useImperativeHandle(ref, () => ({
-    insertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'link' | 'tag') => {
+    insertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'link' | 'tag' | 'block') => {
       const view = viewRef.current
       if (!view) return
       const { from, to } = view.state.selection.main
@@ -1053,6 +1054,14 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
           newFrom = from + (bracketPos >= 0 ? bracketPos + 2 : markdown.length)
           newTo = newFrom + 3
         }
+      } else if (mode === 'block') {
+        // 多行块片段：原样插入，光标落在片段里**第一个空行**上 —— 那是"该你填了"的位置。
+        // 例：分栏区间 `\n***\n\n***\n\n***\n` → 光标落在第一个 `***` 之后的空行（左栏）；
+        //     用户填完左栏，下面那个空档自然就是右栏，不必先理解语法。
+        insertText = markdown
+        const blank = /\n\s*\n/.exec(markdown)
+        newFrom = from + (blank ? blank.index + 1 : markdown.length)
+        newTo = newFrom
       } else {
         insertText = markdown
         newFrom = from + markdown.length
@@ -1567,7 +1576,13 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         break
       }
       case 'horizontalRule': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '\n---\n' }, selection: { anchor: newFrom + 5, head: newFrom + 5 } }); break
-      case 'columnBreak': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '\n***\n' }, selection: { anchor: newFrom + 5, head: newFrom + 5 } }); break
+      case 'columnBreak': {
+        // 插入**分栏区间**（三条 *** = 2 栏的形状），光标落在第一个空档（左栏）。
+        // 详见 lib/slides.ts 的 COLUMN_REGION_SNIPPET / COLUMN_REGION_CURSOR。
+        const caret = newFrom + COLUMN_REGION_CURSOR
+        view.dispatch({ changes: { from: newFrom, to: newTo, insert: COLUMN_REGION_SNIPPET }, selection: { anchor: caret, head: caret } })
+        break
+      }
       case 'footnote': insertFootnoteAtView(view); break
     }
 

@@ -886,6 +886,26 @@
   box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.35);
 }
 
+/* 单独成块的图片默认**不拉伸、并在页面中间居中**。
+   ⚠️ 选择器必须是 `p > img:only-child` 而不是 `> img`：markdown-it 会把单独成行的图片
+   包进 `<p>`（实测 DOM 是 `<p><img></p>`），img 从来不是 .ys-slide 的直接子元素 ——
+   上一版写成 `.ys-slide > img`，结果是一条**永远不命中**的死规则，居中完全没生效。
+   `.ys-slide > *` 把 `<p>` 钉成 width:100%，图片因此被拉满整行贴在左边；
+   收缩回原生尺寸（width:auto）后，靠 margin-inline:auto 落到中线。
+   用 `:only-child` 而不是所有 img：段落里夹着文字的行内图片必须保持原样。 */
+.ys-slide p > img:only-child {
+  display: block;
+  margin-inline: auto;
+  /* 高度封顶 = **内容区高度的 78%**（内容区高度 = --ys-fill-h × 100vh，见 .ys-slide 的 padding）。
+     为什么必须有：图片是 width:auto + max-width:100%，浏览器按**宽度**等比缩放 ——
+     原图接近方形或偏高时，缩到内容区宽度就会吃满整屏，把同页的标题/正文顶出可视区
+     （.ys-slide 是 overflow:auto，内容还在，只是没滚动就看不见 ⇒ 观感就是"被挤出去了"）。
+     留 22% 给同页其它内容。
+     这是**唯一**的高度上限来源：图片页原先写死的 `max-height:76vh` 已并入这里 ——
+     那个值是「内容填充高度」旋钮加入之前写的，不跟旋钮走，而且图片页后面跟文字时照样会挤出画面。 */
+  max-height: calc(var(--ys-fill-h, 0.84) * 78vh);
+}
+
 .ys-slide a {
   color: var(--editor-accent, #4f46e5);
   text-decoration: none;
@@ -1202,12 +1222,18 @@
   accent-color: var(--editor-accent, #4f46e5);
 }
 
-/* ---- 图文页：图左文右双栏 ---- */
+/* ---- 图文页：图左文右双栏 ----
+   ⚠️ v0.3.4 起这个版式**不再由自动推断产生**（见 lib/slides.ts 的 LAYOUT_RULES）：
+   图与文默认按书写顺序纵向排列、图片居中；想要左右并排请用 `***` 分栏。
+   样式整体保留，仅由 `<!-- layout: figure -->` 显式指定时生效。 */
 .ys-layout-figure {
   justify-content: center;
   display: grid;
   grid-template-columns: minmax(0, 45fr) minmax(0, 55fr);
-  gap: 2.5vw;
+  /* 行间距按段落节奏（0.7em，与 .ys-slide p 的 margin 一致）、列间距是图文之间的栏距。
+     写成两值是因为右栏现在可能有多个块（见下方 :not(:first-child)），它们之间靠 row-gap 分开；
+     若沿用单一 gap，段落之间会被拉开 2.5vw 那么宽。 */
+  gap: 0.7em 2.5vw;
   align-items: center;
   width: 100%;
 }
@@ -1223,13 +1249,18 @@
   grid-row: 1;
 }
 
+/* 右栏**只钉列、不钉行**。
+   ⚠️ 曾经这里还写了 `grid-row: 1`，后果是右栏第 2 个及以后的块与第 1 个**占同一个栅格格子**，
+   完全叠印在一起（图 + 两段文字 ⇒ 两段文字叠成一团，issue 见 v0.3.4 模板第 13 页）。
+   只给 grid-column 时，自动布局会把它们依次放进第 2 列的第 1 / 2 / 3 … 行，
+   每块一行、按 row-gap 分隔 —— 这正是「图左文右、右侧可多段」应有的样子。 */
 .ys-layout-figure > *:not(:first-child) {
   grid-column: 2;
-  grid-row: 1;
 }
 
+/* 图文页（仅 `<!-- layout: figure -->` 可达）：图片收缩到栏内原生尺寸。
+   高度上限同样统一交给 `.ys-slide p > img:only-child`，原先写死的 64vh 已作废 */
 .ys-layout-figure > :first-child img {
-  max-height: 64vh;
   width: auto;
   max-width: 100%;
 }
@@ -1261,8 +1292,9 @@
   max-width: none;
 }
 
+/* 图片页：图片自身收缩（不拉满整行）。高度上限已统一交给
+   `.ys-slide p > img:only-child`（原先这里写死的 76vh 是旋钮加入之前的值，已作废） */
 .ys-layout-image img {
-  max-height: 76vh;
   width: auto;
   max-width: 100%;
 }
@@ -1433,6 +1465,130 @@
 .ys-slide.ys-has-cols > .ys-cols::before,
 .ys-slide.ys-has-cols > .ys-cols::after {
   content: none;   /* 关掉封面下划线 / 对角大引号等挂在"首块"上的装饰 */
+}
+
+/* ===== 栏外文案（圈定写法的 before / after，见 lib/slideColumns… 实为 lib/slides.ts 的 splitColumns）=====
+   由 getSlideHtml 包成 `<div class="ys-col-aside">`，是**页级**内容：
+   引言整页横跨在栏之上、落款整页横跨在栏之下，都**不参与分栏**。
+   由于它在 `.ys-cols` 之外，下面「分栏对齐」段里的所有栏内规则（对齐、卡片、分隔线）
+   自然都碰不到它 —— 这正是想要的：栏外文案属于页面层级，跟随版式与页标题，
+   不跟随栏内对齐（否则会出现「页标题左对齐、引言居中」的新割裂）。
+   刻意**不加任何视觉样式**：引言与落款长什么样由作者的 Markdown 决定
+   （斜体、引用块、小字……），这里只保证它待在页级流里。
+   `.ys-slide > *` 已经给了它 width:100% / max-width:100%，无需重复声明。 */
+
+/* ===== 分栏对齐（HUD「演示排版 → 分栏 → 栏内对齐」，见 lib/slideColumns.ts）=====
+   来源唯一：Slideshow.tsx 已把「HUD 全局默认 + 页级 <!-- align: xxx -->」合成一个值，
+   以 .ys-col-align-* 挂在 .ys-slide 上 ⇒ 下面的规则不必再跟 .ys-align-* 争夺优先级。
+   作用域只有「栏内内容」，两条硬约束：
+     1) **只作用于分栏页**：每条都带 .ys-has-cols（该类只出现在 columns >= 2 的页上），
+        非分栏页、页脚、HUD 一律不受影响；
+     2) **只作用于栏内**：所有选择器都从 `.ys-cols` 往下走 ⇒ 页标题（intro，是 .ys-slide 的
+        直接子元素、在 .ys-cols 之外）永远保持版式自身的对齐，见下方说明；
+     3) 基础排版把标题/列表/引用写死为左对齐（.ys-slide h1 / ul / blockquote = (0,1,1)），
+        `.ys-cols` 又在 (0,3,0) 上写 text-align:left —— 因此每条都抬到 (0,4,x) 以上才翻得动。
+   默认（左对齐）**没有对应规则** ⇒ 不产出任何声明，未调整时与加这个旋钮前逐像素一致。 */
+
+/* 栏内的标题 / 列表 / 引用跟随栏对齐：这三类在基础排版里各有 text-align:left，
+   不显式翻过来的话，用户选了「居中」也只会看到正文段落居中。
+   ⚠️ 这里的 h1~h4 指**栏内标题**（写在栏里的小标题），不是页标题 —— 见上。 */
+.ys-slide.ys-col-align-center.ys-has-cols .ys-cols :is(h1, h2, h3, h4, ul, ol, blockquote),
+.ys-slide.ys-col-align-right.ys-has-cols .ys-cols :is(h1, h2, h3, h4, ul, ol, blockquote) {
+  text-align: inherit;
+}
+
+/* ===== 栏内居中 ===== */
+.ys-slide.ys-col-align-center.ys-has-cols .ys-cols {
+  text-align: center;
+}
+
+/* 每栏的直接子块收缩到内容宽再居中。为什么连段落也一起收：
+   `width:fit-content` 对文本是**无损**的 —— 需要折行的段落 max-content > 栏宽，
+   仍取栏宽，折行位置不变；不需折行的短段落盒子虽变窄，但行盒本来就只有那么宽
+   ⇒ 观感与整宽居中完全一致。真正的收益是图片 / 代码块 / 表格这些「块盒」
+   （只写 text-align 对它们无效，`.ys-cols > .ys-col > *` 已把 width 钉成 100%）。 */
+.ys-slide.ys-col-align-center.ys-has-cols .ys-cols > .ys-col > * {
+  width: fit-content;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ===== 栏内右对齐 ===== */
+.ys-slide.ys-col-align-right.ys-has-cols .ys-cols {
+  text-align: right;
+}
+
+.ys-slide.ys-col-align-right.ys-has-cols .ys-cols > .ys-col > * {
+  width: fit-content;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: 0;
+}
+
+/* 右对齐列表：内边距与项目符号一起翻到右侧。
+   比页级 .ys-align-right 那版更彻底 —— 它把 padding 加在 ul 上、li 仍留着
+   1.5em 的左内边距，右对齐后左边会空出一截；这里直接改 li，栏宽紧张时
+   不会白白吃掉 1.5em。 */
+.ys-slide.ys-col-align-right.ys-has-cols .ys-cols li {
+  padding-left: 0;
+  padding-right: 1.5em;
+}
+
+.ys-slide.ys-col-align-right.ys-has-cols .ys-cols ul > li::before,
+.ys-slide.ys-col-align-right.ys-has-cols .ys-cols ol > li::before {
+  left: auto;
+  right: 0;
+}
+
+/* 栏内右对齐时，图片跟随右边缘 —— 否则会被「单独成块的图片居中」那条规则
+   钉在栏中间，出现「文字贴右、图片悬在中间」的割裂。居中对齐无需覆盖（默认就是居中）。 */
+.ys-slide.ys-col-align-right.ys-has-cols .ys-cols p > img:only-child {
+  margin-inline: auto 0;
+}
+
+/* 页标题（分栏页里被 splitColumns 抽出的 intro）**刻意不跟随栏对齐** ——
+   栏内对齐的作用域是「栏内内容」，页标题属于页面层级：它跟着所属版式走
+   （内容页左对齐、封面/章节页居中），改它会让「一屏一个标题」的层级被打散。
+   也因此 `.ys-slide.ys-has-cols > .ys-cols` 之外的第一个子元素一律不受下面规则影响。 */
+
+/* ===== 分栏样式：分隔线 / 卡片（HUD「演示排版 → 分栏 → 分栏样式」）=====
+   类挂 .yizi-slideshow 根节点（ys-col-style-*）：样式作用于整副演示而非单页。
+   **默认是卡片**（DEFAULT_SLIDE_COL_STYLE = 'card'）：卡片外框让分栏占位可感知，
+   是本组旋钮里最该默认打开的那个；仅显式选「无」时不产出 class。 */
+
+/* 分隔线：画在栏间 gap 的正中线上（gap 2.4vw 的一半 = 1.2vw），
+   不改变栏宽与间距，比 padding 版更轻。
+   position: relative 只在本样式下加：它是 ::before 的定位锚，但同时会改变
+   栏内**绝对定位后代**（如图表脚注）的包含块 —— 默认样式一个属性都不动。 */
+.ys-col-style-line .ys-cols > .ys-col {
+  position: relative;
+}
+
+.ys-col-style-line .ys-cols > .ys-col + .ys-col::before {
+  content: '';
+  position: absolute;
+  left: -1.2vw;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--editor-border, rgba(128, 128, 128, 0.25));
+}
+
+/* 卡片：本问题的主药方 —— 卡片外框随「内容填充宽度」两侧同时伸缩，
+   把看不见的栏宽变化变成看得见的框，用户才感知得到右栏也在变。
+   令牌全部复用主题既有变量 ⇒ 明暗与主题自动跟随；
+   内边距用 em ⇒ 跟着「字号」旋钮一起缩放，不会出现字大框小。 */
+.ys-col-style-card .ys-cols {
+  align-items: stretch;   /* 等高卡片：两栏一高一矮会让"对标"失去参照 */
+}
+
+.ys-col-style-card .ys-cols > .ys-col {
+  background: color-mix(in srgb, var(--editor-accent, #4f46e5) 6%, var(--editor-surface, rgba(128, 128, 128, 0.12)));
+  border: 1px solid var(--editor-border, rgba(128, 128, 128, 0.2));
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-1, none);
+  padding: 1.1em 1.3em;
 }
 
 /* ===== 对齐覆盖（<!-- align: left|center|right -->） ===== */
@@ -1647,6 +1803,11 @@
   font-size: 12px;
   color: var(--editor-text, inherit);
   pointer-events: auto;
+  /* 面板只有 bottom 锚点、向上生长：行数变多后（分栏两行是最后加的）
+     矮窗口上会顶出屏幕上沿 ⇒ 兜一个上限，超出时面板内部滚动。
+     96px = 底边距 48 + 上方留白 24 + 余量 24；正常分辨率下远达不到，不出现滚动条。 */
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
 }
 
 .ys-hud-panel-title {
@@ -1663,6 +1824,16 @@
   justify-content: space-between;
   gap: 10px;
   margin: 7px 0;
+}
+
+/* 左右布局行里的标签：过长时截断成省略号，而不是把右侧的分段控件挤变形
+   （"Spaltenausrichtung" / "Вирівнювання колонок" 这类长词语言）。
+   只作用于 flex 行 —— ys-hud-row-col 的标签是独占一行的块，不需要截断。 */
+.ys-hud-row:not(.ys-hud-row-col) > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 滑杆行：标签在上、滑杆独占一行（拖拽命中区更大） */
@@ -1685,9 +1856,12 @@
   margin-top: 5px;
 }
 
-/* 字重分段控件 */
+/* 字重 / 栏内对齐 / 分栏样式 共用的分段控件。
+   flex-shrink:0 是必须的：左右布局的行里标签过长（德/俄等长词语言）时，
+   压缩会先落在按钮上，按钮内文字换行会让整行高度跳变。 */
 .ys-hud-seg {
   display: flex;
+  flex-shrink: 0;
   border: 1px solid var(--editor-border, rgba(128, 128, 128, 0.3));
   border-radius: 6px;
   overflow: hidden;
@@ -1817,7 +1991,22 @@
   border-radius: 3px;
 }
 
-/* ===== 备注面板 ===== */
+/* ===== 提词备注 =====
+   ⚠️ 它与幻灯片**同屏显示**（不像 PPT / WPS 有副屏演示者视图），单屏投影时观众必然看得到。
+   因此默认**收在屏幕左缘之外**：
+     - 鼠标移到左缘热区（.ys-notes-edge）才滑出（纯 CSS :hover，不占 JS 监听）
+     - 按 `S` 或点 HUD「提词」= 锁定常显（.ys-pinned）；再按一次 / 点「关闭」/ 按 Esc = 收回
+   这样讲到不想让观众看的内容时一按就藏；不碰左缘时观众完全看不到。 */
+.ys-notes-edge {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  z-index: 149;          /* 低于面板，避免盖住面板本身 */
+  pointer-events: auto;  /* 要吃 hover 才能当热区 */
+}
+
 .ys-notes-panel {
   position: fixed;
   left: 24px;
@@ -1830,6 +2019,19 @@
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
   z-index: 150;
   overflow: hidden;
+  /* 收起态：按自身宽度平移出屏（-110% 保证完全出界）并淡出 */
+  transform: translateX(-110%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 220ms ease, opacity 220ms ease;
+}
+
+/* 热区 hover（且未锁定）或已锁定 ⇒ 展开；锁定时鼠标离开不会收回 */
+.ys-notes-edge:hover ~ .ys-notes-panel,
+.ys-notes-panel.ys-pinned {
+  transform: none;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .ys-notes-head {
@@ -1863,6 +2065,30 @@
   max-height: 40vh;
   overflow: auto;
   white-space: pre-wrap;
+}
+
+/* 按 S 而本页无备注时的短暂提示。
+   视觉语言与备注面板一致（同一套 surface / border / radius / shadow），
+   但抬到页脚之上，别把左下角的章节名与页码盖住。 */
+.ys-notes-hint {
+  position: fixed;
+  left: 24px;
+  bottom: 56px;
+  padding: 8px 14px;
+  font-size: 12px;
+  color: var(--editor-text, inherit);
+  background: var(--editor-surface, #ffffff);
+  border: 1px solid var(--editor-border, rgba(128, 128, 128, 0.3));
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  z-index: 150;
+  pointer-events: none;   /* 提示而已，不拦翻页与点击 */
+  animation: ys-notes-hint-in 180ms ease-out;
+}
+
+@keyframes ys-notes-hint-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
 }
 
 

@@ -1640,7 +1640,7 @@ mod tests {
         sync_builtin_templates().unwrap();
         let seeded = list_templates().unwrap();
         assert!(seeded.contains(&"default.md".to_string()), "内置模板未同步: {:?}", seeded);
-        assert!(seeded.contains(&"Slide-Template.md".to_string()), "内置模板未同步: {:?}", seeded);
+        assert!(seeded.contains(&"Slide-Template-new.md".to_string()), "内置模板未同步: {:?}", seeded);
         // 子目录（模板内的相对图片 images/）也要一并复制，否则模板里的图渲染不出来
         let img_dir = user_dir.join("images");
         assert!(img_dir.is_dir(), "模板 images/ 子目录未复制");

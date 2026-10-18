@@ -7,6 +7,10 @@ import {
   DEFAULT_SLIDE_TYPOGRAPHY, DEFAULT_SLIDE_FONT_WEIGHT, SLIDE_FONT_SCALE, SLIDE_FILL,
   clampNumber, isSlideFontId, type SlideFontId,
 } from '../lib/slideTypography.ts'
+import {
+  DEFAULT_SLIDE_COL_ALIGN, DEFAULT_SLIDE_COL_STYLE,
+  isSlideColAlign, isSlideColStyle, type SlideColAlign, type SlideColStyle,
+} from '../lib/slideColumns.ts'
 
 export interface SettingsState {
   // 通用
@@ -90,6 +94,13 @@ export interface SettingsState {
   slideFillWidth: number
   /** 内容区高度占整屏百分比（50–95，默认 84）：**唯一**的高度依据 */
   slideFillHeight: number
+
+  // 演示模式分栏（v0.3.4）：HUD「演示排版 → 分栏」的两个旋钮。
+  // 与排版旋钮同一模式：在演示 HUD 里改、立即持久化、下次进入演示沿用。
+  /** 栏内对齐（默认 left）：栏**内**内容的对齐；页标题不参与，页级 <!-- align --> 可单页覆盖 */
+  slideColAlign: SlideColAlign
+  /** 分栏样式（默认 card）：card = 每栏一张等高主题卡片，line = 栏间细线，none = 无参照 */
+  slideColStyle: SlideColStyle
 
   // 元信息属性（v0.3.2）
   /** front matter 属性类型：按**属性名**全局存（与 Obsidian 的 types.json 语义一致）。
@@ -180,6 +191,10 @@ export const useSettingsStore = create<SettingsState>()(
       slideFillWidth: DEFAULT_SLIDE_TYPOGRAPHY.fillWidth,
       slideFillHeight: DEFAULT_SLIDE_TYPOGRAPHY.fillHeight,
 
+      // 演示模式分栏（v0.3.4）
+      slideColAlign: DEFAULT_SLIDE_COL_ALIGN,
+      slideColStyle: DEFAULT_SLIDE_COL_STYLE,
+
       // 元信息属性（v0.3.2）：属性名 → 类型
       frontMatterTypes: {},
 
@@ -205,7 +220,8 @@ export const useSettingsStore = create<SettingsState>()(
       // v8: 「页边距缩放」改为「内容填充宽度/高度」——删去 slidePadScale，新增 slideFillWidth / slideFillHeight
       // v9: 新增 webdavSaveLastDir —— 云端保存对话框记住上次成功保存的目录
       // v10: 格式工具栏「手动收折」持久化 —— 新增 formatManuallyCollapsed
-      version: 10,
+      // v11: 演示模式分栏 —— 新增 slideColAlign / slideColStyle
+      version: 11,
       migrate: (persisted: unknown) => {
         // 自动迁移旧字体栈到 MiSans 方案
         const oldFont = "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
@@ -248,6 +264,12 @@ export const useSettingsStore = create<SettingsState>()(
           if (typeof state.webdavSaveLastDir !== 'string') state.webdavSaveLastDir = ''
           // v10：格式工具栏手动收折标记。存量存档没有它 ⇒ 补 false（维持宽度自动策略）
           if (typeof state.formatManuallyCollapsed !== 'boolean') state.formatManuallyCollapsed = false
+          // v11：演示模式分栏。存量存档没有这两个键 ⇒ 补默认值。
+          // 注意升级观感：样式默认是 **card**（有意的默认升级，不是零变化）——
+          // 存量用户升级后分栏页会直接出现卡片，这是产品决策而非疏漏（见 slideColumns.ts 顶部）。
+          // 枚举只认合法值：手改 localStorage 写入非法值会让 HUD 分段按钮全灭、CSS 也落不到规则上。
+          if (!isSlideColAlign(state.slideColAlign)) state.slideColAlign = DEFAULT_SLIDE_COL_ALIGN
+          if (!isSlideColStyle(state.slideColStyle)) state.slideColStyle = DEFAULT_SLIDE_COL_STYLE
         }
         return state
       },

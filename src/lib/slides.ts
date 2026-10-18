@@ -13,8 +13,11 @@
  *       `<!-- layout: xxx -->`      显式指定版式，覆盖自动推断（非法值忽略并回落推断）
  *       `<!-- align: xxx -->`       显式指定对齐方向（left / center / right）
  *       `<!-- fragments: off -->`   关闭该页片段逐步显示（on 恢复）
- *   - 分栏：页内**单独成行的 `***`**（标准主题分割线）= 栏分隔，与 `---` = 分页配对。
- *     页内第一个标题块视为**页标题**，不参与分栏（见 splitColumns）。
+ *   - 分栏：页内**单独成行的 `***`**（标准主题分割线），与 `---` = 分页配对。
+ *     它同时承担**栏区边界**与**栏分隔**两种身份（类比表格的 `|`，靠位置决定）：
+ *     N 栏写 N+1 条，首尾两条圈住栏区，栏区**之外**的内容是页级文案（引言 / 落款）。
+ *     1 / 2 条时圈定读法退化成空栏区 / 单栏，按分隔读（旧语义）—— 见 COLUMN_BREAK。
+ *     页内第一个标题块视为**页标题**，也不参与分栏（见 splitColumns）。
  *   - 文档顶部 front matter（首个 `--- ... ---` 块）自动剥离：
  *     可提供 title/author/date 供封面页展示；`slideshow-fragments: off`
  *     可整副关闭片段逐步显示（默认开）。不会成为一页幻灯片。
@@ -70,21 +73,51 @@ export function splitSlides(src: string, hor = '---'): string[] {
   return slides
 }
 
-/** 分栏分隔标记：单独成行的标准主题分割线 `***`
- *  （`---` 已被 splitSlides 用作分页；`___` / `- - -` 仍是普通分隔线 → <hr>） */
+/** 分栏标记：单独成行的标准主题分割线 `***`
+ *  （`---` 已被 splitSlides 用作分页；`___` / `- - -` 仍是普通分隔线 → <hr>）
+ *
+ *  它同时承担**栏区边界**与**栏分隔**两种身份 —— 类比表格的 `|`：
+ *  既是左右外框，也是内线，靠位置决定身份：
+ *
+ *      `***` 左栏 `***` 右栏 `***`
+ *
+ *  首尾两条是栏区边界，中间的是分隔 ⇒ **N 栏写 N+1 条**。
+ *  栏区**之外**的内容是页级文案（before / after），整页横跨、不参与分栏。
+ *
+ *  ⚠️ 退化规则（不是兼容垫片，是语义逼出来的）：条数 ≤2 时圈定读法退化成
+ *  「空栏区」（1 条：首尾是同一条）或「单栏」（2 条：中间没有分隔），
+ *  作者不可能是那个意思 ⇒ 这两档一律按**分隔**读（旧语义：条数 + 1 = 栏数）。
+ *  唯一的代价：写满 4 栏（3 条）会被读成「2 栏 + 栏外文案」，语法上无法区分，见 changelog。 */
 export const COLUMN_BREAK = '***'
 
 /** 分栏上限：超过则把后续各栏并入最后一栏（一页切太多栏没人看得清）。 */
 export const MAX_COLUMNS = 4
 
-/** 分栏结果：页标题（不参与分栏）+ 各栏正文 */
+/** 达到这个条数才启用「圈定」读法（首尾为边界）。1 / 2 条按分隔读，见 COLUMN_BREAK。 */
+export const COLUMN_REGION_MIN = 3
+
+/** 工具栏 / 斜杠菜单插入的**分栏区间**片段：三条 `***` = 2 栏的形状
+ *  （首尾两条是栏区边界，中间一条是分隔），两个空档正好是左栏与右栏。
+ *  之所以插三条而不是两条：两条按退化规则会被读成「3 栏」，写法必须自洽。 */
+export const COLUMN_REGION_SNIPPET = `\n${COLUMN_BREAK}\n\n${COLUMN_BREAK}\n\n${COLUMN_BREAK}\n`
+
+/** 插入 COLUMN_REGION_SNIPPET 后光标的落点（相对插入点的偏移）：
+ *  第一个空档，也就是左栏。用户照着光标位置填即可，不必先理解语法 ——
+ *  填完左栏，下面那个空档自然就是右栏。 */
+export const COLUMN_REGION_CURSOR = `\n${COLUMN_BREAK}\n`.length
+
+/** 分栏结果：页标题 + 栏外文案（前/后）+ 各栏正文 */
 export interface ColumnSplit {
   /** 页标题：页内**第一个标题块**（ATX `#`~`######`）。单独整页渲染，不参与分栏；
    *  无标题时为空串。为什么必须抽出来 —— 否则标题会落进第 1 栏，
    *  表现为「左栏带标题、右栏内容顶端高于标题」的错位观感。 */
   intro: string
+  /** 栏区**之前**的页级文案（引言）：整页横跨、不参与分栏；未圈定时恒为空串 */
+  before: string
   /** 各栏 Markdown 源；**长度 1 = 未分栏** */
   parts: string[]
+  /** 栏区**之后**的页级文案（落款 / 脚注）：同 before；未圈定时恒为空串 */
+  after: string
 }
 
 /** 取出页内第一个标题块（ATX 标题单行成块），返回 { intro, body } */
@@ -102,48 +135,99 @@ function splitLeadingHeading(src: string): { intro: string; body: string } {
   return { intro, body: rest.join('\n') }
 }
 
+/** 只去掉首尾**空行**（不动行首缩进 —— 缩进的代码块 / 嵌套列表是合法内容） */
+function trimBlankLines(lines: string[]): string {
+  const buf = [...lines]
+  while (buf.length && buf[0].trim() === '') buf.shift()
+  while (buf.length && buf[buf.length - 1].trim() === '') buf.pop()
+  return buf.join('\n')
+}
+
+/** 找出栏标记所在行的下标（fence 感知、逐字匹配，口径与 splitColumns 历史实现一致） */
+function findColumnMarkers(lines: string[]): number[] {
+  const re = new RegExp(`^${esc(COLUMN_BREAK)}\\s*$`)
+  const idx: number[] = []
+  let inFence = false
+  lines.forEach((line, i) => {
+    if (/^```/.test(line)) { inFence = !inFence; return }
+    if (!inFence && re.test(line)) idx.push(i)
+  })
+  return idx
+}
+
 /**
  * 按 `***`（单独成行）把一页切成多栏。
  *   - 与 splitSlides 对称：fence 感知（``` 内的 `***` 是内容）、逐字匹配（行内只有 `***`）。
  *   - **页内第一个标题块会被抽成 `intro`**（页标题），不参与分栏 —— 见 ColumnSplit。
+ *   - **圈定读法**：条数 ≥ COLUMN_REGION_MIN 时首尾两条是栏区边界 ⇒ 栏区外的内容落入
+ *     before / after（页级文案，不参与分栏）；条数 ≤2 时全部内容参与分栏（旧语义）。
  *   - 空栏（连续两个 `***`）被丢弃；**parts 长度 1 = 未分栏**。
  *   - 超过 max：保留前 max-1 栏，其余并入最后一栏并 console.warn
  *     （与 extractDirectives 的 warn 风格一致）—— 任何内容都不会被丢弃。
  */
 export function splitColumns(src: string, max = MAX_COLUMNS): ColumnSplit {
-  if (!src) return { intro: '', parts: [''] }
+  if (!src) return { intro: '', before: '', parts: [''], after: '' }
   const { intro, body } = splitLeadingHeading(src)
   const lines = body.split(/\r?\n/)
+  const markers = findColumnMarkers(lines)
+
+  // 圈定：首尾两条当边界吃掉，中间的才是分隔；栏区外的落入 before / after
+  const balanced = markers.length >= COLUMN_REGION_MIN
+  let before = ''
+  let after = ''
+  let region = lines
+  let seps = markers
+  if (balanced) {
+    const first = markers[0]
+    const last = markers[markers.length - 1]
+    before = trimBlankLines(lines.slice(0, first))
+    after = trimBlankLines(lines.slice(last + 1))
+    region = lines.slice(first + 1, last)
+    seps = markers.slice(1, -1).map((i) => i - first - 1)
+  }
+
   const parts: string[] = []
-  let buf: string[] = []
-  let inFence = false
-  const reCol = new RegExp(`^${esc(COLUMN_BREAK)}\\s*$`)
-
-  const push = () => {
-    // 只去掉首尾**空行**（不动行首缩进 —— 缩进的代码块/嵌套列表是合法内容）
-    while (buf.length && buf[0].trim() === '') buf.shift()
-    while (buf.length && buf[buf.length - 1].trim() === '') buf.pop()
-    const s = buf.join('\n')
-    if (s !== '') parts.push(s)
-    buf = []
+  let start = 0
+  for (const end of [...seps, region.length]) {
+    const s = trimBlankLines(region.slice(start, end))
+    if (s !== '') parts.push(s)   // 空栏丢弃
+    start = end + 1
   }
 
-  for (const line of lines) {
-    if (/^```/.test(line)) inFence = !inFence
-    if (!inFence && reCol.test(line)) push()
-    else buf.push(line)
-  }
-  push()
-
-  if (!parts.length) return { intro, parts: [''] }
-
-  if (parts.length <= max) return { intro, parts }
+  if (!parts.length) return { intro, before, parts: [''], after }
+  if (parts.length <= max) return { intro, before, parts, after }
 
   console.warn(`[slideshow] 分栏数 ${parts.length} 超过上限 ${max}，已把后续内容并入第 ${max} 栏。`)
   const head = parts.slice(0, max - 1)
   head.push(parts.slice(max - 1).join('\n\n'))
-  return { intro, parts: head }
+  return { intro, before, parts: head, after }
 }
+
+/** 逐行标记「这一行是否在代码围栏内」（``` 开/关，与 splitSlides / splitColumns 同一口径）。
+ *
+ *  指令与备注的提取**必须**做这个判断：此前 `extractDirectives` / `extractNotes` 是直接在
+ *  **原始文本**上跑正则，分不清正文与代码块 ⇒ 文档里只要**提到** `<!-- layout: xxx -->`
+ *  （哪怕是在代码块里教语法、在表格里列表格、在行内代码里举例子），它就会被真的执行、
+ *  并从正文里剥掉 —— 写说明文档的人会被自己讲的内容坑到。
+ *  `---` 分页与 `***` 分栏早就做了 fence 感知，这里补齐同样的约定。 */
+function fenceMask(lines: string[]): boolean[] {
+  const mask: boolean[] = []
+  let inFence = false
+  for (const line of lines) {
+    const t = line.trim()
+    if (/^```/.test(t)) { mask.push(true); inFence = !inFence; continue }
+    mask.push(inFence)
+  }
+  return mask
+}
+
+/** 指令的识别口径：**独占一行**（trim 后整行就是这条注释）。
+ *  与 `---` / `***` 完全一致 —— 那两个也正是「单独成行」才算数。
+ *  一条规则同时挡掉正文、表格单元格、行内代码三种误触：它们的行都以别的字符开头。 */
+const DIRECTIVE_LINE = /^<!--\s*(layout|align|fragments)\s*:\s*([a-z-]+)\s*-->$/i
+
+/** 备注块的起始行：同样必须独占一行 */
+const NOTES_OPEN = /^<!--\s*notes\b/i
 
 export interface NotesResult {
   body: string
@@ -153,16 +237,39 @@ export interface NotesResult {
 /**
  * 提取并剥离演讲者备注注释（`<!-- notes ... -->`），返回剥离后的正文与备注文本。
  * 支持单行 `<!-- notes: 内容 -->` 与多行 `<!-- notes\n内容\n-->`。
+ * 只认**独占一行**的注释，且**跳过代码围栏**（见 fenceMask）。
  */
 export function extractNotes(raw: string): NotesResult {
+  const lines = raw.split(/\r?\n/)
+  const inFence = fenceMask(lines)
   const parts: string[] = []
-  const re = /<!--\s*notes([\s\S]*?)-->/gi
-  const body = raw.replace(re, (_, content: string) => {
-    const text = content.replace(/^[ \t]*/gm, '').trim()
-    parts.push(text.replace(/^:\s*/, ''))
-    return ''
-  })
-  return { body, notes: parts.join('\n').trim() }
+  const out: string[] = []
+  let i = 0
+  while (i < lines.length) {
+    const line = lines[i]
+    if (inFence[i] || !NOTES_OPEN.test(line.trim())) {
+      out.push(line)
+      i++
+      continue
+    }
+    // 备注块：起始行独占一行；同一行闭合，或一直收到 `-->` 所在行为止（多行形态）
+    let content = line.trim().replace(/^<!--\s*notes/i, '')
+    if (content.includes('-->')) {
+      content = content.replace(/-->\s*$/, '')
+    } else {
+      i++
+      while (i < lines.length && !lines[i].includes('-->')) {
+        content += '\n' + lines[i]
+        i++
+      }
+      if (i < lines.length) content += '\n' + lines[i].replace(/-->\s*$/, '')
+    }
+    const text = content.replace(/^[ \t]*/gm, '').trim().replace(/^:\s*/, '')
+    if (text) parts.push(text)
+    out.push('')   // 留一个空行，免得把上下两段正文粘在一起
+    i++
+  }
+  return { body: out.join('\n'), notes: parts.join('\n').trim() }
 }
 
 /** 显式版式/对齐/片段指令（HTML 注释形式，可选） */
@@ -178,40 +285,55 @@ export function isValidLayout(v: string): v is SlideKind {
   return (LAYOUT_KINDS as readonly string[]).includes(v)
 }
 
+/** 落一条指令；非法值一律忽略并 console.warn（不打断播放） */
+function applyDirective(directives: Directives, rawKey: string, rawVal: string): void {
+  const k = rawKey.toLowerCase()
+  const v = rawVal.toLowerCase()
+  if (k === 'layout') {
+    if (isValidLayout(v)) directives.layout = v
+    else console.warn(`[slideshow] 未知版式 "${rawVal}"，已忽略该指令并使用自动推断。可用值：${LAYOUT_KINDS.join(' / ')}`)
+  }
+  if (k === 'align') {
+    if (v === 'left' || v === 'center' || v === 'right') directives.align = v
+    else console.warn(`[slideshow] 未知对齐 "${rawVal}"，已忽略该指令。可用值：left / center / right`)
+  }
+  if (k === 'fragments') {
+    if (v === 'on' || v === 'off') directives.fragments = v
+    else console.warn(`[slideshow] 未知 fragments 值 "${rawVal}"，已忽略该指令。可用值：on / off`)
+  }
+}
+
 /**
  * 提取 `<!-- layout: xxx -->`、`<!-- align: xxx -->`、`<!-- fragments: xxx -->`
  * 指令并剥离它们。layout 非法值 → 忽略该指令（回落自动推断）并 console.warn。
+ *
+ * ⚠️ 只认**独占一行**且**不在代码围栏内**的注释（见 DIRECTIVE_LINE / fenceMask）——
+ * 在正文、代码块、行内代码、表格里「提到」指令**不会**被误当成指令。
  */
 export function extractDirectives(raw: string): { body: string; directives: Directives } {
   const directives: Directives = {}
-  const re = /<!--\s*(layout|align|fragments)\s*:\s*([a-z-]+)\s*-->/gi
-  const body = raw.replace(re, (_m, key: string, val: string) => {
-    const k = key.toLowerCase()
-    const v = val.toLowerCase()
-    if (k === 'layout') {
-      if (isValidLayout(v)) directives.layout = v
-      else console.warn(`[slideshow] 未知版式 "${val}"，已忽略该指令并使用自动推断。可用值：${LAYOUT_KINDS.join(' / ')}`)
-    }
-    if (k === 'align') {
-      if (v === 'left' || v === 'center' || v === 'right') directives.align = v
-      else console.warn(`[slideshow] 未知对齐 "${val}"，已忽略该指令。可用值：left / center / right`)
-    }
-    if (k === 'fragments') {
-      if (v === 'on' || v === 'off') directives.fragments = v
-      else console.warn(`[slideshow] 未知 fragments 值 "${val}"，已忽略该指令。可用值：on / off`)
-    }
-    return ''
-  })
+  const lines = raw.split(/\r?\n/)
+  const inFence = fenceMask(lines)
+  const body = lines.map((line, i) => {
+    if (inFence[i]) return line
+    const m = DIRECTIVE_LINE.exec(line.trim())
+    if (!m) return line
+    applyDirective(directives, m[1], m[2])
+    return ''   // 整行剥掉（留空行，行号不漂）
+  }).join('\n')
   return { body, directives }
 }
 
-/** 自动版式：根据整页 Markdown 结构推断出的布局 */
+/** 版式：根据整页 Markdown 结构推断出的布局。
+ *  `figure` 是例外 —— 它**不会被自动推断命中**（见 LAYOUT_RULES 里的说明），
+ *  只作为 `<!-- layout: figure -->` 的合法取值保留。 */
 export type SlideKind =
   | 'cover' | 'section' | 'thanks' | 'agenda'
   | 'content' | 'content-list' | 'table' | 'roadmap'
   | 'figure' | 'image' | 'quote' | 'code' | 'chart' | 'formula'
 
-/** 全部合法版式（注册表派生的唯一事实源，供指令校验与帮助文档） */
+/** 全部合法版式（供指令校验与帮助文档；**不是**都能被自动推断命中 ——
+ *  figure 仅能通过 `<!-- layout: figure -->` 显式指定，自动路径共 13 种） */
 export const LAYOUT_KINDS: SlideKind[] = [
   'cover', 'section', 'thanks', 'agenda',
   'content', 'content-list', 'table', 'roadmap',
@@ -379,14 +501,12 @@ export const LAYOUT_RULES: LayoutRule[] = [
   },
   // 引用页（金句页）：引用开头（仅首块；H2+引用 → content）
   { kind: 'quote', match: (ctx) => first(ctx)?.type === 'quote' },
-  // 图文页 / 图片页：图片开头，后跟文字 → figure，否则整页图
-  {
-    kind: 'figure',
-    match: (ctx) => {
-      if (first(ctx)?.type !== 'image') return false
-      return restHas(ctx, ['p', 'ul', 'ol', 'h2', 'h3'])
-    },
-  },
+  // 图片页：图片开头（无论后面还有没有文字）。
+  // ⚠️ 曾经这里还有一条 `figure` 规则（图片开头 + 后跟文字 → 左图右文 45/55 双栏），
+  // v0.3.4 起**移除自动推断**：左右并排是「想要才要」的版式，不该由引擎猜。
+  // 想并排就用 `***` 分栏（还能自由指定几栏、栏内对齐与卡片）；确实要左图右文的人
+  // 仍可显式 `<!-- layout: figure -->`，对应样式全部保留。
+  // 图与文的默认表现改为**按书写顺序纵向排列**，图片自身居中（见 .ys-slide > img）。
   { kind: 'image', match: (ctx) => first(ctx)?.type === 'image' },
   // 内容页：默认兜底
   { kind: 'content', match: () => true },

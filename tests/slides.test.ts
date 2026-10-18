@@ -11,7 +11,7 @@ import assert from 'node:assert/strict'
 import {
   stripFrontMatter, parseFrontMatter, splitSlides, splitColumns, extractNotes, extractDirectives,
   scanBlocks, detectLayout, detectSlideKind, isValidLayout, LAYOUT_KINDS,
-  COLUMN_BREAK, MAX_COLUMNS,
+  COLUMN_BREAK, MAX_COLUMNS, COLUMN_REGION_MIN, COLUMN_REGION_SNIPPET, COLUMN_REGION_CURSOR,
 } from '../src/lib/slides.ts'
 
 // ---------- splitSlides ----------
@@ -82,6 +82,64 @@ test('extractDirectives: 非法 align/fragments 被忽略', () => {
   assert.equal(d1.directives.align, undefined)
   const d2 = extractDirectives('<!-- fragments: maybe -->')
   assert.equal(d2.directives.fragments, undefined)
+})
+
+// ---------- 指令/备注的误触防护（v0.3.4）----------
+// 口径与 `---` 分页、`***` 分栏一致：**独占一行**且**不在代码围栏内**才算数。
+// 否则任何想「讲解指令」的文档都会被自己讲的内容坑到（指令被真的执行 + 正文被吃掉）。
+
+test('extractDirectives: 正文里提到指令不误触', () => {
+  const { body, directives } = extractDirectives('## 标题\n\n想强制版式就写 <!-- layout: quote --> 即可\n\n正文还在')
+  assert.equal(directives.layout, undefined)
+  assert.ok(body.includes('<!-- layout: quote -->'), '提到的字样必须原样保留在正文里')
+  assert.ok(body.includes('正文还在'))
+})
+
+test('extractDirectives: 代码围栏内的指令是代码内容，不执行也不剥离', () => {
+  const src = '## 标题\n\n```md\n<!-- layout: quote -->\n<!-- align: center -->\n```\n\n正文'
+  const { body, directives } = extractDirectives(src)
+  assert.equal(directives.layout, undefined)
+  assert.equal(directives.align, undefined)
+  assert.ok(body.includes('<!-- layout: quote -->'), '围栏内容不能被吃掉')
+  assert.ok(body.includes('<!-- align: center -->'))
+})
+
+test('extractDirectives: 行内代码与表格单元格里提到指令不误触', () => {
+  const inline = extractDirectives('用 `<!-- fragments: off -->` 关掉')
+  assert.equal(inline.directives.fragments, undefined)
+  assert.ok(inline.body.includes('<!-- fragments: off -->'))
+
+  const table = extractDirectives('| 指令 | 说明 |\n|---|---|\n| <!-- layout: cover --> | 封面 |')
+  assert.equal(table.directives.layout, undefined)
+  assert.ok(table.body.includes('<!-- layout: cover -->'))
+})
+
+test('extractDirectives: 行首有缩进的指令仍生效（与 --- / *** 的 trim 口径一致）', () => {
+  const { directives } = extractDirectives('    <!-- layout: code -->\n内容')
+  assert.equal(directives.layout, 'code')
+})
+
+test('extractDirectives: 指令与其它文字同行时不生效（必须独占一行）', () => {
+  const { directives, body } = extractDirectives('## 标题 <!-- layout: quote -->')
+  assert.equal(directives.layout, undefined)
+  assert.ok(body.includes('<!-- layout: quote -->'))
+})
+
+test('extractNotes: 备注块同样受围栏与独占一行保护', () => {
+  // 围栏里的 notes 字样是代码内容
+  const fenced = extractNotes('正文\n\n```md\n<!-- notes: 这是代码 -->\n```\n\n尾行')
+  assert.equal(fenced.notes, '')
+  assert.ok(fenced.body.includes('<!-- notes: 这是代码 -->'))
+  // 正文里提到 notes 不会被当成备注、也不会被吃掉
+  const prose = extractNotes('想写备注就用 <!-- notes: xxx --> 这种注释\n\n正文')
+  assert.equal(prose.notes, '')
+  assert.ok(prose.body.includes('<!-- notes: xxx -->'))
+})
+
+test('extractNotes: 备注文本里提到 --> 不会被提前截断', () => {
+  const { notes, body } = extractNotes('<!-- notes: 讲清楚 <!-- 与 --> 的写法 -->\n\n正文')
+  assert.equal(notes, '讲清楚 <!-- 与 --> 的写法')
+  assert.ok(body.includes('正文'))
 })
 
 test('isValidLayout: 合法值与非法值', () => {
@@ -176,9 +234,14 @@ test('detectLayout: roadmap 路线图页', () => {
   assert.equal(detectLayout('## 标题\n\n- [x] 完成\n- [ ] 待办').kind, 'roadmap')
 })
 
-test('detectLayout: figure 图文页 / image 图片页', () => {
-  assert.equal(detectLayout('![图](a.png)\n\n说明文字').kind, 'figure')
+test('detectLayout: image 图片页（figure 已退出自动推断）', () => {
+  // v0.3.4：图片 + 文字不再自动变成左图右文（figure）—— 图按书写顺序纵向排列、自身居中，
+  // 想并排请用 `***` 分栏。只要首块是图片，无论后面跟不跟文字都是 image。
+  assert.equal(detectLayout('![图](a.png)\n\n说明文字').kind, 'image')
   assert.equal(detectLayout('![图](a.png)').kind, 'image')
+  assert.equal(detectLayout('## 标题\n\n![图](a.png)').kind, 'content')
+  // figure 不会自动命中，但仍是 layout 指令的合法取值（样式未删，只摘掉自动路径）
+  assert.ok(LAYOUT_KINDS.includes('figure'), 'figure 应仍可被 <!-- layout: figure --> 指定')
 })
 
 test('detectLayout: quote 引用页（仅首块引用；H2+引用 → content）', () => {
@@ -218,12 +281,12 @@ test('detectLayout: title 提取（供章节标记）', () => {
 // ---------- splitColumns（页内 `***` 分栏） ----------
 
 test('splitColumns: 无 *** 返回单栏（与 splitSlides 一致的空输入行为）', () => {
-  assert.deepEqual(splitColumns('正文'), { intro: '', parts: ['正文'] })
-  assert.deepEqual(splitColumns(''), { intro: '', parts: [''] })
+  assert.deepEqual(splitColumns('正文'), { intro: '', before: '', parts: ['正文'], after: '' })
+  assert.deepEqual(splitColumns(''), { intro: '', before: '', parts: [''], after: '' })
 })
 
-test('splitColumns: 两个 *** 切三栏', () => {
-  assert.deepEqual(splitColumns('左\n***\n中\n***\n右'), { intro: '', parts: ['左', '中', '右'] })
+test('splitColumns: 两个 *** 切三栏（退化规则：2 条按分隔读）', () => {
+  assert.deepEqual(splitColumns('左\n***\n中\n***\n右'), { intro: '', before: '', parts: ['左', '中', '右'], after: '' })
 })
 
 test('splitColumns: 围栏内的 *** 不分栏', () => {
@@ -247,7 +310,10 @@ test('splitColumns: 行内必须恰好是 ***（与 --- 的逐字约定一致）
 })
 
 test('splitColumns: 超过上限并入最后一栏且不丢内容', () => {
-  const { parts } = splitColumns('1\n***\n2\n***\n3\n***\n4\n***\n5')
+  // 圈定写法：首尾两条是边界，中间 5 条切出 5 栏 ⇒ 超过上限 4，后续并入最后一栏
+  const { parts, before, after } = splitColumns('0\n***\n1\n***\n2\n***\n3\n***\n4\n***\n5\n***\n6')
+  assert.equal(before, '0')
+  assert.equal(after, '6')
   assert.equal(parts.length, MAX_COLUMNS)
   assert.equal(parts[MAX_COLUMNS - 1].includes('4'), true)
   assert.equal(parts[MAX_COLUMNS - 1].includes('5'), true)
@@ -287,11 +353,77 @@ test('splitColumns: 首块不是标题时 intro 为空（整页都参与分栏�
 
 test('splitColumns: 未分栏时不动内容（intro 归零、parts 为整页）', () => {
   // 无 *** ⇒ parts 长度 1 ⇒ 调用方（Slideshow）用原 src 渲染，行为与分栏前一致
-  assert.deepEqual(splitColumns('# 标题\n\n正文'), { intro: '# 标题', parts: ['正文'] })
+  assert.deepEqual(splitColumns('# 标题\n\n正文'), { intro: '# 标题', before: '', parts: ['正文'], after: '' })
 })
 
 test('splitColumns: 只有标题没有正文时 parts 为空栏占位', () => {
-  assert.deepEqual(splitColumns('## 只有标题'), { intro: '## 只有标题', parts: [''] })
+  assert.deepEqual(splitColumns('## 只有标题'), { intro: '## 只有标题', before: '', parts: [''], after: '' })
+})
+
+// ---------- splitColumns：圈定写法（≥3 条 *** ⇒ 首尾是栏区边界） ----------
+// 语义类比表格的 `|`：既是左右外框，也是内线，靠位置决定身份。
+// 退化规则：1 / 2 条时圈定读法退化成空栏区 / 单栏 ⇒ 按分隔读（旧语义），见 COLUMN_REGION_MIN。
+
+test('splitColumns: 圈定写法 —— 首尾两条是边界，栏区外的文案不参与分栏', () => {
+  const r = splitColumns('引言\n\n***\n\n左栏\n\n***\n\n右栏\n\n***\n\n落款')
+  assert.equal(r.intro, '')
+  assert.equal(r.before, '引言')
+  assert.equal(r.after, '落款')
+  assert.deepEqual(r.parts, ['左栏', '右栏'])
+})
+
+test('splitColumns: 圈定写法 —— 页标题与栏外文案三者并存', () => {
+  const r = splitColumns('## 标题\n\n引言\n\n***\n\nA\n\n***\n\nB\n\n***\n\n脚注')
+  assert.equal(r.intro, '## 标题')
+  assert.equal(r.before, '引言')
+  assert.equal(r.after, '脚注')
+  assert.deepEqual(r.parts, ['A', 'B'])
+})
+
+test('splitColumns: 退化规则 —— 1 条 / 2 条按分隔读（存量文档不受影响）', () => {
+  // 1 条：首尾是同一条 ⇒ 圈定读法退化成空栏区，不可能是作者本意
+  assert.deepEqual(splitColumns('A\n***\nB'), { intro: '', before: '', parts: ['A', 'B'], after: '' })
+  // 2 条：圈定读法只有「单栏」，同样无意义 ⇒ 按 3 栏读
+  assert.deepEqual(splitColumns('A\n***\nB\n***\nC').parts, ['A', 'B', 'C'])
+})
+
+test('splitColumns: 圈定写法 —— 栏外无文案时也不受影响（中间条数即分隔数）', () => {
+  const r = splitColumns('***\nA\n***\nB\n***')
+  assert.equal(r.before, '')
+  assert.equal(r.after, '')
+  assert.deepEqual(r.parts, ['A', 'B'])
+})
+
+test('splitColumns: 圈定写法 —— 围栏内的 *** 不参与计数，否则会破坏圈定', () => {
+  // 栏内代码块里有一条 ***：若被计数，总条数会变成 4 ⇒ 退化判断与切分全错
+  const r = splitColumns('引言\n\n***\n\n```md\n***\n```\n\n***\n\n右栏\n\n***\n\n落款')
+  assert.equal(r.before, '引言')
+  assert.equal(r.after, '落款')
+  assert.equal(r.parts.length, 2)
+  assert.match(r.parts[0], /\*\*\*/)
+})
+
+test('splitColumns: 圈定写法 —— 空栏（连续两条 ***）仍被丢弃', () => {
+  const r = splitColumns('引言\n***\nA\n***\n\n***\nB\n***\n脚注')
+  assert.equal(r.before, '引言')
+  assert.equal(r.after, '脚注')
+  assert.deepEqual(r.parts, ['A', 'B'])
+})
+
+test('COLUMN_REGION_MIN / COLUMN_REGION_SNIPPET：插入片段自洽', () => {
+  // 圈定门槛 = 3 条：低于它圈定读法无意义
+  assert.equal(COLUMN_REGION_MIN, 3)
+  // 工具栏插的就是 3 条 ⇒ 插完即是「2 栏 + 两个待填空档」的完整形状
+  const marks = COLUMN_REGION_SNIPPET.split('\n').filter((l) => l.trim() === COLUMN_BREAK).length
+  assert.equal(marks, 3)
+  // 光标落在第一个 *** 之后的空行上（左栏位置）
+  assert.equal(COLUMN_REGION_SNIPPET[COLUMN_REGION_CURSOR - 1], '\n')
+  assert.equal(COLUMN_REGION_SNIPPET.slice(COLUMN_REGION_CURSOR).startsWith('\n'), true)
+  // 刚插入、两个空档都还没填时：栏外文案已就位，栏区是空占位（不会误判成分隔语义）
+  const r = splitColumns(`上文${COLUMN_REGION_SNIPPET}下文`)
+  assert.equal(r.before, '上文')
+  assert.equal(r.after, '下文')
+  assert.deepEqual(r.parts, [''])
 })
 
 // ---------- scanBlocks / detectLayout：分栏分隔块 ----------
