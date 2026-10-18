@@ -4,6 +4,266 @@
 
 > 本节为**未开发完成的备忘**，仅记录待办，发布前需整理成正式版本说明。
 
+### 分发改用 GitHub Releases：端点落定、CI 补上 latest.json、MSI 彻底退场（批次 4-丙，2026-10-18 实施）
+
+**① 端点从 TOS 换成 GitHub —— 这是「发出去就改不了」的那一类配置**
+
+`plugins.updater.endpoints` 原本是占位地址 `https://REPLACE-BUCKET.tos-cn-beijing.volces.com/updates/latest.json`，现改为：
+
+```
+https://github.com/laoduu/YiziMarkdown/releases/latest/download/latest.json
+```
+
+选 `/releases/latest/...` 而不是固定 tag：客户端**只维护一个 URL**，由下一个版本的发布自动顶替。代价是「必须把 Release **Publish** 成非草稿、非预发布」—— GitHub 的 `latest` 会跳过草稿与预发布，退回上一个 Latest。这条写进了 `release.yml` 头部注释。
+
+`scripts/check-updater.mjs` 会挡住占位地址（`REPLACE|PLACEHOLDER|example.com|YOUR-`）与非 https，且**故意不并入 `npm run build`**（本地构建不需要真端点，天天红着的门禁会被无视），由 release.yml 在昂贵的 Rust 构建之前调用。改完实测：`✓ 在线更新配置就绪（pubkey / endpoints / installMode）`。
+
+**② CI 缺的正是 latest.json —— 没有它，应用内更新在这台机器上永远「没有新版本」**
+
+`release.yml` 原先只构建并上传 NSIS 安装包与 `.sig`（注释里还写着「与安装包一起上传火山 TOS 供 latest.json 引用」），但**没有任何一步生成或上传 latest.json**。补上一步，放在便携版/源码包之后 —— 即整份 Release 的**最后**：
+
+```bash
+setup=$(ls src-tauri/target/release/bundle/nsis/*-setup.exe)   # 用 glob 取实际产物名
+node --experimental-transform-types scripts/make-manifest.mjs \
+  --version "${GITHUB_REF_NAME#v}" \
+  --notes "docs/changelog/CHANGELOG-V${GITHUB_REF_NAME#v}.md" \
+  --base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}" \
+  --artifact "windows-x86_64-nsis=${setup}" --artifact "windows-x86_64=${setup}" \
+  --out .release_tmp/latest.json
+gh release upload "$GITHUB_REF_NAME" .release_tmp/latest.json --clobber
+```
+
+三个要点都是踩过才知道的：**产物名用 glob 取**（版本号带 `-beta.1` 时拼字符串极易对不上）；**base-url 必须是 tag 固定 URL**，不能用 `/releases/latest/download/<file>`（否则旧版本客户端会拿到新清单、下到与自身对不上的产物）；**清单最后上传**（客户端一拿到清单就去下产物，清单先到会撞 404）。另外加了 `${setup}.sig` 存在性检查：缺签名直接 `::error::` 失败，而不是静默产出一个「永远没有更新」的版本。
+
+**③ MSI 从 v0.3.4 起彻底不发 Release —— 核对结果：CI 规则已经改到位**
+
+`release.yml` 的 Windows 腿已是 `--bundles nsis`，头部资产注释也写明「v0.3.4 起不再发布 MSI」，本次只把资产清单更新到最新一版（5 个＋一份 `.sig`）。本地 `npm run tauri:build` 仍会产出 MSI（`bundle.targets: "all"` 无法按平台区分），这是既知待办，不影响发布。
+
+顺手清掉文档里「MSI 还能下载」的残留口径：`docs/changelog/CHANGELOG-V0.3.4.md`（原文一边写「MSI 请手动下载」、一边写「不再提供 MSI」，自相矛盾）、`help.md` + `src-tauri/help.md` 各两处。
+
+**④ 页签改名后的口径清理**
+
+「关于」→「版本与更新」之后，仓库里还有一批把该页签称作「关于」的**注释与帮助文案**：`help.md`（两处，随包进应用）、`App.tsx`、`StatusBar.tsx`（两处）、`updateStore.ts`（两处）、`settingsStore.ts`、`SettingsModal.tsx`、`check-version.mjs`、`upload-tos.mjs`。**技术日志里的历史条目一律不动** —— 那是当时决策的现场记录，改它等于篡改记录。
+
+**⑤ 已知限制：GitHub Releases 不能给 latest.json 设响应头**
+
+按 TOS 方案定的规矩是「清单 `Cache-Control: no-cache`、产物 `max-age=31536000, immutable`」。GitHub Release 资产由平台托管，**设不了响应头**，客户端与 CDN 可能缓存旧清单若干分钟。所以「发布 → 立刻验证」之间要留出这个窗口；真要精确控制缓存，得回到对象存储那条路（`.tos/config.json` 与 `scripts/upload-tos.mjs` 已保留可用）。
+
+### 设置面板三处改动：更新说明不再内滚、「关于」→「版本与更新」、新增「其他产品」（批次 4-乙，2026-10-18 实施）
+
+界面与文案为主，但过程中踩到两个真问题：**主题的卡片装饰会随 `.editor-content` 一起进设置面板**，以及**按字符串切片批量改 15 个语言文件时的行尾接缝**。
+
+**1）更新说明的内滚动条是「主题卡片 + 内联限高」叠出来的**
+
+说明区一直写着 `maxHeight: 200, overflowY: 'auto'`，长说明就出现**第二根滚动条**（面板本身已有一根）。去掉限高交给外层 `.settings-content-scroll` 统一滚 —— 滚动能力一点没少，只是不再「面板里滚一段、里面还套一段」。
+
+那圈看着很重的边框也不来自我们的 CSS：默认主题把 `.editor-content.theme-x` 画成一张玻璃卡（`box-shadow: 0 0 0 1px rgba(120,152,205,0.4)` + 3 层阴影 + 18px 圆角）。说明块借这个类是为了**跟主题一致的排版**（标题/链接/列表色），于是卡片装饰也一起借来了；现在只留排版，卡片换成一根 token 淡边（`color-mix(in srgb, var(--editor-border) 50%, transparent)`）。
+
+覆盖它的选择器必须**四层类名**：主题 CSS 注入在 `head` 末尾，亮色版 `.editor-content.theme-x` 是 (0,2,0)、暗色版 `.dark .editor-content.theme-x` 是 (0,3,0)，写一层 `.update-notes` 会被「后注入者胜」压回去；`.settings-modal-container .settings-content-scroll .update-notes.editor-content` 是 (0,4,0)，亮暗都稳。**没有用 `[class*=]`** —— `check-themes.mjs` 把属性选择器列为反模式，用了会让发布前自查（`--strict`）变红。
+
+**2）dev 下这段说明根本不渲染，只能靠临时补丁「按出」一个更新来验收**
+
+`getUpdateBlocker()` 在 dev 下返回 `dev`，卡片只渲染「开发版不能自动更新」，说明区永远不出现。所以加过一段标了 `TEMP-PREVIEW-STYLE` 的临时补丁：同时按掉 blocker 与「update 为空」两个条件，用 `docs/changelog/CHANGELOG-V0.3.4.md?raw` 当假说明。它不联网、点「立即更新」也不动文件（store 里的 `update` 仍是 null）。**用户看过样式后已删除**（`grep TEMP-PREVIEW-STYLE` 为空），正式包不带它。
+
+**3）批量补 15 种语言时，切片插入点带出了 `\r\r\n` 与裸 `\n`**
+
+「其他产品」要 15 个语言文件各加 7 个键（`settings.products`、5 个产品简介、`settings.authorHome`），并把 `settings.about` 的值改成「版本与更新」。手改 15 个文件必漏，所以写一次性脚本按**命名空间收尾行**定位插入。
+
+插入点实现踩了行尾：切片 `seg` 本身带着上一行结尾的 `\r`，我又补了一个 `\r\n` → 接缝成了 `\r\r\n`；收尾处只补 `\n` → 成了裸 LF。`git diff` 因此显示每文件 1279 行变动，看着像把整份字典重排了一遍。**教训：按字符串切片插入，先想清楚切片端点有没有吃掉 `\r`。** 修好后 `\r\n` 接 `\r\n`，`git diff --ignore-cr-at-eol` 回到每文件 42 行新增（本次 7 行），各语言只剩 1 处**既有**裸 LF（`core.autocrlf=true` 会在提交时归一，仓库内容不受影响）。
+
+**4）「其他产品」的数据来源与打包**
+
+清单/图标/官网全部取自作者自己维护的 YiziVoice 仓库（`src/components/hub/AboutPanel.tsx` 的 `PRODUCTS` + 该仓库 `public/*.png`）：YiziVoice、YiziShare、YiziStudio、一路狂标、荔书，外加作者主页 `https://www.1ziai.com/`（YiziMarkdown 自己**不在**列表里）。5 个图标拷进 `src/assets/products/` 一起打包（约 150KB），不引外链、不在运行时下载，离线可见；卡片右侧标出域名，点之前就知道会跳到哪。
+
+名字与官网属于品牌信息**不翻译**，只有简介走 i18n（15 种语言齐全，`check-i18n --strict` 0 缺失、461 静态键全部有定义）。门禁：`tsc --noEmit` 0、`check-i18n --strict` 0、`check-themes` 0 失败、`check-tauri-args` 18/18；dev 里已逐屏核对（页签名、5 个图标、域名、作者主页）。
+
+**用户面向的版本说明同步改了两处**：`docs/changelog/CHANGELOG-V0.3.4.md` 里「关于」的引用改为「版本与更新」（该文件同时是 GitHub Release 正文与应用内更新说明），并新增「设置：其他产品」小节。
+
+**5）作者主页的头像是下载后打包的，不是外链**
+
+`https://www.1ziai.com/media/logo/logo-235c7fcd.svg`（935×1215 竖版插画、573 条 path、115KB）下载进 `src/assets/products/1ziai.svg`。核对过里面**没有** `<image>` / `xlink:href` / `url()` / `<script>` / 外链字体 → 在 `<img>` 里能独立渲染，不需要网络。图标位用 `object-fit: contain` + 一层主题底色（`--editor-hover`），竖版放进 36px 方块里显示为约 23×30，不会裁掉头部。构建产物已确认：`dist/assets/1ziai-*.svg`，115370 字节。
+
+**验证方式的一个更正**：这一轮本想用合成鼠标点击去点开设置面板，实测**点不动** —— 连点宽按钮「设置」齿轮和左侧「文件」页签都毫无反应，说明当前会话注入的鼠标事件到不了应用窗口（之前几次「点开了」其实是用户自己在点）。顺带发现截图脚本拿窗口矩形原点当客户区原点，而 Tauri 无边框窗口的窗口矩形含约 8px 的 DWM 隐形边框，真实客户区原点要用 `ClientToScreen(0,0)`（实测偏 +8,+1）；脚本已改。后续实机验证（更新按钮）由用户手点，不依赖合成输入。
+
+**收尾（用户已逐屏确认）**：状态栏那条提示的 tooltip（`statusbar.about`）**按用户决定保持「关于 YiziMarkdown」不变**，本次只改页签名；「其他产品」页的成品外观（5 个产品图标 + 作者主页 + 域名行）也确认通过 —— 作者主页最终用的是站点自己的 logo（`media/logo/logo-235c7fcd.svg`，下载后打包），不是占位图标。
+
+### 发版管线打通：npm↔Rust 版本错配、签名环境的两个坑（批次 4-甲，2026-10-18 实施）
+
+TOS 桶还没到手，但**发版链路上能先撞的坑都可以先撞一遍**：这轮把「构建 → 签名 → 上传脚本」逐段验到可复现，撞出来的两个问题都属于**本地门禁全绿、只有真正打包才现形**的类型。
+
+**坑 1：npm 侧与 Rust 侧的 Tauri 版本已经飘开，`tauri build` 第一步就退出（在已提交状态里就已存在）**
+
+```
+Found version mismatched Tauri packages.
+  tauri (v2.11.2) : @tauri-apps/api (v2.12.4)
+  tauri-plugin-updater (v2.12.0) : @tauri-apps/plugin-updater (v2.14.0)
+```
+
+`package.json` 里写的是 `"^2"` 这类范围 —— 一次普通 `npm install` 就把 JS 侧抬到 2.14，而 Rust 侧由 `Cargo.lock` 钉在 2.12；CLI 要求两侧 major.minor 一致，于是**打包直接失败**。`npm run build`（tsc / i18n / themes 全是前端检查）完全看不出来，CI 的 `release.yml` 同样会炸。
+
+- 处理：npm 侧改为**精确版本**并降到与 Rust 同 major.minor（`@tauri-apps/api` 2.11.1 / `@tauri-apps/plugin-updater` 2.12.0 / `@tauri-apps/cli` 2.11.2）。方向选「降 npm」而不是「升 Rust」：Rust 这套是路由 B 实测过的行为，升它会换进一段没人验过的更新器代码。
+- 防守：新增 `scripts/check-tauri-versions.mjs`（读 `Cargo.lock` + `package-lock.json`，复刻 CLI 的判定规则、**只比 major.minor**），接进 `npm run build` 的链尾；另给一个 `npm run check:tauri-versions`。
+
+**坑 2：签名要的是「私钥内容」不是路径；空口令也必须显式给**
+
+- bundler 只认 `TAURI_SIGNING_PRIVATE_KEY`（**内容**）。`TAURI_SIGNING_PRIVATE_KEY_PATH` 只对 `tauri signer` 子命令有效；只给 PATH 时打包**成功**，只在最后报 `A public key has been found, but no private key`，产物**没有 `.sig`** —— 而没带 `.sig` 的包传上去，客户端会永远「查不到更新」。
+- 私钥本身无口令，但 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` 不给时 CLI 会走**交互式口令询问**（本地实测卡住 180s）。CI 没有 TTY，同理 = 不报错的等待 ⇒ `release.yml` 补 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""`，并改掉原来「绝不能设」那句注释。
+- 验证：`Finished 1 updater signature at: YiziMarkdown_0.3.4_x64-setup.exe.sig`（exe 8,221,230 字节 / sig 424 字节），exit=0。
+
+**签名自检：唯一「错了就不可远程修复」的一环，做进上传脚本**
+
+`tauri signer` 只有 sign / generate、**没有 verify**，所以 `upload-tos.mjs` 自己用 `tauri.conf.json` 里烧进去的 pubkey 验本次产物的 `.sig`。格式要点：两侧都是「文本文件的 base64」（外层解一次取文本、取第 2 行再解一次取二进制）；rsign 用 `ED` = 对消息的 **BLAKE2b-512 预哈希**做 ed25519（`Ed` 才是直接签消息），两种都试。实测：真 8.2MB 产物通过；把第 5000 字节改掉立刻被拒并 exit=1（自检有没有牙也验了）。
+
+**`scripts/upload-tos.mjs` + `.tos/config.json`（桶分发端）**
+
+`.tos/` 已进 `.gitignore`（里面放 AK/SK，绝不入库）。脚本的几个决定：
+
+| 做法 | 为什么 |
+|---|---|
+| 产物先传、`latest.json` **最后**传，且 `Cache-Control: no-cache` | 顺序反了、或清单被 CDN 缓存住 ⇒ 客户端抱着旧清单一直「已是最新」，**且无法远程修复** |
+| 产物名带版本 ⇒ `max-age=31536000, immutable` | 同版本产物永不变，吃满缓存 |
+| 对象打 `public-read`，传完用**匿名** HEAD/GET 复验（长度 / `version` / 平台键） | updater 是匿名拉取；「桶不给公共读」的表现正是「永远查不到更新」，本地怎么试都正常 |
+| 默认拒绝覆盖同版本产物（`forbidOverwrite`） | 防手抖重发同一版 |
+| `npm run tos:endpoint` 打印端点 | 端点要写进 `tauri.conf.json` 且**发出去就改不了**，让它只从配置派生一次 |
+
+**顺带查证（读源码与产物，不靠印象）**
+
+- 生成的 `installer.nsi` 里有 `MULTIUSER_INSTALLMODE_FUNCTION RestorePreviousInstallLocation`，被动模式跳过目录选择页 ⇒ 更新**落在原目录**；模板还写明 *"In update mode, always proceeds without uninstalling"* ⇒ 不会出现第二份、也不会卸载重装。
+- 构建日志有 `Patching … with bundle type information: nsis` ⇒ 清单里 `windows-x86_64-nsis` 键**一定命中**（双键只是保险）。
+- Rust 侧 `base64::engine::general_purpose::STANDARD.decode()` **不 trim** —— 签名串带 `\n` 会把正确签名判成失败；而 `updateManifest.ts` 是 `signature: artifact.signature.trim()`（且拒空）⇒ `make:manifest` 与上传脚本都安全。
+- `capabilities/default.json` 含 `updater:default`，且没有 dev 专用 capability ⇒ 发布版权限与开发版一致。
+- 插件 2.12.0 的 `restart_after_install` **默认 true**（`updater.rs:197`）⇒「装完自动重开」不靠我们实现。
+
+**仍未完成（等桶）**：端点写进 `tauri.conf.json` → `check:updater` 过 → 构建**真端点**的 0.3.4（占位端点那份冒烟产物已删，避免误装）→ 0.3.5-beta.1 入桶 → 真机点「立即更新」实测。
+
+### 本地缓存的「自救出口」：状态栏 ⚠ 可点开清理（2026-10-18 实施）
+
+批次 3-乙把配额满从「静默丢数据」变成了「报警」，但**只报警不给出口**等于只做了一半：普通用户没有开发者工具，撞上配额满只能看着 ⚠ 干着急（本轮用户就是这样撞上的，靠手工删 localStorage 键才恢复）。本批次补上出口。
+
+**交互**：状态栏那个红色 ⚠ 变成按钮 → 打开「清理本地缓存」弹窗（`Dialog`），里面有当前占用（`{chars}` 字符 / 上限约 `{limit}`）与两个动作：
+
+| 动作 | 做什么 | 为什么安全/危险 |
+|---|---|---|
+| 清理已保存文件的缓存 | 删掉「磁盘上已有权威副本」标签页的正文键 | 文件本身不受影响；未保存的正文（唯一副本）**一个不动** |
+| 清空全部缓存 | 清单 + 全部正文键一起删 | 未保存内容的本地副本会消失 ⇒ 二次确认（复用 `common.confirm`/`common.cancel`） |
+
+**存储层新增三个方法**（挂在 `createEditorStorage()` 返回的**同一个实例**上，`EditorStorage` 接口）：
+
+- `usage()`：`measureStorage()` 统计整个来源的键数/字符数（把 `describeStorageUse` 的统计逻辑抽成数值版，诊断日志与弹窗共用一份口径）。**注意统计的是整个 localStorage**：别的键（如测试残留的 `filler`）同样吃配额，弹窗只清理本应用的键，所以文案说的是「本地存储已用」而非「应用缓存」。
+- `dropRecoverableContent()`：只清 `isRecoverableFromDisk()` 的正文键。
+- `clearAll()`：清清单 + 全部正文键（`known` 一并清空 ⇒ 下一次写入按新策略重建，未保存的正文会重新落盘）。
+
+**三个必须记住的坑**：
+
+1. **清完必须进入降级（`degraded = true`）**，否则下一次按键立刻把空间填回去：`planEditorStorage` 对「`known` 里没有的正文」判定为「正文变了」而重写，用户会觉得「清理没用」。这是本批次最容易漏的一条，已单测覆盖。
+2. **清单里不认识的正文键一律不动**。清单写入失败时会留下这种「看起来像孤儿」的键，而它可能正是一篇未保存内容的唯一副本 —— 宁可少清一个键，也不能误删救不回来的正文。真正的孤儿键由写入路径自己回收（`planEditorStorage` 的 `deletes`）。
+3. **`useEditorStore` 里的存储层实例必须是模块级单例**（`export const editorStorage = createEditorStorage()`）。它内部记着「磁盘上已有哪些正文键」（`known`）与 `degraded`；界面若另建一个实例去删键，这个内存映射就成了「清单说在、键已不在」的假象。为此把原来内联在 `persist({ storage: … })` 里的一次性调用提了出来。
+
+**清理成功后**：撤掉状态栏常驻警示，并调用新增的 `resetEditorStorageWarning()` 复位「每级只报一次」—— 不复位的话，用户清理完再撞上配额满就永远收不到提示了。**一个键都没删掉时保留警示**（占用来自本应用之外的数据，问题还在，提示不该消失）。`resetEditorStorageWarning()` 与单测用的 `resetEditorStorageWarningsForTests()` 的区别是前者**保留订阅者**。
+
+**界面**：`StatusBar` 的 ⚠ 由 `<div>` 改为 `<button>`（复用 `.statusbar-item`），悬停提示追加「清理本地缓存」；`App.tsx` 持有弹窗状态（`usage` / `reason` 在打开时捕获 —— 清理成功后状态栏文案会被撤掉，弹窗里仍要能说明来由 / `result` / `confirmingAll`）。i18n 新增 8 个键 × 15 语言（`app.storageCleanup*` / `app.storageUsage`）。
+
+### 在线更新界面：状态栏提示 + 「关于」卡片（批次 3-甲，2026-10-18 实施）
+
+**分层**（判断逻辑一律不进组件，组件只画）：
+
+| 文件 | 职责 |
+|---|---|
+| `lib/update.ts` | 纯判断：版本比较、要不要提示、进度比例、体积格式化。有单测（`tests/update.test.ts`） |
+| `lib/updateClient.ts` | 薄胶水：环境 / 安装形态探测、检查、下载安装。直接调插件与后端命令，不测 |
+| `stores/updateStore.ts` | 状态机：`idle / checking / latest / available / skipped / downloading / installed / error` |
+| `StatusBar.tsx` / `SettingsModal.tsx` | 状态栏一行提示；「关于」里的更新卡片 |
+
+**环境闸门收在一处**（`getUpdateBlocker`）—— 散在界面里迟早出现「这个入口拦住了、那个没拦住」，
+后果是把 MSI 用户装出**第二份程序**。六种「不能自动更新」的原因，任何一步拿不到答案都按保守处理：
+
+- `dev`（开发模式：热更新的是源码，装包没有意义）、`not-tauri`
+- `not-windows`（清单里没有 darwin 键，macOS 走 dmg 手动更新）
+- `msi`（NSIS 安装包会装出第二份 ⇒ 给出「手动安装新版」的引导）
+- `portable`（没有安装位置，覆盖不了自己）
+- `unknown`（探测不出安装形态 ⇒ 宁可不更新）
+
+探测链：`import.meta.env.DEV` → `__TAURI_INTERNALS__.invoke` → `get_platform` → `get_install_kind`（注册表）。
+界面按探测结果换文案（`settings.updateBlocker*` 五条，映射表而非拼字符串 —— 拼的键漏一个就会把
+`settings.updateBlockerXxx` 直接显示给用户）。
+
+**打扰策略**：自动检查的失败与「已是最新」**全部静默**，只有「有新版本且没被跳过」才留下痕迹 ——
+状态栏版本号右侧一行提示，点击打开「关于」（安装动作不在状态栏里做）。手动检查失败把原因留在卡片上
+并可重试。启动检查延迟 3 秒，错开恢复标签页 / 加载主题 / 插件；若用户在这 3 秒内已打开「关于」
+（卡片挂载时会查一次），启动检查直接跳过，不重复问网络。
+
+**实现中发现并修掉的真问题**：`Update` 在 Rust 侧是资源，必须 `close()`。最初 `skip()` 里顺手把它
+释放了 ⇒ 用户「跳过此版本」后再点「立即更新」只会拿到 `installUpdate: 没有待安装的更新`。
+改为：只在 `checkForUpdate()` 开始时释放**上一次**的（反复检查不累积资源），跳过**不**释放
+（用户随时可能改主意）。
+
+**安装前清自动保存（上一轮定的口径，这里落地）**：给自动保存 effect 的依赖加上
+`updateBusy`（下载 / 安装中）并在开头 `return` —— React 在依赖变化时先跑清理函数，
+待执行的 `autoSaveTimerRef` 自然被清掉，不需要让更新模块反向去够 `App.tsx` 的 ref。
+手动 `Ctrl+S` 仍然允许（明确意图；且安装器替换的是程序文件，不碰用户文档）。
+
+**「装完谁把应用拉起来」查证过**（不是猜的）：读 `tauri-plugin-updater-2.12.0` 的 Rust 源码与
+JS 类型定义 —— `downloadAndInstall(options)` 的 `restartAfterInstall` **默认为 true**，
+为真时安装器参数里才会带 `nsis_restart_after_install_args()`；也就是说**安装器自己会把应用重新拉起**，
+不需要我们做「重启」按钮。我们仍**显式传** `restartAfterInstall: true`（不依赖默认值，
+将来插件改默认值时行为不会悄悄变），文案也从「装完请重新打开」改成「会自动关闭并重新打开」。
+
+**两个界面细节**：① 总大小未知时不画假的进度条（只显示「已下载 X」），停着不动的 0% 只会让人以为卡死；
+② 更新说明直接用 `renderMarkdown()` 渲染 `docs/changelog/CHANGELOG-V*.md`，与 GitHub Release 同源。
+
+**上一轮留下的开放问题就此结案**（持久化降级到 `lost` 时，更新提示要不要更硬）：**不加拦截、不加摩擦，
+只把文案改诚实**。卡片原来那句「编辑内容已实时保存」在 `lost` 状态是**假的**，改为按
+`getLastEditorStorageWarning()` 的等级切换成「安装前请先按 Ctrl+S」。理由：① 该状态的常驻警示就在
+状态栏上、离更新提示一行远，toast 也明确要求 Ctrl+S；② 硬退出与正常关窗在数据上等价（上一轮已证），
+拦一道保护不了任何东西；③ 安装过程只动程序文件 —— 真正会丢内容的动作是「关掉应用」，那条路已经警示过了。
+
+**i18n 两个坑**（都是本次踩到的）：① `scripts/check-i18n.mjs` 的 `parseDict` 只认**两层**
+（命名空间缩进 2 空格 + 键缩进 4 空格），写成嵌套对象（`settings.update.title`）会让所有键报成
+「用到但未定义」；本项目约定是**扁平点号键**（`settings.updateTitle`）。② `t(cond ? 'a' : 'b')`
+里**两个键都不会被识别**（正则只匹配 `t('字面量')`），会落进 `--unused` 的「死键」名单 ——
+写成 `cond ? t('a') : t('b')` 才看得见。
+
+**门禁与文档**：新增 23 个键 × 15 语言（含五条 blocker 文案与 `statusbar.updateAvailable`），
+用一次性脚本插入、未入库。`check-i18n --strict` 静态 450 / 动态 26、0 缺失；
+`tsc` 干净；`npm test` 230 通过 / 0 失败；`npm run build` 通过。
+`docs/changelog/CHANGELOG-V0.3.4.md` 补「在线更新」小节（用户向，含「0.3.4 是第一个带在线更新的版本、
+一键更新从 0.3.5 起生效」这句必须说清的话）；`help.md` 补「通用设置 → 在线更新」与一条 FAQ，
+**两份副本（根目录与 `src-tauri/`）已同步为 byte-identical**（`make-portable.ps1` 的头注释写明
+打包读的是 `src-tauri/` 那份，手动同步极易漏）。
+
+**仍未完成**：批次 4（TOS 桶 + `latest.json` 上传）。`tauri.conf.json` 的 `endpoints` 还是占位，
+`npm run check:updater` 会因此失败 —— 该检查只在 `release.yml` 的 test 里跑，不进 `npm run build`，
+所以本地门禁全绿而发版会被拦住，这正是设计意图。
+
+### 本地假清单实测：三处修正（2026-10-18 实施）
+
+**为什么值得单独记一笔**：TOS 桶还没到手，但更新的**全部软件路径**（除「装成功」那一步）都能在本地验完 ——
+只靠 `make:manifest` 造的假清单 + 一个本地 http 服务。这一步最大的价值不是「确认能用」，而是**把只在真实运行时
+才会暴露的问题逼出来**：下面三条在开发模式下都属于「看起来没问题」。
+
+**测法**：`.release_tmp/latest.json`（版本谎报 0.3.5、签名是假的、`windows-x86_64-nsis` 与
+`windows-x86_64` 两个键都给）由 `npm run make:manifest` 生成，临时 node 静态服务（带请求日志）监听
+`127.0.0.1:8899`；开发模式临时放行环境闸门（`getUpdateBlocker` 的 dev 分支改为 `return null`）
++ `tauri.conf.json` 的 `endpoints` 指向本地。**debug 构建对 `http://` 只告警不拦**
+（`tauri-plugin-updater` 的 `validate_endpoints` 只在 `#[cfg(not(debug_assertions))]` 下报错），
+所以不需要 `dangerousInsecureTransportProtocol`。两处临时改动测完即还原（`endpoints` 回到占位）。
+
+| # | 现象 | 根因 | 处理 |
+|---|---|---|---|
+| 1 | 「关于」卡片明明写着「发现新版本 v0.3.5」，状态栏那行提示**完全不显示** | 提示用 `--editor-accent` 当文字色，而**16 个主题里 11 个的 `--statusbar-bg` 与 `--editor-accent` 是同一个颜色**（实测 `liquidglass-prism` 两边都是 `#2563eb`）⇒ 同色写同色底，等于隐形 | `StatusBar.tsx` 新增 `chipStyle()`：状态栏芯片的**文字一律用 `--statusbar-text`**（主题保证它与底色有对比），强调改用 `color-mix` 出来的半透明底衬。⚠ 缓存警示同款修法（`--danger` 撞底色的风险同理：`lychee` 的状态栏底色本来就是红的） |
+| 2 | 点「立即更新」下载/校验失败后，卡片写「**检查更新**失败」 | 检查失败与下载安装失败共用 `status: 'error'`，卡片分不清阶段 —— 用户会以为是自己网络的问题，跑去重试检查 | 状态机加 `errorPhase: 'check' \| 'install'`：查不到 →「检查更新失败」+「检查更新」；装不上 →「更新失败」+「重试」（更新信息还在，原地重装即可）。i18n 加 2 键 × 15 语言 |
+| 3 | 安装形态探测在「双记录」机器上会误判成 `nsis` | 先判 NSIS、后判 MSI，而同一台机器可能**同时**留着旧 NSIS 卸载项与后来 MSI 覆盖装的卸载项，两者 `InstallLocation` 指向同一目录（开发机实测：HKLM 是 MSI 0.3.3、HKCU 是 NSIS 0.3.1 遗留）⇒ 双记录时先判 NSIS 就会让 MSI 用户被装出第二份 | `detect_windows_install_kind()` **改为一律先判 MSI**。反向误判（真 NSIS 被判成 `msi`）只是少提示一次更新、要求手动安装，代价比装出第二份小得多 |
+
+**顺带验到的行为**（请求日志 + 逐屏截图，不靠印象）：
+
+- 启动后 **3 秒**才请求清单（`STARTUP_UPDATE_DELAY_MS` 生效）；打开「关于」**不重复请求**（`status !== 'idle'` 直接跳过）。
+- 点状态栏提示 → 打开「偏好设置 → 关于」；点「跳过此版本」→ 状态栏提示消失、卡片显示「已跳过 v0.3.5」，整页重载后仍然如此。
+- 「启动时自动检查更新」关掉后重载 → 日志**没有任何清单请求**；重新打开后重载 → 3 秒后恢复请求（对照组）。
+- 假签名的 8MB 产物**下载完成后卡在校验阶段** ⇒ 安装器没有被执行（顺带证明「先验签、后安装」这个安全前提）。
+
+**没验到的**：装成功 + 自动重启那一段 —— 要真签名产物并真装一份，按路线 C 留到批次 4 之后。
+**副作用已清**：测试期间被记下的「已跳过 v0.3.5」已复位（否则 0.3.5 真发布时不会提示）。
+
 ### 既定分工：`changelog.md` 记过程，`docs/changelog/` 记结果（2026-10-18 定）
 
 > 原「发布流水线产出的正文需手工替换」（2026-10-09 记）由本次分工**消解**：

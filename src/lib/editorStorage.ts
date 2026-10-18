@@ -37,6 +37,15 @@ export const META_KEY = 'yizimarkdown-editor'
 export const CONTENT_PREFIX = 'yizimarkdown-editor:doc:'
 
 /**
+ * WebView2 实测的 localStorage 上限（字符数，**含键名**）：浏览器给的 10MB 按 UTF-16 码元
+ * 2 字节计 ≈ 5,242,880 字符，差额被应用自身数据占掉（二分法实测 5,238,000 可写满）。
+ *
+ * **只用于给用户看「占了多少」**，不要拿它做任何判断 —— 是否写满一律以 `setItem` 是否抛错为准
+ * （不同机器 / WebView2 版本会有差异，拿估算值去拦反而会误伤）。
+ */
+export const WEBVIEW2_QUOTA_CHARS = 5_238_000
+
+/**
  * 清单兜底内嵌正文的大小上限（字符）。**为什么必须有上限**：清单是每次按键都要重写的，
  * 把一大段正文塞进清单等于把刚修掉的写入放大又请回来 —— 每个字符都要把这段正文重新
  * 序列化一遍，而且清单本身就更容易写失败。超过上限的只报警（`lost`），不倒灌进清单。
@@ -194,6 +203,20 @@ export function resetEditorStorageWarningsForTests(): void {
   warnedLevel = null
 }
 
+/**
+ * 复位「本会话已报警」状态（**保留订阅者**）。
+ *
+ * 用在「用户主动清理了缓存」之后：空间已经腾出来，警示不该继续挂在状态栏上；
+ * 同时复位「每级只报一次」，之后若再写失败会**重新**报警（否则用户清理完再撞上配额满，
+ * 反而永远收不到提示了）。
+ *
+ * 不复位存储层内部的 `degraded`（那个由 `dropRecoverableContent` / `clearAll` 自行决定）。
+ */
+export function resetEditorStorageWarning(): void {
+  lastWarning = null
+  warnedLevel = null
+}
+
 function emitWarning(w: EditorStorageWarning): boolean {
   if (warnedLevel !== null && RANK[w.level] <= RANK[warnedLevel]) return false
   warnedLevel = w.level
@@ -215,7 +238,14 @@ function emitWarning(w: EditorStorageWarning): boolean {
  * 而这一条能把「到底是不是配额问题、占用了多少」直接说清楚（WebView2 实测上限约
  * 5,238,000 字符 ≈ 10MB，按 UTF-16 码元 2 字节计）。
  */
-function describeStorageUse(ls: KeyValueStore): string {
+/** 当前占用（键数 + 键名与值的字符数） */
+export interface EditorStorageUsage {
+  keys: number
+  chars: number
+}
+
+/** 统计当前占用。`null` = 统计失败（存储被禁用、迭代抛错等） */
+export function measureStorage(ls: KeyValueStore): EditorStorageUsage | null {
   let keys = 0
   let chars = 0
   try {
@@ -226,9 +256,14 @@ function describeStorageUse(ls: KeyValueStore): string {
       chars += key.length + (ls.getItem(key)?.length ?? 0)
     }
   } catch {
-    return '无法统计'
+    return null
   }
-  return `${keys} 个键 / ${chars} 字符`
+  return { keys, chars }
+}
+
+function describeStorageUse(ls: KeyValueStore): string {
+  const m = measureStorage(ls)
+  return m ? `${m.keys} 个键 / ${m.chars} 字符` : '无法统计'
 }
 
 /** localStorage 的子集（`Storage` 正好满足），便于单测注入假实现 */
@@ -243,13 +278,29 @@ export interface KeyValueStore {
 const defaultStore = (): KeyValueStore | null =>
   typeof localStorage === 'undefined' ? null : localStorage
 
+/** 清理结果：删掉了几个键、释放了多少字符 */
+export interface CleanupResult {
+  removed: number
+  freedChars: number
+}
+
+/** `createEditorStorage()` 的返回：zustand 需要的三个方法 + 界面要用的诊断与清理 */
+export interface EditorStorage extends PersistStorage<PersistedEditorState> {
+  /** 当前占用（存储不可用时为 `null`） */
+  usage(): EditorStorageUsage | null
+  /** 清理「磁盘上已有权威副本」的正文键，并停止缓存它们；见实现里的说明 */
+  dropRecoverableContent(): CleanupResult | null
+  /** 清空编辑器缓存的全部键（清单 + 正文）；界面必须二次确认，见实现里的说明 */
+  clearAll(): CleanupResult | null
+}
+
 /**
  * @param getStore 取底层存储；返回 `null` 表示环境没有 localStorage（Node 单测、
  *                 WebView2 禁用存储等）——此时全部操作静默跳过，不抛错。
  */
 export function createEditorStorage(
   getStore: () => KeyValueStore | null = defaultStore
-): PersistStorage<PersistedEditorState> {
+): EditorStorage {
   /** 已知内容键 → 正文；`null` = 键存在但内容未知（孤儿键） */
   const known = new Map<string, string | null>()
   /** 已降级：不再缓存「磁盘上已有权威副本」的正文（进程内状态，下次启动重新尝试） */
@@ -276,6 +327,30 @@ export function createEditorStorage(
       console.error('[editorStorage] 删除内容键失败:', e)
     }
     known.delete(id)
+  }
+
+  /**
+   * 读清单里的标签页元信息（只给清理入口用）。解析不出来就返回空数组 ——
+   * 调用方对「清单里不认识的键」一律不动（见 `dropRecoverableContent`）。
+   */
+  const readMetaTabs = (ls: KeyValueStore): ContentTab[] => {
+    try {
+      const raw = ls.getItem(META_KEY)
+      if (raw === null) return []
+      const parsed = JSON.parse(raw) as StorageValue<PersistedEditorState>
+      const tabs = parsed?.state?.tabs
+      return Array.isArray(tabs) ? tabs : []
+    } catch (e) {
+      console.error('[editorStorage] 清理前读取清单失败:', e)
+      return []
+    }
+  }
+
+  /** 清理前后的占用差（统计失败时按 0 算，别把 NaN 显示给用户） */
+  const freedCharsSince = (before: EditorStorageUsage | null, ls: KeyValueStore): number => {
+    const after = measureStorage(ls)
+    if (!before || !after) return 0
+    return Math.max(0, before.chars - after.chars)
   }
 
   /** 写一批内容键，返回写入失败的标签页 id */
@@ -455,6 +530,77 @@ export function createEditorStorage(
       } catch (e) {
         console.error('[editorStorage] 删除清单失败:', e)
       }
+    },
+
+    usage() {
+      const ls = getStore()
+      return ls ? measureStorage(ls) : null
+    },
+
+    /**
+     * 清理「磁盘上已有权威副本」的正文键（磁盘上的文件本身不受影响），界面里那个 ⚠ 点开的
+     * 第一个动作。**为什么会存在这个方法**：配额满时应用只会报警，用户没有任何出路 ——
+     * 报警了却只能靠开发者工具自救等于只做了一半。
+     *
+     * 两条判定：
+     * - 只清 `isRecoverableFromDisk()`（有文件路径且已保存 / 刚保存）的正文；未保存、未命名的
+     *   正文是**唯一副本**，绝不在这里动。
+     * - 清单里**不认识**的键一律不动：清单写入失败时会留下这种「看起来像孤儿」的键，而它可能
+     *   正是一篇未保存内容的唯一副本。宁可少清一个键，也不能误删救不回来的正文；真正的孤儿键
+     *   由写入路径自己回收（`planEditorStorage` 的 `deletes`）。
+     *
+     * 清完**必须**进入降级（`degraded = true`）：否则下一次按键就会把刚腾出来的空间又填回去
+     * （`known` 里没有的正文会被当成「正文变了」而重写），用户会觉得「清理没用」。
+     * 降级是本会话内的策略，重启后重新尝试缓存（与自动降级一致）。
+     */
+    dropRecoverableContent() {
+      const ls = getStore()
+      if (!ls) return null
+      const before = measureStorage(ls)
+      const tabById = new Map(readMetaTabs(ls).map((t) => [t.id, t]))
+      scanContentKeys(ls)
+
+      let removed = 0
+      for (const id of [...known.keys()]) {
+        const tab = tabById.get(id)
+        if (!tab || !isRecoverableFromDisk(tab)) continue
+        dropContentKey(ls, id)
+        removed++
+      }
+
+      degraded = true
+      return { removed, freedChars: freedCharsSince(before, ls) }
+    },
+
+    /**
+     * 清空编辑器缓存的全部键（清单 + 所有正文键）。界面里那个 ⚠ 点开的第二个动作，
+     * **必须二次确认**：未保存内容的本地缓存会就此消失（进程内存里还有，但重启后救不回来）。
+     *
+     * 清完同样进入降级（理由同 `dropRecoverableContent`），并由下一次 `setItem` 按新策略重建：
+     * `known` 已清空 ⇒ 必须缓存的正文会重新写入，可省的正文不再写入。
+     */
+    clearAll() {
+      const ls = getStore()
+      if (!ls) return null
+      const before = measureStorage(ls)
+      scanContentKeys(ls)
+
+      let removed = 0
+      for (const id of [...known.keys()]) {
+        dropContentKey(ls, id)
+        removed++
+      }
+      known.clear()
+      try {
+        // 只有真的存在才算「删掉了一个键」：否则「清空」会显示成「已释放 0 字符」，看着像没生效
+        if (ls.getItem(META_KEY) !== null) removed++
+        ls.removeItem(META_KEY)
+      } catch (e) {
+        console.error('[editorStorage] 清空缓存时删除清单失败:', e)
+      }
+
+      degraded = true
+      return { removed, freedChars: freedCharsSince(before, ls) }
     },
   }
 }

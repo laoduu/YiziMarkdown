@@ -1927,6 +1927,25 @@ a {
   padding: 8px 16px 12px;
 }
 
+/* 更新卡片里的「更新说明」（.update-notes）
+   它借用 .editor-content + theme-x 是为了**跟主题一致的排版**（标题/链接/列表颜色），
+   但主题会把 .editor-content.theme-x 画成一张"文档卡"：默认主题是 18px 圆角 + 4 层阴影，
+   其中那圈 0.4 透明度的描边环嵌在设置面板里，看起来就是一圈很重的实边框。
+   这里只留排版，把卡片换成一圈更轻的边（描边透明度砍半）。
+
+   选择器为什么是四层类名：主题 CSS 注入在 head 末尾，`.editor-content.theme-x` 是 (0,2,0)，
+   暗色版 `.dark .editor-content.theme-x` 是 (0,3,0)；只写一层 .update-notes 会被它们压住。
+   四层类名 (0,4,0) 能稳定覆盖亮/暗两版，又不必用 [class*= 那类反模式（见 scripts/check-themes.mjs）。 */
+.settings-modal-container .settings-content-scroll .update-notes.editor-content {
+  margin: 6px 0 0;
+  padding: 12px 14px;
+  height: auto;
+  font-size: 12px;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--editor-border) 50%, transparent);
+}
+
 /* 临时状态未保存提示 */
 .settings-unsaved-dot {
   display: inline-block;
@@ -1953,6 +1972,67 @@ a {
 .settings-theme-card:hover {
   border-color: var(--editor-accent);
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+/* 「设置 → 其他产品」的产品卡：一行一个工具（图标 + 名字/简介 + 域名 + 箭头）
+   与 .settings-theme-card 同族：同一套边框/底色/hover，只是横向排布。 */
+.settings-product-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid var(--editor-border);
+  border-radius: var(--radius-md);
+  background: var(--editor-surface);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.settings-product-card:hover {
+  border-color: var(--editor-accent);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.settings-product-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+/* 作者主页用站点自己的 logo（竖版、透明底），垫一层主题底色当头像块 */
+.settings-product-icon-avatar {
+  background: var(--editor-hover);
+  padding: 3px;
+}
+.settings-product-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+.settings-product-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--editor-text);
+}
+.settings-product-desc {
+  font-size: 11px;
+  color: var(--sidebar-text);
+}
+.settings-product-url {
+  font-size: 10px;
+  color: var(--sidebar-text);
+  opacity: 0.75;
+  flex-shrink: 0;
+}
+.settings-product-arrow {
+  color: var(--sidebar-text);
+  flex-shrink: 0;
+}
+.settings-product-card:hover .settings-product-arrow {
+  color: var(--editor-accent);
 }
 
 .settings-theme-active {

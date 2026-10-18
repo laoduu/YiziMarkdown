@@ -41,5 +41,9 @@ releases/
 .release_tmp/
 .workbuddy/
 
+# TOS 存储桶配置（含 AK/SK 密钥）：**绝不入库**
+# 结构见 scripts/upload-tos.mjs 顶部注释
+.tos/
+
 # Playwright CLI 测试产物（自动化验证会话）
 .playwright-cli/

@@ -1,9 +1,15 @@
 import { invokeTauri, invokeTauriOrThrow } from '../lib/tauri'
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { X, Loader2, ChevronRight, FolderOpen, Palette, FileText, Keyboard, Settings2, Eye, EyeOff, Info, Github, History, BookOpen, ExternalLink, Zap, Globe, Puzzle, Bot, Cloud } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { X, Loader2, ChevronRight, FolderOpen, Palette, FileText, Keyboard, Settings2, Eye, EyeOff, Info, Github, History, BookOpen, ExternalLink, Zap, Globe, Puzzle, Bot, Cloud, Boxes, Download, RefreshCw } from 'lucide-react'
 import { useSettingsStore } from '../stores/settingsStore'
+import { useUpdateStore } from '../stores/updateStore'
+import type { UpdateBlocker } from '../lib/updateClient'
+import { renderMarkdown } from '../lib/markdownRenderer'
+import { onEditorStorageWarning, getLastEditorStorageWarning } from '../lib/editorStorage'
+import { progressRatio, formatBytes } from '../lib/update'
 import { SHORTCUT_ACTIONS, getKeybindingsMap, saveKeybindings, getDefaultMap, formatKey, findConflict, getActionLabel } from '../lib/keybindings'
 import { RotateCcw } from 'lucide-react'
+import { OtherProductsSettings } from './OtherProducts'
 import { getAllPlugins, loadPlugin, unloadPlugin } from '../plugins/registry'
 import { useI18n, LANGUAGES } from '../i18n'
 import { PROVIDERS, providerById } from '../lib/ai-providers'
@@ -54,7 +60,7 @@ interface SettingsModalProps {
   defaultTab?: CategoryKey
 }
 
-type CategoryKey = 'general' | 'appearance' | 'editor' | 'liveMode' | 'ai' | 'cloud' | 'plugins' | 'shortcuts' | 'templates' | 'about'
+type CategoryKey = 'general' | 'appearance' | 'editor' | 'liveMode' | 'ai' | 'cloud' | 'plugins' | 'shortcuts' | 'templates' | 'about' | 'products'
 
 const categories: Array<{ key: CategoryKey; labelKey: string; icon: React.ReactNode }> = [
   { key: 'general', labelKey: 'settings.general', icon: <Settings2 size={16} /> },
@@ -67,6 +73,7 @@ const categories: Array<{ key: CategoryKey; labelKey: string; icon: React.ReactN
   { key: 'shortcuts', labelKey: 'settings.shortcuts', icon: <Keyboard size={16} /> },
   { key: 'templates', labelKey: 'settings.templates', icon: <FolderOpen size={16} /> },
   { key: 'about', labelKey: 'settings.about', icon: <Info size={16} /> },
+  { key: 'products', labelKey: 'settings.products', icon: <Boxes size={16} /> },
 ]
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -1084,6 +1091,186 @@ function PluginsSettings() {
   )
 }
 
+// ===================== 在线更新（v0.3.4） =====================
+/**
+ * 不能自动更新的原因 → 文案键。
+ *
+ * 明确映射而不是拼字符串：拼出来的键漏一个，界面上就会把 `settings.updateBlockerXxx`
+ * 这种原始键名直接显示给用户。映射里没有的（浏览器里打开时的 `not-tauri`）退回「未识别」。
+ */
+const UPDATE_BLOCKER_KEYS: Record<UpdateBlocker, string> = {
+  'dev': 'settings.updateBlockerDev',
+  'not-tauri': 'settings.updateBlockerUnknown',
+  'not-windows': 'settings.updateBlockerNotWindows',
+  'msi': 'settings.updateBlockerMsi',
+  'portable': 'settings.updateBlockerPortable',
+  'unknown': 'settings.updateBlockerUnknown',
+}
+
+/**
+ * 「版本与更新」里的更新卡片。
+ *
+ * 只回答三件事：这台机器能不能自动更新（不能就说清为什么）、有没有新版本（有就连更新说明一起渲染）、
+ * 要不要现在装。所有状态都在 `stores/updateStore.ts`，这里只负责画。
+ *
+ * 一条有意为之的文案：「编辑内容已实时保存」——正文是**每次按键**就落本地缓存的
+ * （见 lib/editorStorage.ts），所以安装前不需要弹窗拦着用户保存，这句话就是那个弹窗的替代品。
+ */
+function UpdateCard() {
+  const { t } = useI18n()
+  const store = useSettingsStore()
+  const currentTheme = useSettingsStore((s) => s.currentTheme)
+  const status = useUpdateStore((s) => s.status)
+  const blocker = useUpdateStore((s) => s.blocker)
+  const update = useUpdateStore((s) => s.update)
+  const downloaded = useUpdateStore((s) => s.downloaded)
+  const total = useUpdateStore((s) => s.total)
+  const error = useUpdateStore((s) => s.error)
+  const errorPhase = useUpdateStore((s) => s.errorPhase)
+
+  // 打开卡片就查一次。启动时自动检查过的话状态已不是 idle，不会重复问网络。
+  useEffect(() => {
+    if (useUpdateStore.getState().status === 'idle') void useUpdateStore.getState().check(true)
+  }, [])
+
+  // 本地缓存已经写不进去时，「编辑内容已实时保存」这句话就是**假的** —— 不能这么说。
+  // 这是本进程内的降级标记（见 lib/editorStorage.ts）：挂载时补读一次，并订阅后续变化。
+  const [storageLost, setStorageLost] = useState(() => getLastEditorStorageWarning()?.level === 'lost')
+  useEffect(() => onEditorStorageWarning((w) => setStorageLost(w.level === 'lost')), [])
+
+  const busy = status === 'checking' || status === 'downloading'
+  const ratio = progressRatio(downloaded, total)
+  const notesHtml = useMemo(() => (update?.notes ? renderMarkdown(update.notes) : ''), [update?.notes])
+
+  const muted: React.CSSProperties = { fontSize: 11, color: 'var(--sidebar-text)', margin: '6px 0 0', lineHeight: 1.5 }
+  const smallBtn: React.CSSProperties = { padding: '4px 10px', fontSize: 12, flexShrink: 0 }
+
+  const renderBody = () => {
+    if (blocker) {
+      return <p style={muted}>{t(UPDATE_BLOCKER_KEYS[blocker] ?? 'settings.updateBlockerUnknown')}</p>
+    }
+    if (status === 'checking') return <p style={muted}>{t('settings.updateChecking')}</p>
+    if (status === 'latest') return <p style={muted}>{t('settings.updateLatest')}</p>
+    if (status === 'installed') return <p style={muted}>{t('settings.updateInstalling')}</p>
+    if (status === 'error') {
+      // 「检查更新失败」和「更新装不上」不是一个问题：前者查清单就挂了，
+      // 后者是下载/签名。文案与重试动作都按阶段分开（errorPhase 由状态机记录）
+      const installFailed = errorPhase === 'install'
+      return (
+        <>
+          <p style={{ ...muted, color: 'var(--danger)' }}>
+            {installFailed
+              ? t('settings.updateInstallFailed', { msg: error ?? '' })
+              : t('settings.updateFailed', { msg: error ?? '' })}
+          </p>
+          <button
+            onClick={() => {
+              // 装不上就原地重试安装（更新信息还在），检查失败才重新问网络
+              if (installFailed) void useUpdateStore.getState().install()
+              else void useUpdateStore.getState().check(true)
+            }}
+            className="settings-btn-secondary" style={{ ...smallBtn, marginTop: 6 }}>
+            {installFailed ? t('settings.updateRetry') : t('settings.updateCheck')}
+          </button>
+        </>
+      )
+    }
+    if (status === 'downloading') {
+      return (
+        <>
+          <div style={{ height: 4, borderRadius: 2, background: 'var(--editor-border)', overflow: 'hidden', margin: '8px 0 0' }}>
+            {/* 总大小未知时不画假的进度条：宁可只让用户看到「已下载多少」，
+                也不要画一个停着不动的 0% 让人以为卡死了 */}
+            {ratio !== null && (
+              <div style={{ width: `${Math.round(ratio * 100)}%`, height: '100%', background: 'var(--editor-accent)', transition: 'width 0.2s' }} />
+            )}
+          </div>
+          <p style={muted}>
+            {t('settings.updateDownloading')}{' '}
+            {total
+              ? t('settings.updateProgress', { done: formatBytes(downloaded), total: formatBytes(total) })
+              : t('settings.updateDownloaded', { done: formatBytes(downloaded) })}
+          </p>
+        </>
+      )
+    }
+    if (!update) return null
+    return (
+      <>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+          <Download size={14} style={{ color: 'var(--editor-accent)', flexShrink: 0 }} />
+          <span style={{ fontSize: 12, color: 'var(--editor-text)', flex: 1 }}>
+            {t('settings.updateFound', { v: update.version })}
+          </span>
+          <button onClick={() => void useUpdateStore.getState().install()} className="settings-btn-primary" style={smallBtn}>
+            {t('settings.updateInstall')}
+          </button>
+          <button onClick={() => void useUpdateStore.getState().skip()} className="settings-btn-secondary" style={smallBtn}>
+            {t('settings.updateSkip')}
+          </button>
+        </div>
+        {status === 'skipped' && <p style={muted}>{t('settings.updateSkipped', { v: update.version })}</p>}
+        {/* 两个键都写成 t('字面量') 的直调形式：check-i18n 只认这种形状，
+            写成 t(cond ? 'a' : 'b') 会让两个键都变成「没人用」而漏掉检查 */}
+        <p style={muted}>
+          {storageLost ? t('settings.updateAutoRestoreLost') : t('settings.updateAutoRestore')}
+        </p>
+        {notesHtml && (
+          <>
+            <p style={{ ...muted, marginTop: 10, fontWeight: 600 }}>{t('settings.updateNotes')}</p>
+            {/* 高度自适应：这里**不能**限高内滚 —— 更新说明常有几十行，内层再套一根滚动条
+                就成了「面板里滚着一段、里面还有一段」，用户不知道该滚哪个。让它自然撑开，
+                由外层 .settings-content-scroll 统一滚（外观见 globals.css 的 .update-notes） */}
+            <div
+              className={`update-notes editor-content prose max-w-none theme-${currentTheme}`}
+              dangerouslySetInnerHTML={{ __html: notesHtml }}
+            />
+          </>
+        )}
+      </>
+    )
+  }
+
+  return (
+    <div style={{ margin: '0 24px 12px', padding: '12px 14px', borderRadius: 10, background: 'var(--editor-hover)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <RefreshCw size={14} style={{ color: 'var(--editor-accent)', flexShrink: 0 }} />
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--editor-text)', flex: 1 }}>
+          {t('settings.updateTitle')}
+        </span>
+        {/* 不能自动更新的环境不给「检查更新」按钮：点了也不会有结果 */}
+        {!blocker && status !== 'downloading' && status !== 'installed' && (
+          <button
+            onClick={() => void useUpdateStore.getState().check(true)}
+            disabled={busy}
+            className="settings-btn-secondary"
+            style={{ ...smallBtn, opacity: busy ? 0.5 : 1 }}
+          >
+            {status === 'checking' ? t('settings.updateChecking') : t('settings.updateCheck')}
+          </button>
+        )}
+      </div>
+
+      {renderBody()}
+
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          className="settings-checkbox"
+          checked={store.autoCheckUpdate}
+          onChange={(e) => {
+            const on = e.target.checked
+            store.setField('autoCheckUpdate', on)
+            // 刚打开这个开关 ⇒ 当场查一次，别让用户等下次启动
+            if (on && useUpdateStore.getState().status === 'idle') void useUpdateStore.getState().check(true)
+          }}
+        />
+        <span style={{ fontSize: 11, color: 'var(--sidebar-text)' }}>{t('settings.updateAutoCheck')}</span>
+      </label>
+    </div>
+  )
+}
+
 // ===================== 关于 =====================
 function AboutSettings() {
   const { t } = useI18n()
@@ -1132,6 +1319,9 @@ function AboutSettings() {
           {t('settings.intro')}
         </p>
       </div>
+
+      {/* 在线更新（v0.3.4） */}
+      <UpdateCard />
 
       {/* Divider */}
       <div style={{ height: 1, background: 'var(--editor-border)', margin: '0 24px' }} />
@@ -1686,6 +1876,7 @@ export default function SettingsModal({ isOpen, onClose, defaultTab }: SettingsM
     liveMode: <LiveModeSettings />, ai: <AISettings />, cloud: <CloudSettings />,
     plugins: <PluginsSettings />,
     shortcuts: <ShortcutsSettings />, templates: <TemplatesSettings />, about: <AboutSettings />,
+    products: <OtherProductsSettings />,
   }
 
   return (

@@ -1,22 +1,29 @@
 # 推送 v* 标签时自动构建并创建 GitHub Release（草稿）。
 #
-# 资产（4 个，v0.3.4 起不再发布 MSI）：
-#   - YiziMarkdown_<ver>_x64-setup.exe   NSIS 安装包      （Windows 腿）
-#   - YiziMarkdown_<ver>_x64-portable.zip 便携版          （Windows 腿，make-portable.ps1）
-#   - YiziMarkdown_<ver>_source.zip      源码包           （Windows 腿，git archive）
-#   - YiziMarkdown_<ver>_universal.dmg   macOS 通用 dmg   （macOS 腿）
+# 资产（5 个 + 1 份签名，v0.3.4 起不再发布 MSI）：
+#   - YiziMarkdown_<ver>_x64-setup.exe     NSIS 安装包       （Windows 腿）
+#   - YiziMarkdown_<ver>_x64-setup.exe.sig minisign 签名     （Windows 腿，在线更新校验用）
+#   - latest.json                          在线更新清单      （Windows 腿，应用内更新端点）
+#   - YiziMarkdown_<ver>_x64-portable.zip  便携版            （Windows 腿，make-portable.ps1）
+#   - YiziMarkdown_<ver>_source.zip        源码包            （Windows 腿，git archive）
+#   - YiziMarkdown_<ver>_universal.dmg     macOS 通用 dmg    （macOS 腿）
 #
 # Release 正文取 docs/changelog/CHANGELOG-V<ver>.md —— 该文件是**用户向简短版**，
 # 与根 changelog.md 的完整技术记录分工（口径见 changelog.md「既定分工」）。
 # 同一份文件也被 scripts/make-manifest.mjs 用作应用内更新说明的 notes，所以它必须用户向。
 # 默认产出【草稿】，在 GitHub 上确认资产无误后再点 Publish。
+# ⚠️ 草稿**不是** Latest，而应用内更新的端点是 /releases/latest/download/latest.json；
+#    要让存量用户收到更新，必须先 Publish（口径见 changelog.md「分发改用 GitHub Releases」）。
 #
 # 在线更新（v0.3.4 起）：Windows 腿经 --config 打开 createUpdaterArtifacts，额外产出
-# YiziMarkdown_<ver>_x64-setup.exe.sig（minisign 签名，私钥来自 secrets.TAURI_SIGNING_PRIVATE_KEY）。
-# 该 .sig 与安装包一起上传火山 TOS 供 latest.json 引用；留在 GitHub Release 上无害。
+# <setup>.exe.sig。latest.json 由 scripts/make-manifest.mjs 组装，引用的是 **tag 固定 URL**
+# （releases/download/<tag>/<file>）—— 绝不能用 /releases/latest/download/<file>，
+# 否则旧版本客户端会拿到新清单、下到与自身对不上的产物。
+# 清单**最后**上传：客户端一拿到清单就会去下产物。
 # installMode 是 passive ⇒ 用户装完由 NSIS 的 /R 自动重启，前端不需要调 relaunch()。
 #
-# 使用：git tag v0.3.2 && git push origin v0.3.2
+# 应用内更新说明（notes）与 Release 正文同源，改 CHANGELOG-V<ver>.md 即可。
+# 使用：git tag v0.3.4 && git push origin v0.3.4
 
 name: Release
 
@@ -122,8 +129,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # 只有 Windows 腿真正用到（macOS 腿没有 createUpdaterArtifacts）。
-          # 私钥是无密码的，所以绝不能设 TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+          # 这里要的是**私钥内容**（base64 文本），不是路径 —— bundler 只认这个变量：
+          # 2026-10-18 实测只给 TAURI_SIGNING_PRIVATE_KEY_PATH 时，NSIS 打包成功但签名这一步报
+          # "A public key has been found, but no private key"，且产物**不带 .sig**。
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # 私钥本身没有口令，但仍要**显式给空值**：不给的话 CLI 会走交互式口令询问
+          # （本地实测卡死 180s；CI 无 TTY 同理会挂上一个不报错的等待）
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         with:
           tagName: ${{ github.ref_name }}
           releaseName: ${{ github.ref_name }}
@@ -149,3 +161,28 @@ jobs:
             .release_tmp/YiziMarkdown_*_x64-portable.zip \
             .release_tmp/YiziMarkdown_*_source.zip \
             --clobber
+
+      # 在线更新清单 latest.json：必须在**全部产物上传之后**再传 ——
+      # 客户端拿到清单就立刻去下产物，清单先到会撞上 404。
+      # 平台键给两个（windows-x86_64-nsis 与 windows-x86_64）指向同一个安装包：
+      # 插件按 {os}-{arch}-{installer} 再退到 {os}-{arch} 查找，少一个键就会「查不到更新」。
+      - name: Generate & upload updater manifest (latest.json)
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          ver="${GITHUB_REF_NAME#v}"
+          # 用 glob 取实际产物名，避免版本号里的 -beta.1 之类让拼出来的文件名对不上
+          setup=$(ls src-tauri/target/release/bundle/nsis/*-setup.exe)
+          test -f "${setup}.sig" || { echo "::error::找不到 ${setup}.sig —— 这次构建没打开 createUpdaterArtifacts"; exit 1; }
+          node --experimental-transform-types scripts/make-manifest.mjs \
+            --version "$ver" \
+            --notes "docs/changelog/CHANGELOG-V${ver}.md" \
+            --base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}" \
+            --artifact "windows-x86_64-nsis=${setup}" \
+            --artifact "windows-x86_64=${setup}" \
+            --out .release_tmp/latest.json
+          gh release upload "$GITHUB_REF_NAME" .release_tmp/latest.json --clobber
+          echo "::notice::latest.json 已上传；Release 仍是草稿，Publish 之后 /releases/latest 才会指向它"

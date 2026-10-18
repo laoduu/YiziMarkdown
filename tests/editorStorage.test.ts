@@ -11,7 +11,8 @@ import {
   META_KEY, CONTENT_PREFIX, INLINE_CONTENT_LIMIT, createEditorStorage,
   isRecoverableFromDisk, mustCacheContent, planEditorStorage, buildMetaTabs,
   onEditorStorageWarning, getLastEditorStorageWarning, resetEditorStorageWarningsForTests,
-  type ContentTab, type PersistedEditorState, type KeyValueStore,
+  resetEditorStorageWarning,
+  type ContentTab, type PersistedEditorState, type KeyValueStore, type EditorStorageWarning,
 } from '../src/lib/editorStorage.ts'
 
 beforeEach(() => {
@@ -358,4 +359,114 @@ test('内嵌正文兜底有体积上限：大段正文不倒灌进清单（否�
 
   const big = buildMetaTabs([dirty('x'.repeat(INLINE_CONTENT_LIMIT + 1))], new Map())
   assert.equal(big[0].content, null)
+})
+
+// ---------- 适配器：界面里的「清理本地缓存」（状态栏 ⚠ 点开） ----------
+// 这一组是「报警了却没有出路」那个洞的回归测试：配额满时用户必须能自己把空间要回来，
+// 而且**清完不能立刻被填回去**（否则看起来像清理没用）。
+
+test('usage: 统计整个存储（含别的应用写进来的键）的键数与字符数', () => {
+  const ls = new FakeStore()
+  const storage = createEditorStorage(() => ls)
+  storage.setItem(META_KEY, { state: stateOf([tab({ id: 'a', content: 'A' })]), version: 0 })
+  // 占用算的是整个来源：别的应用/测试残留的键同样吃掉配额，界面上的数字必须如实反映
+  ls.setItem('filler', 'x'.repeat(100))
+
+  const usage = storage.usage()
+  assert.equal(usage!.keys, 3)
+  assert.equal(usage!.chars, ls.size())
+
+  // 没有存储（Node、WebView2 禁用存储）时不报错，返回 null 由界面自己兜底
+  assert.equal(createEditorStorage(() => null).usage(), null)
+})
+
+test('dropRecoverableContent: 只清「磁盘上有副本」的正文，未保存的正文一个不动', () => {
+  const ls = new FakeStore()
+  const storage = createEditorStorage(() => ls)
+  const clean = tab({ id: 'clean', content: 'C', saveStatus: 'saved' })
+  const dirty = tab({ id: 'dirty', content: 'D', saveStatus: 'unsaved', isSaved: false })
+  storage.setItem(META_KEY, { state: stateOf([clean, dirty]), version: 0 })
+
+  const result = storage.dropRecoverableContent()
+  assert.equal(result!.removed, 1)
+  assert.ok(result!.freedChars > 0)
+
+  assert.equal(ls.getItem(CONTENT_PREFIX + 'clean'), null)
+  // 唯一副本：动了就是真丢数据
+  assert.equal(ls.getItem(CONTENT_PREFIX + 'dirty'), 'D')
+  // 清单不动：标签页列表还在，只是这一页的正文交给界面从磁盘恢复
+  const got = storage.getItem(META_KEY)
+  assert.equal(got!.state.tabs.find((t) => t.id === 'clean')!.content, null)
+  assert.equal(got!.state.tabs.find((t) => t.id === 'dirty')!.content, 'D')
+})
+
+test('dropRecoverableContent: 清单里不认识的键不动（可能是唯一副本）', () => {
+  const ls = new FakeStore()
+  const storage = createEditorStorage(() => ls)
+  storage.setItem(META_KEY, { state: stateOf([tab({ id: 'clean', content: 'C' })]), version: 0 })
+  // 清单写入失败时会留下这种「看起来像孤儿」的正文键，它可能正是一篇未保存内容的唯一副本
+  ls.setItem(CONTENT_PREFIX + 'ghost', 'G')
+
+  storage.dropRecoverableContent()
+  assert.equal(ls.getItem(CONTENT_PREFIX + 'ghost'), 'G')
+})
+
+test('dropRecoverableContent: 清理后不会把刚腾出的空间又填回去（进入降级）', () => {
+  const ls = new FakeStore()
+  const storage = createEditorStorage(() => ls)
+  const clean = tab({ id: 'clean', content: 'C', saveStatus: 'saved' })
+  storage.setItem(META_KEY, { state: stateOf([clean]), version: 0 })
+  storage.dropRecoverableContent()
+
+  // 再写一次（正文没变）。不进入降级的话，`known` 里已经没有这个键，
+  // 会被当成「正文变了」而重写 —— 用户点完清理空间一点没多出来
+  storage.setItem(META_KEY, { state: stateOf([clean]), version: 0 })
+  assert.equal(ls.getItem(CONTENT_PREFIX + 'clean'), null)
+
+  // 但「必须缓存」的正文（未保存/未命名）依旧要落盘
+  const dirty = tab({ id: 'dirty', content: 'D', saveStatus: 'unsaved', isSaved: false })
+  storage.setItem(META_KEY, { state: stateOf([clean, dirty]), version: 0 })
+  assert.equal(ls.getItem(CONTENT_PREFIX + 'dirty'), 'D')
+})
+
+test('clearAll: 清单与全部正文键一起清掉；未保存的正文会在下一次写入时重新落盘', () => {
+  const ls = new FakeStore()
+  const storage = createEditorStorage(() => ls)
+  const clean = tab({ id: 'clean', content: 'C' })
+  const dirty = tab({ id: 'dirty', content: 'D', saveStatus: 'unsaved', isSaved: false })
+  storage.setItem(META_KEY, { state: stateOf([clean, dirty]), version: 0 })
+
+  const result = storage.clearAll()
+  assert.equal(result!.removed, 3) // 两个正文键 + 清单
+  assert.equal(ls.length, 0)
+
+  // `known` 也清了 ⇒ 不能缓存的正文必须重建，否则「清空」等于把未保存内容一起丢掉
+  storage.setItem(META_KEY, { state: stateOf([clean, dirty]), version: 0 })
+  assert.equal(ls.getItem(CONTENT_PREFIX + 'dirty'), 'D')
+  assert.equal(ls.getItem(CONTENT_PREFIX + 'clean'), null)
+})
+
+test('resetEditorStorageWarning: 复位「每级只报一次」，之后写失败会重新报警', () => {
+  const ls = new FakeStore()
+  const storage = createEditorStorage(() => ls)
+  const seen: EditorStorageWarning[] = []
+  onEditorStorageWarning((w) => seen.push(w))
+
+  const meta = (content: string) => ({
+    state: stateOf([tab({ id: 'a', content, saveStatus: 'unsaved', isSaved: false })]),
+    version: 0,
+  })
+  // 只让清单写失败：正文挤得下、清单挤不下，是配额快满时真实会出现的组合
+  ls.failFor = (k) => k === META_KEY
+
+  storage.setItem(META_KEY, meta('A1'))
+  assert.equal(seen.length, 1)
+  storage.setItem(META_KEY, meta('A2'))
+  assert.equal(seen.length, 1)
+
+  resetEditorStorageWarning()
+  assert.equal(getLastEditorStorageWarning(), null)
+  storage.setItem(META_KEY, meta('A3'))
+  // 用户在界面里清理完缓存后：订阅者还在，且再撞上配额满必须重新收到提示
+  assert.equal(seen.length, 2)
 })

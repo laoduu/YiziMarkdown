@@ -77,7 +77,7 @@ if (unique.length > 1) {
   console.error(
     '\n  发版前这三处必须同步。其中：\n' +
       '    tauri.conf.json 是**在线更新比较版本**的依据（编译进 exe）\n' +
-      '    Cargo.toml     是界面「关于」里显示版本的来源（get_app_version）\n' +
+      '    Cargo.toml     是界面「版本与更新」里显示版本的来源（get_app_version）\n' +
       '  两者不一致会导致「提示有新版，更新完版本号却没变」这类问题。\n',
   )
   process.exit(1)

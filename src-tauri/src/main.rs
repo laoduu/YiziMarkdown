@@ -799,6 +799,9 @@ fn get_app_version() -> String {
 ///
 /// 判定不只看注册表有没有键，还要**当前 exe 确实跑在那个安装目录里**：同一台机器可能既装
 /// 过安装版、又跑着别处的便携版副本，只认注册表就会更新错目标。
+///
+/// **判定顺序：MSI 优先于 NSIS**（详见 `detect_windows_install_kind` 里的说明）——
+/// 「双记录」机器上两条记录指向同一目录，先判 NSIS 会让 MSI 版被装出第二份。
 #[tauri::command]
 fn get_install_kind() -> String {
     #[cfg(target_os = "windows")]
@@ -836,23 +839,14 @@ fn detect_windows_install_kind() -> String {
     };
     let exe_dir = norm_dir(&parent.to_string_lossy());
 
-    // 1) NSIS 安装版：卸载项的键名就是 productName，卸载器是 uninstall.exe
-    for hive in [HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE] {
-        let path = format!(r"{UNINSTALL}\{PRODUCT_NAME}");
-        let Ok(key) = RegKey::predef(hive).open_subkey_with_flags(&path, KEY_READ) else {
-            continue;
-        };
-        let uninstall: String = key.get_value("UninstallString").unwrap_or_default();
-        let loc: String = key.get_value("InstallLocation").unwrap_or_default();
-        if uninstall.to_lowercase().contains("uninstall.exe")
-            && !loc.is_empty()
-            && norm_dir(&loc) == exe_dir
-        {
-            return String::from("nsis");
-        }
-    }
-
-    // 2) MSI 安装版：卸载项是 GUID 键，DisplayName 才是 productName，卸载走 msiexec
+    // 1) MSI 安装版：卸载项是 GUID 键，DisplayName 才是 productName，卸载走 msiexec
+    //
+    // **必须先判 MSI，不能先判 NSIS**：同一台机器可能同时留着 NSIS 卸载项（旧版装的）与
+    // MSI 卸载项（后来用 MSI 覆盖装过），两者的 InstallLocation 都指向同一个目录 ——
+    // 谁先判谁赢。这种「双记录」机器上，目录里正在跑的副本大概率是后装的 MSI；若判成 nsis，
+    // NSIS 安装包会把它装成 `%LOCALAPPDATA%` 下的**第二份**（正是本判定存在的意义）。
+    // 反向误判（真 NSIS 被判成 msi）只是少提示一次更新、要求手动安装 —— 代价小得多。
+    // 实测：开发机上就是这种状态（HKLM 是 MSI 0.3.3，HKCU 是 NSIS 0.3.1 的遗留）。
     for hive in [HKEY_LOCAL_MACHINE, HKEY_CURRENT_USER] {
         let Ok(uninstall) = RegKey::predef(hive).open_subkey_with_flags(UNINSTALL, KEY_READ) else {
             continue;
@@ -873,6 +867,22 @@ fn detect_windows_install_kind() -> String {
             {
                 return String::from("msi");
             }
+        }
+    }
+
+    // 2) NSIS 安装版：卸载项的键名就是 productName，卸载器是 uninstall.exe
+    for hive in [HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE] {
+        let path = format!(r"{UNINSTALL}\{PRODUCT_NAME}");
+        let Ok(key) = RegKey::predef(hive).open_subkey_with_flags(&path, KEY_READ) else {
+            continue;
+        };
+        let uninstall: String = key.get_value("UninstallString").unwrap_or_default();
+        let loc: String = key.get_value("InstallLocation").unwrap_or_default();
+        if uninstall.to_lowercase().contains("uninstall.exe")
+            && !loc.is_empty()
+            && norm_dir(&loc) == exe_dir
+        {
+            return String::from("nsis");
         }
     }
 

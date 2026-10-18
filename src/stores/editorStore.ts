@@ -86,6 +86,13 @@ interface EditorState {
   setTabContent: (tabId: string, content: string) => void
 }
 
+/**
+ * 存储层实例。**必须是模块级单例**：它内部记着「磁盘上已有哪些正文键」（`known`），
+ * 界面里的「清理缓存」要在这份内存映射上同步删键，否则清完的下一次写入会以为键还在、
+ * 跳过重写，缓存里就出现「清单说在、键已不在」的假象。界面从这里 import。
+ */
+export const editorStorage = createEditorStorage()
+
 export const useEditorStore = create<EditorState>()(
   persist(
     (set, get) => ({
@@ -330,7 +337,7 @@ export const useEditorStore = create<EditorState>()(
       // 自定义存储层：正文按标签页拆键、只写正文真正变化的那一个，
       // 并在配额耗尽时按「内容的可替代性」降级。为什么不能用默认的整串 JSON 持久化，
       // 以及降级与恢复的完整约定，见 lib/editorStorage.ts 头部说明。
-      storage: createEditorStorage(),
+      storage: editorStorage,
       partialize: (state): PersistedEditorState => ({
         tabs: state.tabs.map(t => ({
           id: t.id, name: t.name, filePath: t.filePath,

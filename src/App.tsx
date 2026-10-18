@@ -15,10 +15,13 @@ import { parentPath, joinPath, baseName, canonicalRemotePath } from './lib/remot
 import { saveActiveTab, markConflictResolved, dirOf } from './lib/saveRouter'
 import Dialog from './components/Dialog'
 import { useSettingsStore } from './stores/settingsStore'
+import { useUpdateStore } from './stores/updateStore'
 import { loadKeybindings, resolveAction, getKeybindingsMap, formatKey, SHORTCUT_ACTIONS } from './lib/keybindings'
-import { useEditorStore } from './stores/editorStore'
+import { useEditorStore, editorStorage } from './stores/editorStore'
 import {
-  onEditorStorageWarning, getLastEditorStorageWarning, type EditorStorageWarning,
+  onEditorStorageWarning, getLastEditorStorageWarning, resetEditorStorageWarning,
+  WEBVIEW2_QUOTA_CHARS,
+  type EditorStorageWarning, type EditorStorageUsage, type CleanupResult,
 } from './lib/editorStorage'
 import { loadPlugin, unloadPlugin } from './plugins/registry'
 import { useI18n, translate, getCurrentLang } from './i18n'
@@ -93,6 +96,9 @@ const withTimeout = <T,>(p: Promise<T | null>, ms: number): Promise<T | null> =>
     )
   })
 
+/** 启动后多久去问一次更新：错开启动流程（恢复标签页、加载主题、插件），别抢 WebView 的启动时间 */
+const STARTUP_UPDATE_DELAY_MS = 3000
+
 function App() {
   const { t } = useI18n()
   const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, enabledPlugins, pluginConfigs, setField, aiPanelOpen, updateSettings, userThemeEnabled, userThemeName, customCssBase } = useSettingsStore()
@@ -123,6 +129,17 @@ function App() {
   const startupDone = useRef(false)
   const prevPluginsRef = useRef<string[]>([])
   const pluginsReadyRef = useRef(false)
+
+  // ===== 在线更新 =====
+  // 状态栏那一行提示的数据源；`updateBusy` 同时用于停掉自动保存（见自动保存的 effect，
+  // 它必须在这里声明：自动保存的依赖数组里要用到）
+  // 只在 `available` 时给版本号 ⇒ 用户「跳过此版本」后状态栏不再提示（那正是跳过的意思），
+  // 开始下载/安装后也收回提示，交给「版本与更新」里的卡片
+  const updateAvailableVersion = useUpdateStore((s) =>
+    s.status === 'available' ? (s.update?.version ?? null) : null
+  )
+  const updateStatus = useUpdateStore((s) => s.status)
+  const updateBusy = updateStatus === 'downloading' || updateStatus === 'installed'
 
   // 动态加载主题 CSS（含「自定义主题」= 基底主题 + user.css）。
   // 注入逻辑统一在 lib/themeLoader.ts —— 保存自定义 CSS 的路径复用同一函数；
@@ -158,6 +175,11 @@ function App() {
     if (!activeTab || !activeTab.filePath || activeTab.isSaved) return
     // 正文待恢复时禁止自动保存：内容还是占位空串，写下去就是把文件清空
     if (activePending) return
+    // 下载 / 安装更新期间不自动保存：安装器要替换磁盘上的程序文件，别和它抢时间。
+    // 正文是**每次按键**就落 localStorage 的（见 lib/editorStorage.ts），停掉自动保存不会丢内容；
+    // 手动 Ctrl+S 照常（那是明确意图，不该被拦住）。依赖里带上它 ⇒ 状态一变就清掉待执行的定时器，
+    // 也就是「安装前清掉 autoSaveTimerRef」这条要求。
+    if (updateBusy) return
     
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
     
@@ -185,7 +207,7 @@ function App() {
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
     }
-  }, [activeTab?.content, activeTab?.filePath, activeTab?.isSaved, activePending?.id])
+  }, [activeTab?.content, activeTab?.filePath, activeTab?.isSaved, activePending?.id, updateBusy])
 
   const shortcutsReadyRef = useRef(false)
 
@@ -510,6 +532,48 @@ function App() {
     if (already) show(already)
     return onEditorStorageWarning(show)
   }, [showToast])
+
+  // ===== 清理本地缓存：给「配额满」一个出口 =====
+  // 只报警不给出路等于只做了一半：普通用户没有开发者工具，撞上配额满只能干看着。
+  // reason 在打开时捕获（清理成功后状态栏提示会被撤掉，弹窗里仍要能说明来由）。
+  const [storageCleanup, setStorageCleanup] = useState<{
+    usage: EditorStorageUsage | null
+    reason: string
+    /** 本次弹窗里上一次清理的结果；null = 还没清理过 */
+    result: CleanupResult | null
+    /** 「清空全部缓存」的二次确认已按下 */
+    confirmingAll: boolean
+  } | null>(null)
+
+  const openStorageCleanup = useCallback(() => {
+    setStorageCleanup({
+      usage: editorStorage.usage(),
+      reason: storageWarning ?? '',
+      result: null,
+      confirmingAll: false,
+    })
+  }, [storageWarning])
+
+  const runStorageCleanup = useCallback((mode: 'safe' | 'all') => {
+    const result = mode === 'safe' ? editorStorage.dropRecoverableContent() : editorStorage.clearAll()
+    if (!result) return
+    // 真的腾出空间 ⇒ 撤掉状态栏那条常驻警示，并复位「每级只报一次」：
+    // 不复位的话，用户清理完再撞上配额满，反而永远收不到提示了。
+    // 一个键都没删掉时（占用来自本应用之外的数据）保留警示 —— 问题还在，提示不该消失。
+    if (mode === 'all' || result.removed > 0) {
+      resetEditorStorageWarning()
+      setStorageWarning(null)
+    }
+    setStorageCleanup((s) => (s ? { ...s, usage: editorStorage.usage(), result, confirmingAll: false } : s))
+  }, [])
+
+  // ===== 在线更新：启动后静默检查一次 =====
+  // 只在**真有新版本且没被跳过**时留下痕迹（状态栏版本号右侧那一行）；
+  // 「已是最新」与失败都不出声 —— 到「关于 → 在线更新」里才看得到原因（见 stores/updateStore.ts）。
+  useEffect(() => {
+    const timer = setTimeout(() => { void useUpdateStore.getState().checkOnStartup() }, STARTUP_UPDATE_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [])
 
   // ===== 正文未缓存的标签页：从磁盘恢复 =====
   // 只有「配额降级放弃了可省缓存」后才会出现这种情况。恢复到就绪之前编辑器不挂载，
@@ -1070,6 +1134,8 @@ function App() {
         onToggleSidebar={() => setSidebarVisible(!sidebarVisible)}
         onOpenAbout={() => { setSettingsDefaultTab('about'); setIsSettingsOpen(true) }}
         storageWarning={storageWarning}
+        onStorageWarningClick={openStorageCleanup}
+        updateVersion={updateAvailableVersion}
       />
       
       <SettingsModal 
@@ -1096,6 +1162,63 @@ function App() {
           <button onClick={handleConflictReload} className="settings-btn-secondary">
             {t('cloud.conflictReload')}
           </button>
+        </div>
+      </Dialog>
+
+      {/* 清理本地缓存：状态栏那个 ⚠ 点开。「清理已保存文件的缓存」是安全动作；
+          「清空全部缓存」会丢掉未保存内容的本地副本，所以要点两下 */}
+      <Dialog
+        open={storageCleanup !== null}
+        onClose={() => setStorageCleanup(null)}
+        title={t('app.storageCleanupTitle')}
+        width={400}
+      >
+        {storageCleanup?.reason && (
+          <p className="text-[12px] mb-2" style={{ color: 'var(--danger)' }}>{storageCleanup.reason}</p>
+        )}
+        <p className="text-[13px] text-[var(--editor-text)] mb-3">
+          {t('app.storageUsage', {
+            chars: (storageCleanup?.usage?.chars ?? 0).toLocaleString(),
+            limit: WEBVIEW2_QUOTA_CHARS.toLocaleString(),
+          })}
+        </p>
+        <div className="flex flex-col gap-1.5">
+          <button onClick={() => runStorageCleanup('safe')} className="settings-btn-primary">
+            {t('app.storageCleanupSafe')}
+          </button>
+          <p className="text-[11px] text-[var(--sidebar-text)]">{t('app.storageCleanupSafeHint')}</p>
+
+          {!storageCleanup?.confirmingAll ? (
+            <button
+              onClick={() => setStorageCleanup(s => (s ? { ...s, confirmingAll: true } : s))}
+              className="settings-btn-secondary mt-2"
+            >
+              {t('app.storageCleanupAll')}
+            </button>
+          ) : (
+            <div className="mt-2 flex flex-col gap-1.5">
+              <p className="text-[11px]" style={{ color: 'var(--danger)' }}>{t('app.storageCleanupAllHint')}</p>
+              <div className="flex gap-2">
+                <button onClick={() => runStorageCleanup('all')} className="settings-btn-primary">
+                  {t('common.confirm')}
+                </button>
+                <button
+                  onClick={() => setStorageCleanup(s => (s ? { ...s, confirmingAll: false } : s))}
+                  className="settings-btn-secondary"
+                >
+                  {t('common.cancel')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {storageCleanup?.result && (
+            <p className="mt-2 text-[11px] text-[var(--sidebar-text)]">
+              {storageCleanup.result.removed === 0
+                ? t('app.storageCleanupNothing')
+                : t('app.storageCleanupDone', { chars: storageCleanup.result.freedChars.toLocaleString() })}
+            </p>
+          )}
         </div>
       </Dialog>
 

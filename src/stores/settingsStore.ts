@@ -113,6 +113,13 @@ export interface SettingsState {
    *  直到用户主动展开时清除 —— 此后回到按窗口宽窄的自动策略（见 components/Toolbar.tsx） */
   formatManuallyCollapsed: boolean
 
+  // 在线更新（v0.3.4）
+  /** 启动后自动检查更新（默认开启）。关掉后仍可在「版本与更新」里手动检查一次 */
+  autoCheckUpdate: boolean
+  /** 用户点过「跳过此版本」的版本号（空串 = 没跳过）。只按版本号**相等**比对：
+   *  跳过 0.3.5 不影响 0.3.6 的提示；清单版本相同也不会反复打扰 */
+  skippedUpdateVersion: string
+
   // AI 面板运行时状态（不持久化）
   /** AI 面板是否打开 */
   aiPanelOpen: boolean
@@ -201,6 +208,10 @@ export const useSettingsStore = create<SettingsState>()(
       // 工具栏（v0.3.4）：格式工具栏手动收折（false = 跟随窗口宽窄自动策略）
       formatManuallyCollapsed: false,
 
+      // 在线更新（v0.3.4）：默认自动检查；没跳过任何版本
+      autoCheckUpdate: true,
+      skippedUpdateVersion: '',
+
       // AI 面板运行时状态
       aiPanelOpen: false,
       aiPendingAction: null,
@@ -221,7 +232,8 @@ export const useSettingsStore = create<SettingsState>()(
       // v9: 新增 webdavSaveLastDir —— 云端保存对话框记住上次成功保存的目录
       // v10: 格式工具栏「手动收折」持久化 —— 新增 formatManuallyCollapsed
       // v11: 演示模式分栏 —— 新增 slideColAlign / slideColStyle
-      version: 11,
+      // v12: 在线更新 —— 新增 autoCheckUpdate（默认开）/ skippedUpdateVersion（默认空）
+      version: 12,
       migrate: (persisted: unknown) => {
         // 自动迁移旧字体栈到 MiSans 方案
         const oldFont = "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
@@ -270,6 +282,10 @@ export const useSettingsStore = create<SettingsState>()(
           // 枚举只认合法值：手改 localStorage 写入非法值会让 HUD 分段按钮全灭、CSS 也落不到规则上。
           if (!isSlideColAlign(state.slideColAlign)) state.slideColAlign = DEFAULT_SLIDE_COL_ALIGN
           if (!isSlideColStyle(state.slideColStyle)) state.slideColStyle = DEFAULT_SLIDE_COL_STYLE
+          // v12：在线更新的两个开关。存量存档没有它们 ⇒ 补默认值。
+          // 跳过版本只认字符串（手改 localStorage 写入数字会让比较永远不相等、等于没跳过）
+          if (typeof state.autoCheckUpdate !== 'boolean') state.autoCheckUpdate = true
+          if (typeof state.skippedUpdateVersion !== 'string') state.skippedUpdateVersion = ''
         }
         return state
       },
