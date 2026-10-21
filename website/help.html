@@ -91,7 +91,7 @@
                     <table>
                         <thead><tr><th>形式</th><th>适用</th><th>说明</th></tr></thead>
                         <tbody>
-                            <tr><td>Windows 安装版</td><td>长期使用的主力机</td><td>标准安装向导，自动创建快捷方式与文件关联；<strong>支持应用内一键更新</strong>（v0.3.4 起）</td></tr>
+                            <tr><td>Windows 安装版</td><td>长期使用的主力机</td><td>标准安装向导，自动创建快捷方式与文件关联；<strong>支持应用内一键更新</strong>（从 v0.3.5 起生效）</td></tr>
                             <tr><td>Windows 便携版</td><td>U 盘 / 临时电脑</td><td><strong>解压即用</strong>，配置与文档随目录带走，不留注册表</td></tr>
                             <tr><td>macOS 通用版</td><td>Intel / Apple Silicon</td><td>Universal Binary 原生运行，无需 Rosetta</td></tr>
                         </tbody>
@@ -899,7 +899,7 @@
                     <li>检查是安静的：<strong>已是最新、或检查失败都不会弹窗打扰</strong>，只有真的有新版时才会出现那行提示</li>
                     <li>更新前<strong>不需要先保存</strong>：编辑内容是边打字边存的，重启后会自动恢复全部标签页（只有本地缓存写满时才会提醒你先按 <kbd>Ctrl</kbd>+<kbd>S</kbd>）</li>
                     <li>仅支持 <strong>Windows 安装版</strong>（NSIS）；便携版与 macOS 请手动下载新版本（Windows 不再提供 MSI）</li>
-                    <li>v0.3.4 是第一个带在线更新的版本，因此一键更新从下一个版本起生效</li>
+                    <li>v0.3.4 及更早版本需要手动安装这一次；从 v0.3.5 起，之后的新版本都能在应用内直接更新</li>
                 </ul>
                 <div class="callout callout-tip">
                     <span class="callout-icon">i</span>
@@ -1014,7 +1014,7 @@
 
             <div class="help-sub" id="faq-update">
                 <h3>为什么我没看到「有新版本」提示？</h3>
-                <p>常见三种原因：① <strong>当前已是最新版本</strong>（「已是最新」与检查失败都不会打扰你）；② 已关闭「启动时自动检查更新」，可在「设置 → 版本与更新」手动检查一次；③ <strong>自动更新仅支持 Windows 安装版</strong>，便携版与 macOS 需手动下载新版本。另注：v0.3.4 是第一个带在线更新的版本，一键更新从下一个版本起生效。</p>
+                <p>常见三种原因：① <strong>当前已是最新版本</strong>（「已是最新」与检查失败都不会打扰你）；② 已关闭「启动时自动检查更新」，可在「设置 → 版本与更新」手动检查一次；③ <strong>自动更新仅支持 Windows 安装版</strong>，便携版与 macOS 需手动下载新版本。另注：v0.3.4 及更早版本需手动安装一次；从 v0.3.5 起可在应用内直接更新。</p>
             </div>
 
             <div class="help-sub" id="faq-cache">

@@ -46,7 +46,7 @@
         "license": "https://github.com/laoduu/YiziMarkdown/blob/main/LICENSE",
         "programmingLanguage": ["TypeScript", "Rust"],
         "screenshot": "https://md.yizigpt.com/assets/index.webp",
-        "version": "0.3.4",
+        "version": "0.3.5",
         "author": {
             "@type": "Organization",
             "name": "YiziPaper",
@@ -74,19 +74,19 @@
 <!-- Hero -->
 <section class="hero">
     <div class="hero-content">
-        <div class="hero-badge"><span class="dot"></span> V0.3.4 · 在线更新 · 脚注引用 · 演示分栏</div>
+        <div class="hero-badge"><span class="dot"></span> V0.3.5 · 导出全面对齐 · 公式可编辑 · 正文拖宽</div>
         <h1>既<span style="color: var(--orange);">好看</span>，又<span class="highlight">彪悍</span></h1>
         <p class="hero-sub">一款 AI 加持的跨平台 Markdown 编辑器<br><span class="nowrap">内置大模型助手与类 PPT 演示模式，写作、提炼、汇报一站搞定</span></p>
         <div class="hero-actions">
-            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.3.4/YiziMarkdown_0.3.4_x64-setup.exe" target="_blank" class="btn-primary">
+            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.3.5/YiziMarkdown_0.3.5_x64-setup.exe" target="_blank" class="btn-primary">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.55 10.5 4.5v6.8H3V5.55zm0 12.9 7.5-1.05v-6.3H3v7.35zM11.5 4.3 21 3v8.3h-9.5V4.3zm0 15.4 9.5-1.3V12.7h-9.5v7z"/></svg>
                 Windows 版下载
             </a>
-            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.3.4/YiziMarkdown_0.3.4_universal.dmg" target="_blank" class="btn-secondary">
+            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.3.5/YiziMarkdown_0.3.5_universal.dmg" target="_blank" class="btn-secondary">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 12.54c-.03-3.04 2.48-4.5 2.6-4.57-1.42-2.07-3.62-2.36-4.4-2.39-1.88-.19-3.66 1.1-4.62 1.1-.95 0-2.43-1.08-4-1.05-2.05.03-3.95 1.2-5 3.04-2.14 3.7-.55 9.17 1.53 12.18 1.02 1.46 2.23 3.1 3.83 3.04 1.53-.06 2.11-.99 3.96-.99 1.85 0 2.37.99 4 .96 1.65-.03 2.7-1.49 3.71-2.95 1.17-1.71 1.65-3.37 1.68-3.45-.04-.02-3.22-1.24-3.29-4.92zM14.4 4.2c.85-1.03 1.42-2.46 1.26-3.89-1.22.05-2.7.81-3.58 1.84-.79.91-1.47 2.36-1.29 3.76 1.36.1 2.76-.69 3.61-1.71z"/></svg>
                 macOS 版下载
             </a>
-            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.3.4/YiziMarkdown_0.3.4_x64-portable.zip" target="_blank" class="btn-secondary">
+            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.3.5/YiziMarkdown_0.3.5_x64-portable.zip" target="_blank" class="btn-secondary">
                 <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 7l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                 便携版（解压即用）
             </a>
@@ -335,7 +335,8 @@
     </div>
     <div class="changelog-container">
         <div class="changelog-tabs" id="changelogTabs">
-            <button class="changelog-tab active" data-version="0.3.4">v0.3.4</button>
+            <button class="changelog-tab active" data-version="0.3.5">v0.3.5</button>
+            <button class="changelog-tab" data-version="0.3.4">v0.3.4</button>
             <button class="changelog-tab" data-version="0.3.3">v0.3.3</button>
             <button class="changelog-tab" data-version="0.3.2">v0.3.2</button>
             <button class="changelog-tab" data-version="0.3.1">v0.3.1</button>
@@ -353,12 +354,35 @@
             <button class="changelog-tab" data-version="0.1.3">v0.1.3</button>
         </div>
         <div class="changelog-content" id="changelogContent">
-            <div class="changelog-panel active" data-version="0.3.4">
+            <div class="changelog-panel active" data-version="0.3.5">
+                <div class="changelog-card">
+                    <div class="changelog-card-head">
+                        <div class="changelog-head-left">
+                            <span class="changelog-version">v0.3.5</span>
+                            <span class="changelog-badge">最新</span>
+                        </div>
+                        <span class="changelog-date">2026.10.21</span>
+                    </div>
+                    <div class="changelog-divider"></div>
+                    <ul class="changelog-list">
+                        <li><span class="changelog-tag new">新增</span><strong>公式导出为 Word 原生公式</strong>：行内与块级公式导出后可在 Word / WPS 里点进去编辑（分式、根式、上下标、求和积分、矩阵、cases 等），不再是一张图或一段源码；实在转不出的写法退回源码，<strong>不会变成空白</strong></li>
+                        <li><span class="changelog-tag new">新增</span><strong>SVG 图片导出为矢量</strong>：放大不糊；旧版 Word / LibreOffice 自动使用内嵌位图，不会整张空白</li>
+                        <li><span class="changelog-tag new">新增</span><strong>正文列宽度可拖拽</strong>：鼠标移到正文左右边缘出现一条短竖线，按住左右拖即可调宽，<strong>源码 / 实时 / 预览共用一个宽度</strong>，双击恢复默认 900px</li>
+                        <li><span class="changelog-tag improve">优化</span><strong>导出 Word 跟随预览排版</strong>：字号、行高、段落与列表间距、标题比例都按设置里的「预览字号 / 预览行高」换算；暗色主题导出为<strong>白底可读</strong>配色，强调色保留原色相</li>
+                        <li><span class="changelog-tag improve">优化</span><strong>导出 Word 的代码块有语法高亮</strong>，颜色与预览逐 token 一致，换主题或改自定义 CSS 也跟着变</li>
+                        <li><span class="changelog-tag improve">优化</span><strong>导出 PDF 与预览一致</strong>：字体、字号、行高跟随预览设置；<strong>纸面统一白纸</strong> —— 不铺主题背景，也不印「卡片式」主题的页面边框与投影，暗色主题按亮色配色导出；A4 / 18mm、无页眉页脚，代码块长行折行、长表格每页重复表头、公式字体随文档内嵌</li>
+                        <li><span class="changelog-tag improve">优化</span><strong>列宽手柄更安静</strong>：拖动时只显示正在拖的那一侧，悬浮时在竖线外侧提示「按住拖动调整宽度」，窗口太窄自动翻到内侧；另外，<strong>从 0.3.5 起可以在应用内直接一键更新</strong>（0.3.4 及更早需手动安装这一次）</li>
+                        <li><span class="changelog-tag fix">修复</span><strong>导出 Word 会丢内容</strong>：公式、脚注、开头 <code>---</code> 之间的元信息、分隔线、工具条插入的上下标与高亮、行内换行，以及 WebP / 没有扩展名 / 扩展名写错的图片</li>
+                        <li><span class="changelog-tag fix">修复</span><strong>导出 Word 的换行全部失效</strong>（代码块的多行被挤成一行）、<strong>列表编号错乱</strong>（第二个有序列表接着上一个继续数、嵌套变成 <code>1.1.</code> 多级编号、任务列表出现双标记）、<strong>无序列表项目符号是方框且层级越深越大</strong></li>
+                        <li><span class="changelog-tag fix">修复</span>导出 Word 的<strong>引用块</strong>被打断且左边框不连续、<strong>脚注</strong>引用消失且字号参差不齐、<strong>表格</strong>没有列宽网格；预览里的任务项内容重复出现两遍；导出不再悄悄替换标点，<code>[[双链]]</code> 按原文显示</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="changelog-panel" data-version="0.3.4">
                 <div class="changelog-card">
                     <div class="changelog-card-head">
                         <div class="changelog-head-left">
                             <span class="changelog-version">v0.3.4</span>
-                            <span class="changelog-badge">最新</span>
                         </div>
                         <span class="changelog-date">2026.10.18</span>
                     </div>
@@ -738,7 +762,7 @@
         <p>免费、开源、便携。下载解压，即刻开始你的 Markdown 写作之旅。</p>
         <a href="https://github.com/laoduu/YiziMarkdown/releases" target="_blank" class="btn-cta">
             <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 7l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            立即下载 v0.3.4
+            立即下载 v0.3.5
         </a>
     </div>
 </section>

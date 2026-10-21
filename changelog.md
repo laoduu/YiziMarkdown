@@ -273,6 +273,68 @@ cargo test write_bullet_probe -- --ignored --nocapture
 - **并排模式不显示手柄**：两列各有各的居中列，一个相对整行的手柄对不齐两处
 - 导出 / 打印不受影响：导出走独立构建的 HTML，本来就在 `extraCss` 里写 `max-width: none !important`
 
+### 正文列宽度手柄：只显示被拖一侧 + 悬浮提示（2026-10-21）
+
+**需求**（用户提出，三条）：① 拖动某一侧时**另一侧的竖线不能露出来**；② 悬浮到边缘、竖线出现时给出「按住拖动调整宽度」的提示；③ 提示放在竖线**外侧**。
+
+**改法**（`src/components/ContentWidthHandles.tsx`）：
+
+1. **只显示被拖一侧**：此前两侧的竖线都由同一个「指针在附近」状态驱动，一按下去两条线一起亮。现在多一个 `dragSide: 'left' | 'right' | null` —— `pointerdown` 记下被抓的是哪一侧，拖动期间只有那一侧渲染竖线与提示，`pointerup/pointercancel` 清空
+2. **提示文案进 i18n**：新增 `editor.widthHandleHint`（15 个语言词典），`npm run build` 里的 `check-i18n --strict` 通过（623 个键）
+3. **提示放外侧、放不下时翻到内侧**：提示绝对定位在竖线的外侧。编辑器容器是 `overflow: hidden`，窗口窄时外侧可能只剩几十像素，直接定位会被裁成半截 —— 所以渲染后用 `offsetWidth` **实测**提示宽度，外侧空间 < 提示宽度 + 24px 就翻到内侧（`is-flipped`），两侧都不会被裁
+
+**验证**：`npx tsc --noEmit` 无输出；`npm test` → **267 passed**（新增 `tests/exportHtml.test.ts` 13 条，见下节）；`npm run build` 通过；悬浮截图确认右侧手柄的提示在竖线外侧、文字不截断。
+
+### 导出 PDF：对齐预览的排版，纸面统一白纸（2026-10-21）
+
+**需求**（用户提出，分三轮追加）：这一版主线是「导出文档的格式还原」，Word 差不多了，**PDF 还没适配** —— ① PDF 必须按预览设定的**字体与字号**排版；② 逐项检查各种 Markdown 格式能否还原。③ 第一轮要求「按明暗色区分，暗色主题导出继承暗色」；实机看过导出结果后改为：**PDF 背景不好看，不要背景了** —— 亮色主题也不铺主题底色，**暗色主题同样按亮色纸面导出**；但**字体、字号、公式、图表、有序/无序列表、代码块等排版还原仍按新方案**。④ 再追加：主题在预览里有**页面背景与页面边框**的（液态玻璃 Prism、Facebook 这类「卡片式」正文），导出 PDF 时**统一去掉背景和页面边框**。
+
+**最终效果**：PDF = **白纸 + 版心**。字体/字号/行高/列宽跟随设置里的「预览字体 / 预览字号 / 预览行高」，公式、列表、代码块、表格、脚注、图片照预览还原；暗色主题按主题自己的亮色配色导出（深色字、强调色保留色相），没有深色纸面、也没有卡片外框。
+
+**五个根因**（第 1/2/3/5 条在前端或构建期，第 4 条在 Rust 侧）：
+
+1. **预览排版带不走**。预览的字体 / 字号 / 行高 / 列宽是**内联**在 `.editor-content` 元素上的（`style={{fontFamily: 'var(--font-preview)', …}}`），而导出只取了 `contentEl.innerHTML` —— 内联样式不在 `innerHTML` 里。于是导出的 PDF 与 HTML 一律回落到主题 CSS 的默认字体字号，设置面板里的「预览字号」完全不起作用
+2. **设置变量也带不走**。`App.tsx` 把 `--font-preview` / `--preview-font-size` / `--preview-line-height` / `--content-max-width` 写在 **`<html>` 的内联 style** 上（`document.documentElement.style.setProperty`）。导出 HTML 里没有这些变量，上面第 1 条就算搬了内联样式，`var(--preview-font-size)` 也解析不出值
+3. **纸面背景两头都不对**。`extraCss` 里原本写死 `body{background:#fff}` —— 浅色主题没问题，暗色主题就变成「白底 + 亮色正文」，几乎不可读；而把背景交还给主题（第一轮的做法）又变成整页深色，纸面上并不好看。根子在于「主题暗色变量」和「白纸」本来就不兼容：要么铺满暗底，要么白底配亮字。最终方案不是换色，而是**打印时不带 `dark` 类**，让主题自己落到亮色配色上（见「改法」），同一份 CSS 既给出深色字、又给出亮色系的局部底色
+4. **WebView2 `PrintToPdf` 的默认参数与预览不符**：Letter 纸张、**不打印背景色**、带页眉页脚（URL/日期）。不印背景会让代码块/表头/引用这些**局部底色**全部消失（暗色主题下这些底色原本就是深色，去掉后连文字都可能看不清）
+5. **KaTeX 字体在导出窗口里 404**。`katex.min.css?inline` 里的字体是相对路径（`./KaTeX_*.woff2`），导出窗口走自定义协议 `yiziexport://`、独立 HTML 文件旁边也没有 `assets/` —— 公式退化成回退字体（分数线、根号、字距全走样）
+
+**改法**：
+
+- **组装逻辑抽成纯函数** `src/lib/exportHtml.ts`（`buildExportHtml`），`App.tsx` 只负责把「预览现场」读出来：正文 `innerHTML` + 正文元素的 `class`/内联 `style` + `<html>` 的内联 style + 主题/用户/KaTeX/基础 CSS + 大纲条目。好处是可单元测试（见 `tests/exportHtml.test.ts`），这类「漏搬一个输入」的缺陷在 UI 上看不出来
+- **属性值转义**：内联样式里可能带引号（`--font-preview: MiSans, "Microsoft YaHei"`），拼进 `style="…"` 必须转 `&quot;`，否则属性被截断
+- **打印样式**（`PRINT_CSS`）：
+  - **纸面一律白底**：`html,body{background:#fff!important}`，撤掉主题底色铺满纸面的规则（第一轮曾用 `html{background-color:var(--editor-bg)}` 让整张纸跟主题，实测暗色 PDF 是一整页深色，用户否决）
+  - **页面背景与页面边框统一去掉**：有些主题（液态玻璃 Prism、Facebook）把 `.editor-content` 做成卡片 —— 渐变底 + 圆角 + `box-shadow` 描边/投影。打印时对容器 `background:none` / `border:none` / `box-shadow:none` / `outline:none` / `border-radius:0`（均 `!important`，压过主题的 `.editor-content.theme-x` 特异性），纸上只剩版心文字；**局部**元素（代码块、表头、引用）不动。全量扫过 16 个内置主题，只有这两个给正文容器加了页面级背景/边框，但这条规则对**自定义主题**一样生效
+  - **打印不带 `dark` 类**：`buildExportHtml` 在 `print` 时把 `themeClass` 算成 `theme-x`（去掉 `dark`）。主题文件里亮色变量是 `:root.theme-x`、暗色是 `:root.theme-x.dark`，去掉 `dark` 就**自动落到该主题自己的亮色配色**，不需要另做一套「白底等效色」换算 —— 暗色主题导出的 PDF 因此是白纸 + 深色字，代码块/表头的局部底色也是亮色系。独立 HTML 导出仍按预览带 `dark`
+  - `@page{size:A4;margin:18mm}`；`print-color-adjust:exact` 保证**局部**底色（代码块、表头、引用）照实印出来
+  - `.code-block-actions/.code-block-lang` 等预览悬浮控件 `display:none`（编辑辅助，不该上纸）
+  - 代码块 `white-space: pre-wrap` + `overflow: visible`：纸上没有横向滚动条，不折行就会被**裁掉右半截**
+  - 分页保护：标题 `break-after: avoid`，`pre/table/blockquote/figure/img/.katex-display` `break-inside: avoid`，`thead{display:table-header-group}`（长表格每页重复表头），`orphans/widows: 3`
+- **Rust `PrintSettings`**（`src-tauri/src/pdf_export.rs`）：`ICoreWebView2_2::Environment()` → `ICoreWebView2Environment6::CreatePrintSettings()`，然后 `SetShouldPrintBackgrounds(true)` / `SetShouldPrintHeaderAndFooter(false)` / A4（210×297mm，单位英寸）/ 四边 18mm / `SetScaleFactor(1.0)`。纸张与页边距与 CSS `@page` 取同一组数值，谁生效都不会出现两套版心
+- **KaTeX 字体构建期内联**（`vite.config.ts` 新增 `inlineKatexFonts()`）：只处理 `?inline` 的那份 CSS，把 `url(…woff2)` 换成 `data:font/woff2;base64,…`（20 个字体共 254 KB，woff/ttf 是给老浏览器的回退，不搬）。应用自身的 KaTeX 样式不受影响
+
+**验证**：
+
+- `npm run build` 通过，日志 `[inline-katex-fonts] 20 个 woff2 已内联`；产物 `dist/assets/index-*.js` 里 20 处 `data:font/woff2;base64,`
+- Rust 重新编译通过（`Finished dev profile`），tauri dev 自动重启
+- `npm test` → **267 passed**（新增 13 条导出断言：`<html>` 变量与正文内联样式落位、引号转义、打印强制白底、打印去掉 `dark` 类、页面背景/边框清零、`@page` A4/18mm、分页规则、悬浮控件隐藏、PDF 不出大纲、HTML 导出带大纲）
+- **无头 Edge 打印实测**（同一份 `buildExportHtml` 输出 + 真实主题 CSS + 真实 markdown 渲染，`docx-export-test.md` 全量用例），三轮都测了：
+  - 页面 `595 × 842 pt` = **A4**；浅色 / 暗色各 14 页（卡片式主题 17 页）
+  - 第一轮：暗色主题**整页深色**、亮色正文（技术上成立，但用户认为纸面上不好看 → 否决）
+  - 第二轮：**暗色主题导出与浅色一样是白纸**，正文为深色字、标题强调色保留原色相，代码块/表头/引用的局部底色为亮色系（`print-color-adjust:exact` 生效）；字体、字号、行高与传进去的预览设置一致
+  - 第三轮补测 **液态玻璃 Prism / Facebook**（浅色 + 暗色四份）：页面纯白、正文**不再有卡片底色/描边/投影**，只剩文字；液态玻璃的渐变标题（`background-clip:text`）仍正常显示，块引用/代码块等**局部**样式保留
+  - KaTeX 公式正常（积分号、分式、上下标、`f(x)=…` 多行对齐），字体已内联
+  - 表格跨页时表头重复；代码块长行折行不裁切；任务列表勾选框、脚注区、引用块、行内代码/上下标/高亮、远程图片均正常
+  - 浅色主题与暗色主题的排版一致，只换配色
+
+**已知边界**：
+
+- **代码块不折行的长行会被折行**（预览可以横向滚动）：纸面没有滚动条，折行是唯一不丢内容的选择 —— 这一点与预览「长行可横向滚动」不同，属于必然差异
+- **相对路径图片**依赖预览已经把 `src` 换成 data URL（`Editor.tsx` 的本地图片解析 effect）。导出瞬间预览还没渲染完（150 ms 防抖）或图片解析失败时，PDF 里会是断图 —— 与 Word 导出同一套限制
+- **mermaid 等插件内容**由插件在预览 DOM 里渲染成 SVG 后随 `innerHTML` 带出（本轮未单独做图形级验收）
+- **自定义主题要按「亮/暗两套变量」的约定写**：PDF 去 `dark` 类后直接使用 `:root.theme-x` 那一套，所以深色配色必须写在 `.dark` 块里；如果把深色配色直接写在 `:root.theme-x`（没有 `.dark` 变体），白纸上就会印出原本给深色屏幕配的浅色字 —— 这与 Word 导出不同（Word 会做「白底等效色」换算，PDF 不做，只做 `dark` 有无）
+
 ## v0.3.4
 
 > 本节为**未开发完成的备忘**，仅记录待办，发布前需整理成正式版本说明。
