@@ -22,7 +22,7 @@
     <link rel="icon" type="image/png" href="assets/icon.png">
     <link rel="shortcut icon" href="assets/favicon.ico">
     <link rel="stylesheet" href="assets/css/style.css">
-    <link rel="stylesheet" href="assets/css/help.css?v=2">
+    <link rel="stylesheet" href="assets/css/help.css?v=3">
 
     <script type="application/ld+json">
     {
@@ -46,10 +46,11 @@
     })();
     </script>
 </head>
-<body>
+<body class="has-docs-tabs">
 
 <!-- 共用导航（由 site-chrome.js 渲染，与首页完全一致） -->
 <div id="site-nav"></div>
+<div id="docs-tabs"></div>
 <noscript>
     <div style="padding: 88px 20px 0; text-align: center; font-size: 14px; color: #64748b;">
         导航需要 JavaScript。请直接访问 <a href="index.html" style="color: #002FA7;">YiziMarkdown 首页</a>。
@@ -609,6 +610,10 @@
                     <span class="callout-icon">i</span>
                     <p>用户目录 <code>~/Documents/yizimarkdown/templates/Slide-Template-new.md</code> 是一份演示模式完全指南（34 页，覆盖全部自动版式、分栏、指令与备注），每页末尾都标出了触发该版式的结构。打开后按 <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd> 即可体验。</p>
                 </div>
+                <div class="callout callout-new">
+                    <span class="callout-icon">→</span>
+                    <p>想要逐条对照？<a href="slideshow-syntax.html">演示模式语法</a>按「Markdown 写法 → 自动版式」列出了分页、分栏、显式指令、逐步显示、切换动画与演讲者备注的完整规则。</p>
+                </div>
             </div>
         </section>
 
@@ -735,6 +740,10 @@
                     </table>
                 </div>
                 <p>内置技能也会同步到该目录，可以基于内置技能修改提示词来创建自己的版本。首次启动新版本时自动同步。</p>
+                <div class="callout callout-new">
+                    <span class="callout-icon">→</span>
+                    <p>要写自己的技能？<a href="skill-spec.html">技能（Skill）规范</a>完整说明了 <code>skills.json</code> 的字段与逗号规则、提示词编写技巧，以及更新时哪些文件会被覆盖。</p>
+                </div>
             </div>
         </section>
 
@@ -856,6 +865,10 @@
                     <li>在程序目录 <code>themes/</code> 放入 <code>.css</code> 文件，并在 <code>themes/theme.json</code> 中登记主题参数，<strong>重启后自动识别</strong>。CSS 需用 <code>.editor-content</code> 前缀限定范围，避免影响设置面板</li>
                     <li>想给主题换一套气质，推荐先看 <code>docs/THEME-DESIGN-SPEC.md</code>（v0.3.3 新增，14 章 + 2 附录）：令牌分层总览、每类令牌的设计指引、明暗双模式规范、check-themes 门禁与新增主题检查清单，附录还标出每个令牌是「已接入」还是「已声明待接入」</li>
                 </ul>
+                <div class="callout callout-new">
+                    <span class="callout-icon">→</span>
+                    <p>规范已上线：<a href="theme-spec.html">主题设计规范</a>（在线版，与安装包内 <code>docs/THEME-DESIGN-SPEC.md</code> 同源），含令牌总表、明暗双模式、门禁检查与从零写一个主题的完整示例。</p>
+                </div>
             </div>
         </section>
 

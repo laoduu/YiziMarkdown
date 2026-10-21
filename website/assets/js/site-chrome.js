@@ -11,7 +11,15 @@
     var HOME = 'index.html';
     var HELP = 'help.html';
 
-    // 首页锚点区块；help.html 上会自动补 index.html 前缀
+    // 文档频道（二级标签栏）：顶部导航只保留一个入口，频道内横向扩展
+    var DOC_TABS = [
+        { label: '帮助中心', page: HELP },
+        { label: '演示语法', page: 'slideshow-syntax.html' },
+        { label: '主题规范', page: 'theme-spec.html' },
+        { label: '技能规范', page: 'skill-spec.html' }
+    ];
+
+    // 首页锚点区块；文档页上会自动补 index.html 前缀
     var LINKS = [
         { label: '首页', page: HOME },
         { label: '功能', hash: 'features' },
@@ -24,18 +32,20 @@
         { label: '帮助中心', page: HELP }
     ];
 
-    var href = location.href.split('#')[0];
-    var isHelp = /help\.html$/.test(href) || /\/help\/?$/.test(location.pathname);
+    var currentPage = location.pathname.split('/').pop().toLowerCase() || HOME;
+    if (/\/help\/?$/.test(location.pathname)) currentPage = HELP;
+    var isDocsPage = DOC_TABS.some(function (t) { return t.page === currentPage; }) ||
+        /\/help\/?$/.test(location.pathname);
 
     function resolve(link) {
         if (link.page) return link.page;
-        return isHelp ? HOME + '#' + link.hash : '#' + link.hash;
+        return isDocsPage ? HOME + '#' + link.hash : '#' + link.hash;
     }
 
     function buildNav() {
         var items = LINKS.map(function (link) {
             var url = resolve(link);
-            var active = link.page && isHelp;
+            var active = link.page === HELP && isDocsPage;
             return '<a href="' + url + '"' +
                 (active ? ' class="active" aria-current="page"' : '') +
                 '>' + link.label + '</a>';
@@ -60,12 +70,28 @@
             '</nav>';
     }
 
+    function buildDocTabs() {
+        var items = DOC_TABS.map(function (tab) {
+            var active = tab.page === currentPage;
+            return '<a href="' + tab.page + '"' +
+                (active ? ' class="active" aria-current="page"' : '') +
+                '>' + tab.label + '</a>';
+        }).join('');
+        return '' +
+            '<nav class="docs-tabs" aria-label="文档导航">' +
+                '<div class="docs-tabs-inner">' + items + '</div>' +
+            '</nav>';
+    }
+
     function buildFooter() {
         return '' +
             '<footer class="footer">' +
                 '<p>&copy; 2026 YiziMarkdown &middot; ' +
                     '<a href="https://github.com/laoduu/YiziMarkdown/blob/main/LICENSE" target="_blank">MIT License</a> &middot; ' +
                     '<a href="' + HELP + '">帮助中心</a> &middot; ' +
+                    '<a href="slideshow-syntax.html">演示语法</a> &middot; ' +
+                    '<a href="theme-spec.html">主题规范</a> &middot; ' +
+                    '<a href="skill-spec.html">技能规范</a> &middot; ' +
                     'Built with Tauri + React + CodeMirror 6' +
                 '</p>' +
                 '<p style="margin-top: 6px; font-size: 12px; color: #94a3b8;">渝ICP备2023007919号-1</p>' +
@@ -73,8 +99,10 @@
     }
 
     var navSlot = document.getElementById('site-nav');
+    var tabsSlot = document.getElementById('docs-tabs');
     var footerSlot = document.getElementById('site-footer');
     if (navSlot) navSlot.outerHTML = buildNav();
+    if (tabsSlot) tabsSlot.outerHTML = buildDocTabs();
     if (footerSlot) footerSlot.outerHTML = buildFooter();
 
     // 导航滚动态

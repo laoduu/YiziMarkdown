@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>技能（Skill）规范 - YiziMarkdown 文档</title>
+    <meta name="description" content="YiziMarkdown 技能（Skill）规范：skills.json 字段与逗号规则、提示词编写技巧、自定义技能创建步骤、存储位置与版本更新覆盖机制，以及修改后不生效等常见问题。">
+    <meta name="keywords" content="YiziMarkdown,Skill,技能,自定义技能,skills.json,提示词,AI助手">
+    <meta name="author" content="YiziPaper">
+    <meta name="robots" content="index, follow">
+    <meta name="docs-src" content="src-tauri/skill-guide.md">
+    <meta name="docs-hash" content="6d23da0504704034ed20be5609c69a25d0271599879778d403bf6164c787b934">
+    <link rel="canonical" href="https://md.yizigpt.com/skill-spec.html">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="技能（Skill）规范 - YiziMarkdown 文档">
+    <meta property="og:description" content="YiziMarkdown 技能（Skill）规范：skills.json 字段与逗号规则、提示词编写技巧、自定义技能创建步骤、存储位置与版本更新覆盖机制，以及修改后不生效等常见问题。">
+    <meta property="og:url" content="https://md.yizigpt.com/skill-spec.html">
+    <meta property="og:site_name" content="YiziMarkdown">
+    <meta property="og:locale" content="zh_CN">
+    <meta property="og:image" content="https://md.yizigpt.com/assets/index.webp">
+
+    <link rel="icon" type="image/png" href="assets/icon.png">
+    <link rel="shortcut icon" href="assets/favicon.ico">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/help.css?v=3">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "首页", "item": "https://md.yizigpt.com/" },
+            { "@type": "ListItem", "position": 2, "name": "文档", "item": "https://md.yizigpt.com/help.html" },
+            { "@type": "ListItem", "position": 3, "name": "技能（Skill）规范", "item": "https://md.yizigpt.com/skill-spec.html" }
+        ]
+    }
+    </script>
+
+    <!-- 百度统计 -->
+    <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?782f6fcd479a342d5d05f5bc47c61349";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+</head>
+<body class="has-docs-tabs">
+
+<!-- 共用导航（由 site-chrome.js 渲染，与首页一致） -->
+<div id="site-nav"></div>
+<div id="docs-tabs"></div>
+<noscript>
+    <div style="padding: 120px 20px 0; text-align: center; font-size: 14px; color: #64748b;">
+        导航需要 JavaScript。请直接访问 <a href="index.html" style="color: #002FA7;">YiziMarkdown 首页</a>，
+        或查看 <a href="help.html" style="color: #002FA7;">帮助中心</a>。
+    </div>
+</noscript>
+
+<!-- 页头 -->
+<header class="help-header">
+    <div class="help-header-inner">
+        <nav class="docs-breadcrumb" aria-label="面包屑">
+            <a href="index.html">首页</a><span>/</span><a href="help.html">文档</a><span>/</span><span>技能（Skill）规范</span>
+        </nav>
+        <h1 class="help-title">技能（Skill）规范</h1>
+        <p class="docs-subtitle">skills.json 字段、提示词写法与自定义技能的完整说明。</p>
+        <div class="docs-meta"><span>适用版本 v0.3.5</span><span>用户目录可改</span></div>
+        <div class="help-search">
+            <svg class="help-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <input type="text" class="help-search-input" id="helpSearch" placeholder="搜索技能配置，例如「needsDoc」" autocomplete="off">
+            <span class="help-search-hint">/</span>
+            <div class="help-results" id="helpResults"></div>
+        </div>
+    </div>
+</header>
+
+<div class="help-layout">
+
+    <!-- 左侧章节导航（由 help.js 生成） -->
+    <aside class="help-sidebar" id="helpSidebar">
+        <nav id="helpNav"></nav>
+    </aside>
+
+    <!-- 正文 -->
+    <main class="help-content docs-content">
+<section class="help-section" id="什么是-skill" data-icon="zap" data-kw="什么是 Skill？ Skill（技能）是 YiziMarkdown AI 对话面板中的预设提示词模板。选择一个 Skill 后，AI 会按照该技能的提示词执行特定任务，例如： 演示稿提炼 — 将文档转为幻灯片格式的 Markdown 文档摘要 — 快速总结文档核心内容 润色改写 — 优化文字表达 全文翻译 — 翻译文档内容 每个 Skill 由两部分组成： skills.json — 技能清单（元数据：名称、描述、是否需要文档等） &lt;file&gt;.md — 提示词正文（告诉 AI 具体如何执行）">
+<h2><a class="anchor" href="#什么是-skill">#</a>什么是 Skill？</h2>
+<p>Skill（技能）是 YiziMarkdown AI 对话面板中的预设提示词模板。选择一个 Skill 后，AI 会按照该技能的提示词执行特定任务，例如：</p>
+<ul>
+<li><strong>演示稿提炼</strong> — 将文档转为幻灯片格式的 Markdown</li>
+<li><strong>文档摘要</strong> — 快速总结文档核心内容</li>
+<li><strong>润色改写</strong> — 优化文字表达</li>
+<li><strong>全文翻译</strong> — 翻译文档内容</li>
+</ul>
+<p>每个 Skill 由两部分组成：</p>
+<ol>
+<li><strong><code>skills.json</code></strong> — 技能清单（元数据：名称、描述、是否需要文档等）</li>
+<li><strong><code>&lt;file&gt;.md</code></strong> — 提示词正文（告诉 AI 具体如何执行）</li>
+</ol>
+
+</section>
+
+<section class="help-section" id="存储位置" data-icon="folder-open" data-kw="存储位置 Skill 文件存储在用户文档目录下： 系统 路径 Windows C:\Users\&lt;用户名&gt;\Documents\yizimarkdown\skills\ macOS /Users/&lt;用户名&gt;/Documents/yizimarkdown/skills/ 目录结构： yizimarkdown/ └── skills/ ├── skills.json ← 技能清单 ├── slides-outline.md ← 演示稿提炼提示词 ├── doc-summary.md ← 文档摘要提示词 ├── poli">
+<h2><a class="anchor" href="#存储位置">#</a>存储位置</h2>
+<p>Skill 文件存储在用户文档目录下：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>系统</th>
+<th>路径</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Windows</td>
+<td><code>C:\Users\&lt;用户名&gt;\Documents\yizimarkdown\skills\</code></td>
+</tr>
+<tr>
+<td>macOS</td>
+<td><code>/Users/&lt;用户名&gt;/Documents/yizimarkdown/skills/</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>目录结构：</p>
+<pre><code>yizimarkdown/
+└── skills/
+    ├── skills.json           ← 技能清单
+    ├── slides-outline.md     ← 演示稿提炼提示词
+    ├── doc-summary.md        ← 文档摘要提示词
+    ├── polish-writing.md     ← 润色改写提示词
+    └── translate-fulltext.md ← 全文翻译提示词
+</code></pre>
+
+</section>
+
+<section class="help-section" id="更新覆盖机制" data-icon="settings" data-kw="更新覆盖机制 YiziMarkdown 更新版本时，会自动处理 Skill 文件： 场景 行为 首次安装 所有内置 Skill 复制到用户文档目录 版本更新（ skills.json 中 version 变化） 内置 Skill 的 .md 文件被覆盖（提示词同步更新），用户自定义的 Skill 保留不动 版本一致 不做任何操作 注意 ：如果你修改了内置 Skill 的 .md 文件，下次版本更新时会被覆盖。建议通过复制一份来创建自定义 Skill。">
+<h2><a class="anchor" href="#更新覆盖机制">#</a>更新覆盖机制</h2>
+<p>YiziMarkdown 更新版本时，会自动处理 Skill 文件：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>场景</th>
+<th>行为</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>首次安装</td>
+<td>所有内置 Skill 复制到用户文档目录</td>
+</tr>
+<tr>
+<td>版本更新（<code>skills.json</code> 中 <code>version</code> 变化）</td>
+<td>内置 Skill 的 <code>.md</code> 文件被覆盖（提示词同步更新），用户自定义的 Skill 保留不动</td>
+</tr>
+<tr>
+<td>版本一致</td>
+<td>不做任何操作</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>注意</strong>：如果你修改了内置 Skill 的 <code>.md</code> 文件，下次版本更新时会被覆盖。建议通过复制一份来创建自定义 Skill。</p>
+
+</section>
+
+<section class="help-section" id="如何创建自定义-skill" data-icon="pencil-line" data-kw="如何创建自定义 Skill ">
+<h2><a class="anchor" href="#如何创建自定义-skill">#</a>如何创建自定义 Skill</h2>
+
+<div class="help-sub" id="方法一手动创建" data-kw="方法一：手动创建 第 1 步：编写提示词文件 在 skills/ 目录下新建一个 .md 文件，例如 my-skill.md ： 你是一个专业的代码审查助手。 请按照以下步骤审查用户提供的代码： 1. 检查代码风格是否一致 2. 识别潜在的 Bug 和逻辑错误 3. 评估性能和可读性 4. 给出具体的改进建议 输出格式： - 问题列表（按严重程度排序） - 每个问题的具体位置和修复建议 第 2 步：在 skills.json 中注册 打开 skills.json ，在 skills 数组中添加一项。具体格式和逗号规">
+<h3>方法一：手动创建</h3>
+<p><strong>第 1 步：编写提示词文件</strong></p>
+<p>在 <code>skills/</code> 目录下新建一个 <code>.md</code> 文件，例如 <code>my-skill.md</code>：</p>
+<pre><code class="language-markdown">你是一个专业的代码审查助手。
+
+请按照以下步骤审查用户提供的代码：
+1. 检查代码风格是否一致
+2. 识别潜在的 Bug 和逻辑错误
+3. 评估性能和可读性
+4. 给出具体的改进建议
+
+输出格式：
+- 问题列表（按严重程度排序）
+- 每个问题的具体位置和修复建议
+</code></pre>
+<p><strong>第 2 步：在 <code>skills.json</code> 中注册</strong></p>
+<p>打开 <code>skills.json</code>，在 <code>skills</code> 数组中添加一项。具体格式和逗号规则请参见下方「<code>skills.json</code> 完整格式」章节。</p>
+<p><strong>第 3 步：重启应用</strong></p>
+<p>保存后重启 YiziMarkdown，新的 Skill 就会出现在列表中。</p>
+</div>
+<div class="help-sub" id="方法二复制内置-skill-修改" data-kw="方法二：复制内置 Skill 修改 复制现有的 .md 文件，例如将 polish-writing.md 复制为 my-polish.md 修改提示词内容 在 skills.json 中添加新条目， file 指向新文件名">
+<h3>方法二：复制内置 Skill 修改</h3>
+<ol>
+<li>复制现有的 <code>.md</code> 文件，例如将 <code>polish-writing.md</code> 复制为 <code>my-polish.md</code></li>
+<li>修改提示词内容</li>
+<li>在 <code>skills.json</code> 中添加新条目，<code>file</code> 指向新文件名</li>
+</ol>
+</div>
+</section>
+
+<section class="help-section" id="skillsjson-完整格式" data-icon="code" data-kw="skills.json 完整格式 skills.json 是标准 JSON 文件，遵循以下语法规则： 所有字符串用 双引号 &quot; 包裹，不能用单引号 键值对之间用 逗号 , 分隔 skills 数组中的每个技能对象之间用 逗号 , 分隔 最后一个技能对象后面不加逗号 （尾逗号会导致解析失败） 文件编码必须为 UTF-8">
+<h2><a class="anchor" href="#skillsjson-完整格式">#</a><code>skills.json</code> 完整格式</h2>
+<p><code>skills.json</code> 是标准 JSON 文件，遵循以下语法规则：</p>
+<ul>
+<li>所有字符串用<strong>双引号</strong> <code>&quot;</code> 包裹，不能用单引号</li>
+<li>键值对之间用<strong>逗号</strong> <code>,</code> 分隔</li>
+<li><code>skills</code> 数组中的每个技能对象之间用<strong>逗号</strong> <code>,</code> 分隔</li>
+<li><strong>最后一个技能对象后面不加逗号</strong>（尾逗号会导致解析失败）</li>
+<li>文件编码必须为 <strong>UTF-8</strong></li>
+</ul>
+<div class="help-sub" id="示例添加一个自定义技能" data-kw="示例：添加一个自定义技能 假设当前 skills.json 内容如下，要在末尾追加一个&quot;代码审查&quot;技能： 追加前 （注意最后一个技能 translate-fulltext 后面没有逗号）： { &quot;version&quot;: 2, &quot;skills&quot;: [ { &quot;id&quot;: &quot;slides-outline&quot;, &quot;name&quot;: &quot;演示稿提炼&quot;, &quot;summary&quot;: &quot;把当前文档提炼为简洁的演示模式 Markdown&quot;, &quot;file&quot;: &quot;slides-outline.md&quot;, &quot;needsDoc&quot;: true }, { &quot;id&quot;">
+<h3>示例：添加一个自定义技能</h3>
+<p>假设当前 <code>skills.json</code> 内容如下，要在末尾追加一个&quot;代码审查&quot;技能：</p>
+<p><strong>追加前</strong>（注意最后一个技能 <code>translate-fulltext</code> 后面没有逗号）：</p>
+<pre><code class="language-json">{
+  &quot;version&quot;: 2,
+  &quot;skills&quot;: [
+    {
+      &quot;id&quot;: &quot;slides-outline&quot;,
+      &quot;name&quot;: &quot;演示稿提炼&quot;,
+      &quot;summary&quot;: &quot;把当前文档提炼为简洁的演示模式 Markdown&quot;,
+      &quot;file&quot;: &quot;slides-outline.md&quot;,
+      &quot;needsDoc&quot;: true
+    },
+    {
+      &quot;id&quot;: &quot;translate-fulltext&quot;,
+      &quot;name&quot;: &quot;全文翻译&quot;,
+      &quot;summary&quot;: &quot;将内容完整翻译为目标语言&quot;,
+      &quot;file&quot;: &quot;translate-fulltext.md&quot;,
+      &quot;needsDoc&quot;: true
+    }
+  ]
+}
+</code></pre>
+<p><strong>追加后</strong>（在 <code>translate-fulltext</code> 对象的 <code>}</code> 后加逗号，再添加新技能）：</p>
+<pre><code class="language-json">{
+  &quot;version&quot;: 2,
+  &quot;skills&quot;: [
+    {
+      &quot;id&quot;: &quot;slides-outline&quot;,
+      &quot;name&quot;: &quot;演示稿提炼&quot;,
+      &quot;summary&quot;: &quot;把当前文档提炼为简洁的演示模式 Markdown&quot;,
+      &quot;file&quot;: &quot;slides-outline.md&quot;,
+      &quot;needsDoc&quot;: true
+    },
+    {
+      &quot;id&quot;: &quot;translate-fulltext&quot;,
+      &quot;name&quot;: &quot;全文翻译&quot;,
+      &quot;summary&quot;: &quot;将内容完整翻译为目标语言&quot;,
+      &quot;file&quot;: &quot;translate-fulltext.md&quot;,
+      &quot;needsDoc&quot;: true
+    },
+    {
+      &quot;id&quot;: &quot;code-review&quot;,
+      &quot;name&quot;: &quot;代码审查&quot;,
+      &quot;summary&quot;: &quot;审查代码质量并给出改进建议&quot;,
+      &quot;description&quot;: &quot;对用户提供的代码进行全面审查，包括风格、Bug、性能等方面。&quot;,
+      &quot;file&quot;: &quot;code-review.md&quot;,
+      &quot;needsDoc&quot;: false
+    }
+  ]
+}
+</code></pre>
+</div>
+<div class="help-sub" id="逗号规则速查" data-kw="逗号规则速查 位置 是否加逗号 示例 同一对象内，最后一个字段后 不加 &quot;needsDoc&quot;: false （后面是 } ） 数组中，最后一个元素后 不加 } （后面是 ] ） 数组中，非最后一个元素后 必须加 }, （后面还有下一个 { ） 对象内，非最后一个字段后 必须加 &quot;name&quot;: &quot;xx&quot;, （后面还有下一个字段）">
+<h3>逗号规则速查</h3>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>位置</th>
+<th>是否加逗号</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>同一对象内，最后一个字段后</td>
+<td>不加</td>
+<td><code>&quot;needsDoc&quot;: false</code>（后面是 <code>}</code>）</td>
+</tr>
+<tr>
+<td>数组中，最后一个元素后</td>
+<td>不加</td>
+<td><code>}</code>（后面是 <code>]</code>）</td>
+</tr>
+<tr>
+<td>数组中，非最后一个元素后</td>
+<td>必须加</td>
+<td><code>},</code>（后面还有下一个 <code>{</code>）</td>
+</tr>
+<tr>
+<td>对象内，非最后一个字段后</td>
+<td>必须加</td>
+<td><code>&quot;name&quot;: &quot;xx&quot;,</code>（后面还有下一个字段）</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<div class="help-sub" id="常见错误" data-kw="常见错误 // ❌ 错误：最后一个技能后加了逗号 { &quot;skills&quot;: [ { &quot;id&quot;: &quot;a&quot;, ... }, { &quot;id&quot;: &quot;b&quot;, ... }, ← 这里多了一个逗号！ ] } // ✅ 正确：最后一个技能后不加逗号 { &quot;skills&quot;: [ { &quot;id&quot;: &quot;a&quot;, ... }, { &quot;id&quot;: &quot;b&quot;, ... } ← 没有逗号 ] } 字段说明： 字段 必填 说明 id 是 唯一标识符，建议用英文小写和连字符 name 是 显示在列表中的名称 summary 是 一句话简介，列表中显示 desc">
+<h3>常见错误</h3>
+<pre><code class="language-json">// ❌ 错误：最后一个技能后加了逗号
+{
+  &quot;skills&quot;: [
+    { &quot;id&quot;: &quot;a&quot;, ... },
+    { &quot;id&quot;: &quot;b&quot;, ... },    ← 这里多了一个逗号！
+  ]
+}
+
+// ✅ 正确：最后一个技能后不加逗号
+{
+  &quot;skills&quot;: [
+    { &quot;id&quot;: &quot;a&quot;, ... },
+    { &quot;id&quot;: &quot;b&quot;, ... }     ← 没有逗号
+  ]
+}
+</code></pre>
+<p>字段说明：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>字段</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>是</td>
+<td>唯一标识符，建议用英文小写和连字符</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>是</td>
+<td>显示在列表中的名称</td>
+</tr>
+<tr>
+<td><code>summary</code></td>
+<td>是</td>
+<td>一句话简介，列表中显示</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>否</td>
+<td>详细说明，hover 时显示</td>
+</tr>
+<tr>
+<td><code>file</code></td>
+<td>是</td>
+<td>提示词文件名（需与 <code>skills/</code> 目录下的文件名一致）</td>
+</tr>
+<tr>
+<td><code>needsDoc</code></td>
+<td>否</td>
+<td>是否需要引用当前文档。<code>true</code> = AI 会自动读取当前打开的文档内容</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>第 3 步：重启应用</strong></p>
+<p>保存后重启 YiziMarkdown，新的 Skill 就会出现在列表中。</p>
+</div>
+</section>
+
+<section class="help-section" id="提示词编写技巧" data-icon="sparkles" data-kw="提示词编写技巧 明确角色 ：告诉 AI 它扮演什么角色（如&quot;你是一个专业的翻译&quot;） 分步骤 ：用编号列出执行步骤，AI 更容易遵循 指定格式 ：说明输出的格式要求（Markdown、列表、表格等） 设置约束 ：告诉 AI 什么不该做（如&quot;不要添加额外解释&quot;） 利用文档 ：设置 needsDoc: true 后，AI 可以读取当前文档内容作为上下文">
+<h2><a class="anchor" href="#提示词编写技巧">#</a>提示词编写技巧</h2>
+<ol>
+<li><strong>明确角色</strong>：告诉 AI 它扮演什么角色（如&quot;你是一个专业的翻译&quot;）</li>
+<li><strong>分步骤</strong>：用编号列出执行步骤，AI 更容易遵循</li>
+<li><strong>指定格式</strong>：说明输出的格式要求（Markdown、列表、表格等）</li>
+<li><strong>设置约束</strong>：告诉 AI 什么不该做（如&quot;不要添加额外解释&quot;）</li>
+<li><strong>利用文档</strong>：设置 <code>needsDoc: true</code> 后，AI 可以读取当前文档内容作为上下文</li>
+</ol>
+
+</section>
+
+<section class="help-section" id="常见问题" data-icon="circle-help" data-kw="常见问题 Q: 修改后没有生效？ A: 请重启 YiziMarkdown。技能列表在应用启动时加载。 Q: 不小心删除了内置 Skill 怎么办？ A: 删除 skills.json 文件，重启应用会自动重新生成（从内置资源复制）。 Q: 能否删除不需要的内置 Skill？ A: 可以。在 skills.json 中删除对应条目即可。但下次版本更新时可能会重新出现。 Q: needsDoc 设为 true 但没有打开文档？ A: AI 会正常执行，只是没有文档上下文。建议在打开文档后使用需要文档的 Skill。">
+<h2><a class="anchor" href="#常见问题">#</a>常见问题</h2>
+<p><strong>Q: 修改后没有生效？</strong>
+A: 请重启 YiziMarkdown。技能列表在应用启动时加载。</p>
+<p><strong>Q: 不小心删除了内置 Skill 怎么办？</strong>
+A: 删除 <code>skills.json</code> 文件，重启应用会自动重新生成（从内置资源复制）。</p>
+<p><strong>Q: 能否删除不需要的内置 Skill？</strong>
+A: 可以。在 <code>skills.json</code> 中删除对应条目即可。但下次版本更新时可能会重新出现。</p>
+<p><strong>Q: <code>needsDoc</code> 设为 <code>true</code> 但没有打开文档？</strong>
+A: AI 会正常执行，只是没有文档上下文。建议在打开文档后使用需要文档的 Skill。</p>
+
+</section>
+
+        <div class="docs-source">
+            <p>本页由 <code>src-tauri/skill-guide.md</code> 生成，随对应版本更新。发现表述问题？欢迎到
+            <a href="https://github.com/laoduu/YiziMarkdown/issues" target="_blank">GitHub Issues</a> 反馈。</p>
+        </div>
+    </main>
+
+</div>
+
+<button class="help-fab" id="helpFab">目录</button>
+
+<div id="site-footer"></div>
+
+<script src="assets/js/site-chrome.js"></script>
+<script src="assets/js/icons.js"></script>
+<script src="assets/js/help.js"></script>
+
+</body>
+</html>

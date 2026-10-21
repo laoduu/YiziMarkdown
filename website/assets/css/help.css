@@ -19,7 +19,7 @@
 /* ===== 搜索 ===== */
 .help-search { position: relative; margin: 26px auto 0; max-width: 540px; }
 .help-search-input {
-    width: 100%; height: 46px; padding: 0 16px 0 44px;
+    width: 100%; height: 46px; padding: 0 48px 0 44px;
     font-size: 14px; font-family: inherit; color: var(--dark);
     background: #fff; border: 1px solid #dbe3ec; border-radius: 10px;
     outline: none; transition: border-color 0.2s, box-shadow 0.2s;
@@ -267,4 +267,97 @@ kbd {
 @media (max-width: 600px) {
     .help-title { font-size: 23px; }
     .theme-shot-grid { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   文档频道（帮助中心 + 演示语法 / 主题规范 / 技能规范）
+   二级标签栏固定在顶部导航下方，四个页面共用
+   ============================================================ */
+.docs-tabs {
+    position: fixed; top: 64px; left: 0; right: 0; z-index: 150;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid #e8eef6;
+}
+.docs-tabs-inner {
+    max-width: 1200px; margin: 0 auto;
+    padding: 0 clamp(16px, 4vw, 32px);
+    height: 44px; display: flex; align-items: stretch; gap: 4px;
+    overflow-x: auto; scrollbar-width: none;
+}
+.docs-tabs-inner::-webkit-scrollbar { display: none; }
+.docs-tabs a {
+    display: inline-flex; align-items: center; flex: none;
+    padding: 0 12px; font-size: 14px; font-weight: 500;
+    color: var(--gray); text-decoration: none; white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+}
+.docs-tabs a:hover { color: var(--dark); }
+.docs-tabs a.active { color: var(--blue); font-weight: 700; border-bottom-color: var(--blue); }
+
+/* 标签栏占掉 44px，页头与侧栏随之下移 */
+body.has-docs-tabs .help-header { padding-top: 148px; }
+body.has-docs-tabs .help-sidebar { top: 132px; max-height: calc(100vh - 156px); }
+body.has-docs-tabs .help-section,
+body.has-docs-tabs .help-sub h3,
+body.has-docs-tabs .help-sub h4 { scroll-margin-top: 124px; }
+
+/* 生成页页头 */
+.docs-breadcrumb {
+    display: flex; justify-content: center; align-items: center;
+    gap: 8px; margin-bottom: 14px; font-size: 13px; color: #94a3b8;
+}
+.docs-breadcrumb a { color: var(--gray); text-decoration: none; }
+.docs-breadcrumb a:hover { color: var(--blue); }
+.docs-subtitle {
+    max-width: 680px; margin: 12px auto 0;
+    font-size: 15px; line-height: 1.75; color: var(--gray);
+}
+.docs-meta {
+    display: flex; justify-content: center; flex-wrap: wrap;
+    gap: 8px; margin-top: 16px;
+}
+.docs-meta span {
+    font-size: 12px; color: #64748b; background: #fff;
+    border: 1px solid #e2e8f0; border-radius: 999px; padding: 3px 10px;
+}
+
+/* 生成页正文：Markdown 里比帮助中心多出来的元素 */
+.docs-content .docs-intro {
+    padding-bottom: 26px; margin-bottom: 10px;
+    border-bottom: 1px solid #eef2f7;
+}
+.docs-content .docs-intro > :last-child { margin-bottom: 0; }
+.docs-content h4 {
+    font-size: 15.5px; font-weight: 700; color: var(--dark);
+    margin: 22px 0 8px; line-height: 1.6;
+}
+.docs-content blockquote {
+    margin: 0 0 16px; padding: 10px 16px;
+    border-left: 3px solid rgba(0, 47, 167, 0.25);
+    background: #f8fafc; border-radius: 0 8px 8px 0; color: #475569;
+}
+.docs-content blockquote p { margin: 0; }
+.docs-content blockquote p + p { margin-top: 8px; }
+
+/* 规范类表格首列常是整句说明，不能沿用帮助中心「首列不换行」 */
+.docs-table td:first-child { white-space: normal; }
+.docs-table th { white-space: nowrap; }
+
+.docs-source {
+    margin-top: 40px; padding-top: 20px;
+    border-top: 1px solid #eef2f7; font-size: 13px; color: #94a3b8;
+}
+.docs-source p { margin: 0; }
+
+@media (max-width: 900px) {
+    body.has-docs-tabs .help-header { padding-top: 140px; }
+    .docs-subtitle { font-size: 14px; }
+}
+
+@media (max-width: 600px) {
+    /* 触屏没有键盘，「/」提示只会压住 placeholder */
+    .help-search-hint { display: none; }
+    .help-search-input { padding-right: 16px; font-size: 13px; }
 }

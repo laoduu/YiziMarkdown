@@ -17,6 +17,12 @@
         var name = META.chapter[id];
         if (L[name]) ICONS[id] = L[name];
     });
+    // 生成页（主题规范 / 演示语法 / 技能规范）在 section 上写 data-icon
+    function iconFor(sec) {
+        var name = sec.getAttribute('data-icon');
+        if (name && L[name]) return L[name];
+        return ICONS[sec.id] || '';
+    }
     var CHEV = '<svg class="help-nav-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
         'stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
 
@@ -56,10 +62,11 @@
     /* ---------- 正文大标题加图标 ---------- */
     sections.forEach(function (sec) {
         var h2 = sec.querySelector('h2');
-        if (!h2 || !ICONS[sec.id]) return;
+        var iconHtml = iconFor(sec);
+        if (!h2 || !iconHtml) return;
         var icon = document.createElement('span');
         icon.className = 'help-h2-icon';
-        icon.innerHTML = ICONS[sec.id];
+        icon.innerHTML = iconHtml;
         h2.insertBefore(icon, h2.firstChild);
     });
     addRowIcons();
@@ -76,7 +83,7 @@
             var item = document.createElement('a');
             item.className = 'help-nav-item';
             item.href = '#' + sec.id;
-            item.innerHTML = '<span class="help-nav-icon">' + (ICONS[sec.id] || '') + '</span>' +
+            item.innerHTML = '<span class="help-nav-icon">' + iconFor(sec) + '</span>' +
                 '<span class="help-nav-label"></span>' + CHEV;
             item.querySelector('.help-nav-label').textContent = headingText(sec.querySelector('h2'));
             group.appendChild(item);

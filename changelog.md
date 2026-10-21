@@ -39,6 +39,34 @@
 - **用户自定义的 `user.css` / `keybindings.json` 可能被随包资源覆盖**：这两份是 bundle 资源，更新时安装器按"内容/时间戳差异"覆盖（beta 实测没被改写，是因为测试机没改过它们）。自定义过的用户升级前建议先备份
 - GitHub Releases 不能给 `latest.json` 设 `Cache-Control`，CDN 可能有**短暂的旧清单**（几分钟）；客户端多检查一次即恢复
 
+### 官网新增三个文档频道：演示语法 / 主题规范 / 技能规范（文档二级标签栏）
+
+**需求**：把「主题设计规范」「Skill 设计规范」「演示模式语法」各做成官网频道，沿用帮助中心样式（左大纲 + 右正文）。原始想法是四个都进顶部导航。
+
+**先算宽度，否掉「全塞顶部」**：现有 9 项 + GitHub 按钮在 1200px 容器里已占约 980px；再加三项约 330px ⇒ 约 1310px 溢出。汉堡菜单要到 `max-width:900px` 才出现，所以 900–1250px（最常见的笔记本宽度）会挤在一起；而且顶部已有「演示模式」「主题」两个首页锚点，再加同名频道会让人分不清去向。
+
+**方案**：顶部导航保持 9 项不动，「帮助中心」作为文档入口；文档区加一条固定在导航下方（`top:64px`）的二级标签栏：
+
+`帮助中心 | 演示语法 | 主题规范 | 技能规范`
+
+以后再加频道只是多一个标签，不再挤压导航。首页三个对应区块、帮助中心三个对应小节末尾都加了交叉入口。
+
+**实现**：
+
+- `scripts/docs-site.config.mjs`：四个标签 + 三个页面的元信息（标题、副标题、SEO、图标序列、要跳过的章节）
+- `scripts/build-docs-pages.mjs`：用项目已有的 `markdown-it` 把三份源文件渲染成 `help-section`（H2）/ `help-sub`（H3）两层，生成与帮助中心一致的骨架；生成物写入 `website/{slideshow-syntax,theme-spec,skill-spec}.html`
+- 生成结果：演示语法 12 章 / 2 节 / 33 KB，主题规范 16 章 / 44 节 / 137 KB，技能规范 7 章 / 5 节 / 21 KB
+- `scripts/check-docs-site.mjs`：校验源文件哈希（写入页面 `<meta name="docs-hash">`）、同页锚点是否都有目标、四个页面是否都挂了标签栏 —— **接进 `npm run build`**，源 Markdown 改了却没重新生成时门禁直接失败
+- 锚点用 GitHub 风格 slug（保留中文、去标点、空格转 `-`），所以源文档里的 `#61-基础层令牌base` 一类锚点仍能对上；主题规范的「目录」章跳过（侧栏本来就会生成）
+- 源文档的 `---` 在网页里不再渲染成 `<hr>`：章节之间已有边框、小节之间已有间距，重复画线反而多出空段
+- 表格统一包 `help-table-wrap` 并加 `docs-table` 类：规范表格首列常是整句说明，不能沿用帮助中心「首列不换行」的规则
+- `help.js` 增加 `data-icon` 支持（生成页的 section 自带图标名），`site-chrome.js` 增加标签栏、页脚四个文档入口、文档页统一高亮
+- 补 `website/sitemap.xml`（5 个 URL）与 `robots.txt`（指向 sitemap）
+
+**验证**：`npm run build` 全门禁通过（含新增的 `check-docs-site`）；1440px 与 390px 两档实拍检查——标签栏高 45px、移动端汉堡正常、`document.scrollWidth === innerWidth`（无横向溢出）、侧栏吸顶位置 132px；三个生成页的同页锚点 0 缺失。
+
+**注意**：官网仍是手工部署，本次只改了仓库里的 `website/`。以后改 `docs/THEME-DESIGN-SPEC.md` 或 `src-tauri/skill-guide.md`，需要跑一次 `npm run docs:site` 再提交生成物。
+
 ### 导出 Word：项目符号变方框（根因＝Unicode 码位 + 强制 Symbol 字体）
 
 **现象**（用户反馈）：导出的 docx 里无序列表项目符号变方框 / 错误字符，选中符号时字体栏显示 `Symbol`。

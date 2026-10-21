@@ -61,6 +61,13 @@
         .section-more:hover { gap: 11px; text-decoration: underline; }
         .section-more svg { flex: none; }
 
+        /* 同一区块并列两个文档入口（教程 / 完整规范） */
+        .section-more-group {
+            display: flex; justify-content: center; flex-wrap: wrap;
+            gap: 8px 24px; margin-top: 16px;
+        }
+        .section-more-group .section-more { margin-top: 0; }
+
         /* 移动端汉堡按钮 */
 
         /* 移动端汉堡按钮 */

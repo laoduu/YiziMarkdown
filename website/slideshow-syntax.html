@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>演示模式语法 - YiziMarkdown 文档</title>
+    <meta name="description" content="YiziMarkdown 演示模式语法完整参考：用 --- 分页、*** 分栏，自动版式推断规则，显式 layout / align / fragments 指令，片段逐步显示、切换动画、演讲者备注与播放快捷键。">
+    <meta name="keywords" content="YiziMarkdown,演示模式,幻灯片语法,Markdown分页,分栏,自动版式,演讲者备注">
+    <meta name="author" content="YiziPaper">
+    <meta name="robots" content="index, follow">
+    <meta name="docs-src" content="docs/slideshow-style-mapping.md">
+    <meta name="docs-hash" content="1c677634d5d70a6aae9b45d9858fb60fbaea927cb3bbc674ae4063a5f320db75">
+    <link rel="canonical" href="https://md.yizigpt.com/slideshow-syntax.html">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="演示模式语法 - YiziMarkdown 文档">
+    <meta property="og:description" content="YiziMarkdown 演示模式语法完整参考：用 --- 分页、*** 分栏，自动版式推断规则，显式 layout / align / fragments 指令，片段逐步显示、切换动画、演讲者备注与播放快捷键。">
+    <meta property="og:url" content="https://md.yizigpt.com/slideshow-syntax.html">
+    <meta property="og:site_name" content="YiziMarkdown">
+    <meta property="og:locale" content="zh_CN">
+    <meta property="og:image" content="https://md.yizigpt.com/assets/index.webp">
+
+    <link rel="icon" type="image/png" href="assets/icon.png">
+    <link rel="shortcut icon" href="assets/favicon.ico">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/help.css?v=3">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "首页", "item": "https://md.yizigpt.com/" },
+            { "@type": "ListItem", "position": 2, "name": "文档", "item": "https://md.yizigpt.com/help.html" },
+            { "@type": "ListItem", "position": 3, "name": "演示模式语法", "item": "https://md.yizigpt.com/slideshow-syntax.html" }
+        ]
+    }
+    </script>
+
+    <!-- 百度统计 -->
+    <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?782f6fcd479a342d5d05f5bc47c61349";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+</head>
+<body class="has-docs-tabs">
+
+<!-- 共用导航（由 site-chrome.js 渲染，与首页一致） -->
+<div id="site-nav"></div>
+<div id="docs-tabs"></div>
+<noscript>
+    <div style="padding: 120px 20px 0; text-align: center; font-size: 14px; color: #64748b;">
+        导航需要 JavaScript。请直接访问 <a href="index.html" style="color: #002FA7;">YiziMarkdown 首页</a>，
+        或查看 <a href="help.html" style="color: #002FA7;">帮助中心</a>。
+    </div>
+</noscript>
+
+<!-- 页头 -->
+<header class="help-header">
+    <div class="help-header-inner">
+        <nav class="docs-breadcrumb" aria-label="面包屑">
+            <a href="index.html">首页</a><span>/</span><a href="help.html">文档</a><span>/</span><span>演示模式语法</span>
+        </nav>
+        <h1 class="help-title">演示模式语法</h1>
+        <p class="docs-subtitle">翻页、分栏、版式、动画与快捷键的完整对照表 —— 不需要额外格式，写 Markdown 就是写幻灯片。</p>
+        <div class="docs-meta"><span>适用版本 v0.3.5</span><span>纯 Markdown</span><span>零标记</span></div>
+        <div class="help-search">
+            <svg class="help-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <input type="text" class="help-search-input" id="helpSearch" placeholder="搜索语法，例如「分栏」「指令」" autocomplete="off">
+            <span class="help-search-hint">/</span>
+            <div class="help-results" id="helpResults"></div>
+        </div>
+    </div>
+</header>
+
+<div class="help-layout">
+
+    <!-- 左侧章节导航（由 help.js 生成） -->
+    <aside class="help-sidebar" id="helpSidebar">
+        <nav id="helpNav"></nav>
+    </aside>
+
+    <!-- 正文 -->
+    <main class="help-content docs-content">
+<div class="docs-intro">
+<p>YiziMarkdown 的演示模式（幻灯片）<strong>不需要任何额外格式</strong>：你按平时写 Markdown 的习惯写，引擎根据整页内容的结构自动排版，配色继承当前主题。本文是「Markdown 写什么 → 演示效果是什么」的对照参考。</p>
+<p>相关代码：</p>
+<ul>
+<li>分页与版式推断：<code>src/lib/slides.ts</code></li>
+<li>渲染与主题继承：<code>src/components/Slideshow.tsx</code></li>
+<li>幻灯片样式：<code>src/styles/slideshow.css</code></li>
+</ul>
+</div>
+
+<section class="help-section" id="唯一规则分页" data-icon="file-text" data-kw="唯一规则：分页 用 单独成行的 --- （标准 Markdown 水平分割线）翻页： # 第一页 --- # 第二页 --- 必须单独成行（前后是空行） 代码围栏（ ``` ）内部的 --- 是代码内容， 不会 分页 文档顶部的 front matter（首个 --- ... --- 块）自动忽略，不会成为一页 除了这一条，其余全部是你已经会的 Markdown。">
+<h2><a class="anchor" href="#唯一规则分页">#</a>唯一规则：分页</h2>
+<p>用<strong>单独成行的 <code>---</code></strong>（标准 Markdown 水平分割线）翻页：</p>
+<pre><code class="language-markdown"># 第一页
+
+---
+
+# 第二页
+</code></pre>
+<ul>
+<li><code>---</code> 必须单独成行（前后是空行）</li>
+<li>代码围栏（<code>```</code>）内部的 <code>---</code> 是代码内容，<strong>不会</strong>分页</li>
+<li>文档顶部的 front matter（首个 <code>--- ... ---</code> 块）自动忽略，不会成为一页</li>
+</ul>
+<p>除了这一条，其余全部是你已经会的 Markdown。</p>
+
+</section>
+
+<section class="help-section" id="自动版式整页结构-幻灯片效果" data-icon="presentation" data-kw="自动版式：整页结构 → 幻灯片效果 引擎分析每页的 完整块结构 （标题层级、内容类型、组合方式）自动选择版式，无需任何标记： 一页的内容结构 自动版式 效果 # 一级标题 + 副标题段落 封面页 居中大标题 + 主题色渐变下划线，底部作者/日期 meta 行 ## 标题 单独成页 章节页 大号序号 + 章节标题居中，过渡感 # 谢谢 / Thanks / Q&amp;A 结尾页 居中大字收尾 整页有序列表（3 项以上） 目录页 大号数字编号，双列网格排布 ## 标题 + 段落 内容页 标题左上 + 强调下划线，正文左对齐 ">
+<h2><a class="anchor" href="#自动版式整页结构-幻灯片效果">#</a>自动版式：整页结构 → 幻灯片效果</h2>
+<p>引擎分析每页的<strong>完整块结构</strong>（标题层级、内容类型、组合方式）自动选择版式，无需任何标记：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>一页的内容结构</th>
+<th>自动版式</th>
+<th>效果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code># 一级标题</code> + 副标题段落</td>
+<td><strong>封面页</strong></td>
+<td>居中大标题 + 主题色渐变下划线，底部作者/日期 meta 行</td>
+</tr>
+<tr>
+<td><code>## 标题</code> 单独成页</td>
+<td><strong>章节页</strong></td>
+<td>大号序号 + 章节标题居中，过渡感</td>
+</tr>
+<tr>
+<td><code># 谢谢 / Thanks / Q&amp;A</code></td>
+<td><strong>结尾页</strong></td>
+<td>居中大字收尾</td>
+</tr>
+<tr>
+<td>整页有序列表（3 项以上）</td>
+<td><strong>目录页</strong></td>
+<td>大号数字编号，双列网格排布</td>
+</tr>
+<tr>
+<td><code>## 标题</code> + 段落</td>
+<td><strong>内容页</strong></td>
+<td>标题左上 + 强调下划线，正文左对齐</td>
+</tr>
+<tr>
+<td><code>## 标题</code> + 列表</td>
+<td><strong>列表页</strong></td>
+<td>标题左上，列表大号强调</td>
+</tr>
+<tr>
+<td><code>## 标题</code> + 表格</td>
+<td><strong>数据表页</strong></td>
+<td>表头主题色、斑马纹行</td>
+</tr>
+<tr>
+<td>任务列表（<code>- [ ]</code>）</td>
+<td><strong>路线图页</strong></td>
+<td>大号勾选框，进度感</td>
+</tr>
+<tr>
+<td>图片开头（后面可跟文字）</td>
+<td><strong>图片页</strong></td>
+<td>图片居中，图与文按书写顺序纵向排列</td>
+</tr>
+<tr>
+<td><code>&gt; 引用</code></td>
+<td><strong>引用页</strong></td>
+<td>大引号 + 居中大字</td>
+</tr>
+<tr>
+<td><code> ``` 代码围栏</code></td>
+<td><strong>代码页</strong></td>
+<td>代码聚焦居中</td>
+</tr>
+<tr>
+<td><code>```mermaid</code></td>
+<td><strong>图表页</strong></td>
+<td>图表居中</td>
+</tr>
+<tr>
+<td>块级公式（<code>$$</code>）</td>
+<td><strong>公式页</strong></td>
+<td>公式居中放大</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>版式判定依赖<strong>整页结构</strong>（不只首块），无需配置，用户无感知、零学习成本。</p>
+<p><strong><code>figure</code>（图文页 / 左图右文）已从自动推断中移除</strong>（v0.3.4）：并排是「想要才要」的版式，不该由引擎猜 —— 想并排用 <code>***</code> 分栏，还能自由决定几栏与对齐。<code>figure</code> 仍作为 <code>&lt;!-- layout: figure --&gt;</code> 的合法取值保留，样式未删。</p>
+</blockquote>
+<div class="help-sub" id="排版约定" data-kw="排版约定 内容页 ：标题左上对齐 + 主题色短下划线；正文、列表左对齐，阅读舒适。 封面 / 章节 / 结尾 / 目录 / 引用 ：整体居中，突出仪式感。 图片 ：单独成块的图片（无论有无标题） 默认居中 —— .ys-slide &gt; img 收缩到原生尺寸后靠 align-items:center 落到中线，不再被 .ys-slide &gt; * 的 width:100% 拉满整行。">
+<h3>排版约定</h3>
+<ul>
+<li><strong>内容页</strong>：标题左上对齐 + 主题色短下划线；正文、列表左对齐，阅读舒适。</li>
+<li><strong>封面 / 章节 / 结尾 / 目录 / 引用</strong>：整体居中，突出仪式感。</li>
+<li><strong>图片</strong>：单独成块的图片（无论有无标题）<strong>默认居中</strong>——<code>.ys-slide &gt; img</code> 收缩到原生尺寸后靠 <code>align-items:center</code> 落到中线，不再被 <code>.ys-slide &gt; *</code> 的 <code>width:100%</code> 拉满整行。</li>
+</ul>
+</div>
+<div class="help-sub" id="分栏" data-kw="分栏： *** 一页内想并排放两块内容，用 单独成行的 *** （标准 Markdown 主题分割线）圈出栏区。 *** 同时承担 栏区边界 与 栏分隔 两种身份 —— 类比表格的 | ：既是左右外框，也是内线，靠位置决定： ## 对比 引言（栏外） *** - 左侧第一条 - 左侧第二条 *** - 右侧第一条 - 右侧第二条 *** 落款（栏外） --- = 分页 ， *** = 分栏 （同为标准分割线，语义分开） N 栏写 N+1 条 *** ：首尾两条是栏区 边界 ，中间的是 分隔 ； 栏区 之外 的内容是">
+<h3>分栏：<code>***</code></h3>
+<p>一页内想并排放两块内容，用<strong>单独成行的 <code>***</code></strong>（标准 Markdown 主题分割线）圈出栏区。
+<code>***</code> 同时承担<strong>栏区边界</strong>与<strong>栏分隔</strong>两种身份 —— 类比表格的 <code>|</code>：既是左右外框，也是内线，靠位置决定：</p>
+<pre><code class="language-markdown">## 对比
+
+引言（栏外）
+
+***
+
+- 左侧第一条
+- 左侧第二条
+
+***
+
+- 右侧第一条
+- 右侧第二条
+
+***
+
+落款（栏外）
+</code></pre>
+<ul>
+<li><code>---</code> = <strong>分页</strong>，<code>***</code> = <strong>分栏</strong>（同为标准分割线，语义分开）</li>
+<li><strong>N 栏写 N+1 条 <code>***</code></strong>：首尾两条是栏区<strong>边界</strong>，中间的是<strong>分隔</strong>；
+栏区<strong>之外</strong>的内容是页级文案（<code>splitColumns</code> 的 <code>before</code> / <code>after</code>），整页横跨、不参与分栏</li>
+<li><strong>退化规则</strong>（不是兼容垫片）：条数 ≤2 时圈定读法退化成「空栏区」（1 条）或「单栏」（2 条），
+作者不可能是那个意思 ⇒ 这两档按<strong>分隔</strong>读（旧语义：条数 + 1 = 栏数），存量文档不受影响。
+唯一的代价：写满 4 栏（3 条）会被读成「2 栏 + 栏外文案」，语法上无法区分、也无法检测</li>
+<li>必须单独成行；代码围栏内的 <code>***</code> 是代码内容，<strong>不参与计数</strong>，因此不会破坏圈定</li>
+<li><strong>页内第一个标题</strong>（<code>#</code>~<code>######</code>）视为<strong>页标题</strong>，整页显示在分栏之上、不参与分栏
+（<code>splitColumns</code> 把它抽成 <code>intro</code>；否则标题会落进第 1 栏，出现「左栏带标题、右栏内容顶端高于标题」的错位）</li>
+<li>最多 4 栏，超出时后续内容并入最后一栏（控制台提示，内容不丢）</li>
+<li>注意：<code>***</code> 从此不再渲染为 <code>&lt;hr&gt;</code>（需要页内分隔线请用 <code>___</code> 或 <code>- - -</code>）</li>
+<li>分栏数独立于版式：<code>.ys-cols</code> 容器由 <code>getSlideHtml</code> 生成，栏数经行内变量 <code>--ys-cols</code> 下发；
+页标题<strong>不包 div</strong>、直接作为 <code>.ys-slide</code> 的直接子元素 ⇒ 各版式的 <code>h2</code> 规则与
+<code>&gt; :first-child</code> 装饰仍能命中它，标题样式与不分栏时一致；
+栏外文案（<code>before</code> / <code>after</code>）<strong>包一层 <code>.ys-col-aside</code></strong>：它是页级内容，落在 <code>.ys-cols</code> 之外，
+因此「栏内对齐 / 卡片 / 分隔线」这些栏内规则天然碰不到它 —— 它跟随版式与页标题，不跟随栏内对齐；
+页面容器以 <code>.ys-slide.ys-has-cols</code> 退回单列 flex，避免与 <code>figure</code> 版的 <code>display:grid</code> 冲突（见 <code>src/styles/slideshow.css</code>）</li>
+</ul>
+<h4 id="栏内对齐-分栏样式hud演示排版v034">栏内对齐 / 分栏样式（HUD「演示排版」，v0.3.4）</h4>
+<p>分栏内容默认<strong>左对齐</strong>，可在播放中点击 HUD 的 <code>Aa</code> 图标调整（持久化在 <code>settingsStore</code>，纯函数在 <code>src/lib/slideColumns.ts</code>）：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>旋钮</th>
+<th>取值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>栏内对齐</td>
+<td><code>left</code>（默认）/ <code>center</code> / <code>right</code></td>
+<td>栏<strong>内</strong>的标题、正文、列表、引用、图片、代码块一并对齐；<strong>页标题不参与</strong></td>
+</tr>
+<tr>
+<td>分栏样式</td>
+<td><code>card</code>（默认）/ <code>line</code> / <code>none</code></td>
+<td><code>card</code> = 每栏一张等高主题卡片；<code>line</code> = 栏间中缝细线；<code>none</code> = 无参照</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>为什么需要它们</strong> —— 分栏是等宽栅格，设栏宽为 <code>W</code>、栏间距为 <code>g</code>，则第 2 栏的左边线</p>
+<pre><code>左缘 + (W_total − g)/2 + g = 屏幕中心 + g/2      ← W_total 被完全消掉
+</code></pre>
+<p>即<strong>与「内容填充宽度」无关</strong>，拖滑杆时右栏左边线纹丝不动，只有左栏在飘。栏内容少时用户会觉得「右边没反应」。
+对齐解决「栏内内容怎么排」，卡片给每栏一个随宽度<strong>两侧同时伸缩</strong>的可见外框 —— 两者配合才让栏的实际占位可感知。</p>
+<p>实现要点（<code>src/styles/slideshow.css</code> 的「分栏对齐」「分栏样式」两段）：</p>
+<ul>
+<li>值在 JS 里合成（<code>resolveColAlign</code>：<strong>页级 <code>&lt;!-- align --&gt;</code> 覆盖 HUD 全局默认</strong>），CSS 只认 <code>.ys-slide.ys-col-align-*</code> 一个来源，无需与 <code>.ys-align-*</code> 争夺优先级</li>
+<li>每条规则都带 <code>.ys-has-cols</code> 且从 <code>.ys-cols</code> 往下走：只作用于<strong>分栏页的栏内内容</strong>，非分栏页 / 页脚 / HUD / 页标题都不受影响</li>
+<li>栏内的标题、列表、引用在基础排版里被写死为 <code>text-align:left</code>（<code>.ys-slide h1</code> / <code>ul</code> / <code>blockquote</code>），必须用 <code>:is()</code> 一并抬高特异性才能翻过来</li>
+<li>中/右对齐给栏的直接子块加 <code>width:fit-content</code> + <code>margin:auto</code> —— 只写 <code>text-align</code> 对图片 / 代码块 / 表格这些块盒无效（<code>.ys-cols &gt; .ys-col &gt; *</code> 已把 width 钉成 100%）；对文本则是无损的，折行位置不变</li>
+<li>右对齐时列表的内边距与项目符号一起翻到右侧（比页级 <code>.ys-align-right</code> 更彻底：它只改 <code>ul</code> 的 padding，<code>li</code> 仍留着 1.5em 左内边距）</li>
+<li><strong>页标题（<code>intro</code>）刻意不参与栏对齐</strong>：它是页面层级的元素（<code>.ys-slide</code> 的直接子元素、在 <code>.ys-cols</code> 之外），继续跟所属版式走（内容页左对齐、封面/章节页居中）。让页标题跟着栏内走会打散「一屏一个标题」的层级</li>
+<li>卡片用主题既有令牌（<code>--editor-surface</code> / <code>--editor-border</code> / <code>--editor-accent</code> / <code>--radius-lg</code> / <code>--shadow-1</code>）+ <code>color-mix</code>，明暗与主题自动跟随；内边距用 <code>em</code> ⇒ 随「字号」旋钮一起缩放；卡片开启时 <code>.ys-cols</code> 由 <code>align-items:start</code> 转为 <code>stretch</code>（等高，对比才有参照）</li>
+<li>分隔线画在栏间 gap 的正中线上（<code>left: -1.2vw</code>），不改变栏宽与间距；<code>position:relative</code> 只在该样式下加，避免改变栏内绝对定位后代的包含块</li>
+<li><strong>默认值的取舍</strong>：对齐默认 <code>left</code> 无对应规则 ⇒ 逐像素零变化；样式默认 <strong><code>card</code></strong> ⇒ 会产出 <code>ys-col-style-card</code>。后者是<strong>有意的默认观感升级</strong>（卡片是这组旋钮的价值所在，默认藏起来等于没做），存量用户升级后分栏页会直接看到卡片；只有显式选 <code>none</code> 才退回无参照的旧观感</li>
+</ul>
+</div>
+</section>
+
+<section class="help-section" id="可选显式指令覆盖自动版式" data-icon="settings" data-kw="可选：显式指令（覆盖自动版式） 自动版式在绝大多数场景足够；个别页面需要精确控制时，可在该页任意位置用 HTML 注释指定（渲染时不可见，不影响预览）： &lt;!-- layout: content-list --&gt; &lt;!-- align: left --&gt; &lt;!-- layout: &lt;类型&gt; --&gt; ：显式指定版式，覆盖自动推断（类型见上表，如 cover / section / agenda …； figure 只能靠这条指令指定，不会自动命中）。 非法值会被忽略并回落自动推断 &lt;!-- align: left|c">
+<h2><a class="anchor" href="#可选显式指令覆盖自动版式">#</a>可选：显式指令（覆盖自动版式）</h2>
+<p>自动版式在绝大多数场景足够；个别页面需要精确控制时，可在该页任意位置用 HTML 注释指定（渲染时不可见，不影响预览）：</p>
+<pre><code class="language-html">&lt;!-- layout: content-list --&gt;
+&lt;!-- align: left --&gt;
+</code></pre>
+<ul>
+<li><code>&lt;!-- layout: &lt;类型&gt; --&gt;</code>：显式指定版式，覆盖自动推断（类型见上表，如 <code>cover</code> / <code>section</code> / <code>agenda</code> …；<code>figure</code> 只能靠这条指令指定，不会自动命中）。<strong>非法值会被忽略并回落自动推断</strong></li>
+<li><code>&lt;!-- align: left|center|right --&gt;</code>：整页对齐方向；<strong>分栏页上它同时覆盖 HUD 的「栏内对齐」</strong>（页级 &gt; 全局，见上文「栏内对齐 / 分栏样式」）</li>
+<li><code>&lt;!-- fragments: off|on --&gt;</code>：关闭 / 恢复该页片段逐步显示（见下节）</li>
+</ul>
+<p>显式指令优先于结构推断，适合需要精确控制的进阶场景。</p>
+
+</section>
+
+<section class="help-section" id="片段逐步显示默认关闭" data-icon="list" data-kw="片段逐步显示（默认关闭） 内容页 / 列表页 / 路线图页的 顶层列表项 可逐条出现：播放时按 → 先显示下一条，全部显示后再按才翻页；按 ← 先回退一条，退完再翻页（翻回的页面列表全显）。 ## 产品优势 - 第一条（开启后逐条出现） - 第二条 - 第三条 默认关闭 （列表整页显示，避免目录等内容被迫逐条点击）。开启方式： 粒度 写法 / 操作 效果 播放中切换 HUD 底部列表图标 即时生效，仅本次播放 整副开启 front matter slideshow-fragments: on 全部符合条件的页面逐条">
+<h2><a class="anchor" href="#片段逐步显示默认关闭">#</a>片段逐步显示（默认关闭）</h2>
+<p>内容页 / 列表页 / 路线图页的<strong>顶层列表项</strong>可逐条出现：播放时按 <code>→</code> 先显示下一条，全部显示后再按才翻页；按 <code>←</code> 先回退一条，退完再翻页（翻回的页面列表全显）。</p>
+<pre><code class="language-markdown">## 产品优势
+
+- 第一条（开启后逐条出现）
+- 第二条
+- 第三条
+</code></pre>
+<p><strong>默认关闭</strong>（列表整页显示，避免目录等内容被迫逐条点击）。开启方式：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>粒度</th>
+<th>写法 / 操作</th>
+<th>效果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>播放中切换</td>
+<td>HUD 底部列表图标</td>
+<td>即时生效，仅本次播放</td>
+</tr>
+<tr>
+<td>整副开启</td>
+<td>front matter <code>slideshow-fragments: on</code></td>
+<td>全部符合条件的页面逐条出现</td>
+</tr>
+<tr>
+<td>单页开启</td>
+<td>页内 <code>&lt;!-- fragments: on --&gt;</code></td>
+<td>覆盖 deck 级关闭</td>
+</tr>
+<tr>
+<td>单页关闭</td>
+<td>页内 <code>&lt;!-- fragments: off --&gt;</code></td>
+<td>该页整页显示</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>仅内容页 / 列表页 / 路线图页生效；封面、章节、目录、表格、图表、公式、引用等版式整页显示</li>
+<li>嵌套子列表随父项一起出现，无需单独标记</li>
+</ul>
+
+</section>
+
+<section class="help-section" id="切换动画播放中可选" data-icon="sparkles" data-kw="切换动画（播放中可选） 播放中点击 HUD 底部 ✨ 图标切换翻页动画（仅本次播放生效）。 柔和型 ： 动画 效果 水平滑动 新页从右滑入 + 淡入（默认） 淡入淡出 纯透明度溶解 轻微缩放 轻微缩放进出 无动画 直接切换 强烈型 ： 动画 效果 高斯溶解 水渍从多点渗开、互相吞并，有机边缘吞没整页（12 层软边径向渐变 mask + @property --ys-blob 驱动半径，新页同时 blur→0） 百叶窗格 整页切成竖条，每条绕自身中轴翻面露出下一页（瓷砖转场 · strip） 棋盘格子 整页拆成方格，">
+<h2><a class="anchor" href="#切换动画播放中可选">#</a>切换动画（播放中可选）</h2>
+<p>播放中点击 HUD 底部 ✨ 图标切换翻页动画（仅本次播放生效）。</p>
+<p><strong>柔和型</strong>：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>动画</th>
+<th>效果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>水平滑动</td>
+<td>新页从右滑入 + 淡入（默认）</td>
+</tr>
+<tr>
+<td>淡入淡出</td>
+<td>纯透明度溶解</td>
+</tr>
+<tr>
+<td>轻微缩放</td>
+<td>轻微缩放进出</td>
+</tr>
+<tr>
+<td>无动画</td>
+<td>直接切换</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>强烈型</strong>：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>动画</th>
+<th>效果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>高斯溶解</td>
+<td>水渍从多点渗开、互相吞并，有机边缘吞没整页（12 层软边径向渐变 mask + <code>@property --ys-blob</code> 驱动半径，新页同时 blur→0）</td>
+</tr>
+<tr>
+<td>百叶窗格</td>
+<td>整页切成竖条，每条绕自身中轴翻面露出下一页（瓷砖转场 · strip）</td>
+</tr>
+<tr>
+<td>棋盘格子</td>
+<td>整页拆成方格，随机次序 3D 翻面露出下一页，随后融合回落（瓷砖转场 · square）</td>
+</tr>
+<tr>
+<td>百变立方</td>
+<td>每格绕自身竖轴转 180°，三面各沿法线平移半格宽 ⇒ 中途露出侧面（瓷砖转场 · 3 面）</td>
+</tr>
+<tr>
+<td>六角蜂巢</td>
+<td>整页切成蜂巢状六边形（尖顶六边形铺砖：行距 3h/4 + 相邻行错位半宽，r/c 从 -1 起补出界格才是严格无缝），各自随机次序翻面；裁形挂在面上、影用卡片级 box-shadow（六边形无缝 ⇒ 矩形影多出的方角被邻格的面盖住，不露方角；实测逐格 drop-shadow 会让帧率从 60 掉到 34fps）</td>
+</tr>
+<tr>
+<td>爆裂卡片</td>
+<td>旧页碎片带随机方向旋转飞散，新页碎片从反方向飞入归位（瓷砖转场 · 冲量）</td>
+</tr>
+<tr>
+<td>纵深穿梭</td>
+<td>每格有不同纵深，翻面时前后穿梭产生视差（瓷砖转场 · 冲量 z）</td>
+</tr>
+<tr>
+<td>卡片推换</td>
+<td>当前页缩小成卡片向左移出，新页卡片从右进入后放大落定；后退完全镜像</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>「瓷砖转场」= 整页连同背景被切成单元，每个单元是一个窗口 + 一份【整页克隆】负偏移对齐（正面旧页、背面新页），因此每格能独立做 2D/3D 变换与独立时序。切割形状 / 延迟节奏 / 单格时长由 <code>src/lib/slideTiles.ts</code> 的 <code>TILE_VARIANTS</code> 配置驱动（有单元测试 <code>tests/slideTiles.test.ts</code>），CSS 只负责&quot;怎么动&quot;。</p>
+<p>强烈型中的 mask 动画依赖 CSS <code>@property</code> 与 mask 合成（Chromium 85+ / WebView2 均支持）；不支持的引擎自动降级为淡入淡出。</p>
+</blockquote>
+
+</section>
+
+<section class="help-section" id="封面-meta可选" data-icon="file-text" data-kw="封面 meta（可选） 文档顶部的 front matter 可提供封面页的作者与日期（自动剥离，不会成为一页）： --- title: 我的演示 author: 张三 date: 2026-08-13 --- # 标题 副标题文字 封面页会在底部自动显示 作者 · 日期 一行。">
+<h2><a class="anchor" href="#封面-meta可选">#</a>封面 meta（可选）</h2>
+<p>文档顶部的 front matter 可提供封面页的作者与日期（自动剥离，不会成为一页）：</p>
+<pre><code class="language-markdown">---
+title: 我的演示
+author: 张三
+date: 2026-08-13
+---
+
+# 标题
+
+副标题文字
+</code></pre>
+<p>封面页会在底部自动显示 <code>作者 · 日期</code> 一行。</p>
+
+</section>
+
+<section class="help-section" id="配色主题继承" data-icon="palette" data-kw="配色：主题继承 幻灯片 自动继承应用当前主题与明暗 ，无需配置。 取色来自主题的 CSS 变量（ --editor-bg/text/accent/surface/border/... 、 --font-sans/mono ），因此换主题，幻灯片同步换肤。 标题颜色 通过主题变量 --editor-h1 / --editor-h2 / --editor-h3 继承（各主题已定义这些变量，对应各自 h1/h2/h3 配色；深色模式另有取值）。行内代码用 --editor-accent 。 主题 CSS 中的 :root">
+<h2><a class="anchor" href="#配色主题继承">#</a>配色：主题继承</h2>
+<ul>
+<li>幻灯片<strong>自动继承应用当前主题与明暗</strong>，无需配置。</li>
+<li>取色来自主题的 CSS 变量（<code>--editor-bg/text/accent/surface/border/...</code>、<code>--font-sans/mono</code>），因此换主题，幻灯片同步换肤。</li>
+<li><strong>标题颜色</strong>通过主题变量 <code>--editor-h1 / --editor-h2 / --editor-h3</code> 继承（各主题已定义这些变量，对应各自 h1/h2/h3 配色；深色模式另有取值）。行内代码用 <code>--editor-accent</code>。</li>
+<li>主题 CSS 中的 <code>:root.theme-*</code> 会被自动改写为幻灯片作用域以提供变量；幻灯片的字号/对齐/居中由 <code>slideshow.css</code> 全权控制（不继承编辑器的元素排版规则，避免左对齐/小字号覆盖演示版式）。</li>
+</ul>
+
+</section>
+
+<section class="help-section" id="可选演讲者备注仅演示者可见" data-icon="quote" data-kw="可选：演讲者备注（仅演示者可见） 在幻灯片任意位置用 HTML 注释写备注，播放时按 S 显示/隐藏： &lt;!-- notes: 这一页要强调的重点 --&gt; 备注只出现在左下角面板，不会出现在正片画面。这是 可选 的非纯 Markdown 语法，且不影响版式与美观。">
+<h2><a class="anchor" href="#可选演讲者备注仅演示者可见">#</a>可选：演讲者备注（仅演示者可见）</h2>
+<p>在幻灯片任意位置用 HTML 注释写备注，播放时按 <code>S</code> 显示/隐藏：</p>
+<pre><code class="language-html">&lt;!-- notes: 这一页要强调的重点 --&gt;
+</code></pre>
+<p>备注只出现在左下角面板，不会出现在正片画面。这是<strong>可选</strong>的非纯 Markdown 语法，且不影响版式与美观。</p>
+
+</section>
+
+<section class="help-section" id="播放快捷键" data-icon="keyboard" data-kw="播放快捷键 按键 功能 → / 空格 / PageDown / Enter 下一页 ← / PageUp / Backspace 上一页 Home / End 首页 / 末页 F 切换全屏 S 显示 / 隐藏演讲者备注 ? 显示 / 隐藏帮助 Esc 退出演示">
+<h2><a class="anchor" href="#播放快捷键">#</a>播放快捷键</h2>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>按键</th>
+<th>功能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>→ / 空格 / PageDown / Enter</td>
+<td>下一页</td>
+</tr>
+<tr>
+<td>← / PageUp / Backspace</td>
+<td>上一页</td>
+</tr>
+<tr>
+<td>Home / End</td>
+<td>首页 / 末页</td>
+</tr>
+<tr>
+<td>F</td>
+<td>切换全屏</td>
+</tr>
+<tr>
+<td>S</td>
+<td>显示 / 隐藏演讲者备注</td>
+</tr>
+<tr>
+<td>?</td>
+<td>显示 / 隐藏帮助</td>
+</tr>
+<tr>
+<td>Esc</td>
+<td>退出演示</td>
+</tr>
+</tbody>
+</table></div>
+
+</section>
+
+<section class="help-section" id="支持的内容" data-icon="code" data-kw="支持的内容 幻灯片内支持编辑器全部预览能力：标题、列表、表格、引用、行内 / 块级公式（KaTeX）、Mermaid 图表、本地图片等，与预览一致（需在 设置 → 插件 中启用对应插件）。">
+<h2><a class="anchor" href="#支持的内容">#</a>支持的内容</h2>
+<p>幻灯片内支持编辑器全部预览能力：标题、列表、表格、引用、行内 / 块级公式（KaTeX）、Mermaid 图表、本地图片等，与预览一致（需在 设置 → 插件 中启用对应插件）。</p>
+
+</section>
+
+<section class="help-section" id="页脚与进度" data-icon="presentation" data-kw="页脚与进度 左下角显示 当前章节名 （取最近的封面/章节页标题）与 页码 （ 3 / 12 ）。 底部有一条主题色 进度条 ，随翻页增长。">
+<h2><a class="anchor" href="#页脚与进度">#</a>页脚与进度</h2>
+<ul>
+<li>左下角显示<strong>当前章节名</strong>（取最近的封面/章节页标题）与<strong>页码</strong>（<code>3 / 12</code>）。</li>
+<li>底部有一条主题色<strong>进度条</strong>，随翻页增长。</li>
+</ul>
+
+</section>
+
+<section class="help-section" id="扩展版式进阶" data-icon="code-2" data-kw="扩展版式（进阶） 如需新增或调整某类版式的观感，编辑 src/styles/slideshow.css 中 .ys-layout-&lt;类型&gt; 规则即可（ cover / section / thanks / agenda / content / content-list / table / roadmap / figure / image / quote / code / chart / formula ）。版式识别逻辑在 src/lib/slides.ts 的 detectLayout ；标题颜色在主题文件的 --">
+<h2><a class="anchor" href="#扩展版式进阶">#</a>扩展版式（进阶）</h2>
+<p>如需新增或调整某类版式的观感，编辑 <code>src/styles/slideshow.css</code> 中 <code>.ys-layout-&lt;类型&gt;</code> 规则即可（<code>cover / section / thanks / agenda / content / content-list / table / roadmap / figure / image / quote / code / chart / formula</code>）。版式识别逻辑在 <code>src/lib/slides.ts</code> 的 <code>detectLayout</code>；标题颜色在主题文件的 <code>--editor-h1/h2/h3</code> 变量中调整。</p>
+
+</section>
+
+        <div class="docs-source">
+            <p>本页由 <code>docs/slideshow-style-mapping.md</code> 生成，随对应版本更新。发现表述问题？欢迎到
+            <a href="https://github.com/laoduu/YiziMarkdown/issues" target="_blank">GitHub Issues</a> 反馈。</p>
+        </div>
+    </main>
+
+</div>
+
+<button class="help-fab" id="helpFab">目录</button>
+
+<div id="site-footer"></div>
+
+<script src="assets/js/site-chrome.js"></script>
+<script src="assets/js/icons.js"></script>
+<script src="assets/js/help.js"></script>
+
+</body>
+</html>

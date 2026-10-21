@@ -1,0 +1,3244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>主题设计规范 - YiziMarkdown 文档</title>
+    <meta name="description" content="YiziMarkdown 主题设计规范：主题令牌分层（基础 / 区域 / 装饰 / 效果）、文件与命名、明暗双模式、theme.json 元数据、check-themes 校验门禁、从零写一个主题的完整示例与令牌总表。">
+    <meta name="keywords" content="YiziMarkdown,主题设计,主题规范,CSS变量,令牌,theme.json,自定义主题">
+    <meta name="author" content="YiziPaper">
+    <meta name="robots" content="index, follow">
+    <meta name="docs-src" content="docs/THEME-DESIGN-SPEC.md">
+    <meta name="docs-hash" content="2248b69e0aaab3b7357d27c187896f0e279a6516bf43193bbe2f0ec8a3033de7">
+    <link rel="canonical" href="https://md.yizigpt.com/theme-spec.html">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="主题设计规范 - YiziMarkdown 文档">
+    <meta property="og:description" content="YiziMarkdown 主题设计规范：主题令牌分层（基础 / 区域 / 装饰 / 效果）、文件与命名、明暗双模式、theme.json 元数据、check-themes 校验门禁、从零写一个主题的完整示例与令牌总表。">
+    <meta property="og:url" content="https://md.yizigpt.com/theme-spec.html">
+    <meta property="og:site_name" content="YiziMarkdown">
+    <meta property="og:locale" content="zh_CN">
+    <meta property="og:image" content="https://md.yizigpt.com/assets/index.webp">
+
+    <link rel="icon" type="image/png" href="assets/icon.png">
+    <link rel="shortcut icon" href="assets/favicon.ico">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/help.css?v=3">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "首页", "item": "https://md.yizigpt.com/" },
+            { "@type": "ListItem", "position": 2, "name": "文档", "item": "https://md.yizigpt.com/help.html" },
+            { "@type": "ListItem", "position": 3, "name": "主题设计规范", "item": "https://md.yizigpt.com/theme-spec.html" }
+        ]
+    }
+    </script>
+
+    <!-- 百度统计 -->
+    <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?782f6fcd479a342d5d05f5bc47c61349";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+</head>
+<body class="has-docs-tabs">
+
+<!-- 共用导航（由 site-chrome.js 渲染，与首页一致） -->
+<div id="site-nav"></div>
+<div id="docs-tabs"></div>
+<noscript>
+    <div style="padding: 120px 20px 0; text-align: center; font-size: 14px; color: #64748b;">
+        导航需要 JavaScript。请直接访问 <a href="index.html" style="color: #002FA7;">YiziMarkdown 首页</a>，
+        或查看 <a href="help.html" style="color: #002FA7;">帮助中心</a>。
+    </div>
+</noscript>
+
+<!-- 页头 -->
+<header class="help-header">
+    <div class="help-header-inner">
+        <nav class="docs-breadcrumb" aria-label="面包屑">
+            <a href="index.html">首页</a><span>/</span><a href="help.html">文档</a><span>/</span><span>主题设计规范</span>
+        </nav>
+        <h1 class="help-title">主题设计规范</h1>
+        <p class="docs-subtitle">从令牌分层到明暗双模式，写出一套能通过校验门禁的主题。</p>
+        <div class="docs-meta"><span>基线 v0.3.2+</span><span>更新 2026-09-24</span><span>面向主题作者</span></div>
+        <div class="help-search">
+            <svg class="help-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <input type="text" class="help-search-input" id="helpSearch" placeholder="搜索令牌或规则，例如「--editor-bg」" autocomplete="off">
+            <span class="help-search-hint">/</span>
+            <div class="help-results" id="helpResults"></div>
+        </div>
+    </div>
+</header>
+
+<div class="help-layout">
+
+    <!-- 左侧章节导航（由 help.js 生成） -->
+    <aside class="help-sidebar" id="helpSidebar">
+        <nav id="helpNav"></nav>
+    </aside>
+
+    <!-- 正文 -->
+    <main class="help-content docs-content">
+<section class="help-section" id="1-概述主题是什么" data-icon="book-open" data-kw="1. 概述：主题是什么 ">
+<h2><a class="anchor" href="#1-概述主题是什么">#</a>1. 概述：主题是什么</h2>
+
+<div class="help-sub" id="11-定义" data-kw="1.1 定义 一个主题 = 一个 CSS 文件 ，内容是一组 CSS 自定义属性（下称「令牌」）的覆盖值，配合少量「无法令牌化的结构性装饰」规则。 主题 不重写组件选择器 ，不修改布局，不新增 DOM。它只回答一个问题： 「把这个应用里每一个可见区域，染成什么颜色、配上什么形状、加什么光影？」">
+<h3>1.1 定义</h3>
+<p>一个主题 = <strong>一个 CSS 文件</strong>，内容是一组 CSS 自定义属性（下称「令牌」）的覆盖值，配合少量「无法令牌化的结构性装饰」规则。</p>
+<p>主题<strong>不重写组件选择器</strong>，不修改布局，不新增 DOM。它只回答一个问题：<strong>「把这个应用里每一个可见区域，染成什么颜色、配上什么形状、加什么光影？」</strong></p>
+</div>
+<div class="help-sub" id="12-三条铁律" data-kw="1.2 三条铁律 # 铁律 理由 1 只覆盖令牌，不写组件选择器 组件选择器（ .toolbar { … } ）会与全局层、运行时注入层争夺特异性，导致 !important 、层级打架、被 overflow 裁切 2 颜色令牌必须亮/暗各声明一次 只写一侧，另一模式会静默回落到基础值 —— 表现为「暗色下某个角落还是亮的」 3 令牌名必须存在于 globals.css 或主题自身 CSS 变量名写错 不会报错，只会静默失效 。这是本项目最大的历史坑（17 个主题都定义了 --editor-h1/2/3 ，但长期无">
+<h3>1.2 三条铁律</h3>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>#</th>
+<th>铁律</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>只覆盖令牌，不写组件选择器</strong></td>
+<td>组件选择器（<code>.toolbar { … }</code>）会与全局层、运行时注入层争夺特异性，导致 <code>!important</code>、层级打架、被 <code>overflow</code> 裁切</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>颜色令牌必须亮/暗各声明一次</strong></td>
+<td>只写一侧，另一模式会静默回落到基础值 —— 表现为「暗色下某个角落还是亮的」</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>令牌名必须存在于 <code>globals.css</code> 或主题自身</strong></td>
+<td>CSS 变量名写错<strong>不会报错，只会静默失效</strong>。这是本项目最大的历史坑（17 个主题都定义了 <code>--editor-h1/2/3</code>，但长期无人消费 ⇒ 「标题色」旋钮是死的）</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<div class="help-sub" id="13-为什么令牌化一次真实的重构" data-kw="1.3 为什么令牌化：一次真实的重构 liquidglass-prism 的演进是本规范的最佳注脚： 版本 做法 行数 反模式（ !important / [class*= / z-index ） 第三版 用组件选择器 + 字面量「补足」变量体系的缺失 529 14 处 第四版 只用令牌 表达 411 0 处 令牌化后，改一处配色只需改一个值，不再需要动几十行选择器。">
+<h3>1.3 为什么令牌化：一次真实的重构</h3>
+<p><code>liquidglass-prism</code> 的演进是本规范的最佳注脚：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>版本</th>
+<th>做法</th>
+<th>行数</th>
+<th>反模式（<code>!important</code> / <code>[class*=</code> / <code>z-index</code>）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>第三版</td>
+<td>用组件选择器 + 字面量「补足」变量体系的缺失</td>
+<td>529</td>
+<td>14 处</td>
+</tr>
+<tr>
+<td>第四版</td>
+<td><strong>只用令牌</strong>表达</td>
+<td>411</td>
+<td>0 处</td>
+</tr>
+</tbody>
+</table></div>
+<p>令牌化后，改一处配色只需改一个值，不再需要动几十行选择器。</p>
+</div>
+<div class="help-sub" id="14-架构分层" data-kw="1.4 架构分层 ┌─────────────────────────────────────────────────────────────┐ │ L4 结构性装饰（选择器层） .editor-content.theme-x h1 { … } │ ← 无法令牌化的部分 ├─────────────────────────────────────────────────────────────┤ │ L3 效果令牌 --shadow-* --dur-* --ease-* --texture-* │ ├───────">
+<h3>1.4 架构分层</h3>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│  L4  结构性装饰（选择器层）  .editor-content.theme-x h1 { … } │  ← 无法令牌化的部分
+├─────────────────────────────────────────────────────────────┤
+│  L3  效果令牌  --shadow-*  --dur-*  --ease-*  --texture-*    │
+├─────────────────────────────────────────────────────────────┤
+│  L2  装饰层    --&lt;region&gt;-deco-*  --&lt;region&gt;-sheen-*         │
+├─────────────────────────────────────────────────────────────┤
+│  L1  区域令牌  --toolbar-*  --tabbar-*  --sidebar-*  --menu-* │
+│                --dialog-*  --statusbar-*  --overlay-bg        │
+├─────────────────────────────────────────────────────────────┤
+│  L0  基础层    --editor-*  --sidebar-bg/text  --statusbar-*   │
+│                --sel-toolbar-*  --font-*  --radius-*          │
+│                --code-*  --h1-color/--link-color/…  --danger… │
+└─────────────────────────────────────────────────────────────┘
+        所有 L1 令牌默认回退到 L0 ⇒ 老主题一行不改、外观不变
+</code></pre>
+<p><strong>关键设计原则：每一层都回退到下一层。</strong> 区域令牌的默认值是「主题已经覆盖过的基础变量」（如 <code>--toolbar-bg: var(--editor-surface)</code>），因此：</p>
+<ul>
+<li>现有主题<strong>一行不改</strong>，外观逐像素不变；</li>
+<li>区域令牌<strong>自动跟随主题</strong>（主题改了 <code>--editor-surface</code>，工具栏跟着变）；</li>
+<li>想单独定制某区域时，才覆盖对应的 <code>--&lt;region&gt;-*</code>。</li>
+</ul>
+</div>
+</section>
+
+<section class="help-section" id="2-快速开始最小可用主题" data-icon="rocket" data-kw="2. 快速开始：最小可用主题 复制以下模板即可得到一个完整、通过全部门禁的主题： /* 我的主题 (My Theme) — 一句话描述 */ :root.theme-my-theme { /* ── 基础层（必需） ── */ --editor-bg: #ffffff; --editor-text: #222222; --editor-accent: #7c3aed; --editor-border: #e5e7eb; --editor-surface: #f9fafb; --editor-hover: rgba(">
+<h2><a class="anchor" href="#2-快速开始最小可用主题">#</a>2. 快速开始：最小可用主题</h2>
+<p>复制以下模板即可得到一个完整、通过全部门禁的主题：</p>
+<pre><code class="language-css">/* 我的主题 (My Theme) — 一句话描述 */
+:root.theme-my-theme {
+  /* ── 基础层（必需） ── */
+  --editor-bg: #ffffff;
+  --editor-text: #222222;
+  --editor-accent: #7c3aed;
+  --editor-border: #e5e7eb;
+  --editor-surface: #f9fafb;
+  --editor-hover: rgba(0, 0, 0, 0.04);
+  --editor-selection-bg: rgba(124, 58, 237, 0.25);
+  --editor-cursor: #7c3aed;
+  --sidebar-bg: #f5f3ff;
+  --sidebar-text: #6b7280;
+  --statusbar-bg: #7c3aed;
+  --statusbar-text: #ffffff;
+
+  /* ── 形状与排版 ── */
+  --border-radius: 10px;
+  --font-sans: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --font-size-base: 16px;
+  --line-height: 1.8;
+  --paragraph-spacing: 1.5em;
+}
+
+:root.theme-my-theme.dark {
+  /* ── 暗色：颜色令牌必须逐一声明 ── */
+  --editor-bg: #14121c;
+  --editor-text: #d8d4e4;
+  --editor-accent: #a78bfa;
+  --editor-border: #2b2738;
+  --editor-surface: #1c1926;
+  --editor-hover: rgba(255, 255, 255, 0.05);
+  --editor-selection-bg: rgba(167, 139, 250, 0.3);
+  --editor-cursor: #a78bfa;
+  --sidebar-bg: #1a1724;
+  --sidebar-text: #8b8698;
+  --statusbar-bg: #2a2438;
+  --statusbar-text: #c4bfd4;
+}
+
+/* ── 结构性装饰（可选）：只有无法令牌化的部分才写选择器 ── */
+.editor-content.theme-my-theme h1 {
+  font-size: 2em;
+  font-weight: 700;
+  margin: 1.5em 0 0.5em;
+}
+</code></pre>
+<p><strong>注册元数据</strong>（<code>src-tauri/themes/theme.json</code>，键 = 文件名去掉 <code>.css</code>）：</p>
+<pre><code class="language-json">&quot;my-theme&quot;: {
+  &quot;name&quot;: &quot;我的主题&quot;,
+  &quot;swatch&quot;: [&quot;#ffffff&quot;, &quot;#7c3aed&quot;],
+  &quot;desc&quot;: &quot;一句话中文描述&quot;
+}
+</code></pre>
+<p><strong>校验</strong>：</p>
+<pre><code class="language-bash">node scripts/check-themes.mjs          # 只让真 bug 失败
+node scripts/check-themes.mjs --strict # 发布前自查，告警也算失败
+</code></pre>
+
+</section>
+
+<section class="help-section" id="3-文件与命名规范" data-icon="file-text" data-kw="3. 文件与命名规范 ">
+<h2><a class="anchor" href="#3-文件与命名规范">#</a>3. 文件与命名规范</h2>
+
+<div class="help-sub" id="31-位置" data-kw="3.1 位置 路径 角色 src-tauri/themes/*.css 运行时唯一读取目录 。所有主题 CSS 放这里 src-tauri/themes/theme.json 主题元数据注册表（显示名 / 色板 / 描述） src/styles/globals.css 基准令牌全集 + 组件消费点。 同时是校验器的变量白名单 src/lib/themeLoader.ts 主题样式 唯一注入入口 （含「自定义主题」合成） src/lib/userCss.ts 选择器归一 / 提权（主题文件归属 + 用户 CSS 覆盖">
+<h3>3.1 位置</h3>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>路径</th>
+<th>角色</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>src-tauri/themes/*.css</code></strong></td>
+<td><strong>运行时唯一读取目录</strong>。所有主题 CSS 放这里</td>
+</tr>
+<tr>
+<td><code>src-tauri/themes/theme.json</code></td>
+<td>主题元数据注册表（显示名 / 色板 / 描述）</td>
+</tr>
+<tr>
+<td><code>src/styles/globals.css</code></td>
+<td>基准令牌全集 + 组件消费点。<strong>同时是校验器的变量白名单</strong></td>
+</tr>
+<tr>
+<td><code>src/lib/themeLoader.ts</code></td>
+<td>主题样式<strong>唯一注入入口</strong>（含「自定义主题」合成）</td>
+</tr>
+<tr>
+<td><code>src/lib/userCss.ts</code></td>
+<td>选择器归一 / 提权（主题文件归属 + 用户 CSS 覆盖）</td>
+</tr>
+<tr>
+<td><code>scripts/check-themes.mjs</code></td>
+<td>六项一致性门禁</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>⚠️ <strong><code>src/assets/themes/</code> 已于 2026-09-22 删除</strong>，全仓零引用。它曾害过一次 bug：改了那份副本，运行时却从 <code>src-tauri/</code> 读取，导致变量未生效。<code>check-themes.mjs</code> 第 6 项保留为哨兵 —— 该目录再现即告警。<strong>不要重建副本。</strong></p>
+</blockquote>
+</div>
+<div class="help-sub" id="32-命名一致性硬性要求" data-kw="3.2 命名一致性（硬性要求） 文件名 my-theme.css ↓ 必须一致 选择器 :root.theme-my-theme （亮色） :root.theme-my-theme.dark （暗色） 由 check-themes.mjs 第 4 项校验， 不一致直接构建失败 。">
+<h3>3.2 命名一致性（硬性要求）</h3>
+<pre><code>文件名         my-theme.css
+                 ↓ 必须一致
+选择器         :root.theme-my-theme        （亮色）
+               :root.theme-my-theme.dark   （暗色）
+</code></pre>
+<p>由 <code>check-themes.mjs</code> 第 4 项校验，<strong>不一致直接构建失败</strong>。</p>
+</div>
+<div class="help-sub" id="33-主题清单共-15-个" data-kw="3.3 主题清单（共 15 个） src-tauri/themes/ 下现有 15 个 CSS 文件。其中 14 个在 theme.json 注册， academic （学术蓝）是 代码内置的保底预设 （元数据在 SettingsModal.tsx ，走 i18n，不在 theme.json ）： academic cyberpunk facebook liquidglass-prism lychee magazine matrix minimal mint nature sunset tech typewrite">
+<h3>3.3 主题清单（共 15 个）</h3>
+<p><code>src-tauri/themes/</code> 下现有 15 个 CSS 文件。其中 14 个在 <code>theme.json</code> 注册，<code>academic</code>（学术蓝）是<strong>代码内置的保底预设</strong>（元数据在 <code>SettingsModal.tsx</code>，走 i18n，不在 <code>theme.json</code>）：</p>
+<pre><code>academic  cyberpunk  facebook  liquidglass-prism  lychee  magazine
+matrix    minimal    mint      nature             sunset  tech
+typewriter vibrant   violet
+</code></pre>
+<p><strong>默认主题</strong> = <code>liquidglass-prism</code>，由 <code>src/lib/themeOrder.ts</code> 的 <code>DEFAULT_THEME</code> 常量定义，并在工具栏 / 设置面板 / 演示主题菜单三个消费点统一排到列表<strong>第一位</strong>。</p>
+<blockquote>
+<p><strong>开发用测试主题</strong>：仓库里另有一个 <code>brocade.css</code>（织锦），是纹路 / 流光能力的<strong>验证样本</strong>（第一个使用 <code>--&lt;region&gt;-deco-*</code> / <code>--&lt;region&gt;-sheen-*</code> 与 <code>--texture-grid/dots/paper</code> 预设的主题），<strong>不注册 <code>theme.json</code>、不随版本发布</strong>。想看纹路效果可直接研究它；正式主题请勿模仿它的「测试定位」。</p>
+</blockquote>
+</div>
+</section>
+
+<section class="help-section" id="4-加载与生效机制" data-icon="settings" data-kw="4. 加载与生效机制 理解加载时序，能解释 90% 的「主题没生效」问题。">
+<h2><a class="anchor" href="#4-加载与生效机制">#</a>4. 加载与生效机制</h2>
+<p>理解加载时序，能解释 90% 的「主题没生效」问题。</p>
+<div class="help-sub" id="41-注入流程" data-kw="4.1 注入流程 App.tsx └─ applyThemeStyles(theme, customCssBase) ← lib/themeLoader.ts（唯一注入入口） ├─ tauri.invoke('read_theme_css', { name }) ← Rust 侧从 exe 旁 themes/ 读文件 │ └─ retargetThemeCss(css, theme) ← 选择器归一到当前生效主题名 │ └─ 写入 &lt;style id=&quot;yizimarkdown-theme-css&quot;&gt; ├─ [th">
+<h3>4.1 注入流程</h3>
+<pre><code>App.tsx
+  └─ applyThemeStyles(theme, customCssBase)          ← lib/themeLoader.ts（唯一注入入口）
+       ├─ tauri.invoke('read_theme_css', { name })   ← Rust 侧从 exe 旁 themes/ 读文件
+       │    └─ retargetThemeCss(css, theme)          ← 选择器归一到当前生效主题名
+       │    └─ 写入 &lt;style id=&quot;yizimarkdown-theme-css&quot;&gt;
+       ├─ [theme === 'custom' 时] 读 user.css
+       │    └─ normalizeUserCss(css, 'custom')       ← 归一 + 提权（见 §4.5）
+       │    └─ 写入 &lt;style id=&quot;yizimarkdown-user-css&quot;&gt;
+       └─ document.documentElement.classList.add('theme-&lt;name&gt;')
+            └─ :root.theme-&lt;name&gt; { … } 命中 ⇒ 令牌生效
+  └─ 明暗：document.documentElement.classList.toggle('dark')
+       └─ :root.theme-&lt;name&gt;.dark { … } 命中
+</code></pre>
+</div>
+<div class="help-sub" id="42-自定义主题-基底主题-usercss" data-kw="4.2 「自定义主题」= 基底主题 + user.css 设置 → 外观 → 自定义 CSS 保存后，会生成一个合成主题（id = custom ）： 基底主题 （ settingsStore.customCssBase ）= 保存时的当前主题，提供完整外观； user.css 是覆盖层 —— 既可以粘贴整份新主题，也可以只改几个变量； 保存后「自定义主题」自动出现在主题列表 首位 并选中； 激活态与观感永远一致 。 user.css 只在 「自定义主题」下生效（其他主题不叠加它）—— 这是刻意设计：否则「菜单里选">
+<h3>4.2 「自定义主题」= 基底主题 + user.css</h3>
+<p>设置 → 外观 → 自定义 CSS 保存后，会生成一个合成主题（id = <code>custom</code>）：</p>
+<ul>
+<li><strong>基底主题</strong>（<code>settingsStore.customCssBase</code>）= 保存时的当前主题，提供完整外观；</li>
+<li><strong>user.css</strong> 是覆盖层 —— 既可以粘贴整份新主题，也可以只改几个变量；</li>
+<li>保存后「自定义主题」自动出现在主题列表<strong>首位</strong>并选中；<strong>激活态与观感永远一致</strong>。</li>
+<li>user.css <strong>只在</strong>「自定义主题」下生效（其他主题不叠加它）—— 这是刻意设计：否则「菜单里选的是 A、看到的却是被 user.css 覆盖后的 B」，用户会分不清自己选了什么。</li>
+<li>清空 user.css 并保存 ⇒ 条目消失，回落到基底主题。</li>
+<li>演示模式同样支持：HUD 主题菜单出现「自定义主题」（user.css 非空时），基底变量块 + user.css 变量块合并注入。</li>
+</ul>
+</div>
+<div class="help-sub" id="43-关键时序坑" data-kw="4.3 关键时序坑 主题 CSS 是异步注入的 。组件在 mount 时用 getComputedStyle 读到的可能是 注入前 的值。需要读取主题色的逻辑（如主题色光标生成）必须等待注入完成。 主题切换带过渡 ：切换瞬间 &lt;html&gt; 会挂 .theme-transition ，其 * { transition: background-color/color/border-color } 让换肤平滑。注意它是 全局通配 ，会短暂影响所有元素的颜色过渡。 dev 模式读的是 target/debug/themes">
+<h3>4.3 关键时序坑</h3>
+<ul>
+<li><strong>主题 CSS 是异步注入的</strong>。组件在 <code>mount</code> 时用 <code>getComputedStyle</code> 读到的可能是<strong>注入前</strong>的值。需要读取主题色的逻辑（如主题色光标生成）必须等待注入完成。</li>
+<li><strong>主题切换带过渡</strong>：切换瞬间 <code>&lt;html&gt;</code> 会挂 <code>.theme-transition</code>，其 <code>* { transition: background-color/color/border-color }</code> 让换肤平滑。注意它是<strong>全局通配</strong>，会短暂影响所有元素的颜色过渡。</li>
+<li><strong>dev 模式读的是 <code>target/debug/themes/</code></strong>（<code>get_app_root()</code> 返回 exe 所在目录）。Tauri 资源拷贝是<strong>增量、不删已移除文件</strong>的 ⇒ <strong>删主题时必须连带清理 <code>target/**/themes/</code> 的资源拷贝</strong>，否则旧主题仍在列表里。</li>
+<li><strong>Vite 文件监视器可能漏掉 <code>globals.css</code> 的写入通知</strong> ⇒ HMR 不推送，测试无效。改动 <code>globals.css</code> 后若「看起来没生效」，重启 dev 进程树再验证。</li>
+</ul>
+</div>
+<div class="help-sub" id="44-js-运行时注入的变量" data-kw="4.4 JS 运行时注入的变量 以下变量由 JavaScript 在运行时写入， 因此不在 globals.css 里声明 （校验器的 JS_INJECTED 豁免清单）： 令牌 注入点 来源 --cursor-arrow / --cursor-standard / --cursor-bold themeCursor.ts 由当前主题 --editor-cursor 动态生成（明暗适配描边） --preview-font-size / --preview-line-height App.tsx 设置里的预览字号 /">
+<h3>4.4 JS 运行时注入的变量</h3>
+<p>以下变量由 JavaScript 在运行时写入，<strong>因此不在 <code>globals.css</code> 里声明</strong>（校验器的 <code>JS_INJECTED</code> 豁免清单）：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>注入点</th>
+<th>来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--cursor-arrow</code> / <code>--cursor-standard</code> / <code>--cursor-bold</code></td>
+<td><code>themeCursor.ts</code></td>
+<td>由当前主题 <code>--editor-cursor</code> 动态生成（明暗适配描边）</td>
+</tr>
+<tr>
+<td><code>--preview-font-size</code> / <code>--preview-line-height</code></td>
+<td><code>App.tsx</code></td>
+<td>设置里的预览字号 / 行高</td>
+</tr>
+<tr>
+<td><code>--font-mono</code></td>
+<td><code>App.tsx</code></td>
+<td>编辑器字体设置</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<div class="help-sub" id="45-选择器归一与提权libusercssts" data-kw="4.5 选择器归一与提权（ lib/userCss.ts ） 应用只给 &lt;html&gt; 挂 当前生效主题 的那一个类，因此两套改写缺一不可： ① 主题文件归属（ retargetThemeCss ） ：主题文件写的是自己的名字（ :root.theme-brocade ），但 &lt;html&gt; 上挂的是当前生效主题 ⇒ 所有 .theme-&lt;x&gt; 归一到生效主题名。同名归一是无害的空操作。 ② 用户 CSS（ normalizeUserCss ） ，两条规则： 用户写法 改写结果 原理 :root.theme-broca">
+<h3>4.5 选择器归一与提权（<code>lib/userCss.ts</code>）</h3>
+<p>应用只给 <code>&lt;html&gt;</code> 挂<strong>当前生效主题</strong>的那一个类，因此两套改写缺一不可：</p>
+<p><strong>① 主题文件归属（<code>retargetThemeCss</code>）</strong>：主题文件写的是自己的名字（<code>:root.theme-brocade</code>），但 <code>&lt;html&gt;</code> 上挂的是当前生效主题 ⇒ 所有 <code>.theme-&lt;x&gt;</code> 归一到生效主题名。同名归一是无害的空操作。</p>
+<p><strong>② 用户 CSS（<code>normalizeUserCss</code>）</strong>，两条规则：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>用户写法</th>
+<th>改写结果</th>
+<th>原理</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>:root.theme-brocade { … }</code>（粘贴整份主题）</td>
+<td><code>:root.theme-custom { … }</code></td>
+<td>只归一主题名，<strong>不加前缀</strong>（双主题类永不匹配）</td>
+</tr>
+<tr>
+<td><code>:root { … }</code> / <code>.editor-content h1 { … }</code>（微调）</td>
+<td><code>:root.theme-custom { … }</code> / <code>:root.theme-custom .editor-content h1 { … }</code></td>
+<td>追加作用域前缀提权</td>
+</tr>
+</tbody>
+</table></div>
+<p>提权不用 <code>!important</code>：作用域前缀已能稳定压过主题（变量 (0,2,0) 平手 + 后置 ⇒ 胜；元素 (0,3,1) &gt; 主题 (0,2,1)），且用户自己后面的规则仍能覆盖前面的。<code>@media</code> / <code>@supports</code> 递归改写；<code>@keyframes</code> / <code>@font-face</code> / <code>@page</code> 原样保留。</p>
+<blockquote>
+<p><strong>历史教训</strong>：注入逻辑曾分裂在「启动加载」与「保存」两条路径，保存那条漏了提权 ⇒ 改了 CSS 保存后毫无反应、必须重启。现已统一到 <code>applyThemeStyles</code> 单一入口。</p>
+</blockquote>
+</div>
+<div class="help-sub" id="46-明暗无关变量modeindependent-豁免" data-kw="4.6 明暗无关变量（ MODE_INDEPENDENT 豁免） 以下变量 只声明一次就是正确的 ，不该按「亮/暗各一次」要求（校验器第 2 项会跳过它们）： --font-size-base / --line-height / --paragraph-spacing --border-radius / --radius-xs|sm|md|lg|xl|full --sel-toolbar-bg|text|border|hover|accent —— 用户明确确认的有意设计 ：划词工具栏是浮动小面板，暗色下若跟着变暗">
+<h3>4.6 明暗无关变量（<code>MODE_INDEPENDENT</code> 豁免）</h3>
+<p>以下变量<strong>只声明一次就是正确的</strong>，不该按「亮/暗各一次」要求（校验器第 2 项会跳过它们）：</p>
+<ul>
+<li><code>--font-size-base</code> / <code>--line-height</code> / <code>--paragraph-spacing</code></li>
+<li><code>--border-radius</code> / <code>--radius-xs|sm|md|lg|xl|full</code></li>
+<li><code>--sel-toolbar-bg|text|border|hover|accent</code> —— <strong>用户明确确认的有意设计</strong>：划词工具栏是浮动小面板，暗色下若跟着变暗会显著影响可见性，故刻意沿用亮色值</li>
+<li>正则匹配：<code>^--font-</code>（字体族不分明暗）、<code>-(deco|sheen)-</code>（装饰尺寸 / 节奏 / 混合模式不是颜色）</li>
+</ul>
+</div>
+</section>
+
+<section class="help-section" id="5-令牌分层总览" data-icon="list" data-kw="5. 令牌分层总览 层 前缀 / 令牌 数量 角色 详见 L0 基础 --editor-* 9 编辑器内容区配色骨架 §6.1 L0 基础 --sidebar-bg/text 、 --statusbar-bg/text 4 侧栏 / 状态栏基础色 §6.1 L0 基础 --sel-toolbar-* 5 划词助手浮动工具栏（明暗无关） §6.1 L0 基础 --font-* 8 字体三通道 + 字号 / 行高 §6.8 L0 基础 --radius-* / --border-radius 6 + 1 圆角阶梯 §6">
+<h2><a class="anchor" href="#5-令牌分层总览">#</a>5. 令牌分层总览</h2>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>层</th>
+<th>前缀 / 令牌</th>
+<th>数量</th>
+<th>角色</th>
+<th>详见</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L0 基础</td>
+<td><code>--editor-*</code></td>
+<td>9</td>
+<td>编辑器内容区配色骨架</td>
+<td>§6.1</td>
+</tr>
+<tr>
+<td>L0 基础</td>
+<td><code>--sidebar-bg/text</code>、<code>--statusbar-bg/text</code></td>
+<td>4</td>
+<td>侧栏 / 状态栏基础色</td>
+<td>§6.1</td>
+</tr>
+<tr>
+<td>L0 基础</td>
+<td><code>--sel-toolbar-*</code></td>
+<td>5</td>
+<td>划词助手浮动工具栏（明暗无关）</td>
+<td>§6.1</td>
+</tr>
+<tr>
+<td>L0 基础</td>
+<td><code>--font-*</code></td>
+<td>8</td>
+<td>字体三通道 + 字号 / 行高</td>
+<td>§6.8</td>
+</tr>
+<tr>
+<td>L0 基础</td>
+<td><code>--radius-*</code> / <code>--border-radius</code></td>
+<td>6 + 1</td>
+<td>圆角阶梯</td>
+<td>§6.2</td>
+</tr>
+<tr>
+<td>L1 区域</td>
+<td><code>--toolbar-*</code></td>
+<td>8</td>
+<td>顶部工具栏</td>
+<td>§6.3</td>
+</tr>
+<tr>
+<td>L1 区域</td>
+<td><code>--tabbar-*</code></td>
+<td>8</td>
+<td>标签栏</td>
+<td>§6.3</td>
+</tr>
+<tr>
+<td>L1 区域</td>
+<td><code>--sidebar-*</code>（补缺）</td>
+<td>5</td>
+<td>侧边栏</td>
+<td>§6.3</td>
+</tr>
+<tr>
+<td>L1 区域</td>
+<td><code>--statusbar-border</code></td>
+<td>1</td>
+<td>状态栏描边</td>
+<td>§6.3</td>
+</tr>
+<tr>
+<td>L1 区域</td>
+<td><code>--menu-*</code></td>
+<td>6</td>
+<td>菜单 / 下拉</td>
+<td>§6.3</td>
+</tr>
+<tr>
+<td>L1 区域</td>
+<td><code>--dialog-*</code></td>
+<td>3</td>
+<td>弹窗 / 模态</td>
+<td>§6.3</td>
+</tr>
+<tr>
+<td>L1 区域</td>
+<td><code>--overlay-bg</code></td>
+<td>1</td>
+<td>遮罩</td>
+<td>§6.3</td>
+</tr>
+<tr>
+<td>L2 装饰</td>
+<td><code>--&lt;region&gt;-deco-*</code></td>
+<td>4×4</td>
+<td>纹路（背景图层）</td>
+<td>§6.4</td>
+</tr>
+<tr>
+<td>L2 装饰</td>
+<td><code>--&lt;region&gt;-sheen-*</code></td>
+<td>3×2</td>
+<td>流光（<code>::after</code> 层）</td>
+<td>§6.4</td>
+</tr>
+<tr>
+<td>L3 效果</td>
+<td><code>--shadow-*</code> / <code>--dur-*</code> / <code>--ease-*</code></td>
+<td>3 + 3 + 2</td>
+<td>阴影 / 动效节奏</td>
+<td>§6.5</td>
+</tr>
+<tr>
+<td>L3 效果</td>
+<td><code>--texture-*</code></td>
+<td>6</td>
+<td>纹理预设</td>
+<td>§6.5</td>
+</tr>
+<tr>
+<td>L0 代码</td>
+<td><code>--code-*</code></td>
+<td>28</td>
+<td>语法高亮 + markdown 角色</td>
+<td>§6.6</td>
+</tr>
+<tr>
+<td>L0 排版</td>
+<td><code>--h1-color</code> / <code>--link-color</code> / …</td>
+<td>12</td>
+<td>预览排版（经 Tailwind prose 注入）</td>
+<td>§6.7</td>
+</tr>
+<tr>
+<td>L0 语义</td>
+<td><code>--danger</code> / <code>--warn</code> / <code>--success</code> / <code>--on-accent</code></td>
+<td>4</td>
+<td>语义色</td>
+<td>§6.9</td>
+</tr>
+<tr>
+<td>L4 结构</td>
+<td>选择器规则</td>
+<td>—</td>
+<td>渐变文字、多重内阴影等</td>
+<td>§6.10</td>
+</tr>
+</tbody>
+</table></div>
+
+</section>
+
+<section class="help-section" id="6-模块参考" data-icon="palette" data-kw="6. 模块参考 每个模块按统一格式说明： 定义 → 令牌清单 → 设计指引 → 实现效果 → 示例 。">
+<h2><a class="anchor" href="#6-模块参考">#</a>6. 模块参考</h2>
+<p>每个模块按统一格式说明：<strong>定义 → 令牌清单 → 设计指引 → 实现效果 → 示例</strong>。</p>
+<div class="help-sub" id="61-基础层令牌base" data-kw="6.1 基础层令牌（Base） 定义 基础层是整个应用配色的 骨架 ，也是主题 必须覆盖 的一层。它定义了编辑器内容区、侧边栏、状态栏、划词工具栏的配色，以及所有 L1 区域令牌的默认回退源。 令牌清单 令牌 类型 默认值（亮） 默认值（暗） 说明 --editor-bg color #ffffff #1e1e1e 编辑器内容区背景（也是 body 背景） --editor-text color #333333 #d4d4d4 正文文字色 --editor-accent color #0066cc #569cd6 ">
+<h3>6.1 基础层令牌（Base）</h3>
+<h4 id="定义">定义</h4>
+<p>基础层是整个应用配色的<strong>骨架</strong>，也是主题<strong>必须覆盖</strong>的一层。它定义了编辑器内容区、侧边栏、状态栏、划词工具栏的配色，以及所有 L1 区域令牌的默认回退源。</p>
+<h4 id="令牌清单">令牌清单</h4>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>类型</th>
+<th>默认值（亮）</th>
+<th>默认值（暗）</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--editor-bg</code></td>
+<td>color</td>
+<td><code>#ffffff</code></td>
+<td><code>#1e1e1e</code></td>
+<td>编辑器内容区背景（也是 <code>body</code> 背景）</td>
+</tr>
+<tr>
+<td><code>--editor-text</code></td>
+<td>color</td>
+<td><code>#333333</code></td>
+<td><code>#d4d4d4</code></td>
+<td>正文文字色</td>
+</tr>
+<tr>
+<td><code>--editor-accent</code></td>
+<td>color</td>
+<td><code>#0066cc</code></td>
+<td><code>#569cd6</code></td>
+<td>强调色：链接、按钮、焦点环、复选框</td>
+</tr>
+<tr>
+<td><code>--editor-border</code></td>
+<td>color</td>
+<td><code>#e5e5e5</code></td>
+<td><code>#3c3c3c</code></td>
+<td>通用描边</td>
+</tr>
+<tr>
+<td><code>--editor-surface</code></td>
+<td>color</td>
+<td><code>#f8f8f8</code></td>
+<td><code>#252526</code></td>
+<td>次级表面：卡片、输入框、代码块底</td>
+</tr>
+<tr>
+<td><code>--editor-hover</code></td>
+<td>color</td>
+<td><code>rgba(0,0,0,0.03)</code></td>
+<td><code>rgba(255,255,255,0.05)</code></td>
+<td>悬停底色</td>
+</tr>
+<tr>
+<td><code>--editor-selection</code></td>
+<td>color</td>
+<td><code>#0066cc</code></td>
+<td><code>#569cd6</code></td>
+<td>选区色（<strong>已知死旋钮</strong>，当前无消费点）</td>
+</tr>
+<tr>
+<td><code>--editor-selection-bg</code></td>
+<td>color</td>
+<td><code>rgba(0,102,204,0.35)</code></td>
+<td><code>rgba(86,156,214,0.45)</code></td>
+<td>选区背景（实际生效的是这个）</td>
+</tr>
+<tr>
+<td><code>--editor-cursor</code></td>
+<td>color</td>
+<td><code>#0066cc</code></td>
+<td><code>#569cd6</code></td>
+<td>主题色光标源色（JS 据此生成 I-beam）</td>
+</tr>
+<tr>
+<td><code>--sidebar-bg</code></td>
+<td>color</td>
+<td><code>#fafafa</code></td>
+<td><code>#252526</code></td>
+<td>侧边栏背景（区域令牌的源头之一）</td>
+</tr>
+<tr>
+<td><code>--sidebar-text</code></td>
+<td>color</td>
+<td><code>#666666</code></td>
+<td><code>#858585</code></td>
+<td>次级 / 弱化文字（大量用于 muted 场景）</td>
+</tr>
+<tr>
+<td><code>--statusbar-bg</code></td>
+<td>color</td>
+<td><code>#f5f5f5</code></td>
+<td><code>#007acc</code></td>
+<td>状态栏背景（<strong>接受渐变</strong>，见 §6.3）</td>
+</tr>
+<tr>
+<td><code>--statusbar-text</code></td>
+<td>color</td>
+<td><code>#888888</code></td>
+<td><code>#ffffff</code></td>
+<td>状态栏文字</td>
+</tr>
+<tr>
+<td><code>--sel-toolbar-bg</code></td>
+<td>color</td>
+<td><code>#ffffff</code></td>
+<td>—</td>
+<td>划词工具栏背景（<strong>明暗无关</strong>）</td>
+</tr>
+<tr>
+<td><code>--sel-toolbar-text</code></td>
+<td>color</td>
+<td><code>#333333</code></td>
+<td>—</td>
+<td>划词工具栏文字</td>
+</tr>
+<tr>
+<td><code>--sel-toolbar-border</code></td>
+<td>color</td>
+<td><code>#e5e5e5</code></td>
+<td>—</td>
+<td>划词工具栏描边</td>
+</tr>
+<tr>
+<td><code>--sel-toolbar-hover</code></td>
+<td>color</td>
+<td><code>rgba(0,0,0,0.03)</code></td>
+<td>—</td>
+<td>划词工具栏悬停</td>
+</tr>
+<tr>
+<td><code>--sel-toolbar-accent</code></td>
+<td>color</td>
+<td><code>#0066cc</code></td>
+<td>—</td>
+<td>划词工具栏强调色</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="设计指引">设计指引</h4>
+<ul>
+<li><strong><code>--editor-accent</code> 是主题的灵魂</strong>：它同时驱动链接、按钮、焦点环、复选框、光标、进度条。选一个饱和但不过曝的颜色。</li>
+<li><strong><code>--sidebar-text</code> 承担「弱化文字」角色</strong>，远不止侧边栏 —— 它被用作 <code>--toolbar-fg-muted</code> / <code>--menu-fg-muted</code> / 说明文字 / 列表标记色。别把它设得和正文一样重，否则层级全塌。</li>
+<li><strong><code>--editor-surface</code> 与 <code>--editor-bg</code> 要有可辨识的明度差</strong>：前者是「浮起来的卡片」，后者是「地板」。差值太小会让代码块 / 输入框边界消失。</li>
+<li><strong><code>--editor-hover</code> 用半透明</strong>（<code>rgba</code>）：它要叠在各种底色上，纯色会在不同底上显得突兀。</li>
+</ul>
+<h4 id="实现效果">实现效果</h4>
+<p>覆盖基础层后，<strong>编辑器内容区、侧边栏、状态栏、划词工具栏、所有下拉菜单、弹窗、圆角</strong>会整体换肤 —— 因为 L1 区域令牌全部回退到这里。</p>
+<h4 id="示例">示例</h4>
+<pre><code class="language-css">:root.theme-example {
+  --editor-bg: #fdfcfb;
+  --editor-text: #2d2a26;
+  --editor-accent: #c2410c;      /* 暖橙强调 */
+  --editor-border: #e7e2db;
+  --editor-surface: #f5f1ec;
+  --editor-hover: rgba(45, 42, 38, 0.04);
+  --editor-selection-bg: rgba(194, 65, 12, 0.22);
+  --editor-cursor: #c2410c;
+  --sidebar-bg: #f7f3ee;
+  --sidebar-text: #8a8178;
+  --statusbar-bg: #c2410c;
+  --statusbar-text: #fff7ed;
+}
+</code></pre>
+</div>
+<div class="help-sub" id="62-圆角阶梯radius" data-kw="6.2 圆角阶梯（Radius） 定义 把主题声明的 单一 圆角值 --border-radius 展开成一套 --radius-* 阶梯，供全应用 UI 消费。 令牌清单 令牌 默认值（计算式） 实际值（ --border-radius: 8px ） 用途 --border-radius 8px （回退值） 8px 主题输入项 ：全局圆角半径 --radius-xs max(0px, calc(var(--radius-md) - 4px)) 4px 小图标按钮、标记 --radius-sm max(0px, c">
+<h3>6.2 圆角阶梯（Radius）</h3>
+<h4 id="定义-1">定义</h4>
+<p>把主题声明的<strong>单一</strong>圆角值 <code>--border-radius</code> 展开成一套 <code>--radius-*</code> 阶梯，供全应用 UI 消费。</p>
+<h4 id="令牌清单-1">令牌清单</h4>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>默认值（计算式）</th>
+<th>实际值（<code>--border-radius: 8px</code>）</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--border-radius</code></td>
+<td><code>8px</code>（回退值）</td>
+<td><code>8px</code></td>
+<td><strong>主题输入项</strong>：全局圆角半径</td>
+</tr>
+<tr>
+<td><code>--radius-xs</code></td>
+<td><code>max(0px, calc(var(--radius-md) - 4px))</code></td>
+<td><code>4px</code></td>
+<td>小图标按钮、标记</td>
+</tr>
+<tr>
+<td><code>--radius-sm</code></td>
+<td><code>max(0px, calc(var(--radius-md) - 2px))</code></td>
+<td><code>6px</code></td>
+<td>输入框、次要按钮</td>
+</tr>
+<tr>
+<td><code>--radius-md</code></td>
+<td><code>var(--border-radius, 8px)</code></td>
+<td><code>8px</code></td>
+<td>基准：卡片、代码块、面板</td>
+</tr>
+<tr>
+<td><code>--radius-lg</code></td>
+<td><code>calc(var(--radius-md) + 4px)</code></td>
+<td><code>12px</code></td>
+<td>大卡片、弹窗</td>
+</tr>
+<tr>
+<td><code>--radius-xl</code></td>
+<td><code>calc(var(--radius-md) + 8px)</code></td>
+<td><code>16px</code></td>
+<td>弹出层</td>
+</tr>
+<tr>
+<td><code>--radius-full</code></td>
+<td><code>9999px</code></td>
+<td><code>9999px</code></td>
+<td>胶囊 / 圆形</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="设计指引-1">设计指引</h4>
+<ul>
+<li><strong>主题只需声明 <code>--border-radius</code> 一个值</strong>，阶梯自动展开。</li>
+<li><code>max(0px, …)</code> 是必需的：主题可以声明 <code>0px</code>（方正主题），减法会算出负半径而使整条失效。</li>
+<li>阶梯间距固定为 4px，所以 <code>--border-radius: 8px</code> 时与改造前<strong>逐像素一致</strong>。</li>
+</ul>
+<h4 id="实现效果-1">实现效果</h4>
+<p>改 <code>--border-radius</code> 一个值，<strong>全应用 UI 圆角</strong>（工具栏、标签、菜单、弹窗、输入框、按钮、滚动条）同步变化；<code>0px</code> 得到方正硬朗的观感，<code>14px+</code> 得到柔和圆润的观感。</p>
+<h4 id="示例-1">示例</h4>
+<pre><code class="language-css">:root.theme-sharp { --border-radius: 0px; }    /* 方正 */
+:root.theme-soft  { --border-radius: 14px; }   /* 圆润 */
+</code></pre>
+</div>
+<div class="help-sub" id="63-区域令牌region" data-kw="6.3 区域令牌（Region） 定义 每个功能区一套 独立 令牌。核心目的：让主题能把「顶栏」和「内容区」分开配色 —— 改造前它们共用 --editor-surface / --editor-border ，一个变量代表两个区域，主题无法区分。 6.3.1 顶部工具栏 --toolbar-* 令牌 默认值 消费点 说明 --toolbar-bg var(--editor-surface) .toolbar 背景 接受渐变 / 图片 --toolbar-fg var(--editor-text) .toolbar">
+<h3>6.3 区域令牌（Region）</h3>
+<h4 id="定义-2">定义</h4>
+<p>每个功能区一套<strong>独立</strong>令牌。核心目的：让主题能把「顶栏」和「内容区」分开配色 —— 改造前它们共用 <code>--editor-surface</code> / <code>--editor-border</code>，一个变量代表两个区域，主题无法区分。</p>
+<h4 id="631-顶部工具栏-toolbar">6.3.1 顶部工具栏 <code>--toolbar-*</code></h4>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>默认值</th>
+<th>消费点</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--toolbar-bg</code></td>
+<td><code>var(--editor-surface)</code></td>
+<td><code>.toolbar</code> 背景</td>
+<td>接受渐变 / 图片</td>
+</tr>
+<tr>
+<td><code>--toolbar-fg</code></td>
+<td><code>var(--editor-text)</code></td>
+<td><code>.toolbar</code> 文字</td>
+<td>图标 / 按钮前景</td>
+</tr>
+<tr>
+<td><code>--toolbar-fg-muted</code></td>
+<td><code>var(--sidebar-text)</code></td>
+<td>工具栏次级文字</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--toolbar-border</code></td>
+<td><code>var(--editor-border)</code></td>
+<td>底部描边</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--toolbar-accent</code></td>
+<td><code>var(--editor-accent)</code></td>
+<td>激活按钮</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--toolbar-hover</code></td>
+<td><code>var(--editor-hover)</code></td>
+<td>悬停底色</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--toolbar-active</code></td>
+<td><code>var(--editor-hover)</code></td>
+<td>激活底色</td>
+<td>○ <strong>待接入</strong>（尚无消费点）</td>
+</tr>
+<tr>
+<td><code>--toolbar-shadow</code></td>
+<td><code>none</code></td>
+<td>工具栏投影</td>
+<td>接受多重阴影（内高光 + 外投影）</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="632-标签栏-tabbar">6.3.2 标签栏 <code>--tabbar-*</code></h4>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>默认值</th>
+<th>消费点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--tabbar-bg</code></td>
+<td><code>var(--editor-surface)</code></td>
+<td><code>.tab-bar</code> 背景</td>
+</tr>
+<tr>
+<td><code>--tabbar-fg</code></td>
+<td><code>var(--sidebar-text)</code></td>
+<td>非激活 tab 文字</td>
+</tr>
+<tr>
+<td><code>--tabbar-fg-hover</code></td>
+<td><code>var(--editor-text)</code></td>
+<td>tab 悬停文字</td>
+</tr>
+<tr>
+<td><code>--tabbar-fg-active</code></td>
+<td><code>var(--editor-accent)</code></td>
+<td>激活 tab 文字</td>
+</tr>
+<tr>
+<td><code>--tabbar-border</code></td>
+<td><code>var(--editor-border)</code></td>
+<td>底边 + tab 分隔线</td>
+</tr>
+<tr>
+<td><code>--tabbar-accent</code></td>
+<td><code>var(--editor-accent)</code></td>
+<td>激活 tab 下划线</td>
+</tr>
+<tr>
+<td><code>--tabbar-hover</code></td>
+<td><code>var(--editor-hover)</code></td>
+<td>tab 悬停底色</td>
+</tr>
+<tr>
+<td><code>--tabbar-active-bg</code></td>
+<td><code>var(--editor-bg)</code></td>
+<td>激活 tab 底色</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="633-侧边栏-sidebar">6.3.3 侧边栏 <code>--sidebar-*</code></h4>
+<p><code>--sidebar-bg</code> / <code>--sidebar-text</code> 来自基础层，区域层只补缺：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>默认值</th>
+<th>消费点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--sidebar-border</code></td>
+<td><code>var(--editor-border)</code></td>
+<td>右侧描边</td>
+</tr>
+<tr>
+<td><code>--sidebar-hover</code></td>
+<td><code>var(--editor-hover)</code></td>
+<td>○ <strong>待接入</strong>（尚无消费点）</td>
+</tr>
+<tr>
+<td><code>--sidebar-accent</code></td>
+<td><code>var(--editor-accent)</code></td>
+<td>○ <strong>待接入</strong>（尚无消费点）</td>
+</tr>
+<tr>
+<td><code>--sidebar-shadow</code></td>
+<td><code>none</code></td>
+<td>侧栏投影</td>
+</tr>
+<tr>
+<td><code>--sidebar-blur</code></td>
+<td><code>none</code></td>
+<td>毛玻璃：主题给 <code>blur(16px)</code> 即可（令牌放完整函数值，便于同时覆盖 <code>-webkit-</code> 前缀版）</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="634-状态栏-statusbar">6.3.4 状态栏 <code>--statusbar-*</code></h4>
+<p><code>--statusbar-bg</code> / <code>--statusbar-text</code> 来自基础层：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>默认值</th>
+<th>消费点</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--statusbar-border</code></td>
+<td><code>transparent</code></td>
+<td>顶边描边</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>⚠️ <strong><code>--statusbar-bg</code> 用 <code>background</code> 简写消费</strong>，因此<strong>接受渐变</strong>（<code>cyberpunk</code> 主题就用了 <code>linear-gradient</code>）。但若用 <code>background-color</code> 消费点则渐变无效 —— 这是历史坑，已修正为简写。</p>
+</blockquote>
+<h4 id="635-菜单-下拉-menu">6.3.5 菜单 / 下拉 <code>--menu-*</code></h4>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>默认值</th>
+<th>消费点</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--menu-bg</code></td>
+<td><code>var(--editor-bg)</code></td>
+<td>斜杠菜单、属性类型菜单、导出大纲</td>
+<td>接受半透明</td>
+</tr>
+<tr>
+<td><code>--menu-fg</code></td>
+<td><code>var(--editor-text)</code></td>
+<td>○ <strong>待接入</strong>（菜单文字当前直接读 <code>--editor-text</code>）</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--menu-fg-muted</code></td>
+<td><code>var(--sidebar-text)</code></td>
+<td>○ <strong>待接入</strong></td>
+<td></td>
+</tr>
+<tr>
+<td><code>--menu-border</code></td>
+<td><code>var(--editor-border)</code></td>
+<td>菜单描边</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--menu-hover</code></td>
+<td><code>var(--editor-hover)</code></td>
+<td>菜单项悬停</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--menu-shadow</code></td>
+<td><code>0 8px 24px rgba(0,0,0,0.16)</code></td>
+<td>菜单投影</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>改造前菜单<strong>完全没有令牌</strong>，主题只能靠 <code>[class*=&quot;menu&quot;] { … !important }</code> 硬怼（正是 <code>liquidglass-prism</code> 第三版 14 处反模式的来源）。</p>
+</blockquote>
+<h4 id="636-弹窗-dialog">6.3.6 弹窗 <code>--dialog-*</code></h4>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>默认值</th>
+<th>消费点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--dialog-bg</code></td>
+<td><code>var(--editor-bg)</code></td>
+<td>设置面板、关闭确认弹窗</td>
+</tr>
+<tr>
+<td><code>--dialog-border</code></td>
+<td><code>var(--editor-border)</code></td>
+<td>弹窗描边</td>
+</tr>
+<tr>
+<td><code>--dialog-shadow</code></td>
+<td><code>0 25px 60px rgba(0,0,0,0.25), 0 8px 20px rgba(0,0,0,0.1)</code></td>
+<td>弹窗投影</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="637-遮罩-overlay-bg">6.3.7 遮罩 <code>--overlay-bg</code></h4>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>默认值</th>
+<th>消费点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--overlay-bg</code></td>
+<td><code>rgba(0,0,0,0.35)</code></td>
+<td>模态遮罩</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="设计指引-2">设计指引</h4>
+<ul>
+<li><strong>区域令牌之间要有「层次差」</strong>：典型做法是 <code>tabbar-bg</code> 比 <code>toolbar-bg</code> 略沉，<code>active-bg</code> 回到 <code>editor-bg</code>（形成「标签被选中后与内容区连成一体」的观感）。</li>
+<li><strong>区域令牌接受任意 <code>background</code> 值</strong>（纯色 / 渐变 / 图片），因为它消费在 <code>background</code> 简写上。</li>
+<li><strong>半透明是玻璃质感的关键</strong>：<code>rgba(255,255,255,0.78)</code> 这类值配合 <code>--sidebar-blur</code> 得到毛玻璃效果。</li>
+<li><strong>不要为「区分区域」而改布局</strong>：区域令牌只改表现属性（颜色 / 阴影 / 模糊）。改 <code>position</code> / <code>display</code> / <code>inset</code> 会静默破坏基础几何。</li>
+</ul>
+<h4 id="实现效果-2">实现效果</h4>
+<p>覆盖区域令牌后，<strong>顶栏、标签栏、侧栏、状态栏、所有菜单、所有弹窗、遮罩</strong>可各自独立配色，实现「顶栏与内容区不同色」「侧栏毛玻璃」「状态栏品牌色」等效果 —— 全部不写一行组件选择器。</p>
+<h4 id="示例-2">示例</h4>
+<pre><code class="language-css">:root.theme-glass {
+  /* 顶栏实色基底 + 内高光 + 外投影 */
+  --toolbar-bg: #f2f7ff;
+  --toolbar-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 1px 4px rgba(37,99,235,0.10);
+  /* 标签栏比顶栏略沉 */
+  --tabbar-bg: rgba(228, 240, 255, 0.85);
+  --tabbar-active-bg: #eef3fb;
+  /* 侧栏毛玻璃 */
+  --sidebar-bg: rgba(228, 240, 255, 0.9);
+  --sidebar-blur: blur(16px);
+  /* 菜单半透明 */
+  --menu-bg: rgba(255, 255, 255, 0.97);
+  --menu-shadow: 0 8px 28px rgba(37, 99, 235, 0.14), 0 2px 8px rgba(0,0,0,0.06);
+  /* 状态栏品牌色 */
+  --statusbar-bg: #2563eb;
+  --statusbar-text: #ffffff;
+}
+</code></pre>
+</div>
+<div class="help-sub" id="64-装饰层令牌deco-sheen" data-kw="6.4 装饰层令牌（Deco / Sheen） 定义 让主题 只给值 就能给区域加纹路与流动光影，无需写选择器、无需自带 @keyframes 、无需抢层级。 纹路（deco） 走区域自身的 背景图层 ⇒ 不新增 DOM、不碰 z-index ，天然在内容之下。 流光（sheen） 走区域的 ::after 层 （ z-index: 1 ）⇒ 在内容之上、在 z-index ≥ 40 的下拉菜单之下。 支持的区域 纹路支持 4 个区域 ： toolbar / tabbar / sidebar / statusbar">
+<h3>6.4 装饰层令牌（Deco / Sheen）</h3>
+<h4 id="定义-3">定义</h4>
+<p>让主题<strong>只给值</strong>就能给区域加纹路与流动光影，无需写选择器、无需自带 <code>@keyframes</code>、无需抢层级。</p>
+<ul>
+<li><strong>纹路（deco）</strong> 走区域自身的<strong>背景图层</strong> ⇒ 不新增 DOM、不碰 <code>z-index</code>，天然在内容之下。</li>
+<li><strong>流光（sheen）</strong> 走区域的 <strong><code>::after</code> 层</strong>（<code>z-index: 1</code>）⇒ 在内容之上、在 <code>z-index ≥ 40</code> 的下拉菜单之下。</li>
+</ul>
+<h4 id="支持的区域">支持的区域</h4>
+<p>纹路支持 <strong>4 个区域</strong>：<code>toolbar</code> / <code>tabbar</code> / <code>sidebar</code> / <code>statusbar</code>。
+流光支持 <strong>2 个区域</strong>：<code>toolbar</code> / <code>statusbar</code>（它们有 <code>position: relative</code> 与 <code>::after</code> 基座）。</p>
+<h4 id="令牌清单-2">令牌清单</h4>
+<p><strong>纹路（每个支持区域各 4 个）</strong>：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--&lt;region&gt;-deco-image</code></td>
+<td><code>none</code></td>
+<td>纹路图：<code>var(--texture-diagonal)</code> 或任意 <code>gradient</code> / <code>url()</code></td>
+</tr>
+<tr>
+<td><code>--&lt;region&gt;-deco-size</code></td>
+<td><code>auto</code></td>
+<td>纹路尺寸</td>
+</tr>
+<tr>
+<td><code>--&lt;region&gt;-deco-repeat</code></td>
+<td><code>repeat</code></td>
+<td>重复方式</td>
+</tr>
+<tr>
+<td><code>--&lt;region&gt;-deco-blend</code></td>
+<td><code>normal</code></td>
+<td>混合模式</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>流光（每个支持区域各 3 个）</strong>：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--&lt;region&gt;-sheen-image</code></td>
+<td><code>none</code></td>
+<td>流光渐变（建议两端透明的横向 <code>linear-gradient</code>）</td>
+</tr>
+<tr>
+<td><code>--&lt;region&gt;-sheen-size</code></td>
+<td><code>200% 100%</code></td>
+<td>尺寸；<code>200%</code> 配合位移 keyframes 实现「扫过」</td>
+</tr>
+<tr>
+<td><code>--&lt;region&gt;-sheen-anim</code></td>
+<td><code>none</code></td>
+<td>动画：直接引用下列 keyframes</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>通用 keyframes（主题直接引用，无需自带）</strong>：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>keyframes</th>
+<th>效果</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>deco-sweep</code></td>
+<td>左 → 右 扫过</td>
+<td><code>background-position</code> <code>200% → -100%</code></td>
+</tr>
+<tr>
+<td><code>deco-sweep-back</code></td>
+<td>右 → 左 扫过</td>
+<td>反向</td>
+</tr>
+<tr>
+<td><code>deco-pulse</code></td>
+<td>呼吸明灭</td>
+<td>只动 <code>opacity</code>（0.35 ↔ 1）</td>
+</tr>
+<tr>
+<td><code>deco-drift</code></td>
+<td>缓慢漂移</td>
+<td><code>background-position</code> <code>0 → 50%</code></td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>方向说明：<code>background-size: 200%</code> 时 <code>background-position</code> 百分比按 <code>(容器宽 - 图宽)</code> 计算 ⇒ <code>200%</code> 完全在左屏外，<code>-100%</code> 完全在右屏外。</p>
+</blockquote>
+<h4 id="设计指引-3">设计指引</h4>
+<ul>
+<li><strong>流光渐变两端必须透明</strong>（<code>rgba(..., 0)</code>），否则扫过时会看到硬边。</li>
+<li><strong>节奏要慢</strong>：<code>14s ease-in-out infinite</code> 是经过验证的舒适值；快于 6s 会显得躁动。</li>
+<li><strong>纹路用 <code>currentColor</code> 派生</strong>：<code>--texture-*</code> 预设内部用 <code>currentColor</code> ⇒ 自动跟随所在区域的文字色，主题不必为每种色再写一遍。</li>
+<li><strong>无障碍已内置</strong>：<code>prefers-reduced-motion: reduce</code> 时所有 <code>::after</code> 动画自动静止（令牌保留，只是不动）。</li>
+</ul>
+<h4 id="实现效果-3">实现效果</h4>
+<pre><code class="language-css">/* 一行 = 给侧栏加斜纹 */
+--sidebar-deco-image: var(--texture-diagonal);
+/* 一行 = 给状态栏加流动光带 */
+--statusbar-sheen-image: linear-gradient(90deg,
+    rgba(34,211,238,0) 0%, rgba(34,211,238,0.40) 22%,
+    rgba(59,130,246,0.46) 46%, rgba(37,99,235,0) 100%);
+--statusbar-sheen-anim: deco-sweep 14s ease-in-out infinite;
+</code></pre>
+<p>得到「冰蓝光带在状态栏上缓慢往复流动」的效果（<code>liquidglass-prism</code> 的招牌视觉）。</p>
+<blockquote>
+<p><strong>已验证通路</strong>：纹路 / 流光能力已经真实渲染验证（计算样式 + 像素差分，验证样本为开发用测试主题 <code>brocade</code>，见 §3.3）。纹路是<strong>纯 CSS 渐变</strong>（<code>background-image</code> 接受渐变，不需要图片资源）。</p>
+</blockquote>
+</div>
+<div class="help-sub" id="65-效果令牌effect" data-kw="6.5 效果令牌（Effect） 定义 统一阴影、动效节奏、纹理预设，让主题能整体调节「软硬感」与「快慢感」。 令牌清单 阴影 ： 令牌 默认值 当前状态 --shadow-1 0 1px 3px rgba(0,0,0,0.08) 已声明， 待接入 （尚无 UI 消费点） --shadow-2 0 8px 24px rgba(0,0,0,0.16) 已声明， 待接入 --shadow-3 0 25px 60px rgba(0,0,0,0.25), 0 8px 20px rgba(0,0,0,0.1) 已声明， 待接">
+<h3>6.5 效果令牌（Effect）</h3>
+<h4 id="定义-4">定义</h4>
+<p>统一阴影、动效节奏、纹理预设，让主题能整体调节「软硬感」与「快慢感」。</p>
+<h4 id="令牌清单-3">令牌清单</h4>
+<p><strong>阴影</strong>：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>默认值</th>
+<th>当前状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--shadow-1</code></td>
+<td><code>0 1px 3px rgba(0,0,0,0.08)</code></td>
+<td>已声明，<strong>待接入</strong>（尚无 UI 消费点）</td>
+</tr>
+<tr>
+<td><code>--shadow-2</code></td>
+<td><code>0 8px 24px rgba(0,0,0,0.16)</code></td>
+<td>已声明，<strong>待接入</strong></td>
+</tr>
+<tr>
+<td><code>--shadow-3</code></td>
+<td><code>0 25px 60px rgba(0,0,0,0.25), 0 8px 20px rgba(0,0,0,0.1)</code></td>
+<td>已声明，<strong>待接入</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>动效节奏</strong>：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>默认值</th>
+<th>当前状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--dur-fast</code></td>
+<td><code>0.15s</code></td>
+<td>已声明，<strong>待接入</strong></td>
+</tr>
+<tr>
+<td><code>--dur-normal</code></td>
+<td><code>0.25s</code></td>
+<td>已声明，<strong>待接入</strong></td>
+</tr>
+<tr>
+<td><code>--dur-slow</code></td>
+<td><code>0.4s</code></td>
+<td>已声明，<strong>待接入</strong></td>
+</tr>
+<tr>
+<td><code>--ease-standard</code></td>
+<td><code>cubic-bezier(0.2, 0, 0, 1)</code></td>
+<td>已声明，<strong>待接入</strong></td>
+</tr>
+<tr>
+<td><code>--ease-out</code></td>
+<td><code>ease-out</code></td>
+<td>已声明，<strong>待接入</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>纹理预设</strong>（供 deco 令牌引用；测试主题 <code>brocade</code> 已实际引用 grid / dots / paper 三种）：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>效果</th>
+<th style="text-align:center">已被引用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--texture-none</code></td>
+<td>无</td>
+<td style="text-align:center">—</td>
+</tr>
+<tr>
+<td><code>--texture-diagonal</code></td>
+<td>135° 斜线</td>
+<td style="text-align:center">—（brocade 用了自写的加粗版）</td>
+</tr>
+<tr>
+<td><code>--texture-grid</code></td>
+<td>网格</td>
+<td style="text-align:center">✓ brocade 标签栏</td>
+</tr>
+<tr>
+<td><code>--texture-dots</code></td>
+<td>圆点</td>
+<td style="text-align:center">✓ brocade 侧栏</td>
+</tr>
+<tr>
+<td><code>--texture-paper</code></td>
+<td>细横纹（纸感）</td>
+<td style="text-align:center">✓ brocade 状态栏</td>
+</tr>
+<tr>
+<td><code>--texture-shine</code></td>
+<td>100° 高光斜带</td>
+<td style="text-align:center">—</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="设计指引-4">设计指引</h4>
+<ul>
+<li><strong>阴影 / 动效令牌是「保留词汇」</strong>：规范已定义、主题可以声明，但 UI 尚未全面接入。声明它们<strong>不会报错、也不会生效</strong>，目前主要价值是为后续统一改造预留接口。<strong>当前主题不必依赖它们</strong>，需要阴影时直接用 <code>--&lt;region&gt;-shadow</code> / <code>--menu-shadow</code> / <code>--dialog-shadow</code>。</li>
+<li><strong>纹理预设立即可用</strong>：通过 <code>--&lt;region&gt;-deco-image: var(--texture-xxx)</code> 引用。</li>
+</ul>
+<h4 id="实现效果-4">实现效果</h4>
+<pre><code class="language-css">--sidebar-deco-image: var(--texture-dots);
+--sidebar-deco-size: 12px 12px;
+--statusbar-deco-image: var(--texture-paper);
+</code></pre>
+</div>
+<div class="help-sub" id="66-代码-语法高亮令牌code" data-kw="6.6 代码 / 语法高亮令牌（Code） 定义 统一「预览区代码块」与「实时编辑模式代码」的配色。此前 25 种 token 全挤在 3 个颜色上 ⇒ 所有主题的代码都是单色的。 令牌分两类，默认值取法不同： 语法 token （ keyword / string / …）默认取 highlight.js github 主题 的调色板 ⇒ 预览区代码块零变化；实时编辑的代码从「强调色单色」升级为真正的语法配色。 markdown 角色 token （ heading / link / …）默认保持原来的强调色 /">
+<h3>6.6 代码 / 语法高亮令牌（Code）</h3>
+<h4 id="定义-5">定义</h4>
+<p>统一「预览区代码块」与「实时编辑模式代码」的配色。此前 <strong>25 种 token 全挤在 3 个颜色上</strong> ⇒ 所有主题的代码都是单色的。</p>
+<p>令牌分两类，默认值取法不同：</p>
+<ul>
+<li><strong>语法 token</strong>（<code>keyword</code> / <code>string</code> / …）默认取 <strong>highlight.js github 主题</strong>的调色板 ⇒ 预览区代码块零变化；实时编辑的代码从「强调色单色」升级为真正的语法配色。</li>
+<li><strong>markdown 角色 token</strong>（<code>heading</code> / <code>link</code> / …）默认保持原来的强调色 / 正文色 ⇒ 实时编辑正文视图零变化。</li>
+</ul>
+<h4 id="令牌清单-4">令牌清单</h4>
+<p><strong>语法 token（13）</strong>：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>默认值</th>
+<th>对应语法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--code-keyword</code></td>
+<td><code>#d73a49</code></td>
+<td>关键字 <code>if</code> / <code>return</code></td>
+</tr>
+<tr>
+<td><code>--code-type</code></td>
+<td><code>#d73a49</code></td>
+<td>类型名</td>
+</tr>
+<tr>
+<td><code>--code-string</code></td>
+<td><code>#032f62</code></td>
+<td>字符串</td>
+</tr>
+<tr>
+<td><code>--code-number</code></td>
+<td><code>#005cc5</code></td>
+<td>数字</td>
+</tr>
+<tr>
+<td><code>--code-constant</code></td>
+<td><code>#005cc5</code></td>
+<td>常量</td>
+</tr>
+<tr>
+<td><code>--code-builtin</code></td>
+<td><code>#e36209</code></td>
+<td>内建函数</td>
+</tr>
+<tr>
+<td><code>--code-function</code></td>
+<td><code>#6f42c1</code></td>
+<td>函数名</td>
+</tr>
+<tr>
+<td><code>--code-tag</code></td>
+<td><code>#22863a</code></td>
+<td>HTML / XML 标签</td>
+</tr>
+<tr>
+<td><code>--code-comment</code></td>
+<td><code>#6a737d</code></td>
+<td>注释</td>
+</tr>
+<tr>
+<td><code>--code-variable</code></td>
+<td><code>#005cc5</code></td>
+<td>变量 / 属性名</td>
+</tr>
+<tr>
+<td><code>--code-attr</code></td>
+<td><code>#005cc5</code></td>
+<td>属性</td>
+</tr>
+<tr>
+<td><code>--code-operator</code></td>
+<td><code>#005cc5</code></td>
+<td>运算符</td>
+</tr>
+<tr>
+<td><code>--code-punct</code></td>
+<td><code>var(--editor-text)</code></td>
+<td>标点 / 括号</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>markdown 角色 token（15）</strong>：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--code-heading</code></td>
+<td><code>var(--editor-accent)</code></td>
+<td>标题色</td>
+</tr>
+<tr>
+<td><code>--code-link</code></td>
+<td><code>var(--editor-accent)</code></td>
+<td>链接色</td>
+</tr>
+<tr>
+<td><code>--code-strong</code></td>
+<td><code>var(--editor-text)</code></td>
+<td>粗体</td>
+</tr>
+<tr>
+<td><code>--code-emphasis</code></td>
+<td><code>var(--editor-text)</code></td>
+<td>斜体</td>
+</tr>
+<tr>
+<td><code>--code-inline-fg</code></td>
+<td><code>var(--editor-accent)</code></td>
+<td>行内代码前景</td>
+</tr>
+<tr>
+<td><code>--code-quote-fg</code></td>
+<td><code>var(--sidebar-text)</code></td>
+<td>引用文字</td>
+</tr>
+<tr>
+<td><code>--code-quote-bar</code></td>
+<td><code>var(--editor-accent)</code></td>
+<td>引用左侧条</td>
+</tr>
+<tr>
+<td><code>--code-quote-bg</code></td>
+<td><code>var(--editor-surface)</code></td>
+<td>引用底色</td>
+</tr>
+<tr>
+<td><code>--code-inline-bg</code></td>
+<td><code>color-mix(in srgb, var(--editor-text) 10%, var(--editor-surface))</code></td>
+<td>行内代码底</td>
+</tr>
+<tr>
+<td><code>--code-block-bg</code></td>
+<td><code>color-mix(in srgb, var(--editor-text) 5%, var(--editor-surface))</code></td>
+<td>代码块底</td>
+</tr>
+<tr>
+<td><code>--code-selection-bg</code></td>
+<td><code>rgba(0,0,0,0.1)</code></td>
+<td>代码选区</td>
+</tr>
+<tr>
+<td><code>--code-active-line</code></td>
+<td><code>rgba(0,0,0,0.03)</code></td>
+<td>当前行高亮</td>
+</tr>
+<tr>
+<td><code>--code-search-match</code></td>
+<td><code>rgba(255,213,0,0.3)</code></td>
+<td>搜索命中</td>
+</tr>
+<tr>
+<td><code>--code-search-match-border</code></td>
+<td><code>rgba(255,213,0,0.6)</code></td>
+<td>搜索命中描边</td>
+</tr>
+<tr>
+<td><code>--code-search-active</code></td>
+<td><code>rgba(255,150,0,0.4)</code></td>
+<td>当前命中</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>暗色模式下 <code>--code-selection-bg</code> / <code>--code-active-line</code> 已在 <code>.dark</code> 中改为更亮的白色半透明（原本是组件里按 <code>isDark</code> 分支写死的）。</p>
+</blockquote>
+<h4 id="设计指引-5">设计指引</h4>
+<ul>
+<li><strong>主题覆盖这一套，预览与实时编辑的代码配色会同时跟着变</strong>。</li>
+<li><strong>建一条「色链」</strong>：不要 13 个 token 各给一个随机色。<code>liquidglass-prism</code> 用「青 → 天蓝 → 蓝 → 深蓝」的冰蓝色链，既满足语法区分，又保持主题一致性。</li>
+<li><strong><code>--code-comment</code> 要明显弱化</strong>（低饱和 / 中明度），它是代码里最该退后的东西。</li>
+</ul>
+<h4 id="实现效果-5">实现效果</h4>
+<pre><code class="language-css">:root.theme-x {
+  --code-keyword: #0e7490;
+  --code-string:  #1d4ed8;
+  --code-number:  #7c3aed;
+  --code-function:#2563eb;
+  --code-comment: #94a3b8;
+}
+</code></pre>
+<p>代码块从单色变为有层次的语法着色。</p>
+</div>
+<div class="help-sub" id="67-预览排版令牌prose" data-kw="6.7 预览排版令牌（Prose） 定义 预览区排版的颜色此前由 Tailwind prose 的 --tw-prose-* 变量驱动，而那些变量 直接指向基础层 ⇒ 主题想细分就得写 .editor-content.theme-x h1 { … } 。 这一层在中间插入令牌： prose 变量改指向这些令牌 （见 tailwind.config.ts ）⇒ 主题只给值就能定制预览外观。 令牌清单 令牌 默认值 对应 prose 变量 --h1-color var(--editor-h1, var(--editor">
+<h3>6.7 预览排版令牌（Prose）</h3>
+<h4 id="定义-6">定义</h4>
+<p>预览区排版的颜色此前由 Tailwind prose 的 <code>--tw-prose-*</code> 变量驱动，而那些变量<strong>直接指向基础层</strong> ⇒ 主题想细分就得写 <code>.editor-content.theme-x h1 { … }</code>。</p>
+<p>这一层在中间插入令牌：<strong>prose 变量改指向这些令牌</strong>（见 <code>tailwind.config.ts</code>）⇒ 主题只给值就能定制预览外观。</p>
+<h4 id="令牌清单-5">令牌清单</h4>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>默认值</th>
+<th>对应 prose 变量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--h1-color</code></td>
+<td><code>var(--editor-h1, var(--editor-text))</code></td>
+<td><code>--tw-prose-headings</code></td>
+</tr>
+<tr>
+<td><code>--link-color</code></td>
+<td><code>var(--editor-accent)</code></td>
+<td><code>--tw-prose-links</code></td>
+</tr>
+<tr>
+<td><code>--strong-color</code></td>
+<td><code>var(--editor-text)</code></td>
+<td><code>--tw-prose-bold</code></td>
+</tr>
+<tr>
+<td><code>--quote-fg</code></td>
+<td><code>var(--editor-text)</code></td>
+<td><code>--tw-prose-quotes</code></td>
+</tr>
+<tr>
+<td><code>--quote-bar</code></td>
+<td><code>var(--editor-accent)</code></td>
+<td><code>--tw-prose-quote-borders</code></td>
+</tr>
+<tr>
+<td><code>--quote-bg</code></td>
+<td><code>transparent</code></td>
+<td>（引用块背景）</td>
+</tr>
+<tr>
+<td><code>--inline-code-fg</code></td>
+<td><code>var(--editor-text)</code></td>
+<td><code>--tw-prose-code</code></td>
+</tr>
+<tr>
+<td><code>--inline-code-bg</code></td>
+<td><code>var(--editor-surface)</code></td>
+<td>（行内代码背景）</td>
+</tr>
+<tr>
+<td><code>--code-pre-bg</code></td>
+<td><code>var(--editor-surface)</code></td>
+<td><code>--tw-prose-pre-bg</code></td>
+</tr>
+<tr>
+<td><code>--hr-color</code></td>
+<td><code>var(--editor-border)</code></td>
+<td><code>--tw-prose-hr</code></td>
+</tr>
+<tr>
+<td><code>--table-border</code></td>
+<td><code>var(--editor-border)</code></td>
+<td><code>--tw-prose-th-borders</code> / <code>td</code></td>
+</tr>
+<tr>
+<td><code>--table-head-bg</code></td>
+<td><code>var(--editor-surface)</code></td>
+<td>（表头背景）</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="关于-editor-h1-editor-h2-editor-h3">关于 <code>--editor-h1 / --editor-h2 / --editor-h3</code></h4>
+<p>这三个变量<strong>曾是假旋钮</strong>：17 个主题都声明了，但全仓只有 <code>slideshow.css</code> 消费。v0.3.2 已把它们接进真实消费点：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>变量</th>
+<th>消费点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--editor-h1</code></td>
+<td><code>--h1-color</code>（预览 + 实时标题色）；<code>slideshow.css</code> h1</td>
+</tr>
+<tr>
+<td><code>--editor-h2</code></td>
+<td><code>slideshow.css</code> h2</td>
+</tr>
+<tr>
+<td><code>--editor-h3</code></td>
+<td><code>slideshow.css</code> h3</td>
+</tr>
+</tbody>
+</table></div>
+<p>因此主题声明它们<strong>现在会生效</strong>（至少作用于 h1 预览与幻灯片标题）。</p>
+<h4 id="设计指引-6">设计指引</h4>
+<ul>
+<li><strong><code>--quote-bg</code> 接受渐变</strong>（消费在 <code>background</code> 简写上），可做「玻璃引用块」。</li>
+<li><strong>表头与表体要有区分</strong>：<code>--table-head-bg</code> 用强调色的极低透明度（如 <code>rgba(37,99,235,0.07)</code>）比用灰色更协调。</li>
+<li>这些令牌<strong>无需</strong>写选择器即可生效 —— 这是与 §6.10 的分界线。</li>
+</ul>
+</div>
+<div class="help-sub" id="68-字体三通道font" data-kw="6.8 字体三通道（Font） 定义 把字体拆成 三个互不越权 的角色，外加一个标题来源。 角色 令牌 来源 说明 软件界面 --font-ui 主题（默认主题字体栈） 设置面板、侧边栏、tab、状态栏、菜单。 不受用户字体设置影响 源码内容 --font-editor 设置「编辑器字体」 源码模式的可编辑内容 预览内容 --font-preview 设置「预览字体」 预览 / 实时 / 演示模式内容 标题 --font-heading 主题可覆盖，默认 var(--font-preview) 预览与实时 共用同一">
+<h3>6.8 字体三通道（Font）</h3>
+<h4 id="定义-7">定义</h4>
+<p>把字体拆成<strong>三个互不越权</strong>的角色，外加一个标题来源。</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>角色</th>
+<th>令牌</th>
+<th>来源</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>软件界面</td>
+<td><code>--font-ui</code></td>
+<td>主题（默认主题字体栈）</td>
+<td>设置面板、侧边栏、tab、状态栏、菜单。<strong>不受用户字体设置影响</strong></td>
+</tr>
+<tr>
+<td>源码内容</td>
+<td><code>--font-editor</code></td>
+<td>设置「编辑器字体」</td>
+<td>源码模式的可编辑内容</td>
+</tr>
+<tr>
+<td>预览内容</td>
+<td><code>--font-preview</code></td>
+<td>设置「预览字体」</td>
+<td>预览 / 实时 / 演示模式内容</td>
+</tr>
+<tr>
+<td>标题</td>
+<td><code>--font-heading</code></td>
+<td>主题可覆盖，默认 <code>var(--font-preview)</code></td>
+<td>预览与实时<strong>共用同一来源</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>其他字体令牌：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--font-sans</code></td>
+<td>主题字体栈</td>
+<td>内容字体<strong>回退源</strong>（<code>--font-editor</code> / <code>--font-preview</code> 的默认值）</td>
+</tr>
+<tr>
+<td><code>--font-mono</code></td>
+<td><code>'JetBrains Mono', …</code></td>
+<td>等宽：代码、行内代码。<strong>纯等宽</strong>，不含界面字体</td>
+</tr>
+<tr>
+<td><code>--font-serif</code></td>
+<td><code>'Playfair Display', Georgia, serif</code></td>
+<td>衬线，供标题字体引用</td>
+</tr>
+<tr>
+<td><code>--font-size-base</code></td>
+<td><code>16px</code></td>
+<td>正文字号（明暗无关）</td>
+</tr>
+<tr>
+<td><code>--line-height</code></td>
+<td><code>1.8</code></td>
+<td>行高（明暗无关）</td>
+</tr>
+<tr>
+<td><code>--paragraph-spacing</code></td>
+<td><code>1.5em</code></td>
+<td>段落间距（由主题自身的 <code>p { margin }</code> 消费）</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="设计指引-7">设计指引</h4>
+<ul>
+<li><strong>主题覆盖 <code>--font-ui</code> 可获得界面风格差异</strong>（如衬线界面）；<code>--font-sans</code> 主要作为内容字体回退源。</li>
+<li><strong>想给标题换字体</strong>（如杂志 / 自然风用衬线）：声明 <code>--font-heading: var(--font-serif)</code>。<strong>主题优先</strong>于 <code>--font-preview</code>。</li>
+<li><strong><code>--font-mono</code> 保持纯等宽</strong>：不要混入界面字体，否则代码对齐会乱。</li>
+</ul>
+<h4 id="实现效果-6">实现效果</h4>
+<pre><code class="language-css">:root.theme-magazine {
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-heading: var(--font-serif);   /* 标题走衬线 */
+}
+</code></pre>
+<p><code>magazine</code> / <code>nature</code> 即用此法获得衬线标题。</p>
+</div>
+<div class="help-sub" id="69-语义色令牌semantic" data-kw="6.9 语义色令牌（Semantic） 定义 此前 danger / warn / success 是散落在组件里的 Tailwind 调色板类（约 20 处）。 令牌 默认值 说明 --danger #dc2626 错误 / 删除（也用于 diff 的删除行） --warn #f59e0b 警告 --success #10b981 成功（也用于 diff 的新增行） --on-accent #ffffff 强调色之上的文字色 ：主题强调色偏亮时应改为深色 设计指引 --on-accent 常被忽略 ：若主题的 -">
+<h3>6.9 语义色令牌（Semantic）</h3>
+<h4 id="定义-8">定义</h4>
+<p>此前 <code>danger</code> / <code>warn</code> / <code>success</code> 是散落在组件里的 Tailwind 调色板类（约 20 处）。</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--danger</code></td>
+<td><code>#dc2626</code></td>
+<td>错误 / 删除（也用于 diff 的删除行）</td>
+</tr>
+<tr>
+<td><code>--warn</code></td>
+<td><code>#f59e0b</code></td>
+<td>警告</td>
+</tr>
+<tr>
+<td><code>--success</code></td>
+<td><code>#10b981</code></td>
+<td>成功（也用于 diff 的新增行）</td>
+</tr>
+<tr>
+<td><code>--on-accent</code></td>
+<td><code>#ffffff</code></td>
+<td><strong>强调色之上的文字色</strong>：主题强调色偏亮时应改为深色</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="设计指引-8">设计指引</h4>
+<ul>
+<li><strong><code>--on-accent</code> 常被忽略</strong>：若主题的 <code>--editor-accent</code> 是浅色（如柠檬黄），<code>--on-accent</code> 必须设为深色，否则按钮文字不可读。</li>
+<li>语义色<strong>应当跨主题保持一致的可辨识性</strong>（红=危险），不要为了主题和谐而改成同色系 —— 那会让告警失去意义。</li>
+</ul>
+</div>
+<div class="help-sub" id="610-结构性装饰无法令牌化的部分" data-kw="6.10 结构性装饰：无法令牌化的部分 定义 有些视觉无法用「给一个值」表达，只能写选择器。 这是 L4 层，是唯一的例外通道 ，必须克制使用。 典型场景 场景 为什么无法令牌化 例子 渐变文字 background-clip: text + -webkit-text-fill-color: transparent 需要组合声明 liquidglass-prism 的 h1 多重内阴影 / 双层玻璃 需要多条 inset 阴影叠加 引用块、代码块 伪元素光带 需要 ::before / ::after 内容 引用块">
+<h3>6.10 结构性装饰：无法令牌化的部分</h3>
+<h4 id="定义-9">定义</h4>
+<p>有些视觉无法用「给一个值」表达，只能写选择器。<strong>这是 L4 层，是唯一的例外通道</strong>，必须克制使用。</p>
+<h4 id="典型场景">典型场景</h4>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>场景</th>
+<th>为什么无法令牌化</th>
+<th>例子</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>渐变文字</td>
+<td><code>background-clip: text</code> + <code>-webkit-text-fill-color: transparent</code> 需要组合声明</td>
+<td><code>liquidglass-prism</code> 的 h1</td>
+</tr>
+<tr>
+<td>多重内阴影 / 双层玻璃</td>
+<td>需要多条 <code>inset</code> 阴影叠加</td>
+<td>引用块、代码块</td>
+</tr>
+<tr>
+<td>伪元素光带</td>
+<td>需要 <code>::before</code> / <code>::after</code> 内容</td>
+<td>引用块顶部高光折线</td>
+</tr>
+<tr>
+<td>复杂布局微调</td>
+<td>涉及 <code>padding</code> / <code>margin</code> / <code>position</code></td>
+<td>正文卡片留白</td>
+</tr>
+<tr>
+<td>字体排版细节</td>
+<td><code>letter-spacing</code> / <code>font-weight</code> 组合</td>
+<td>标题字重</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="写法规范">写法规范</h4>
+<pre><code class="language-css">/* ✅ 正确：作用域限定在 .editor-content.theme-&lt;name&gt; 或 .theme-&lt;name&gt; */
+.editor-content.theme-my-theme h1 { /* … */ }
+.theme-my-theme pre { /* … */ }
+.dark .editor-content.theme-my-theme h1 { /* … 暗色变体 */ }
+
+/* ❌ 错误：未加作用域 ⇒ 会污染其它主题、甚至幻灯片 */
+h1 { /* … */ }
+</code></pre>
+<blockquote>
+<p><strong>历史教训</strong>：<code>lychee</code> / <code>violet</code> 的标题规则曾写成未加作用域的 <code>.theme-lychee h1 { font-size: 2em }</code>，而幻灯片根节点恰好带 <code>theme-lychee</code> 类 ⇒ 字号错误地覆盖了演示版式。<strong>必须限定 <code>.editor-content.theme-x</code></strong>。</p>
+</blockquote>
+<h4 id="设计指引-9">设计指引</h4>
+<ul>
+<li><strong>能用令牌就不用选择器</strong>：先查 §6.1–6.9 有没有对应令牌。</li>
+<li><strong>颜色一律走令牌</strong>：<code>liquidglass-prism</code> 第四版的原则是「颜色一律走令牌，只有结构性装饰留选择器」。</li>
+<li><strong>明暗变体要成对</strong>：<code>.dark .editor-content.theme-x …</code> 与亮色版成对出现。</li>
+</ul>
+</div>
+</section>
+
+<section class="help-section" id="7-明暗双模式规范" data-icon="eye" data-kw="7. 明暗双模式规范 ">
+<h2><a class="anchor" href="#7-明暗双模式规范">#</a>7. 明暗双模式规范</h2>
+
+<div class="help-sub" id="71-双块结构" data-kw="7.1 双块结构 每个主题必须有两个变量块： :root.theme-&lt;name&gt; { /* 亮色 */ } :root.theme-&lt;name&gt;.dark { /* 暗色 */ }">
+<h3>7.1 双块结构</h3>
+<p>每个主题必须有两个变量块：</p>
+<pre><code class="language-css">:root.theme-&lt;name&gt; { /* 亮色 */ }
+:root.theme-&lt;name&gt;.dark { /* 暗色 */ }
+</code></pre>
+</div>
+<div class="help-sub" id="72-配对规则校验器第-2-项" data-kw="7.2 配对规则（校验器第 2 项） 颜色令牌必须在亮、暗各声明一次 ⇒ 该令牌在文件中的 总出现次数为偶数 。出现奇数次 ⇒ 告警「另一种模式会回落到基础值」。 情形 后果 只写亮色，漏写暗色 暗色下该区域回落到 globals.css 的 .dark 默认值（通常是 VS Code 深灰）—— 表现为「暗色下某个角落还是蓝的 / 还是亮的」 只写暗色，漏写亮色 亮色下回落到 :root 默认值 豁免（明暗无关，只写一次即正确） ：见 §4.6 的 MODE_INDEPENDENT 清单与正则 ^--font- ">
+<h3>7.2 配对规则（校验器第 2 项）</h3>
+<p><strong>颜色令牌必须在亮、暗各声明一次</strong> ⇒ 该令牌在文件中的<strong>总出现次数为偶数</strong>。出现奇数次 ⇒ 告警「另一种模式会回落到基础值」。</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>情形</th>
+<th>后果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>只写亮色，漏写暗色</td>
+<td>暗色下该区域回落到 <code>globals.css</code> 的 <code>.dark</code> 默认值（通常是 VS Code 深灰）—— 表现为「暗色下某个角落还是蓝的 / 还是亮的」</td>
+</tr>
+<tr>
+<td>只写暗色，漏写亮色</td>
+<td>亮色下回落到 <code>:root</code> 默认值</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>豁免（明暗无关，只写一次即正确）</strong>：见 §4.6 的 <code>MODE_INDEPENDENT</code> 清单与正则 <code>^--font-</code>、<code>-(deco|sheen)-</code>。</p>
+</div>
+<div class="help-sub" id="73-暗色设计指引" data-kw="7.3 暗色设计指引 暗色不是「亮色反相」 ：直接反相会得到刺眼的对比。暗色背景宜用 低饱和深色 （ #14121c 、 #0a0f1e ），文字用 降饱和的浅色 （ #d8d4e4 、 #cfd9ec ）而非纯白。 暗色下强调色要提亮 ： #2563eb 在暗底上偏闷，暗色版应提到 #7ab3ff 一类。 深度线索必须按明暗换向 ：暗色下「黑投影」读不出来（黑底上的黑阴影不可见）。暗色的深度感应改用 主题变量派生的亮辉光 ，例如 color-mix(in srgb, var(--editor-text) 22%,">
+<h3>7.3 暗色设计指引</h3>
+<ul>
+<li><strong>暗色不是「亮色反相」</strong>：直接反相会得到刺眼的对比。暗色背景宜用<strong>低饱和深色</strong>（<code>#14121c</code>、<code>#0a0f1e</code>），文字用<strong>降饱和的浅色</strong>（<code>#d8d4e4</code>、<code>#cfd9ec</code>）而非纯白。</li>
+<li><strong>暗色下强调色要提亮</strong>：<code>#2563eb</code> 在暗底上偏闷，暗色版应提到 <code>#7ab3ff</code> 一类。</li>
+<li><strong>深度线索必须按明暗换向</strong>：暗色下「黑投影」读不出来（黑底上的黑阴影不可见）。暗色的深度感应改用<strong>主题变量派生的亮辉光</strong>，例如 <code>color-mix(in srgb, var(--editor-text) 22%, transparent)</code>。</li>
+<li><strong><code>--statusbar-bg</code> 在暗色下不要沿用亮色的品牌蓝</strong>：<code>globals.css</code> 的 <code>.dark</code> 回退是 <code>#007acc</code>，若主题不覆盖，所有暗色状态栏都会是同一个固定蓝。</li>
+</ul>
+</div>
+</section>
+
+<section class="help-section" id="8-校验门禁check-themes-六项检查" data-icon="workflow" data-kw="8. 校验门禁：check-themes 六项检查 scripts/check-themes.mjs 把「靠肉眼发现」变成「构建时失败」。 node scripts/check-themes.mjs # 默认：只让真 bug（1、4）失败 node scripts/check-themes.mjs --strict # 发布前自查：告警也算失败 node scripts/check-themes.mjs --quiet # 只输出失败与统计 # 检查 级别 含义 1 变量白名单 失败 var(--x) 里的 x 必">
+<h2><a class="anchor" href="#8-校验门禁check-themes-六项检查">#</a>8. 校验门禁：check-themes 六项检查</h2>
+<p><code>scripts/check-themes.mjs</code> 把「靠肉眼发现」变成「构建时失败」。</p>
+<pre><code class="language-bash">node scripts/check-themes.mjs           # 默认：只让真 bug（1、4）失败
+node scripts/check-themes.mjs --strict  # 发布前自查：告警也算失败
+node scripts/check-themes.mjs --quiet   # 只输出失败与统计
+</code></pre>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>#</th>
+<th>检查</th>
+<th>级别</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>变量白名单</strong></td>
+<td><strong>失败</strong></td>
+<td><code>var(--x)</code> 里的 <code>x</code> 必须存在于 <code>globals.css</code> / 主题自身 / <code>JS_INJECTED</code> 清单 ⇒ 抓拼写错误</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>亮/暗一致性</strong></td>
+<td>告警</td>
+<td>每个颜色令牌在亮暗块各声明一次（总次数为偶数）</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>死声明</strong></td>
+<td>告警</td>
+<td>主题定义了但全仓无人消费的变量 ⇒ 「这个旋钮是假的」</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>命名一致性</strong></td>
+<td><strong>失败</strong></td>
+<td>文件名必须与 <code>:root.theme-&lt;name&gt;</code> 选择器一致</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>反模式计数</strong></td>
+<td>告警</td>
+<td><code>!important</code> / <code>[class*=]</code> / 直接写 <code>z-index</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>双目录漂移</strong></td>
+<td>告警</td>
+<td><code>src/assets/themes/</code> 再现即告警（该目录已删除）</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>退出码</strong>：真 bug（1、4）恒为失败；告警默认只提示，加 <code>--strict</code> 才失败。语义与 <code>check-i18n.mjs</code> 一致：<strong>历史遗留问题不该阻塞构建，但也不该被忽略</strong>。</p>
+<div class="help-sub" id="81-为什么需要死声明检查" data-kw="8.1 为什么需要「死声明」检查 CSS 变量名写错 不报错、只静默失效 。历史踩坑：17 个主题都定义了 --editor-h1/2/3 ，但全仓只有 slideshow.css 消费 ⇒ 「标题色」旋钮长期是死的。第 3 项就是为这类问题设的。 检查器 必须先剥掉注释 再扫反模式 —— 否则「文档里提到 !important 」都会被算成反模式（真实踩过）。">
+<h3>8.1 为什么需要「死声明」检查</h3>
+<p>CSS 变量名写错<strong>不报错、只静默失效</strong>。历史踩坑：17 个主题都定义了 <code>--editor-h1/2/3</code>，但全仓只有 <code>slideshow.css</code> 消费 ⇒ 「标题色」旋钮长期是死的。第 3 项就是为这类问题设的。</p>
+<blockquote>
+<p>检查器<strong>必须先剥掉注释</strong>再扫反模式 —— 否则「文档里提到 <code>!important</code>」都会被算成反模式（真实踩过）。</p>
+</blockquote>
+</div>
+</section>
+
+<section class="help-section" id="9-反模式与最佳实践" data-icon="circle-help" data-kw="9. 反模式与最佳实践 ">
+<h2><a class="anchor" href="#9-反模式与最佳实践">#</a>9. 反模式与最佳实践</h2>
+
+<div class="help-sub" id="91-反模式清单校验器第-5-项会告警" data-kw="9.1 反模式清单（校验器第 5 项会告警） 反模式 为什么禁止 正确做法 !important 说明「变量体系表达力不足」，且会与运行时注入层打架 用区域令牌替代 [class*=&quot;menu&quot;] 等属性子串选择器 脆弱的类名耦合，一改类名就失效 用 --menu-* 令牌 直接写 z-index 抢层级会与下拉菜单冲突、被 overflow 裁切 装饰走 --&lt;region&gt;-deco-* / --&lt;region&gt;-sheen-* 未加作用域的选择器 污染其它主题、甚至幻灯片 限定 .editor-content">
+<h3>9.1 反模式清单（校验器第 5 项会告警）</h3>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>反模式</th>
+<th>为什么禁止</th>
+<th>正确做法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>!important</code></td>
+<td>说明「变量体系表达力不足」，且会与运行时注入层打架</td>
+<td>用区域令牌替代</td>
+</tr>
+<tr>
+<td><code>[class*=&quot;menu&quot;]</code> 等属性子串选择器</td>
+<td>脆弱的类名耦合，一改类名就失效</td>
+<td>用 <code>--menu-*</code> 令牌</td>
+</tr>
+<tr>
+<td>直接写 <code>z-index</code></td>
+<td>抢层级会与下拉菜单冲突、被 <code>overflow</code> 裁切</td>
+<td>装饰走 <code>--&lt;region&gt;-deco-*</code> / <code>--&lt;region&gt;-sheen-*</code></td>
+</tr>
+<tr>
+<td>未加作用域的选择器</td>
+<td>污染其它主题、甚至幻灯片</td>
+<td>限定 <code>.editor-content.theme-&lt;name&gt;</code></td>
+</tr>
+<tr>
+<td>硬编码颜色（本可用令牌处）</td>
+<td>换肤时不跟随</td>
+<td>用令牌或 <code>color-mix</code> 派生</td>
+</tr>
+<tr>
+<td>覆盖布局定位属性（<code>position</code> / <code>display</code> / <code>inset</code> / <code>height</code>）</td>
+<td>会<strong>静默破坏</strong>基础几何</td>
+<td>只改表现属性（<code>transform</code> / <code>opacity</code> / <code>background</code> / <code>box-shadow</code>）</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>深度案例</strong>：在变体 / 主题段写 <code>.ys-deck.ys-anim-cube { position: relative }</code>（(0,2,0) 压过 (0,1,0)）⇒ deck 落回正常流、高度塌成 0 ⇒ 内容被顶到顶部并溢出。<strong>一般化结论：变体 / 主题段只能改「表现」属性，改「布局定位」属性会静默破坏基础几何。</strong></p>
+</blockquote>
+</div>
+<div class="help-sub" id="92-最佳实践" data-kw="9.2 最佳实践 从模板起步 （§2），先保证过门禁，再逐步加装饰。 建色链而非堆颜色 ：强调色、代码语法、流光都用同一色域内的明度 / 色相阶梯。 用 color-mix 派生 ： color-mix(in srgb, var(--editor-text) 10%, var(--editor-surface)) 比写死灰色更能跟随主题。 先查令牌再写选择器 ：能令牌化的一律令牌化。 改动后必跑 ： node scripts/check-themes.mjs --strict 。 视觉类需求「数据全 PASS ≠ ">
+<h3>9.2 最佳实践</h3>
+<ol>
+<li><strong>从模板起步</strong>（§2），先保证过门禁，再逐步加装饰。</li>
+<li><strong>建色链而非堆颜色</strong>：强调色、代码语法、流光都用同一色域内的明度 / 色相阶梯。</li>
+<li><strong>用 <code>color-mix</code> 派生</strong>：<code>color-mix(in srgb, var(--editor-text) 10%, var(--editor-surface))</code> 比写死灰色更能跟随主题。</li>
+<li><strong>先查令牌再写选择器</strong>：能令牌化的一律令牌化。</li>
+<li><strong>改动后必跑</strong>：<code>node scripts/check-themes.mjs --strict</code>。</li>
+<li><strong>视觉类需求「数据全 PASS ≠ 用户认可」</strong>：动手前先复述理解。</li>
+</ol>
+</div>
+</section>
+
+<section class="help-section" id="10-主题元数据-themejson" data-icon="file-text" data-kw="10. 主题元数据 theme.json ">
+<h2><a class="anchor" href="#10-主题元数据-themejson">#</a>10. 主题元数据 theme.json</h2>
+
+<div class="help-sub" id="101-位置与结构" data-kw="10.1 位置与结构 src-tauri/themes/theme.json ，键 = 文件名去掉 .css ： { &quot;my-theme&quot;: { &quot;name&quot;: &quot;我的主题&quot;, &quot;swatch&quot;: [&quot;#ffffff&quot;, &quot;#7c3aed&quot;], &quot;desc&quot;: &quot;一句话中文描述&quot; } } 字段 类型 说明 name string 中文显示名（设置面板 / 工具栏展示） swatch [string, string] 两个 hex： [背景色, 强调色] 。用于设置面板的主题色块预览 desc string 一句话中">
+<h3>10.1 位置与结构</h3>
+<p><code>src-tauri/themes/theme.json</code>，键 = 文件名去掉 <code>.css</code>：</p>
+<pre><code class="language-json">{
+  &quot;my-theme&quot;: {
+    &quot;name&quot;: &quot;我的主题&quot;,
+    &quot;swatch&quot;: [&quot;#ffffff&quot;, &quot;#7c3aed&quot;],
+    &quot;desc&quot;: &quot;一句话中文描述&quot;
+  }
+}
+</code></pre>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>中文显示名（设置面板 / 工具栏展示）</td>
+</tr>
+<tr>
+<td><code>swatch</code></td>
+<td><code>[string, string]</code></td>
+<td>两个 hex：<code>[背景色, 强调色]</code>。用于设置面板的主题色块预览</td>
+</tr>
+<tr>
+<td><code>desc</code></td>
+<td>string</td>
+<td>一句话中文描述</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<div class="help-sub" id="102-设计指引" data-kw="10.2 设计指引 swatch 决定主题在设置面板里的「第一眼」 ：第一个色取主题的 --editor-bg （亮色），第二个取 --editor-accent 。 必须与主题文件同名 ： theme.json 的键、CSS 文件名、 :root.theme-&lt;name&gt; 三者一致。 academic 是例外 ：它是代码内置的保底预设，元数据在 SettingsModal.tsx （走 i18n）， 不在 theme.json 。 「自定义主题」不在 theme.json ：它是合成主题（id = custom ">
+<h3>10.2 设计指引</h3>
+<ul>
+<li><strong><code>swatch</code> 决定主题在设置面板里的「第一眼」</strong>：第一个色取主题的 <code>--editor-bg</code>（亮色），第二个取 <code>--editor-accent</code>。</li>
+<li><strong>必须与主题文件同名</strong>：<code>theme.json</code> 的键、CSS 文件名、<code>:root.theme-&lt;name&gt;</code> 三者一致。</li>
+<li><strong><code>academic</code> 是例外</strong>：它是代码内置的保底预设，元数据在 <code>SettingsModal.tsx</code>（走 i18n），<strong>不在 <code>theme.json</code></strong>。</li>
+<li><strong>「自定义主题」不在 <code>theme.json</code></strong>：它是合成主题（id = <code>custom</code>，基底 + user.css），显示名走 i18n <code>settings.customTheme</code>，色板借用基底主题的 swatch。</li>
+</ul>
+</div>
+<div class="help-sub" id="103-️-删主题的连带清理" data-kw="10.3 ⚠️ 删主题的连带清理 删除主题时必须同时清理： src-tauri/themes/&lt;name&gt;.css theme.json 中的条目 target/**/themes/ 下的资源拷贝（dev 模式读这里，Tauri 资源拷贝 增量、不删已移除文件 ） settingsStore 的 persist 迁移（若用户可能选过该主题，需把被删值迁移到默认主题 —— 否则 read_theme_css 取不到文件、 整块主题空白 ） 任何 .theme-swatch-&lt;name&gt; 死 CSS 回滚纪律： git">
+<h3>10.3 ⚠️ 删主题的连带清理</h3>
+<p>删除主题时必须同时清理：</p>
+<ol>
+<li><code>src-tauri/themes/&lt;name&gt;.css</code></li>
+<li><code>theme.json</code> 中的条目</li>
+<li><code>target/**/themes/</code> 下的资源拷贝（dev 模式读这里，Tauri 资源拷贝<strong>增量、不删已移除文件</strong>）</li>
+<li><code>settingsStore</code> 的 persist 迁移（若用户可能选过该主题，需把被删值迁移到默认主题 —— 否则 <code>read_theme_css</code> 取不到文件、<strong>整块主题空白</strong>）</li>
+<li>任何 <code>.theme-swatch-&lt;name&gt;</code> 死 CSS</li>
+</ol>
+<blockquote>
+<p>回滚纪律：<code>git checkout -- &lt;dir&gt;</code> 会<strong>整目录回退</strong>，把同目录的非 <code>.css</code> 文件（如 <code>theme.json</code>）一并带走。回滚前先 <code>git ls-files &lt;dir&gt;</code> 列全受控文件。</p>
+</blockquote>
+</div>
+</section>
+
+<section class="help-section" id="11-演示模式的主题继承" data-icon="presentation" data-kw="11. 演示模式的主题继承 幻灯片 自动继承应用当前主题与明暗 ，无需配置。机制： Slideshow.tsx 改写选择器 :root.theme-* → .yizi-slideshow.theme-* :root.theme-*.dark → .yizi-slideshow.theme-*.dark">
+<h2><a class="anchor" href="#11-演示模式的主题继承">#</a>11. 演示模式的主题继承</h2>
+<p>幻灯片<strong>自动继承应用当前主题与明暗</strong>，无需配置。机制：</p>
+<pre><code>Slideshow.tsx 改写选择器
+  :root.theme-*        →  .yizi-slideshow.theme-*
+  :root.theme-*.dark   →  .yizi-slideshow.theme-*.dark
+</code></pre>
+<div class="help-sub" id="111-继承的是变量而非元素规则" data-kw="11.1 继承的是「变量」而非「元素规则」 继承 不继承 主题 CSS 变量（ --editor-bg/text/accent/surface/border/… 、 --font-* 、 --editor-h1/2/3 ） .editor-content.theme-* &lt;el&gt; 的 元素级排版规则 （左对齐 / 小字号） 原因 ：若把元素规则也改写过去，编辑器的「左对齐 / 小字号」会覆盖演示版式的「居中 / 大字号」，导致「标题没居中」。幻灯片的 字号 / 对齐 / 居中由 slideshow.css 全权控制">
+<h3>11.1 继承的是「变量」而非「元素规则」</h3>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>继承</th>
+<th>不继承</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>主题 CSS 变量（<code>--editor-bg/text/accent/surface/border/…</code>、<code>--font-*</code>、<code>--editor-h1/2/3</code>）</td>
+<td><code>.editor-content.theme-* &lt;el&gt;</code> 的<strong>元素级排版规则</strong>（左对齐 / 小字号）</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>原因</strong>：若把元素规则也改写过去，编辑器的「左对齐 / 小字号」会覆盖演示版式的「居中 / 大字号」，导致「标题没居中」。幻灯片的<strong>字号 / 对齐 / 居中由 <code>slideshow.css</code> 全权控制</strong>。</p>
+</div>
+<div class="help-sub" id="112-设计指引" data-kw="11.2 设计指引 主题作者只需保证 变量正确 ，幻灯片即自动跟随换肤。 标题颜色 通过 --editor-h1/h2/h3 继承（对应各主题 h1/h2/h3 配色，深色另有取值）。 不要在主题里写幻灯片选择器 ：版式扩展编辑 src/styles/slideshow.css 的 .ys-layout-&lt;类型&gt; 规则。 「自定义主题」同样生效 ：HUD 主题菜单里会出现「自定义主题」（user.css 非空时）；其变量 = 基底主题变量块 + user.css 变量块（归一到 custom 后合并），元素规则照旧">
+<h3>11.2 设计指引</h3>
+<ul>
+<li>主题作者只需保证<strong>变量正确</strong>，幻灯片即自动跟随换肤。</li>
+<li><strong>标题颜色</strong>通过 <code>--editor-h1/h2/h3</code> 继承（对应各主题 h1/h2/h3 配色，深色另有取值）。</li>
+<li><strong>不要在主题里写幻灯片选择器</strong>：版式扩展编辑 <code>src/styles/slideshow.css</code> 的 <code>.ys-layout-&lt;类型&gt;</code> 规则。</li>
+<li><strong>「自定义主题」同样生效</strong>：HUD 主题菜单里会出现「自定义主题」（user.css 非空时）；其变量 = 基底主题变量块 + user.css 变量块（归一到 <code>custom</code> 后合并），元素规则照旧丢弃。</li>
+</ul>
+</div>
+<div class="help-sub" id="113-演示模式自己的旋钮-ys-主题可覆盖" data-kw="11.3 演示模式自己的旋钮（ --ys-* ，主题可覆盖） v0.3.3 起演示模式有一组自己的排版变量，默认值声明在 globals.css 的 :root ， 并可由 演示 HUD 的「排版」面板 在运行时以行内变量覆盖（挂在 .yizi-slideshow 根节点上， 退出演示即失效）： 变量 默认 含义 --ys-font-family var(--font-preview) 内容字体（HUD「字体」；默认跟随预览字体） --ys-font-weight 400 正文字重（HUD「字重」；标题自带字重不受">
+<h3>11.3 演示模式自己的旋钮（<code>--ys-*</code>，主题可覆盖）</h3>
+<p>v0.3.3 起演示模式有一组自己的排版变量，默认值声明在 <code>globals.css</code> 的 <code>:root</code>，
+并可由<strong>演示 HUD 的「排版」面板</strong>在运行时以行内变量覆盖（挂在 <code>.yizi-slideshow</code> 根节点上，
+退出演示即失效）：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>变量</th>
+<th>默认</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--ys-font-family</code></td>
+<td><code>var(--font-preview)</code></td>
+<td>内容字体（HUD「字体」；默认跟随预览字体）</td>
+</tr>
+<tr>
+<td><code>--ys-font-weight</code></td>
+<td><code>400</code></td>
+<td>正文字重（HUD「字重」；标题自带字重不受影响）</td>
+</tr>
+<tr>
+<td><code>--ys-font-scale</code></td>
+<td><code>1</code></td>
+<td>字号倍率（HUD「字号」，0.7~1.6）</td>
+</tr>
+<tr>
+<td><code>--ys-fill-w</code></td>
+<td><code>0.82</code></td>
+<td><strong>内容区宽度占整屏的比例</strong>（0.50~0.95）</td>
+</tr>
+<tr>
+<td><code>--ys-fill-h</code></td>
+<td><code>0.84</code></td>
+<td><strong>内容区高度占整屏的比例</strong>（0.50~0.95）</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><code>--ys-fill-w/h</code> 是内容区大小的<strong>唯一</strong>依据：<code>slideshow.css</code> 里原先写死的 9 处 rem 行宽上限
+（66rem / 58rem / 56rem / 54rem / 50rem / 42rem / 72rem）已全部改为 <code>100%</code>，
+4 处 <code>padding-top: 10vh</code> 也改为按填充高度换算</li>
+<li>⇒ 主题若想控制幻灯片的版心宽度，<strong>不要</strong>写 <code>max-width</code>（那会把 HUD 的填充旋钮压死，
+正是 v0.3.3 修掉的「调页边距没效果」），而应覆盖 <code>--ys-fill-w</code> / <code>--ys-fill-h</code></li>
+<li>这 5 个变量已声明在 <code>globals.css</code> ⇒ <strong>无需</strong>登记进 <code>check-themes.mjs</code> 的 <code>JS_INJECTED</code>
+（该白名单只用于「JS 注入、且不在 <code>globals.css</code> 声明」的变量）</li>
+</ul>
+</div>
+</section>
+
+<section class="help-section" id="12-从零写一个主题完整示例" data-icon="pencil-line" data-kw="12. 从零写一个主题：完整示例 以下是一个 功能完整、含区域 + 装饰 + 效果 的主题，可作为进阶模板： /* ═══════════════════════════════════════════════════════════ 墨玉 (Ink Jade) — 深青绿 + 纸感纹理 + 状态栏流光 ═══════════════════════════════════════════════════════════ */ /* ── 亮色 ── */ :root.theme-ink-jade { /* 基础层">
+<h2><a class="anchor" href="#12-从零写一个主题完整示例">#</a>12. 从零写一个主题：完整示例</h2>
+<p>以下是一个<strong>功能完整、含区域 + 装饰 + 效果</strong>的主题，可作为进阶模板：</p>
+<pre><code class="language-css">/* ═══════════════════════════════════════════════════════════
+   墨玉 (Ink Jade) — 深青绿 + 纸感纹理 + 状态栏流光
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── 亮色 ── */
+:root.theme-ink-jade {
+  /* 基础层 */
+  --editor-bg: #f4f8f7;
+  --editor-text: #1c2b28;
+  --editor-accent: #0f766e;
+  --editor-border: #cfe0dc;
+  --editor-surface: #eaf2f0;
+  --editor-hover: rgba(28, 43, 40, 0.04);
+  --editor-selection-bg: rgba(15, 118, 110, 0.22);
+  --editor-cursor: #0f766e;
+  --editor-h1: #115e59;
+  --editor-h2: #0f766e;
+  --editor-h3: #0f766e;
+  --sidebar-bg: #edf4f2;
+  --sidebar-text: #5f7a74;
+  --statusbar-bg: #0f766e;
+  --statusbar-text: #ecfdf5;
+
+  /* 区域令牌 */
+  --toolbar-bg: #f0f6f4;
+  --toolbar-fg: #1c2b28;
+  --toolbar-fg-muted: #5f7a74;
+  --toolbar-border: #d5e5e1;
+  --toolbar-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 4px rgba(15, 118, 110, 0.08);
+
+  --tabbar-bg: #e6f0ee;
+  --tabbar-active-bg: #f4f8f7;
+
+  --sidebar-border: #d5e5e1;
+  --sidebar-blur: none;
+
+  --menu-bg: rgba(255, 255, 255, 0.98);
+  --menu-border: #d5e5e1;
+  --menu-shadow: 0 8px 26px rgba(15, 118, 110, 0.12), 0 2px 8px rgba(0, 0, 0, 0.05);
+
+  --dialog-bg: #f7fbfa;
+  --dialog-border: #d5e5e1;
+  --overlay-bg: rgba(10, 30, 27, 0.35);
+
+  /* 装饰层：侧栏纸感细纹 + 状态栏流光 */
+  --sidebar-deco-image: var(--texture-paper);
+  --sidebar-deco-size: auto;
+  --sidebar-deco-repeat: repeat;
+  --statusbar-sheen-image: linear-gradient(90deg,
+      rgba(45, 212, 191, 0) 0%, rgba(45, 212, 191, 0.42) 40%,
+      rgba(20, 184, 166, 0.46) 60%, rgba(15, 118, 110, 0) 100%);
+  --statusbar-sheen-size: 200% 100%;
+  --statusbar-sheen-anim: deco-sweep 14s ease-in-out infinite;
+
+  /* 效果 / 形状 / 排版 */
+  --border-radius: 10px;
+  --paragraph-spacing: 1.5em;
+  --link-color: #0f766e;
+  --quote-bar: #14b8a6;
+  --quote-fg: #3f5a55;
+  --quote-bg: linear-gradient(160deg, rgba(240, 250, 248, 0.95), rgba(230, 245, 242, 0.8));
+  --table-head-bg: rgba(15, 118, 110, 0.07);
+  --hr-color: rgba(15, 118, 110, 0.2);
+
+  /* 代码色链（青绿系） */
+  --code-keyword: #0e7490;
+  --code-string:  #0f766e;
+  --code-number:  #7c3aed;
+  --code-function:#115e59;
+  --code-comment: #94a3b8;
+
+  /* 字体 */
+  --font-sans: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --font-size-base: 16px;
+  --line-height: 1.8;
+}
+
+/* ── 暗色 ── */
+:root.theme-ink-jade.dark {
+  --editor-bg: #0d1614;
+  --editor-text: #cfe3df;
+  --editor-accent: #2dd4bf;
+  --editor-border: #23403a;
+  --editor-surface: #13201d;
+  --editor-hover: rgba(255, 255, 255, 0.05);
+  --editor-selection-bg: rgba(45, 212, 191, 0.24);
+  --editor-cursor: #2dd4bf;
+  --editor-h1: #5eead4;
+  --editor-h2: #2dd4bf;
+  --editor-h3: #2dd4bf;
+  --sidebar-bg: #111c1a;
+  --sidebar-text: #5f7a74;
+  --statusbar-bg: #13201d;
+  --statusbar-text: #8fb5ae;
+
+  --toolbar-bg: #111c1a;
+  --toolbar-fg: #cfe3df;
+  --toolbar-fg-muted: #5f7a74;
+  --toolbar-border: #1d332e;
+  --toolbar-shadow: inset 0 1px 0 rgba(45, 212, 191, 0.08), 0 1px 3px rgba(0, 0, 0, 0.4);
+
+  --tabbar-bg: #0f1917;
+  --tabbar-active-bg: #13201d;
+
+  --sidebar-border: #1d332e;
+
+  --menu-bg: #16241f;
+  --menu-border: #23403a;
+  --menu-shadow: 0 8px 26px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.25);
+
+  --dialog-bg: #121e1b;
+  --dialog-border: #23403a;
+  --overlay-bg: rgba(0, 0, 0, 0.55);
+
+  --statusbar-sheen-image: linear-gradient(90deg,
+      rgba(94, 234, 212, 0) 0%, rgba(94, 234, 212, 0.4) 40%,
+      rgba(45, 212, 191, 0.45) 60%, rgba(20, 184, 166, 0) 100%);
+
+  --quote-bar: #2dd4bf;
+  --quote-fg: #8fb5ae;
+  --quote-bg: linear-gradient(160deg, #16241f, #0f1917);
+  --table-head-bg: rgba(45, 212, 191, 0.08);
+  --hr-color: rgba(45, 212, 191, 0.16);
+  --link-color: #2dd4bf;
+
+  --code-keyword: #5eead4;
+  --code-string:  #2dd4bf;
+  --code-number:  #c4b5fd;
+  --code-function:#5eead4;
+  --code-comment: #64748b;
+}
+
+/* ── 结构性装饰（仅无法令牌化者） ── */
+.editor-content.theme-ink-jade h1 {
+  font-size: 2em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 1.5em 0 0.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 2px solid var(--hr-color);
+}
+.editor-content.theme-ink-jade h2 { font-size: 1.5em; font-weight: 600; margin: 1.3em 0 0.4em; }
+.editor-content.theme-ink-jade h3 { font-size: 1.25em; font-weight: 600; margin: 1.2em 0 0.3em; }
+.editor-content.theme-ink-jade p  { margin: 0 0 var(--paragraph-spacing); }
+</code></pre>
+<p><strong>注册 + 校验</strong>：</p>
+<pre><code class="language-jsonc">// src-tauri/themes/theme.json
+&quot;ink-jade&quot;: { &quot;name&quot;: &quot;墨玉&quot;, &quot;swatch&quot;: [&quot;#f4f8f7&quot;, &quot;#0f766e&quot;], &quot;desc&quot;: &quot;深青绿纸感，状态栏流光&quot; }
+</code></pre>
+<pre><code class="language-bash">node scripts/check-themes.mjs --strict
+</code></pre>
+<blockquote>
+<p><strong>不想新建文件？</strong> 把上面整份 CSS 粘到 设置 → 外观 → 自定义 CSS 并保存，即生成「自定义主题」（基底 = 保存时的主题 + 这份 CSS），立即生效 —— 见 §4.2。</p>
+</blockquote>
+
+</section>
+
+<section class="help-section" id="13-新增主题检查清单" data-icon="list" data-kw="13. 新增主题检查清单 [ ] 文件放在 src-tauri/themes/&lt;name&gt;.css （ 不要 放 src/assets/themes/ ） [ ] 文件名 == :root.theme-&lt;name&gt; == theme.json 键，三者一致 [ ] 亮色块与暗色块 都 存在 [ ] 所有 颜色令牌 亮暗各声明一次（偶数次） [ ] 未使用 !important / [class*=] / 裸 z-index [ ] 未写未加作用域的选择器（必须 .editor-content.theme-&lt;name">
+<h2><a class="anchor" href="#13-新增主题检查清单">#</a>13. 新增主题检查清单</h2>
+<ul>
+<li>[ ] 文件放在 <code>src-tauri/themes/&lt;name&gt;.css</code>（<strong>不要</strong>放 <code>src/assets/themes/</code>）</li>
+<li>[ ] 文件名 == <code>:root.theme-&lt;name&gt;</code> == <code>theme.json</code> 键，三者一致</li>
+<li>[ ] 亮色块与暗色块<strong>都</strong>存在</li>
+<li>[ ] 所有<strong>颜色令牌</strong>亮暗各声明一次（偶数次）</li>
+<li>[ ] 未使用 <code>!important</code> / <code>[class*=]</code> / 裸 <code>z-index</code></li>
+<li>[ ] 未写未加作用域的选择器（必须 <code>.editor-content.theme-&lt;name&gt;</code> 或 <code>.theme-&lt;name&gt;</code>）</li>
+<li>[ ] 未覆盖布局定位属性（<code>position</code> / <code>display</code> / <code>inset</code> / <code>height</code>）</li>
+<li>[ ] <code>theme.json</code> 条目已添加（<code>name</code> / <code>swatch</code> / <code>desc</code>）</li>
+<li>[ ] <code>swatch</code> 取自 <code>--editor-bg</code> + <code>--editor-accent</code></li>
+<li>[ ] 若强调色偏亮，已设 <code>--on-accent</code></li>
+<li>[ ] <code>node scripts/check-themes.mjs --strict</code> <strong>零失败、零告警</strong></li>
+<li>[ ] dev 模式下确认主题 CSS 已注入（<code>&lt;style id=&quot;yizimarkdown-theme-css&quot;&gt;</code>）</li>
+<li>[ ] 明暗两侧都<strong>目视</strong>检查过（顶栏 / 标签栏 / 侧栏 / 状态栏 / 菜单 / 弹窗 / 代码块）</li>
+</ul>
+
+</section>
+
+<section class="help-section" id="14-不走文件自定义主题用户侧" data-icon="sparkles" data-kw="14. 不走文件：自定义主题（用户侧） 用户无需碰文件系统即可获得新主题 —— 设置 → 外观 → 自定义 CSS： 用法 写法 结果 粘贴整份主题 直接粘任何主题文件的全文（ :root.theme-x / .editor-content.theme-x h1 均可） 选择器自动归一到 theme-custom ，立即呈现该主题观感 微调当前主题 :root { --editor-accent: #e11d48; } 等裸选择器 自动提权（ :root.theme-custom 前缀），稳定压过基底主题 清空 删">
+<h2><a class="anchor" href="#14-不走文件自定义主题用户侧">#</a>14. 不走文件：自定义主题（用户侧）</h2>
+<p>用户无需碰文件系统即可获得新主题 —— 设置 → 外观 → 自定义 CSS：</p>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>用法</th>
+<th>写法</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>粘贴整份主题</strong></td>
+<td>直接粘任何主题文件的全文（<code>:root.theme-x</code> / <code>.editor-content.theme-x h1</code> 均可）</td>
+<td>选择器自动归一到 <code>theme-custom</code>，立即呈现该主题观感</td>
+</tr>
+<tr>
+<td><strong>微调当前主题</strong></td>
+<td><code>:root { --editor-accent: #e11d48; }</code> 等裸选择器</td>
+<td>自动提权（<code>:root.theme-custom</code> 前缀），稳定压过基底主题</td>
+</tr>
+<tr>
+<td><strong>清空</strong></td>
+<td>删光内容保存</td>
+<td>「自定义主题」条目消失，回落基底主题</td>
+</tr>
+</tbody>
+</table></div>
+<p>机制细节见 §4.2 / §4.5。对主题作者而言，这也是<strong>最快的主题预览方式</strong>：写好 CSS 粘进去看效果，满意了再落成正式主题文件。</p>
+
+</section>
+
+<section class="help-section" id="附录-a令牌总表" data-icon="table" data-kw="附录 A：令牌总表 快速检索用。 类型 ： C =颜色（需亮暗配对）、 S =尺寸 / 形状、 F =字体、 V =任意值。 状态 ： ● =已接入消费点、 ○ =已声明待接入（声明不报错但暂不生效）。">
+<h2><a class="anchor" href="#附录-a令牌总表">#</a>附录 A：令牌总表</h2>
+<blockquote>
+<p>快速检索用。<strong>类型</strong>：<code>C</code>=颜色（需亮暗配对）、<code>S</code>=尺寸 / 形状、<code>F</code>=字体、<code>V</code>=任意值。
+<strong>状态</strong>：<code>●</code>=已接入消费点、<code>○</code>=已声明待接入（声明不报错但暂不生效）。</p>
+</blockquote>
+<div class="help-sub" id="a1-基础层" data-kw="A.1 基础层 令牌 类型 默认（亮） 状态 --editor-bg C #ffffff ● --editor-text C #333333 ● --editor-accent C #0066cc ● --editor-border C #e5e5e5 ● --editor-surface C #f8f8f8 ● --editor-hover C rgba(0,0,0,0.03) ● --editor-selection C #0066cc ○ 死旋钮 --editor-selection-bg C rgba(0,">
+<h3>A.1 基础层</h3>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th style="text-align:center">类型</th>
+<th>默认（亮）</th>
+<th style="text-align:center">状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--editor-bg</code></td>
+<td style="text-align:center">C</td>
+<td><code>#ffffff</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--editor-text</code></td>
+<td style="text-align:center">C</td>
+<td><code>#333333</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--editor-accent</code></td>
+<td style="text-align:center">C</td>
+<td><code>#0066cc</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--editor-border</code></td>
+<td style="text-align:center">C</td>
+<td><code>#e5e5e5</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--editor-surface</code></td>
+<td style="text-align:center">C</td>
+<td><code>#f8f8f8</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--editor-hover</code></td>
+<td style="text-align:center">C</td>
+<td><code>rgba(0,0,0,0.03)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--editor-selection</code></td>
+<td style="text-align:center">C</td>
+<td><code>#0066cc</code></td>
+<td style="text-align:center">○ 死旋钮</td>
+</tr>
+<tr>
+<td><code>--editor-selection-bg</code></td>
+<td style="text-align:center">C</td>
+<td><code>rgba(0,102,204,0.35)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--editor-cursor</code></td>
+<td style="text-align:center">C</td>
+<td><code>#0066cc</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--editor-h1</code> / <code>--editor-h2</code> / <code>--editor-h3</code></td>
+<td style="text-align:center">C</td>
+<td>（无，回退正文）</td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--sidebar-bg</code></td>
+<td style="text-align:center">C</td>
+<td><code>#fafafa</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--sidebar-text</code></td>
+<td style="text-align:center">C</td>
+<td><code>#666666</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--statusbar-bg</code></td>
+<td style="text-align:center">V</td>
+<td><code>#f5f5f5</code></td>
+<td style="text-align:center">● 接受渐变</td>
+</tr>
+<tr>
+<td><code>--statusbar-text</code></td>
+<td style="text-align:center">C</td>
+<td><code>#888888</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--sel-toolbar-bg</code></td>
+<td style="text-align:center">C</td>
+<td><code>#ffffff</code></td>
+<td style="text-align:center">● 明暗无关</td>
+</tr>
+<tr>
+<td><code>--sel-toolbar-text</code></td>
+<td style="text-align:center">C</td>
+<td><code>#333333</code></td>
+<td style="text-align:center">● 明暗无关</td>
+</tr>
+<tr>
+<td><code>--sel-toolbar-border</code></td>
+<td style="text-align:center">C</td>
+<td><code>#e5e5e5</code></td>
+<td style="text-align:center">● 明暗无关</td>
+</tr>
+<tr>
+<td><code>--sel-toolbar-hover</code></td>
+<td style="text-align:center">C</td>
+<td><code>rgba(0,0,0,0.03)</code></td>
+<td style="text-align:center">● 明暗无关</td>
+</tr>
+<tr>
+<td><code>--sel-toolbar-accent</code></td>
+<td style="text-align:center">C</td>
+<td><code>#0066cc</code></td>
+<td style="text-align:center">● 明暗无关</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<div class="help-sub" id="a2-圆角" data-kw="A.2 圆角 令牌 类型 默认 状态 --border-radius S 8px （回退） ● 主题输入 --radius-xs S md-4px ● --radius-sm S md-2px ● --radius-md S var(--border-radius, 8px) ● --radius-lg S md+4px ● --radius-xl S md+8px ● --radius-full S 9999px ●">
+<h3>A.2 圆角</h3>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th style="text-align:center">类型</th>
+<th>默认</th>
+<th style="text-align:center">状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--border-radius</code></td>
+<td style="text-align:center">S</td>
+<td><code>8px</code>（回退）</td>
+<td style="text-align:center">● 主题输入</td>
+</tr>
+<tr>
+<td><code>--radius-xs</code></td>
+<td style="text-align:center">S</td>
+<td><code>md-4px</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--radius-sm</code></td>
+<td style="text-align:center">S</td>
+<td><code>md-2px</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--radius-md</code></td>
+<td style="text-align:center">S</td>
+<td><code>var(--border-radius, 8px)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--radius-lg</code></td>
+<td style="text-align:center">S</td>
+<td><code>md+4px</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--radius-xl</code></td>
+<td style="text-align:center">S</td>
+<td><code>md+8px</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--radius-full</code></td>
+<td style="text-align:center">S</td>
+<td><code>9999px</code></td>
+<td style="text-align:center">●</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<div class="help-sub" id="a3-区域令牌" data-kw="A.3 区域令牌 ○ 标记的是 已声明但尚无消费点 的令牌（ --toolbar-active / --sidebar-hover / --sidebar-accent / --menu-fg / --menu-fg-muted ）。声明它们不报错、也暂不生效；当前主题可忽略。 区域 令牌 默认 状态 toolbar --toolbar-bg / -fg / -fg-muted / -border / -accent / -hover / -shadow 回退基础层 ● toolbar --toolbar-acti">
+<h3>A.3 区域令牌</h3>
+<blockquote>
+<p><code>○</code> 标记的是<strong>已声明但尚无消费点</strong>的令牌（<code>--toolbar-active</code> / <code>--sidebar-hover</code> / <code>--sidebar-accent</code> / <code>--menu-fg</code> / <code>--menu-fg-muted</code>）。声明它们不报错、也暂不生效；当前主题可忽略。</p>
+</blockquote>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>区域</th>
+<th>令牌</th>
+<th>默认</th>
+<th style="text-align:center">状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>toolbar</td>
+<td><code>--toolbar-bg</code> / <code>-fg</code> / <code>-fg-muted</code> / <code>-border</code> / <code>-accent</code> / <code>-hover</code> / <code>-shadow</code></td>
+<td>回退基础层</td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td>toolbar</td>
+<td><code>--toolbar-active</code></td>
+<td>回退基础层</td>
+<td style="text-align:center">○ 待接入</td>
+</tr>
+<tr>
+<td>tabbar</td>
+<td><code>--tabbar-bg</code> / <code>-fg</code> / <code>-fg-hover</code> / <code>-fg-active</code> / <code>-border</code> / <code>-accent</code> / <code>-hover</code> / <code>-active-bg</code></td>
+<td>回退基础层</td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td>sidebar</td>
+<td><code>--sidebar-border</code> / <code>-shadow</code> / <code>-blur</code></td>
+<td>回退基础层</td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td>sidebar</td>
+<td><code>--sidebar-hover</code> / <code>--sidebar-accent</code></td>
+<td>回退基础层</td>
+<td style="text-align:center">○ 待接入</td>
+</tr>
+<tr>
+<td>statusbar</td>
+<td><code>--statusbar-border</code></td>
+<td><code>transparent</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td>menu</td>
+<td><code>--menu-bg</code> / <code>-border</code> / <code>-hover</code> / <code>-shadow</code></td>
+<td>回退基础层</td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td>menu</td>
+<td><code>--menu-fg</code> / <code>--menu-fg-muted</code></td>
+<td>回退基础层</td>
+<td style="text-align:center">○ 待接入</td>
+</tr>
+<tr>
+<td>dialog</td>
+<td><code>--dialog-bg</code> / <code>-border</code> / <code>-shadow</code></td>
+<td>回退基础层</td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td>overlay</td>
+<td><code>--overlay-bg</code></td>
+<td><code>rgba(0,0,0,0.35)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<div class="help-sub" id="a4-装饰层" data-kw="A.4 装饰层 消费点齐全（四个区域的 deco + 两个区域的 sheen），已实际启用并经渲染验证（计算样式 + 像素差分；启用者为测试主题 brocade，见 §3.3）。 区域 令牌 默认 状态 toolbar --toolbar-deco-image / -size / -repeat / -blend none / auto / repeat / normal ● 已验证 toolbar --toolbar-sheen-image / -size / -anim none / 200% 100% / n">
+<h3>A.4 装饰层</h3>
+<blockquote>
+<p>消费点齐全（四个区域的 deco + 两个区域的 sheen），已实际启用并经渲染验证（计算样式 + 像素差分；启用者为测试主题 brocade，见 §3.3）。</p>
+</blockquote>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>区域</th>
+<th>令牌</th>
+<th>默认</th>
+<th style="text-align:center">状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>toolbar</td>
+<td><code>--toolbar-deco-image</code> / <code>-size</code> / <code>-repeat</code> / <code>-blend</code></td>
+<td><code>none</code> / <code>auto</code> / <code>repeat</code> / <code>normal</code></td>
+<td style="text-align:center">● 已验证</td>
+</tr>
+<tr>
+<td>toolbar</td>
+<td><code>--toolbar-sheen-image</code> / <code>-size</code> / <code>-anim</code></td>
+<td><code>none</code> / <code>200% 100%</code> / <code>none</code></td>
+<td style="text-align:center">● prism 已用</td>
+</tr>
+<tr>
+<td>tabbar</td>
+<td><code>--tabbar-deco-image</code> / <code>-size</code> / <code>-repeat</code> / <code>-blend</code></td>
+<td>同上</td>
+<td style="text-align:center">● 已验证</td>
+</tr>
+<tr>
+<td>sidebar</td>
+<td><code>--sidebar-deco-image</code> / <code>-size</code> / <code>-repeat</code> / <code>-blend</code></td>
+<td>同上</td>
+<td style="text-align:center">● 已验证</td>
+</tr>
+<tr>
+<td>statusbar</td>
+<td><code>--statusbar-deco-image</code> / <code>-size</code> / <code>-repeat</code> / <code>-blend</code></td>
+<td>同上</td>
+<td style="text-align:center">● 已验证</td>
+</tr>
+<tr>
+<td>statusbar</td>
+<td><code>--statusbar-sheen-image</code> / <code>-size</code> / <code>-anim</code></td>
+<td>同上</td>
+<td style="text-align:center">● prism 已用</td>
+</tr>
+<tr>
+<td>—</td>
+<td>keyframes <code>deco-sweep</code> / <code>deco-sweep-back</code> / <code>deco-pulse</code> / <code>deco-drift</code></td>
+<td>—</td>
+<td style="text-align:center">● 已验证</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<div class="help-sub" id="a5-效果令牌" data-kw="A.5 效果令牌 令牌 类型 默认 状态 --shadow-1 / --shadow-2 / --shadow-3 V 三级阴影 ○ 待接入 --dur-fast / --dur-normal / --dur-slow S 0.15s / 0.25s / 0.4s ○ 待接入 --ease-standard / --ease-out V 缓动函数 ○ 待接入 --texture-none / -diagonal / -grid / -dots / -paper / -shine V 纹理预设 ● grid/dots">
+<h3>A.5 效果令牌</h3>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th style="text-align:center">类型</th>
+<th>默认</th>
+<th style="text-align:center">状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--shadow-1</code> / <code>--shadow-2</code> / <code>--shadow-3</code></td>
+<td style="text-align:center">V</td>
+<td>三级阴影</td>
+<td style="text-align:center">○ 待接入</td>
+</tr>
+<tr>
+<td><code>--dur-fast</code> / <code>--dur-normal</code> / <code>--dur-slow</code></td>
+<td style="text-align:center">S</td>
+<td><code>0.15s</code> / <code>0.25s</code> / <code>0.4s</code></td>
+<td style="text-align:center">○ 待接入</td>
+</tr>
+<tr>
+<td><code>--ease-standard</code> / <code>--ease-out</code></td>
+<td style="text-align:center">V</td>
+<td>缓动函数</td>
+<td style="text-align:center">○ 待接入</td>
+</tr>
+<tr>
+<td><code>--texture-none</code> / <code>-diagonal</code> / <code>-grid</code> / <code>-dots</code> / <code>-paper</code> / <code>-shine</code></td>
+<td style="text-align:center">V</td>
+<td>纹理预设</td>
+<td style="text-align:center">● grid/dots/paper 已验证（brocade）</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<div class="help-sub" id="a6-代码-语法令牌" data-kw="A.6 代码 / 语法令牌 令牌 默认 状态 --code-keyword #d73a49 ● --code-type #d73a49 ● --code-string #032f62 ● --code-number #005cc5 ● --code-constant #005cc5 ● --code-builtin #e36209 ● --code-function #6f42c1 ● --code-tag #22863a ● --code-comment #6a737d ● --code-variable #00">
+<h3>A.6 代码 / 语法令牌</h3>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>默认</th>
+<th style="text-align:center">状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--code-keyword</code></td>
+<td><code>#d73a49</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-type</code></td>
+<td><code>#d73a49</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-string</code></td>
+<td><code>#032f62</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-number</code></td>
+<td><code>#005cc5</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-constant</code></td>
+<td><code>#005cc5</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-builtin</code></td>
+<td><code>#e36209</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-function</code></td>
+<td><code>#6f42c1</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-tag</code></td>
+<td><code>#22863a</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-comment</code></td>
+<td><code>#6a737d</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-variable</code></td>
+<td><code>#005cc5</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-attr</code></td>
+<td><code>#005cc5</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-operator</code></td>
+<td><code>#005cc5</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-punct</code></td>
+<td><code>var(--editor-text)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-heading</code></td>
+<td><code>var(--editor-accent)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-link</code></td>
+<td><code>var(--editor-accent)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-strong</code></td>
+<td><code>var(--editor-text)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-emphasis</code></td>
+<td><code>var(--editor-text)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-inline-fg</code></td>
+<td><code>var(--editor-accent)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-quote-fg</code></td>
+<td><code>var(--sidebar-text)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-quote-bar</code></td>
+<td><code>var(--editor-accent)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-quote-bg</code></td>
+<td><code>var(--editor-surface)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-inline-bg</code></td>
+<td><code>color-mix(…)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-block-bg</code></td>
+<td><code>color-mix(…)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-selection-bg</code></td>
+<td><code>rgba(0,0,0,0.1)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-active-line</code></td>
+<td><code>rgba(0,0,0,0.03)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-search-match</code></td>
+<td><code>rgba(255,213,0,0.3)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-search-match-border</code></td>
+<td><code>rgba(255,213,0,0.6)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-search-active</code></td>
+<td><code>rgba(255,150,0,0.4)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<div class="help-sub" id="a7-预览排版令牌" data-kw="A.7 预览排版令牌 令牌 默认 状态 --h1-color var(--editor-h1, var(--editor-text)) ● --link-color var(--editor-accent) ● --strong-color var(--editor-text) ● --quote-fg var(--editor-text) ● --quote-bar var(--editor-accent) ● --quote-bg transparent ● 接受渐变 --inline-code-fg var(">
+<h3>A.7 预览排版令牌</h3>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>默认</th>
+<th style="text-align:center">状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--h1-color</code></td>
+<td><code>var(--editor-h1, var(--editor-text))</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--link-color</code></td>
+<td><code>var(--editor-accent)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--strong-color</code></td>
+<td><code>var(--editor-text)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--quote-fg</code></td>
+<td><code>var(--editor-text)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--quote-bar</code></td>
+<td><code>var(--editor-accent)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--quote-bg</code></td>
+<td><code>transparent</code></td>
+<td style="text-align:center">● 接受渐变</td>
+</tr>
+<tr>
+<td><code>--inline-code-fg</code></td>
+<td><code>var(--editor-text)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--inline-code-bg</code></td>
+<td><code>var(--editor-surface)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--code-pre-bg</code></td>
+<td><code>var(--editor-surface)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--hr-color</code></td>
+<td><code>var(--editor-border)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--table-border</code></td>
+<td><code>var(--editor-border)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--table-head-bg</code></td>
+<td><code>var(--editor-surface)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<div class="help-sub" id="a8-字体与语义色" data-kw="A.8 字体与语义色 令牌 类型 默认 状态 --font-ui F 主题界面字体栈 ● --font-editor F var(--font-sans) ● --font-preview F var(--font-sans) ● --font-heading F var(--font-preview) ● --font-sans F 主题字体栈 ● 回退源 --font-mono F 'JetBrains Mono', … ● --font-serif F 'Playfair Display', … ● --fo">
+<h3>A.8 字体与语义色</h3>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th style="text-align:center">类型</th>
+<th>默认</th>
+<th style="text-align:center">状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--font-ui</code></td>
+<td style="text-align:center">F</td>
+<td>主题界面字体栈</td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--font-editor</code></td>
+<td style="text-align:center">F</td>
+<td><code>var(--font-sans)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--font-preview</code></td>
+<td style="text-align:center">F</td>
+<td><code>var(--font-sans)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--font-heading</code></td>
+<td style="text-align:center">F</td>
+<td><code>var(--font-preview)</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--font-sans</code></td>
+<td style="text-align:center">F</td>
+<td>主题字体栈</td>
+<td style="text-align:center">● 回退源</td>
+</tr>
+<tr>
+<td><code>--font-mono</code></td>
+<td style="text-align:center">F</td>
+<td><code>'JetBrains Mono', …</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--font-serif</code></td>
+<td style="text-align:center">F</td>
+<td><code>'Playfair Display', …</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--font-size-base</code></td>
+<td style="text-align:center">S</td>
+<td><code>16px</code></td>
+<td style="text-align:center">● 明暗无关</td>
+</tr>
+<tr>
+<td><code>--line-height</code></td>
+<td style="text-align:center">S</td>
+<td><code>1.8</code></td>
+<td style="text-align:center">● 明暗无关</td>
+</tr>
+<tr>
+<td><code>--paragraph-spacing</code></td>
+<td style="text-align:center">S</td>
+<td><code>1.5em</code></td>
+<td style="text-align:center">● 明暗无关</td>
+</tr>
+<tr>
+<td><code>--danger</code></td>
+<td style="text-align:center">C</td>
+<td><code>#dc2626</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--warn</code></td>
+<td style="text-align:center">C</td>
+<td><code>#f59e0b</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--success</code></td>
+<td style="text-align:center">C</td>
+<td><code>#10b981</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--on-accent</code></td>
+<td style="text-align:center">C</td>
+<td><code>#ffffff</code></td>
+<td style="text-align:center">●</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<div class="help-sub" id="a9-js-运行时注入不在-globalscss-声明" data-kw="A.9 JS 运行时注入（不在 globals.css 声明） 令牌 注入点 --cursor-arrow / --cursor-standard / --cursor-bold themeCursor.ts --preview-font-size / --preview-line-height App.tsx --font-mono App.tsx">
+<h3>A.9 JS 运行时注入（不在 globals.css 声明）</h3>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>令牌</th>
+<th>注入点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--cursor-arrow</code> / <code>--cursor-standard</code> / <code>--cursor-bold</code></td>
+<td><code>themeCursor.ts</code></td>
+</tr>
+<tr>
+<td><code>--preview-font-size</code> / <code>--preview-line-height</code></td>
+<td><code>App.tsx</code></td>
+</tr>
+<tr>
+<td><code>--font-mono</code></td>
+<td><code>App.tsx</code></td>
+</tr>
+</tbody>
+</table></div>
+</div>
+</section>
+
+<section class="help-section" id="附录-b相关文件索引" data-icon="folder-open" data-kw="附录 B：相关文件索引 文件 角色 src-tauri/themes/*.css 15 个正式主题实现（运行时唯一读取目录；另有测试主题 brocade.css ，见 §3.3） src-tauri/themes/theme.json 主题元数据注册表（14 条； academic 除外） src/styles/globals.css 基准令牌全集 + 组件消费点 + 装饰 keyframes src/styles/hljs-theme.css 代码高亮 → --code-* 的消费点 src/styles/exp">
+<h2><a class="anchor" href="#附录-b相关文件索引">#</a>附录 B：相关文件索引</h2>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>文件</th>
+<th>角色</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src-tauri/themes/*.css</code></td>
+<td>15 个正式主题实现（运行时唯一读取目录；另有测试主题 <code>brocade.css</code>，见 §3.3）</td>
+</tr>
+<tr>
+<td><code>src-tauri/themes/theme.json</code></td>
+<td>主题元数据注册表（14 条；<code>academic</code> 除外）</td>
+</tr>
+<tr>
+<td><code>src/styles/globals.css</code></td>
+<td>基准令牌全集 + 组件消费点 + 装饰 keyframes</td>
+</tr>
+<tr>
+<td><code>src/styles/hljs-theme.css</code></td>
+<td>代码高亮 → <code>--code-*</code> 的消费点</td>
+</tr>
+<tr>
+<td><code>src/styles/export-toc.css</code></td>
+<td>HTML 导出大纲侧栏（消费 <code>--menu-*</code> / <code>--radius-*</code>）</td>
+</tr>
+<tr>
+<td><code>src/styles/slideshow.css</code></td>
+<td>幻灯片版式（全权控制字号 / 对齐 / 居中）</td>
+</tr>
+<tr>
+<td><code>tailwind.config.ts</code></td>
+<td>prose <code>--tw-prose-*</code> → 预览排版令牌的桥接</td>
+</tr>
+<tr>
+<td><code>src/lib/themeOrder.ts</code></td>
+<td><code>DEFAULT_THEME</code> + 列表归位</td>
+</tr>
+<tr>
+<td><code>src/lib/themeLoader.ts</code></td>
+<td>主题样式唯一注入入口（含「自定义主题」合成）</td>
+</tr>
+<tr>
+<td><code>src/lib/userCss.ts</code></td>
+<td>选择器归一 / 提权（<code>normalizeUserCss</code> / <code>retargetThemeCss</code>）</td>
+</tr>
+<tr>
+<td><code>src/lib/themeCursor.ts</code></td>
+<td>主题色光标生成（注入 <code>--cursor-*</code>）</td>
+</tr>
+<tr>
+<td><code>scripts/check-themes.mjs</code></td>
+<td>六项一致性门禁</td>
+</tr>
+<tr>
+<td><code>src/components/SettingsModal.tsx</code></td>
+<td>主题列表 UI（含「自定义主题」条目）+ <code>academic</code> 内置元数据</td>
+</tr>
+<tr>
+<td><code>src/components/Slideshow.tsx</code></td>
+<td>主题选择器改写（<code>:root.theme-*</code> → <code>.yizi-slideshow.theme-*</code>）+ custom 支持</td>
+</tr>
+<tr>
+<td><code>tests/userCss.test.ts</code></td>
+<td>归一 / 提权的 16 条单测</td>
+</tr>
+<tr>
+<td><code>docs/slideshow-style-mapping.md</code></td>
+<td>演示模式：Markdown → 版式对照</td>
+</tr>
+</tbody>
+</table></div>
+<p><em>本文档描述 v0.3.2+ 的主题系统。新增令牌或改变分层时，请同步更新本文件与 <code>scripts/check-themes.mjs</code>。</em></p>
+
+</section>
+
+        <div class="docs-source">
+            <p>本页由 <code>docs/THEME-DESIGN-SPEC.md</code> 生成，随对应版本更新。发现表述问题？欢迎到
+            <a href="https://github.com/laoduu/YiziMarkdown/issues" target="_blank">GitHub Issues</a> 反馈。</p>
+        </div>
+    </main>
+
+</div>
+
+<button class="help-fab" id="helpFab">目录</button>
+
+<div id="site-footer"></div>
+
+<script src="assets/js/site-chrome.js"></script>
+<script src="assets/js/icons.js"></script>
+<script src="assets/js/help.js"></script>
+
+</body>
+</html>
