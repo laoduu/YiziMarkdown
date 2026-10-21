@@ -2,7 +2,42 @@
 
 ## v0.3.5
 
-> 本节为**开发中的备忘**，发布前整理成正式版本说明（`docs/changelog/CHANGELOG-V0.3.5.md`）。
+> 已发布（2026-10-21，`v0.3.5` = `9af7392`）。用户向说明见 `docs/changelog/CHANGELOG-V0.3.5.md`。
+
+### 0.3.5 正式发布：CI 自动打包与在线更新链路核验（2026-10-21）
+
+**① CI 一次通过，两条腿都成功**
+
+推 `main`（`9af7392`）→ 打 `v0.3.5` 轻量标签 → `release.yml` 触发（run `39629095261`）。`Test & gates`（`npm test` 267 / `npm run build` / `check-updater`）✓；Windows 腿 10m54s ✓；macOS 腿（universal dmg）✓。没有踩到签名私钥、口令交互、产物名拼接之类的坑 —— 那几条在 beta 已验过。
+
+**② 草稿里的 6 个资产逐项验过**
+
+| 资产 | 实测 |
+|---|---|
+| `YiziMarkdown_0.3.5_x64-setup.exe` | 9,927,658 B；`FileVersion` = `0.3.5`（`ProductVersion` 同） |
+| `..._x64-setup.exe.sig` | 424 B（非空） |
+| `latest.json` | 5,088 B，见下 |
+| `..._x64-portable.zip` | 12,772,910 B；解包根目录 `YiziMarkdown-0.3.5/`，包内 exe 同样是 `0.3.5`；`docs/` 17 个文件、**不含 `docs/changelog/`**、含 `THEME-DESIGN-SPEC.md` 与 `help.md`、**不含开发日志 `changelog.md`**；`themes/` 17 个文件、`user.css` 在 |
+| `..._source.zip` | 7,227,523 B；394 条目，`git archive` 自 tag，**无 `node_modules` / `target`**；含 `src/lib/exportHtml.ts`、`tests/exportHtml.test.ts`、`docs/changelog/CHANGELOG-V0.3.5.md`；`tauri.conf.json` = `0.3.5` |
+| `..._universal.dmg` | 28,522,064 B（macOS 腿产出） |
+
+**③ 清单（latest.json）四项关键点**
+
+- `version` = `0.3.5`，`notes` 与 `docs/changelog/CHANGELOG-V0.3.5.md` **逐字一致**（1683 字符；Release 正文也同源，三者不看长度看内容）
+- 两个平台键 `windows-x86_64-nsis` / `windows-x86_64` **都指向同一个安装包**，URL 是 **tag 固定地址** `releases/download/v0.3.5/...`（不是 `latest/download/...`）
+- `signature` 解 base64 后是完整 minisign 签名；**key id `dc8fce87f0e47235` 与 `tauri.conf.json` 里 pubkey 的 key id 完全一致**，trusted comment 里的文件名 = `YiziMarkdown_0.3.5_x64-setup.exe`
+- 上传顺序正确：`latest.json` 排在便携版/源码包**之后**（工作流最后一步），客户端拿到清单时产物已就位
+
+**④ Publish 之后按客户端视角复核**
+
+- `gh release edit v0.3.5 --draft=false --latest` → Release 列表里 `v0.3.5` 成为 **Latest**
+- `https://github.com/laoduu/YiziMarkdown/releases/latest/download/latest.json`（带/不带 cache-bust 各一次）→ **200，`version=0.3.5`**，`notes` 开头 `# v0.3.5`，两个平台键齐全
+- 清单里的 tag 固定 URL 全部 **200**：setup 9,927,658 B / `.sig` 424 B / dmg 28,522,064 B（`release-assets.githubusercontent.com`）
+
+**⑤ 遗留风险（与本次发布无关，但用户会遇到）**
+
+- **用户自定义的 `user.css` / `keybindings.json` 可能被随包资源覆盖**：这两份是 bundle 资源，更新时安装器按"内容/时间戳差异"覆盖（beta 实测没被改写，是因为测试机没改过它们）。自定义过的用户升级前建议先备份
+- GitHub Releases 不能给 `latest.json` 设 `Cache-Control`，CDN 可能有**短暂的旧清单**（几分钟）；客户端多检查一次即恢复
 
 ### 导出 Word：项目符号变方框（根因＝Unicode 码位 + 强制 Symbol 字体）
 
