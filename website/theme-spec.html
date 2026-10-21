@@ -24,7 +24,7 @@
     <link rel="icon" type="image/png" href="assets/icon.png">
     <link rel="shortcut icon" href="assets/favicon.ico">
     <link rel="stylesheet" href="assets/css/style.css">
-    <link rel="stylesheet" href="assets/css/help.css?v=4">
+    <link rel="stylesheet" href="assets/css/help.css?v=6">
 
     <script type="application/ld+json">
     {
@@ -98,7 +98,7 @@
 </div>
 <div class="help-sub" id="12-三条铁律" data-kw="1.2 三条铁律 # 铁律 理由 1 只覆盖令牌，不写组件选择器 组件选择器（ .toolbar { … } ）会与全局层、运行时注入层争夺特异性，导致 !important 、层级打架、被 overflow 裁切 2 颜色令牌必须亮/暗各声明一次 只写一侧，另一模式会静默回落到基础值 —— 表现为「暗色下某个角落还是亮的」 3 令牌名必须存在于 globals.css 或主题自身 CSS 变量名写错 不会报错，只会静默失效 。这是本项目最大的历史坑（17 个主题都定义了 --editor-h1/2/3 ，但长期无">
 <h3>1.2 三条铁律</h3>
-<div class="help-table-wrap"><table class="docs-table">
+<div class="help-table-wrap"><table class="docs-table docs-table--nowrap-first">
 <thead>
 <tr>
 <th>#</th>
@@ -108,17 +108,17 @@
 </thead>
 <tbody>
 <tr>
-<td>1</td>
+<td class="docs-cell-num">1</td>
 <td><strong>只覆盖令牌，不写组件选择器</strong></td>
 <td>组件选择器（<code>.toolbar { … }</code>）会与全局层、运行时注入层争夺特异性，导致 <code>!important</code>、层级打架、被 <code>overflow</code> 裁切</td>
 </tr>
 <tr>
-<td>2</td>
+<td class="docs-cell-num">2</td>
 <td><strong>颜色令牌必须亮/暗各声明一次</strong></td>
 <td>只写一侧，另一模式会静默回落到基础值 —— 表现为「暗色下某个角落还是亮的」</td>
 </tr>
 <tr>
-<td>3</td>
+<td class="docs-cell-num">3</td>
 <td><strong>令牌名必须存在于 <code>globals.css</code> 或主题自身</strong></td>
 <td>CSS 变量名写错<strong>不会报错，只会静默失效</strong>。这是本项目最大的历史坑（17 个主题都定义了 <code>--editor-h1/2/3</code>，但长期无人消费 ⇒ 「标题色」旋钮是死的）</td>
 </tr>
@@ -128,7 +128,7 @@
 <div class="help-sub" id="13-为什么令牌化一次真实的重构" data-kw="1.3 为什么令牌化：一次真实的重构 liquidglass-prism 的演进是本规范的最佳注脚： 版本 做法 行数 反模式（ !important / [class*= / z-index ） 第三版 用组件选择器 + 字面量「补足」变量体系的缺失 529 14 处 第四版 只用令牌 表达 411 0 处 令牌化后，改一处配色只需改一个值，不再需要动几十行选择器。">
 <h3>1.3 为什么令牌化：一次真实的重构</h3>
 <p><code>liquidglass-prism</code> 的演进是本规范的最佳注脚：</p>
-<div class="help-table-wrap"><table class="docs-table">
+<div class="help-table-wrap"><table class="docs-table docs-table--nowrap-first">
 <thead>
 <tr>
 <th>版本</th>
@@ -141,13 +141,13 @@
 <tr>
 <td>第三版</td>
 <td>用组件选择器 + 字面量「补足」变量体系的缺失</td>
-<td>529</td>
+<td class="docs-cell-num">529</td>
 <td>14 处</td>
 </tr>
 <tr>
 <td>第四版</td>
 <td><strong>只用令牌</strong>表达</td>
-<td>411</td>
+<td class="docs-cell-num">411</td>
 <td>0 处</td>
 </tr>
 </tbody>
@@ -427,7 +427,7 @@ typewriter vibrant   violet
 
 <section class="help-section" id="5-令牌分层总览" data-icon="list" data-kw="5. 令牌分层总览 层 前缀 / 令牌 数量 角色 详见 L0 基础 --editor-* 9 编辑器内容区配色骨架 §6.1 L0 基础 --sidebar-bg/text 、 --statusbar-bg/text 4 侧栏 / 状态栏基础色 §6.1 L0 基础 --sel-toolbar-* 5 划词助手浮动工具栏（明暗无关） §6.1 L0 基础 --font-* 8 字体三通道 + 字号 / 行高 §6.8 L0 基础 --radius-* / --border-radius 6 + 1 圆角阶梯 §6">
 <h2><a class="anchor" href="#5-令牌分层总览">#</a>5. 令牌分层总览</h2>
-<div class="help-table-wrap"><table class="docs-table">
+<div class="help-table-wrap"><table class="docs-table docs-table--nowrap-first">
 <thead>
 <tr>
 <th>层</th>
@@ -441,133 +441,133 @@ typewriter vibrant   violet
 <tr>
 <td>L0 基础</td>
 <td><code>--editor-*</code></td>
-<td>9</td>
+<td class="docs-cell-num">9</td>
 <td>编辑器内容区配色骨架</td>
 <td>§6.1</td>
 </tr>
 <tr>
 <td>L0 基础</td>
 <td><code>--sidebar-bg/text</code>、<code>--statusbar-bg/text</code></td>
-<td>4</td>
+<td class="docs-cell-num">4</td>
 <td>侧栏 / 状态栏基础色</td>
 <td>§6.1</td>
 </tr>
 <tr>
 <td>L0 基础</td>
 <td><code>--sel-toolbar-*</code></td>
-<td>5</td>
+<td class="docs-cell-num">5</td>
 <td>划词助手浮动工具栏（明暗无关）</td>
 <td>§6.1</td>
 </tr>
 <tr>
 <td>L0 基础</td>
 <td><code>--font-*</code></td>
-<td>8</td>
+<td class="docs-cell-num">8</td>
 <td>字体三通道 + 字号 / 行高</td>
 <td>§6.8</td>
 </tr>
 <tr>
 <td>L0 基础</td>
 <td><code>--radius-*</code> / <code>--border-radius</code></td>
-<td>6 + 1</td>
+<td class="docs-cell-num">6 + 1</td>
 <td>圆角阶梯</td>
 <td>§6.2</td>
 </tr>
 <tr>
 <td>L1 区域</td>
 <td><code>--toolbar-*</code></td>
-<td>8</td>
+<td class="docs-cell-num">8</td>
 <td>顶部工具栏</td>
 <td>§6.3</td>
 </tr>
 <tr>
 <td>L1 区域</td>
 <td><code>--tabbar-*</code></td>
-<td>8</td>
+<td class="docs-cell-num">8</td>
 <td>标签栏</td>
 <td>§6.3</td>
 </tr>
 <tr>
 <td>L1 区域</td>
 <td><code>--sidebar-*</code>（补缺）</td>
-<td>5</td>
+<td class="docs-cell-num">5</td>
 <td>侧边栏</td>
 <td>§6.3</td>
 </tr>
 <tr>
 <td>L1 区域</td>
 <td><code>--statusbar-border</code></td>
-<td>1</td>
+<td class="docs-cell-num">1</td>
 <td>状态栏描边</td>
 <td>§6.3</td>
 </tr>
 <tr>
 <td>L1 区域</td>
 <td><code>--menu-*</code></td>
-<td>6</td>
+<td class="docs-cell-num">6</td>
 <td>菜单 / 下拉</td>
 <td>§6.3</td>
 </tr>
 <tr>
 <td>L1 区域</td>
 <td><code>--dialog-*</code></td>
-<td>3</td>
+<td class="docs-cell-num">3</td>
 <td>弹窗 / 模态</td>
 <td>§6.3</td>
 </tr>
 <tr>
 <td>L1 区域</td>
 <td><code>--overlay-bg</code></td>
-<td>1</td>
+<td class="docs-cell-num">1</td>
 <td>遮罩</td>
 <td>§6.3</td>
 </tr>
 <tr>
 <td>L2 装饰</td>
 <td><code>--&lt;region&gt;-deco-*</code></td>
-<td>4×4</td>
+<td class="docs-cell-num">4×4</td>
 <td>纹路（背景图层）</td>
 <td>§6.4</td>
 </tr>
 <tr>
 <td>L2 装饰</td>
 <td><code>--&lt;region&gt;-sheen-*</code></td>
-<td>3×2</td>
+<td class="docs-cell-num">3×2</td>
 <td>流光（<code>::after</code> 层）</td>
 <td>§6.4</td>
 </tr>
 <tr>
 <td>L3 效果</td>
 <td><code>--shadow-*</code> / <code>--dur-*</code> / <code>--ease-*</code></td>
-<td>3 + 3 + 2</td>
+<td class="docs-cell-num">3 + 3 + 2</td>
 <td>阴影 / 动效节奏</td>
 <td>§6.5</td>
 </tr>
 <tr>
 <td>L3 效果</td>
 <td><code>--texture-*</code></td>
-<td>6</td>
+<td class="docs-cell-num">6</td>
 <td>纹理预设</td>
 <td>§6.5</td>
 </tr>
 <tr>
 <td>L0 代码</td>
 <td><code>--code-*</code></td>
-<td>28</td>
+<td class="docs-cell-num">28</td>
 <td>语法高亮 + markdown 角色</td>
 <td>§6.6</td>
 </tr>
 <tr>
 <td>L0 排版</td>
 <td><code>--h1-color</code> / <code>--link-color</code> / …</td>
-<td>12</td>
+<td class="docs-cell-num">12</td>
 <td>预览排版（经 Tailwind prose 注入）</td>
 <td>§6.7</td>
 </tr>
 <tr>
 <td>L0 语义</td>
 <td><code>--danger</code> / <code>--warn</code> / <code>--success</code> / <code>--on-accent</code></td>
-<td>4</td>
+<td class="docs-cell-num">4</td>
 <td>语义色</td>
 <td>§6.9</td>
 </tr>
@@ -1086,7 +1086,7 @@ typewriter vibrant   violet
 </tbody>
 </table></div>
 <h4 id="637-遮罩-overlay-bg">6.3.7 遮罩 <code>--overlay-bg</code></h4>
-<div class="help-table-wrap"><table class="docs-table">
+<div class="help-table-wrap"><table class="docs-table docs-table--nowrap-first">
 <thead>
 <tr>
 <th>令牌</th>
@@ -1264,7 +1264,7 @@ typewriter vibrant   violet
 <p>统一阴影、动效节奏、纹理预设，让主题能整体调节「软硬感」与「快慢感」。</p>
 <h4 id="令牌清单-3">令牌清单</h4>
 <p><strong>阴影</strong>：</p>
-<div class="help-table-wrap"><table class="docs-table">
+<div class="help-table-wrap"><table class="docs-table docs-table--nowrap-first">
 <thead>
 <tr>
 <th>令牌</th>
@@ -1653,7 +1653,7 @@ typewriter vibrant   violet
 </table></div>
 <h4 id="关于-editor-h1-editor-h2-editor-h3">关于 <code>--editor-h1 / --editor-h2 / --editor-h3</code></h4>
 <p>这三个变量<strong>曾是假旋钮</strong>：17 个主题都声明了，但全仓只有 <code>slideshow.css</code> 消费。v0.3.2 已把它们接进真实消费点：</p>
-<div class="help-table-wrap"><table class="docs-table">
+<div class="help-table-wrap"><table class="docs-table docs-table--nowrap-first">
 <thead>
 <tr>
 <th>变量</th>
@@ -1687,7 +1687,7 @@ typewriter vibrant   violet
 <h3>6.8 字体三通道（Font）</h3>
 <h4 id="定义-7">定义</h4>
 <p>把字体拆成<strong>三个互不越权</strong>的角色，外加一个标题来源。</p>
-<div class="help-table-wrap"><table class="docs-table">
+<div class="help-table-wrap"><table class="docs-table docs-table--nowrap-first">
 <thead>
 <tr>
 <th>角色</th>
@@ -1755,7 +1755,7 @@ typewriter vibrant   violet
 </tr>
 <tr>
 <td><code>--line-height</code></td>
-<td><code>1.8</code></td>
+<td class="docs-cell-num"><code>1.8</code></td>
 <td>行高（明暗无关）</td>
 </tr>
 <tr>
@@ -1783,7 +1783,7 @@ typewriter vibrant   violet
 <h3>6.9 语义色令牌（Semantic）</h3>
 <h4 id="定义-8">定义</h4>
 <p>此前 <code>danger</code> / <code>warn</code> / <code>success</code> 是散落在组件里的 Tailwind 调色板类（约 20 处）。</p>
-<div class="help-table-wrap"><table class="docs-table">
+<div class="help-table-wrap"><table class="docs-table docs-table--nowrap-first">
 <thead>
 <tr>
 <th>令牌</th>
@@ -1825,7 +1825,7 @@ typewriter vibrant   violet
 <h4 id="定义-9">定义</h4>
 <p>有些视觉无法用「给一个值」表达，只能写选择器。<strong>这是 L4 层，是唯一的例外通道</strong>，必须克制使用。</p>
 <h4 id="典型场景">典型场景</h4>
-<div class="help-table-wrap"><table class="docs-table">
+<div class="help-table-wrap"><table class="docs-table docs-table--nowrap-first">
 <thead>
 <tr>
 <th>场景</th>
@@ -1895,7 +1895,7 @@ h1 { /* … */ }
 <div class="help-sub" id="72-配对规则校验器第-2-项" data-kw="7.2 配对规则（校验器第 2 项） 颜色令牌必须在亮、暗各声明一次 ⇒ 该令牌在文件中的 总出现次数为偶数 。出现奇数次 ⇒ 告警「另一种模式会回落到基础值」。 情形 后果 只写亮色，漏写暗色 暗色下该区域回落到 globals.css 的 .dark 默认值（通常是 VS Code 深灰）—— 表现为「暗色下某个角落还是蓝的 / 还是亮的」 只写暗色，漏写亮色 亮色下回落到 :root 默认值 豁免（明暗无关，只写一次即正确） ：见 §4.6 的 MODE_INDEPENDENT 清单与正则 ^--font- ">
 <h3>7.2 配对规则（校验器第 2 项）</h3>
 <p><strong>颜色令牌必须在亮、暗各声明一次</strong> ⇒ 该令牌在文件中的<strong>总出现次数为偶数</strong>。出现奇数次 ⇒ 告警「另一种模式会回落到基础值」。</p>
-<div class="help-table-wrap"><table class="docs-table">
+<div class="help-table-wrap"><table class="docs-table docs-table--nowrap-first">
 <thead>
 <tr>
 <th>情形</th>
@@ -1933,7 +1933,7 @@ h1 { /* … */ }
 node scripts/check-themes.mjs --strict  # 发布前自查：告警也算失败
 node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 </code></pre>
-<div class="help-table-wrap"><table class="docs-table">
+<div class="help-table-wrap"><table class="docs-table docs-table--nowrap-first">
 <thead>
 <tr>
 <th>#</th>
@@ -1944,37 +1944,37 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 </thead>
 <tbody>
 <tr>
-<td>1</td>
+<td class="docs-cell-num">1</td>
 <td><strong>变量白名单</strong></td>
 <td><strong>失败</strong></td>
 <td><code>var(--x)</code> 里的 <code>x</code> 必须存在于 <code>globals.css</code> / 主题自身 / <code>JS_INJECTED</code> 清单 ⇒ 抓拼写错误</td>
 </tr>
 <tr>
-<td>2</td>
+<td class="docs-cell-num">2</td>
 <td><strong>亮/暗一致性</strong></td>
 <td>告警</td>
 <td>每个颜色令牌在亮暗块各声明一次（总次数为偶数）</td>
 </tr>
 <tr>
-<td>3</td>
+<td class="docs-cell-num">3</td>
 <td><strong>死声明</strong></td>
 <td>告警</td>
 <td>主题定义了但全仓无人消费的变量 ⇒ 「这个旋钮是假的」</td>
 </tr>
 <tr>
-<td>4</td>
+<td class="docs-cell-num">4</td>
 <td><strong>命名一致性</strong></td>
 <td><strong>失败</strong></td>
 <td>文件名必须与 <code>:root.theme-&lt;name&gt;</code> 选择器一致</td>
 </tr>
 <tr>
-<td>5</td>
+<td class="docs-cell-num">5</td>
 <td><strong>反模式计数</strong></td>
 <td>告警</td>
 <td><code>!important</code> / <code>[class*=]</code> / 直接写 <code>z-index</code></td>
 </tr>
 <tr>
-<td>6</td>
+<td class="docs-cell-num">6</td>
 <td><strong>双目录漂移</strong></td>
 <td>告警</td>
 <td><code>src/assets/themes/</code> 再现即告警（该目录已删除）</td>
@@ -2068,7 +2068,7 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
   }
 }
 </code></pre>
-<div class="help-table-wrap"><table class="docs-table">
+<div class="help-table-wrap"><table class="docs-table docs-table--nowrap-first">
 <thead>
 <tr>
 <th>字段</th>
@@ -2175,22 +2175,22 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 </tr>
 <tr>
 <td><code>--ys-font-weight</code></td>
-<td><code>400</code></td>
+<td class="docs-cell-num"><code>400</code></td>
 <td>正文字重（HUD「字重」；标题自带字重不受影响）</td>
 </tr>
 <tr>
 <td><code>--ys-font-scale</code></td>
-<td><code>1</code></td>
+<td class="docs-cell-num"><code>1</code></td>
 <td>字号倍率（HUD「字号」，0.7~1.6）</td>
 </tr>
 <tr>
 <td><code>--ys-fill-w</code></td>
-<td><code>0.82</code></td>
+<td class="docs-cell-num"><code>0.82</code></td>
 <td><strong>内容区宽度占整屏的比例</strong>（0.50~0.95）</td>
 </tr>
 <tr>
 <td><code>--ys-fill-h</code></td>
-<td><code>0.84</code></td>
+<td class="docs-cell-num"><code>0.84</code></td>
 <td><strong>内容区高度占整屏的比例</strong>（0.50~0.95）</td>
 </tr>
 </tbody>
@@ -2391,7 +2391,7 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 <section class="help-section" id="14-不走文件自定义主题用户侧" data-icon="sparkles" data-kw="14. 不走文件：自定义主题（用户侧） 用户无需碰文件系统即可获得新主题 —— 设置 → 外观 → 自定义 CSS： 用法 写法 结果 粘贴整份主题 直接粘任何主题文件的全文（ :root.theme-x / .editor-content.theme-x h1 均可） 选择器自动归一到 theme-custom ，立即呈现该主题观感 微调当前主题 :root { --editor-accent: #e11d48; } 等裸选择器 自动提权（ :root.theme-custom 前缀），稳定压过基底主题 清空 删">
 <h2><a class="anchor" href="#14-不走文件自定义主题用户侧">#</a>14. 不走文件：自定义主题（用户侧）</h2>
 <p>用户无需碰文件系统即可获得新主题 —— 设置 → 外观 → 自定义 CSS：</p>
-<div class="help-table-wrap"><table class="docs-table">
+<div class="help-table-wrap"><table class="docs-table docs-table--nowrap-first">
 <thead>
 <tr>
 <th>用法</th>
@@ -2618,7 +2618,7 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 <blockquote>
 <p><code>○</code> 标记的是<strong>已声明但尚无消费点</strong>的令牌（<code>--toolbar-active</code> / <code>--sidebar-hover</code> / <code>--sidebar-accent</code> / <code>--menu-fg</code> / <code>--menu-fg-muted</code>）。声明它们不报错、也暂不生效；当前主题可忽略。</p>
 </blockquote>
-<div class="help-table-wrap"><table class="docs-table">
+<div class="help-table-wrap"><table class="docs-table docs-table--nowrap-first">
 <thead>
 <tr>
 <th>区域</th>
@@ -2696,7 +2696,7 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 <blockquote>
 <p>消费点齐全（四个区域的 deco + 两个区域的 sheen），已实际启用并经渲染验证（计算样式 + 像素差分；启用者为测试主题 brocade，见 §3.3）。</p>
 </blockquote>
-<div class="help-table-wrap"><table class="docs-table">
+<div class="help-table-wrap"><table class="docs-table docs-table--nowrap-first">
 <thead>
 <tr>
 <th>区域</th>
@@ -3081,7 +3081,7 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 <tr>
 <td><code>--line-height</code></td>
 <td style="text-align:center">S</td>
-<td><code>1.8</code></td>
+<td class="docs-cell-num"><code>1.8</code></td>
 <td style="text-align:center">● 明暗无关</td>
 </tr>
 <tr>

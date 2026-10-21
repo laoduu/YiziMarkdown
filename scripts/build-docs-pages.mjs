@@ -137,7 +137,45 @@ function renderBody(html, cfg) {
         `${sec.lead}\n${subs}\n</section>`
     )
   })
-  return out.join('\n\n')
+  return decorateTables(out.join('\n\n'))
+}
+
+/**
+ * 首列是短标签（层级、字段名、令牌前缀）时允许不折行。
+ * 帮助中心的全局规则是「首列常是整句说明，允许折行」，但令牌总览这类表格
+ * 首列只有「L0 基础」「--font-*」，折行会很难看，需要单独收紧。
+ */
+function decorateTables(html) {
+  return html.replace(
+    /<div class="help-table-wrap"><table class="docs-table">([\s\S]*?)<\/table><\/div>/g,
+    (all, rawInner) => {
+      const rows = rawInner.match(/<tr>[\s\S]*?<\/tr>/g) || []
+      const firstCols = rows
+        .map((row) => {
+          const cell = row.match(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/)
+          return cell ? stripTags(cell[1]) : ''
+        })
+        .filter(Boolean)
+      const maxLen = Math.max(0, ...firstCols.map((t) => t.length))
+      // 数量列常是「6 + 1」「3 + 3 + 2」这类短算式，折行后很难读
+      const inner = rawInner.replace(
+        /(<td[^>]*>)([\s\S]*?)(<\/td>)/g,
+        (cellAll, open, content, close) => {
+          if (/\bclass=/.test(open)) return cellAll
+          const text = stripTags(content)
+          if (!text || text.length > 12) return cellAll
+          if (!/^[\d\s+×xX*·./-]+$/.test(text)) return cellAll
+          return open.replace(/^<td/, '<td class="docs-cell-num"') + content + close
+        }
+      )
+      const cls = maxLen > 0 && maxLen <= 12 ? ' docs-table--nowrap-first' : ''
+      return (
+        `<div class="help-table-wrap"><table class="docs-table${cls}">` +
+        inner +
+        '</table></div>'
+      )
+    }
+  )
 }
 
 function pageTemplate(cfg, body, hash) {
@@ -180,7 +218,7 @@ function pageTemplate(cfg, body, hash) {
     <link rel="icon" type="image/png" href="assets/icon.png">
     <link rel="shortcut icon" href="assets/favicon.ico">
     <link rel="stylesheet" href="assets/css/style.css">
-    <link rel="stylesheet" href="assets/css/help.css?v=4">
+    <link rel="stylesheet" href="assets/css/help.css?v=6">
 
     <script type="application/ld+json">
     {
