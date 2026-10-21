@@ -13,9 +13,53 @@ mod imp {
     use std::sync::Arc;
     use tauri::webview::PageLoadEvent;
     use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
-    use webview2_com::Microsoft::Web::WebView2::Win32::{ICoreWebView2_7, ICoreWebView2PrintSettings};
+    use webview2_com::Microsoft::Web::WebView2::Win32::{
+        ICoreWebView2, ICoreWebView2_2, ICoreWebView2_7, ICoreWebView2Environment6,
+        ICoreWebView2PrintSettings,
+    };
     use webview2_com::PrintToPdfCompletedHandler;
     use windows_core::Interface;
+
+    /// 打印参数。
+    ///
+    /// PrintToPdf 不给 settings 时用的是 WebView2 默认值：Letter 纸张、**不打印背景**、
+    /// 带页眉页脚 —— 对「预览什么样、导出就什么样」全是反效果。纸面本身一律白底
+    /// （打印样式里强制白底、并且不带 `dark` 类，见 `src/lib/exportHtml.ts`），
+    /// 但**局部**底色必须照实打印：代码块、表头、引用的底色丢了，格式还原就只剩文字。
+    ///
+    /// 纸张与页边距必须与导出 HTML 的 `@page{size:A4;margin:18mm}` 一致，
+    /// 否则 CSS @page 与这里谁生效都会得到不同的版心。
+    fn create_print_settings(core: &ICoreWebView2) -> Result<ICoreWebView2PrintSettings, String> {
+        let core2: ICoreWebView2_2 = core
+            .cast()
+            .map_err(|e| format!("QueryInterface ICoreWebView2_2 failed: {}", e))?;
+        let env = unsafe { core2.Environment() }
+        .map_err(|e| format!("get ICoreWebView2Environment failed: {}", e))?;
+        let env6: ICoreWebView2Environment6 = env
+            .cast()
+            .map_err(|e| format!("QueryInterface ICoreWebView2Environment6 failed: {}", e))?;
+        let settings = unsafe { env6.CreatePrintSettings() }
+            .map_err(|e| format!("CreatePrintSettings failed: {}", e))?;
+        // PrintSettings 的长度单位是英寸
+        let mm = |v: f64| v / 25.4;
+        // 统一把 HRESULT 错误转成能读的消息
+        let set = |r: windows_core::Result<()>| r.map_err(|e| format!("print settings: {}", e));
+        unsafe {
+            // 背景色：纸面本身是白底（打印样式强制），这里是为了**局部**底色
+            // （代码块、表头、引用）照实印出来 —— 关掉的话格式还原就只剩文字
+            set(settings.SetShouldPrintBackgrounds(true))?;
+            // 页眉页脚是浏览器加的 URL/日期，纸面上不需要
+            set(settings.SetShouldPrintHeaderAndFooter(false))?;
+            set(settings.SetPageWidth(mm(210.0)))?;   // A4
+            set(settings.SetPageHeight(mm(297.0)))?;
+            set(settings.SetMarginTop(mm(18.0)))?;
+            set(settings.SetMarginBottom(mm(18.0)))?;
+            set(settings.SetMarginLeft(mm(18.0)))?;
+            set(settings.SetMarginRight(mm(18.0)))?;
+            set(settings.SetScaleFactor(1.0))?;
+        }
+        Ok(settings)
+    }
 
     /// 投递 PDF 导出任务：创建隐藏窗口并注册加载完成回调（不阻塞）。
     /// 返回 oneshot 接收端，打印完成后（或失败时）收到结果。
@@ -71,6 +115,7 @@ mod imp {
                                 let core7: ICoreWebView2_7 = core
                                     .cast()
                                     .map_err(|e| format!("QueryInterface ICoreWebView2_7 failed: {}", e))?;
+                                let settings = create_print_settings(&core)?;
                                 let mut pw: Vec<u16> = path4.encode_utf16().collect();
                                 pw.push(0);
                                 let handler = PrintToPdfCompletedHandler::create(Box::new(
@@ -94,12 +139,11 @@ mod imp {
                                         Ok(())
                                     },
                                 ));
-                                let settings: Option<&ICoreWebView2PrintSettings> = None;
                                 unsafe {
                                     core7
                                         .PrintToPdf(
                                             windows_core::PCWSTR(pw.as_ptr()),
-                                            settings,
+                                            Some(&settings),
                                             Some(&handler),
                                         )
                                         .map_err(|e| format!("PrintToPdf failed: {}", e))?;

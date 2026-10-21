@@ -33,6 +33,7 @@ import { ContextMenuHost } from './components/ContextMenu'
 import { windowOps } from './lib/windowOps'
 import { buildDocxPalette } from './lib/docxPalette'
 import { collectCodeHighlights } from './lib/docxCodeHighlight'
+import { buildExportHtml as buildExportDocumentHtml } from './lib/exportHtml'
 // 导出 PDF 用的内联样式（globals.css 已包含 Tailwind prose / 编辑器排版；KaTeX 样式保证公式还原）
 import globalsCss from './styles/globals.css?inline'
 import exportTocCss from './styles/export-toc.css?inline'
@@ -877,45 +878,35 @@ function App() {
   }, [openNewFile])
 
   // 组装独立文档 HTML：内联全部样式（主题/用户/KaTeX/基础排版），与预览还原度一致。
-  // print=true 时附加打印样式（PDF 用）：解除 globals.css 的 html,body{height:100%;overflow:hidden}
-  // （否则 WebView2 打印时文档高度被锁死在视口、只出一页），并去掉预览的留白/限宽。
+  // 拼装与打印规则都在 lib/exportHtml.ts，这里只负责把「预览现场」读出来：
+  //   · 正文 innerHTML（图片在预览里已转 data URL）
+  //   · 正文元素的**内联样式**（预览字体 / 字号 / 行高 / 正文列宽 —— innerHTML 带不走）
+  //   · `<html>` 的内联样式（设置面板写入的 CSS 变量，漏搬就会退回主题默认字体字号）
   const buildExportHtml = useCallback((opts?: { print?: boolean }): string => {
     const themeCss = document.getElementById('yizimarkdown-theme-css')?.textContent || ''
     const userCss = document.getElementById('yizimarkdown-user-css')?.textContent || ''
-    const contentEl = document.querySelector('.editor-content')
-    const previewHtml = contentEl?.innerHTML || ''
-    const themeClass = `theme-${currentTheme}${isDark ? ' dark' : ''}`
+    const contentEl = document.querySelector<HTMLElement>('.editor-content')
 
     // 大纲：直接从**渲染后的标题元素**取 —— 与正文同源，锚点 id 必然一致，
     // 不必再跑一遍 Markdown（也就不会出现"大纲与正文对不上"）。
     // PDF/打印**不带**侧栏：侧边栏是屏幕导航元素，不该出现在纸面上。
-    const tocItems = contentEl
+    const outlineItems = contentEl
       ? Array.from(contentEl.querySelectorAll<HTMLElement>('h1[id],h2[id],h3[id],h4[id],h5[id],h6[id]'))
         .map((el) => ({ level: Number(el.tagName.charAt(1)), id: el.id, text: (el.textContent || '').trim() }))
         .filter((it) => it.id && it.text)
       : []
-    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-    const wantToc = !opts?.print && tocItems.length > 0
-    const tocHtml = wantToc
-      ? `<nav class="export-toc"><div class="export-toc-title">${esc(t('sidebar.outline'))}</div>${
-          tocItems.map((it) => `<a href="#${esc(it.id)}" style="--lv:${it.level}">${esc(it.text)}</a>`).join('')
-        }</nav>`
-      : ''
-    // 大纲卡片与正文第一个标题的**底部**对齐。各主题的留白/字号不同，写死数值换主题就偏，
-    // 所以在文档解析后实测一次；取不到标题时保留 CSS 里的 96px 回退。
-    const tocScript = wantToc
-      ? '<script>(function(){var h=document.querySelector(".editor-content h1,.editor-content h2,.editor-content h3,.editor-content h4");if(!h)return;document.documentElement.style.setProperty("--toc-top",Math.round(h.getBoundingClientRect().bottom+16)+"px")})()</script>'
-      : ''
 
-    // globals.css 的 html,body{height:100%;overflow:hidden} 是应用 UI 用的；
-    // 独立导出文件必须解除，否则文档锁死在视口高度、无法滚动
-    const extraCss = opts?.print
-      ? '@page{margin:18mm}html,body{height:auto!important;overflow:visible!important}body{background:#fff}.editor-content{padding:0!important;max-width:none!important;margin:0!important}'
-      : 'html,body{height:auto!important;overflow:visible!important}'
-    // 大纲侧栏样式只在 HTML 导出时注入（PDF 不带大纲，也就用不上）
-    const tocCss = wantToc ? exportTocCss : ''
-
-    return `<!DOCTYPE html><html class="${themeClass}"><head><meta charset="utf-8"><style>${globalsCss}</style><style>${katexCss}</style><style>${themeCss}</style><style>${userCss}</style>${tocCss ? `<style>${tocCss}</style>` : ''}${extraCss ? `<style>${extraCss}</style>` : ''}</head><body class="${themeClass}">${tocHtml}<div class="editor-content prose prose-lg max-w-none theme-${currentTheme}">${previewHtml}</div>${tocScript}</body></html>`
+    return buildExportDocumentHtml({
+      css: { base: globalsCss, math: katexCss, theme: themeCss, user: userCss, outline: exportTocCss },
+      bodyHtml: contentEl?.innerHTML || '',
+      bodyClass: contentEl?.className || `editor-content prose prose-lg max-w-none theme-${currentTheme}`,
+      bodyStyle: contentEl?.getAttribute('style') || '',
+      rootStyle: document.documentElement.getAttribute('style') || '',
+      theme: currentTheme,
+      isDark,
+      outline: opts?.print ? undefined : { title: t('sidebar.outline'), items: outlineItems },
+      print: !!opts?.print,
+    })
   }, [currentTheme, isDark, t])
 
   const handleExport = useCallback(async (format: 'html' | 'md' | 'txt' | 'docx' | 'pdf') => {
