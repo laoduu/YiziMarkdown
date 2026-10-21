@@ -19,6 +19,7 @@ import { COLUMN_REGION_SNIPPET, COLUMN_REGION_CURSOR } from '../lib/slides'
 import { selectionToolbarExtension, type SelectionToolbarInfo } from '../lib/cm-selection-toolbar'
 import SlashMenu from './SlashMenu'
 import SelectionToolbar from './SelectionToolbar'
+import ContentWidthHandles from './ContentWidthHandles'
 import { renderMarkdown } from '../lib/markdownRenderer'
 import { extendMarkdownIt, postRender as pluginPostRender } from '../plugins/registry'
 import { invokeTauri } from '../lib/tauri'
@@ -498,7 +499,11 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
     <div className="min-h-full bg-[var(--editor-bg)]" ref={containerRef}>
       <div
         className={`editor-content prose prose-lg max-w-none theme-${currentTheme}`}
-        style={{ fontFamily: 'var(--font-preview)', fontSize: 'var(--preview-font-size, var(--font-size-base))', lineHeight: 'var(--preview-line-height, var(--line-height))' }}
+        // maxWidth 用内联样式是**有意为之**：各主题文件里都有
+        // `.editor-content.theme-x { max-width: 800px }`（特异性 0,2,0），
+        // 会盖掉 globals.css 里同名的低特异性规则；内联样式优先级更高且无需 !important，
+        // 所以用户拖拽出来的宽度才能压过主题自带的固定值。
+        style={{ fontFamily: 'var(--font-preview)', fontSize: 'var(--preview-font-size, var(--font-size-base))', lineHeight: 'var(--preview-line-height, var(--line-height))', maxWidth: 'var(--content-max-width, 900px)' }}
         dangerouslySetInnerHTML={{ __html: renderedHtml }}
       />
       {fnPreview && (
@@ -619,7 +624,10 @@ function buildEditorTheme(fontFamily: string, fontSize: string, lineHeight: stri
     },
     '.cm-content': {
       padding: '40px 60px',
-      maxWidth: '900px',
+      // 正文列宽度由设置驱动（拖拽手柄改写 --content-max-width）。
+      // 这里用变量而不是固定值，源码模式与实时模式才会一起跟随；
+      // 默认 900px 与改动前一致。
+      maxWidth: 'var(--content-max-width, 900px)',
       margin: '0 auto',
       caretColor: 'var(--editor-cursor)',
       color: 'var(--editor-text)',
@@ -1634,7 +1642,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
 
   return (
     <div className="editor-container h-full flex flex-col">
-      <div className="flex-1 overflow-hidden flex">
+      <div className="flex-1 overflow-hidden flex relative">
         {/* 编辑器面板：永远挂载，用flex比例控制显隐 */}
         <div ref={editorRef} data-animation={liveAnimationMode} data-cursor={cursorStyle} className="cm-editor-container" style={{ flex: viewMode === 'split' ? '1 1 0%' : (viewMode === 'edit' || viewMode === 'live') ? '1 1 100%' : '0 0 0%', minHeight: 0, overflow: viewMode === 'preview' ? 'hidden' : 'visible', width: viewMode === 'preview' ? 0 : undefined, pointerEvents: viewMode === 'preview' ? 'none' : 'auto' }} />
         {/* 分割线 */}
@@ -1662,6 +1670,21 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         <div ref={previewScrollRef} style={{ flex: viewMode === 'split' ? '1 1 0%' : viewMode === 'preview' ? '1 1 100%' : '0 0 0%', minHeight: 0, overflow: 'auto', pointerEvents: (viewMode === 'edit' || viewMode === 'live') ? 'none' : 'auto' }}>
           <PreviewPane content={content} currentTheme={currentTheme} onContentChange={onChange} enabledPlugins={enabledPlugins} pluginConfigs={pluginConfigs} onToast={onToast} />
         </div>
+
+        {/* 正文列宽度拖拽手柄：默认隐藏，鼠标移到正文列边缘才渐显（见组件内注释）。
+            并排（split）时两列各有各的居中列，一个手柄对不齐两处，故隐藏。 */}
+        <ContentWidthHandles
+          visible={viewMode !== 'split'}
+          mode={viewMode}
+          getContentEl={() => {
+            // 源码/实时走 CodeMirror 的 .cm-content；预览走 PreviewPane 的 .editor-content。
+            // 两者都常驻挂载（另一半只是 flex 0 隐藏），所以必须按当前模式挑，不能简单 querySelector。
+            const host = viewMode === 'preview' ? previewScrollRef.current : editorRef.current
+            return host?.querySelector<HTMLElement>(
+              viewMode === 'preview' ? '.editor-content' : '.cm-content'
+            ) ?? null
+          }}
+        />
       </div>
 
       {isSearchOpen && (

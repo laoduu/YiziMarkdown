@@ -103,7 +103,7 @@ const STARTUP_UPDATE_DELAY_MS = 3000
 
 function App() {
   const { t } = useI18n()
-  const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, enabledPlugins, pluginConfigs, setField, aiPanelOpen, updateSettings, userThemeEnabled, userThemeName, customCssBase } = useSettingsStore()
+  const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, contentMaxWidth, enabledPlugins, pluginConfigs, setField, aiPanelOpen, updateSettings, userThemeEnabled, userThemeName, customCssBase } = useSettingsStore()
   const {
     activeTabId, currentTab,
     openFile, openRemoteFile, openNewFile, closeTab, switchTab,
@@ -164,7 +164,10 @@ function App() {
     if (lineHeight) document.documentElement.style.setProperty('--line-height', String(lineHeight))
     if (previewFontSize) document.documentElement.style.setProperty('--preview-font-size', `${previewFontSize}px`)
     if (previewLineHeight) document.documentElement.style.setProperty('--preview-line-height', String(previewLineHeight))
-  }, [fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight])
+    // 正文列最大宽度：源码(.cm-content) / 实时 / 预览(.editor-content) 共用这一个变量。
+    // 只写"上限"，窗口更窄时各面板仍按 flex 自适应收窄，所以这里不需要关心窗口尺寸。
+    if (contentMaxWidth) document.documentElement.style.setProperty('--content-max-width', `${contentMaxWidth}px`)
+  }, [fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, contentMaxWidth])
 
   // 自动保存（仅已保存过的文件）
   const activeTab = useEditorStore(s => s.tabs.find(t => t.id === s.activeTabId) ?? null)

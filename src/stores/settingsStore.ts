@@ -12,6 +12,12 @@ import {
   isSlideColAlign, isSlideColStyle, type SlideColAlign, type SlideColStyle,
 } from '../lib/slideColumns.ts'
 
+/** 内容区宽度（正文列 max-width）的取值区间与默认值（px）。
+ *  拖拽手柄（components/ContentWidthHandles.tsx）与存档迁移共用同一组边界，避免两处各写一套。 */
+export const CONTENT_WIDTH_MIN = 400
+export const CONTENT_WIDTH_MAX = 1600
+export const CONTENT_WIDTH_DEFAULT = 900
+
 export interface SettingsState {
   // 通用
   autoSave: boolean
@@ -27,6 +33,10 @@ export interface SettingsState {
   showLineNumbers: boolean
   wordWrap: boolean
   spellCheck: boolean
+  /** 内容区（正文列）最大宽度 px —— 源码 / 实时 / 预览**共用**这一个值。
+   *  由正文列边缘的拖拽手柄改写；它只是 max-width 的**上限**，
+   *  窗口更窄时正文仍按原有 flex 逻辑自适应收窄（实际宽度 = min(该值, 可用宽度)）。 */
+  contentMaxWidth: number
 
   // 光标
   cursorStyle: 'text' | 'bold'
@@ -150,6 +160,9 @@ export const useSettingsStore = create<SettingsState>()(
       showLineNumbers: true,
       wordWrap: true,
       spellCheck: false,
+      // 默认 900：与源码模式改动前一致。注意预览模式里部分主题原本自带 800/700px 的固定宽度，
+      // 统一到这个值后会跟随 900 —— 这是「三处共用同一个宽度」的必然结果，属于有意的统一。
+      contentMaxWidth: CONTENT_WIDTH_DEFAULT,
 
       // 光标
       cursorStyle: 'bold',
@@ -233,7 +246,8 @@ export const useSettingsStore = create<SettingsState>()(
       // v10: 格式工具栏「手动收折」持久化 —— 新增 formatManuallyCollapsed
       // v11: 演示模式分栏 —— 新增 slideColAlign / slideColStyle
       // v12: 在线更新 —— 新增 autoCheckUpdate（默认开）/ skippedUpdateVersion（默认空）
-      version: 12,
+      // v13: 内容区可拖拽调宽 —— 新增 contentMaxWidth（默认 900，与改动前一致）
+      version: 13,
       migrate: (persisted: unknown) => {
         // 自动迁移旧字体栈到 MiSans 方案
         const oldFont = "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
@@ -286,6 +300,12 @@ export const useSettingsStore = create<SettingsState>()(
           // 跳过版本只认字符串（手改 localStorage 写入数字会让比较永远不相等、等于没跳过）
           if (typeof state.autoCheckUpdate !== 'boolean') state.autoCheckUpdate = true
           if (typeof state.skippedUpdateVersion !== 'string') state.skippedUpdateVersion = ''
+          // v13：内容区宽度。存量存档没有它 ⇒ 补默认 900（源码模式与改动前一致；
+          // 预览模式下部分主题原本固定 800/700px，会统一到 900 —— 见默认值处说明）；
+          // 手改 localStorage 写入越界值统一收敛，避免手柄算出屏幕外的位置。
+          state.contentMaxWidth = clampNumber(
+            state.contentMaxWidth, CONTENT_WIDTH_MIN, CONTENT_WIDTH_MAX, CONTENT_WIDTH_DEFAULT
+          )
         }
         return state
       },

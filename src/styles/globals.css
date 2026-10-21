@@ -2070,7 +2070,9 @@ a {
   }
   
   .editor-content {
-    max-width: none;
+    /* 预览正文现在是内联 style 写 max-width（为了压过各主题的固定值），
+       而内联样式会盖掉这里的选择器规则 —— 打印时要"满页宽"，只能靠 !important 反压回去。 */
+    max-width: none !important;
     padding: 0;
   }
 }

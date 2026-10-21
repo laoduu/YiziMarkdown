@@ -238,6 +238,41 @@ cargo test write_bullet_probe -- --ignored --nocapture
 
 **留的尾巴**：`src-tauri/skills/` 与 `src-tauri/keybindings.json` 也是「根副本 → 包内副本」，但没纳入本门禁 —— `keybindings.json` 应用运行时会写（开发态就可能变），不是纯镜像；`skills/` 与本次改动无关。两者都不是文档，要守得各自定规则。
 
+### 正文列宽度：边缘拖拽手柄（源码 / 实时 / 预览共用一个全局宽度）
+
+**需求**（用户提出）：正文列左右边缘各有一个**默认完全不可见**的调宽手柄 —— 鼠标移到边缘才浮现一条主题色短竖线（上下两端渐变透明），按住左右拖改变正文列宽度；源码 / 实时 / 预览**共用同一个值**；窗口变窄时正文仍按原有自适应逻辑收窄，不做成固定宽度。
+
+**改法**：
+
+1. **设置项**（`src/stores/settingsStore.ts`）：新增 `contentMaxWidth`（默认 900），导出 `CONTENT_WIDTH_MIN / MAX / DEFAULT`（400 / 1600 / 900）给手柄与迁移共用；persist 版本 12 → 13，迁移用 `clampNumber` 收敛手改 localStorage 的越界值
+2. **CSS 变量**（`src/App.tsx`）：在已有的字体变量 effect 里写 `--content-max-width`，三种模式共用这一个变量
+3. **消费端**（`src/components/Editor.tsx`）：`.cm-content` 的 `max-width` 改为 `var(--content-max-width, 900px)`（源码 + 实时都走 CodeMirror）；预览 `.editor-content` 用**内联** `max-width: var(...)` —— 各主题文件里有 `.editor-content.theme-x { max-width: 800px }`（特异性 0,2,0），内联样式压过它且不需要 `!important`。打印规则补 `!important`，避免内联样式让打印不再满页宽
+4. **手柄**（新文件 `src/components/ContentWidthHandles.tsx`）：16px 隐形命中条 + 88px 短竖线（`linear-gradient(to bottom, transparent, var(--editor-accent), transparent)`），竖线跟随光标上下移动；拖动时锁光标 / 禁选中文字；双击复位默认；并排（split）模式不渲染
+
+**三个绕不过去的坑**：
+
+- **位置不能纯 CSS 算**。看着正文列是 `margin: 0 auto` 的居中列，边缘位置 = `(面板宽 − maxWidth) / 2` 就够了 —— 但 CodeMirror 的 `.cm-scroller` 是 `display: flex`，行号 gutters 占着左侧空间，`.cm-content` 只在**剩余空间**里居中，实测中心比面板中心偏右 **10.5px**（gutter 21px 的一半）；预览面板的纵向滚动条同样会带来 8px 偏移。纯 CSS 推算会整体错位，所以改成实测 `getBoundingClientRect()`：源码 / 实时 118.5px、预览 8px 两种模式都精确贴边
+- **重测时机比想象中难**。写变量的 `App` 是 **useEffect（passive）**，而子组件的 `useLayoutEffect` 先跑 —— 两者之间必然差一帧；`ResizeObserver` 也是按帧回调（本次无头验证环境里干脆一次都不触发，连普通 div 改宽都不回调）。最终加了一个 `MutationObserver` 直接盯 `<html>` 的 `style` 属性：谁改了 `--content-max-width`（拖动、双击复位、设置面板、存档迁移恢复）立刻重测，不依赖帧调度
+- **拖动不能每帧写 store**。`App.tsx` 用的是无 selector 的 `useSettingsStore()`（订阅全部状态），`setField` 会让整棵树重渲染，每帧一次必卡。改成拖动期直接 `style.setProperty('--content-max-width')` + 实测重算，**松开鼠标才落库**持久化。顺带一个有用的性质：写变量后立刻读 `getBoundingClientRect()` 会强制同步布局，所以线与正文列在同一帧就能跟上光标
+
+**宽度算法**：拖动用「光标位移 × 2」而不是「光标到列中心距离」—— 正文列居中、两侧对称外扩，光标移 1px 意味着两侧各外扩 1px。用增量写法可以让被抓的那一侧边缘精确跟随光标，也避免按下时光标没完全压在边缘上造成的起始跳变。实际宽度仍是 `min(设置, 可用宽度)`，所以窄窗口下手柄会贴到面板边缘（实测：设置 1100、面板 1116 − 21px gutter ⇒ 正文 1095，右手柄 `right: 0px` 贴边）。
+
+**验证**：
+
+- `npx tsc --noEmit` 无输出；`npm test` → **254 passed**；`npx vite build` 通过
+- **无头 Edge + CDP 真实鼠标事件驱动**（点击 / 悬浮 / 拖拽 / 双击 / 切模式全部走 `Input.dispatchMouseEvent`）：
+  - 源码：拖左边缘 −60px → 900 → **1020**，两条手柄中心 318.5 / 1338.5 与 `.cm-content` 左右边完全重合；落库 `"contentMaxWidth":1020`
+  - 双击复位 → 900，手柄同步回到 378.5 / 1278.5（这一条正是发现「重测差一帧」的场景，加 `MutationObserver` 后才稳定）
+  - 预览：`.editor-content` 268–1368（1100），手柄中心 268 / 1368 精确重合，线色 `rgb(0, 102, 204)` 取自主题 accent，悬浮时 opacity 0 → 1
+  - 并排：`.cursor-col-resize` 数量 0（手柄不渲染）
+- 截图确认竖线是主题色、两端透明、贴正文列边缘且不压文字
+
+**已知取舍**：
+
+- **默认 900px 会让部分主题的预览宽度变化**。源码模式改动前就是 900，不变；但预览模式下十几个主题原本自带 `max-width: 800px / 700px`，统一到全局值后会跟随 900 —— 这是「三处共用一个宽度」的必然结果（没有哪个默认值能同时等于 900 和 800），代码注释里写明了
+- **并排模式不显示手柄**：两列各有各的居中列，一个相对整行的手柄对不齐两处
+- 导出 / 打印不受影响：导出走独立构建的 HTML，本来就在 `extraCss` 里写 `max-width: none !important`
+
 ## v0.3.4
 
 > 本节为**未开发完成的备忘**，仅记录待办，发布前需整理成正式版本说明。
