@@ -1,6 +1,6 @@
 [package]
 name = "yizimarkdown"
-version = "0.3.4"
+version = "0.3.5"
 description = "YiziMarkdown - A sleek Markdown editor"
 authors = ["You"]
 license = ""
@@ -47,6 +47,15 @@ quick-xml = "0.39"
 percent-encoding = "2"
 # 侧栏右键「删除」走系统回收站（可在回收站还原，不直接销毁）
 trash = "3"
+# 导出 DOCX 时把 WebP 转码成 PNG：Word / WPS 都不能渲染 WebP（内嵌后在文档里是空框），
+# 而预览能正常显示 —— 只开 png/webp 两个解码器/编码器，不带默认格式（不加 jpeg/gif 等）
+image = { version = "0.25.10", default-features = false, features = ["png", "webp"] }
+# 导出 DOCX 时把 SVG 渲染成 PNG 回退图：Word 2016+ 走 svgBlip 读矢量，旧版 Word / WPS /
+# LibreOffice 读这张回退位图（实测 LO 在没有回退图时**什么都不显示**，所以回退图不能省）。
+# resvg 全纯 Rust（usvg + tiny-skia + fontdb + skrifa/harfrust），无 C 依赖；
+# text + system-fonts 是必需的：SVG 内的文字（含中文）要用系统字体渲染，否则文字会丢。
+# 不开 svgz（不支持 .svgz 就够了，省掉 flate2）。
+resvg = { version = "0.48", default-features = false, features = ["text", "system-fonts", "raster-images"] }
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.52"

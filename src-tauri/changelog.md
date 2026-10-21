@@ -1,5 +1,212 @@
 # YiziMarkdown 开发日志
 
+## v0.3.5
+
+> 本节为**开发中的备忘**，发布前整理成正式版本说明（`docs/changelog/CHANGELOG-V0.3.5.md`）。
+
+### 导出 Word：项目符号变方框（根因＝Unicode 码位 + 强制 Symbol 字体）
+
+**现象**（用户反馈）：导出的 docx 里无序列表项目符号变方框 / 错误字符，选中符号时字体栏显示 `Symbol`。
+
+**根因**：`numbering_xml()` 的 bullet 层级把 **Unicode 码位**（`U+2022` / `U+25E6` / `U+25AA`）写进 `w:lvlText`，同时又用 `<w:rPr><w:rFonts w:ascii="Symbol" w:hAnsi="Symbol"/></w:rPr>` **强制 Symbol 字体**。实测本机 `C:\Windows\Fonts\symbol.ttf` 的 cmap 只有两段：
+
+| 子表 | 覆盖区间 | `U+2022` | `U+25E6` | `U+25AA` | `U+F0B7` |
+|---|---|---|---|---|---|
+| `(1,0)` 传统 Symbol 编码 | `0x00-0xFE` | ✗ | ✗ | ✗ | ✗ |
+| `(3,0)` Microsoft 私有区 | `0xF020-0xF0FE` | ✗ | ✗ | ✗ | ✓ |
+
+→ 三个码位在 Symbol 里**一个都没有字形**。Word 自己生成 Symbol 项目符号时写的是 PUA `U+F0B7`（内部 F0xx→0xxx 的私有映射），我们写的是 Unicode 码位，于是取不到字形。一级看起来"正常"，其实是 Word 逐字回退到别的字体画出来的。
+
+**为什么一直没被发现**：`CHANGELOG-V0.2.4` 里已写明「列表符号需 Word 查看，docx-preview 不支持 numbering」——这条路径**从未在真实 Word / 渲染器里验证过**，属于"没测到"，不是"没问题"。
+
+**顺带发现的第二个缺陷**：`font_table_xml()` 给 Symbol 挂的替代名链 `Wingdings, Segoe UI Symbol, Arial Unicode MS` ——① 主名 `Symbol` 在 Windows / macOS 都存在，按 ISO/IEC 29500 只有主名找不到才读 `altName` ⇒ **在主流平台上是死代码**；② 万一在缺 Symbol 的环境触发，排第一的 `Wingdings` 同样没有 `U+2022`（实测 MISSING），而真正含全部三个字符的 `Segoe UI Symbol` 排第二 ⇒ **顺序反了，必然方框**。
+
+**改法（方案 A）**：项目符号只写 Unicode 码位、**不指定字体**（继承正文字体 + 允许 Word 逐字回退）。
+
+- `src-tauri/src/docx_export.rs:1617` `bullet_lvls` 改用转义码位；bullet 层级模板删掉整段 `<w:rPr>`
+- 删除 `font_table_xml()` 里的 Symbol 条目及其替代名链（原 173-178 行，已随改法失效）
+- 回归断言：新增 `bullets_use_unicode_without_forced_symbol_font`（`src-tauri/src/docx_export.rs:2344`）——三级 bullet 齐备、码位正确、`numbering.xml` 内不得出现 `Symbol`、bullet 层级不得写 `w:rPr`；`font_table_declares_alt_names_for_substitution`（`:2272`）改为反向断言（不得残留 `Symbol` / `Wingdings`）
+
+**同版追加**：二级/三级符号由 `◦ U+25E6` / `▪ U+25AA` 换成 `○ U+25CB` / `■ U+25A0`。前者在 **MiSans 与宋体里没有字形**（cmap 实测 MISSING），只能靠 Word 逐字回退 ⇒ 不同机器上外观不一致；后两者在 MiSans / 微软雅黑 / 宋体里**都有**。一级 `• U+2022` 不变。
+
+**后续被推翻（同版）**：`○ U+25CB` / `■ U+25A0` 虽然「有字形」，但**尺寸是 `•` 的 2.5 倍**（WPF 逐字形墨迹实测：MiSans `•` 29.0 / `○` 72.4 / `■` 70.0），用户看到的是「层级越低、符号越大」。最终方案改回小码位 `◦ U+25E6` / `▪ U+25AA` 并**显式指定微软雅黑**（该字体里 `◦` 27.5 / `▪` 24.5，与 `•` 同尺寸），跨平台靠 fontTable 的替代名链兜底 —— 详见下文「第一轮实机验收」一节。
+
+**验收**：`cargo test docx_export` → 50 passed / 3 ignored ✓（含全部新增回归用例；0.3.5 收尾时总数见下文「导出 Word 全面对齐预览」一节的 81 passed）。
+
+**人工验收探针**：新增 `write_bullet_probe`（`#[ignore]`，`src-tauri/src/docx_export.rs:2446`），产出 `target/bullet-probe-{misans,yahei,inter}.docx` 三份（Inter 为纯拉丁字体，是最差情况——符号只能靠 Word 逐字回退）。跑法：
+
+```
+cargo test write_bullet_probe -- --ignored --nocapture
+```
+
+已实跑生成三份文件；`numbering.xml` 里 bullet 层级确认无 `w:rPr`、码位为 `• ○ ■`，`document.xml` 中三级 `ilvl=0/1/2` ✓（注：这是当时的记录；本节之后 P1 又改成**每个列表各自一个 `w:num` 实例**，项目符号层级仍用 `ilvl=0/1/2` 表达，但不再共用一个 `numId`，与本条项目符号字形无关）。
+
+**人工验收：已通过**（2026-10-20，真实 Word 打开三份样本）：逐级选中项目符号 —— 字形正确为 `• ○ ■`、**字体栏不再显示 `Symbol`**、无方框 ✓。本条闭环。
+
+### 导出 Word：全面对齐预览（字号/行高/配色/内容完整性）
+
+用户要求「尽最大努力让导出格式准确，而且和用户设定的预览字号准确匹配」。上一节只修了项目符号，本次把导出器**逐条对着预览 CSS 复核**一遍，按 P0→P4 修完。
+
+**P0 内容丢失 / 不可读**
+
+| 现象 | 根因 | 改法 |
+|---|---|---|
+| 元信息块（YAML front matter）漏成正文第一段 | 渲染器是白名单，`Event::Start(Tag::MetadataBlock(_))` 落进 catch-all 被忽略 ⇒ 块内文本当普通段落输出 | 新增分支整块消费丢弃（与预览/HTML/PDF 一致，两者都不显示元信息） |
+| `$…$` / `$$…$$` 公式**整段消失**，块级公式还留一个空段落 | 未处理 `Event::InlineMath` / `Event::DisplayMath`；且 `$$…$$` 被解析器包在 `Paragraph` 里 | Rust 侧没有 TeX 引擎 ⇒ **保留 TeX 源码**：行内用等宽 run 输出 `$…$`，块级用居中段落输出 `$$…$$`（`display_math_paragraph()`，`:781`）。**（下一节已改为 Word 原生公式 OMML，此处的 TeX 源码降级为转换失败时的兜底）** |
+| 脚注引用消失、定义文字外泄成正文段落 | 未处理 `FootnoteReference` / `FootnoteDefinition` | 输出**真正的 Word 脚注**：新增 `word/footnotes.xml`（含 `separator`/`continuationSeparator` 两个必需分隔符）、内容类型 Override、document.xml 关系、`FootnoteText`/`FootnoteReference` 样式；定义内部产生的链接/图片关系搬到 `word/_rels/footnotes.xml.rels`。用 `scan_footnotes()`（`:1673`）预扫描，只有「有定义**且**有引用」的才转脚注——未被引用的定义按普通段落输出（否则内容凭空消失），没有定义的引用按原文输出 |
+| 工具条 `<sup>`/`<sub>` 丢格式；手写 `^x^` 把整段拆成 4 段 | `is_inline_start()` 不含 `Tag::Superscript`/`Subscript` ⇒ 被当成块级边界；行内 HTML 未映射 | 行内 HTML 走 `apply_html_inline_tag()`（`:365`）映射到 `w:vertAlign`/`w:u`/`w:highlight`/`w:b`/`w:i`/`w:strike` 与 `<br>`；`is_inline_start` 仍补上两者作兜底。后来复核预览发现 `^x^`/`~x~` **预览本来就不支持**（字面显示），于是索性关掉这两个拓展语法（见 P4），只让 `<sup>`/`<sub>` 生效 |
+| `---` 分隔线整条消失 | 未处理 `Event::Rule` | 输出空段落 + 下边框（颜色取 `--editor-border`） |
+| **暗色主题导出后不可读**：白纸上的荧光字（matrix `#00ff41`）+ 近黑底色 | `--editor-text`/`--editor-surface` 是给深色页面配的，docx 页面恒为白底 | 新增前端 `src/lib/docxPalette.ts`：暗色主题改用白底等效色，强调色**保留色相**压到白底可读亮度（WCAG 相对亮度 ≤ 0.3 ≈ 3:1）；顺带把 `rgba()`/`#rgb` 归一成 `#rrggbb`（Rust 侧只解析十六进制） |
+
+**P1 列表编号**
+
+- 此前**所有有序列表共用 `numId=1`**（无序 `numId=2`）⇒ 第二个有序列表接着上一个继续编号、`3. 第三项` 的起始值被忽略。现在**每个列表（含嵌套）各自分配一个新 `w:num`**（`numbering_xml(lists)` `:1617`），有序列表一律写 `<w:lvlOverride><w:startOverride>`（起始值 1 也写，否则共享同一 `abstractNum` 的多个实例在 Word 里会接着上一个继续数）
+- **嵌套列表**：第一版让嵌套层复用最近同类型祖先的实例、用 `ilvl` 表达层级，理由是 `%1.%2.` 这种多级编号需要父子同属一个实例 —— 但预览里每个 `<ol>` 都是独立计数器（浏览器 UA 样式各级都是 `decimal`），复用的结果是 Word 显示 `1.1.`、与预览的 `1.` 不符。现在嵌套列表**也各自一个实例 + `ilvl=0`**（各级都从 `1.` 开始），缩进改由段落 `w:ind` 手写：`left = 720 × 总嵌套深度`、`hanging = 360`（不再依赖编号层级里的缩进，任务项与普通项因此对齐同一列）
+- 项目符号的**层级差异**（• / ○ / ■）仍然靠 `ilvl` 表达，取值 = 祖先里「项目符号列表」的个数（对应 UA 的 `ul`(disc) / `ul ul`(circle) / `ul ul ul`(square)），有序列表不参与计数
+- 任务列表项同时写 `numPr` + `☑` ⇒ Word 里是「项目符号 + 勾选框」**双重标记**。现在任务项**不写 `numPr`**，缩进手写成编号列表的文本位置（`left = 720 × 嵌套深度`、`hanging = 360`），只剩 ☑/☐
+
+**P2 字号/行高（本次用户的核心诉求）**
+
+- 此前 `DocxTheme` 只有颜色/字体，**字号行高根本没传**，导出固定「正文 11pt / 行高 1.5 / 单元格 240」——与预览的 20px / 2.0 完全不是一回事
+- 新增 `Metrics`（`:43`）：`pt = px × 0.75`、`w:sz` = 半磅 = `px × 1.5`、行距 `w:line = 240 × lineHeight / 1.2`（`lineRule="auto"`，**不能用 `exact`**，否则行内图片会被裁掉）、1em = `body_pt × 20` twips
+- 前端 `App.tsx:995` 传 `fontSizePx: previewFontSize, lineHeight: previewLineHeight`（预览容器 `Editor.tsx:501` 用的就是这两个设置——字号取「预览字号」、行高取「预览行高」；未设置时退回 CSS 缺省 16px / 1.8）。**一处需要知道的取舍**：应用自身的预览 CSS 里 `.editor-content p { line-height: var(--line-height) }`（＝「编辑器行高」）盖住了容器的「预览行高」，而 `li`/`blockquote`/`td`/`pre code` 没有自己的 `line-height`、继承容器的「预览行高」——即预览自己前后不一致。导出取**「预览行高」**这一项（它才是设置面板里那个滑杆的语义），并统一套用到正文/列表/引用/代码块/单元格；两者默认值相同（2.0），只有用户单独改一个滑杆时才会看出差别
+- 标题字号改为**按预览的 em 比例**（`globals.css` h1-h3 = 2 / 1.5 / 1.25em，h4-h6 = 1em 仅加粗），不再用一套与预览无关的固定磅值（旧值 h6 10pt 比正文 11pt 还小）；段前 1.5em / 段后 0.5em / 标题行高 1.3、正文段后 1em、列表项 0.3em、代码块 0.9em 全部由字号推导
+- 行高逐元素对照预览取：`p`/`li`/`blockquote`/代码块/表格单元格都是用户行高（预览里后三者继承容器值），标题 1.3；`styles_xml` 补 `w:docDefaults`（默认字体/字号/颜色/行距 + `w:lang en-US/zh-CN`）。脚注文字仍用单倍行距（240，Word 惯例，预览里没有对应元素）
+
+**P3 图片**
+
+- WebP：Word / WPS **都不能渲染**，内嵌后是空框；新增 `image` crate（`default-features=false, features=["png","webp"]`，仅 +6 个包）在嵌入前转码为 PNG，失败则告警并保留原图（`webp_to_png()` `:489`）
+- 本地图片此前**只按扩展名**判类型 ⇒ `.jfif`、无扩展名的图片被静默丢弃，扩展名写错的图片以错误类型嵌入。现在以**文件头**为准、扩展名仅兜底（`sniff_image_ext()` `:459`），不支持的类型跳过并 `eprintln` 说明（**下一节起 SVG 改为支持**：按内容识别为 SVG，转矢量 + 回退位图）
+- `data:` URL 同样按文件头判定（`data:image/svg+xml` 不能冒充 png）
+
+**P4 其他一致性**
+
+- 关闭 `ENABLE_SMART_PUNCTUATION`（预览 `typographer:false`）⇒ `"引号"`/`a--b`/`...` 不再被换掉；关闭 `ENABLE_SUPERSCRIPT`/`ENABLE_SUBSCRIPT` ⇒ `^x^`/`~x~` 与预览一致保持字面（应用自身的上标/下标走 `<sup>`/`<sub>`）。**已知残留**：pulldown 的删除线**同时接受单波浪线**（GFM 只认 `~~x~~`），关掉 SUBSCRIPT 后「前一个字符不是字母数字」的 `~x~` 会落到删除线（如 `空格后的 ~word~`）；无法只关单波浪线（关掉 `STRIKETHROUGH` 会连 `~~删除线~~` 一起失效），故取保住 `~~` 这一侧，已在全格式测试文件与版本说明里列为已知差异。脚注改用 GFM 语义（`remove(ENABLE_OLD_FOOTNOTES)` 会连带清掉 `ENABLE_FOOTNOTES` 位，故再 `insert(ENABLE_FOOTNOTES)` 补回）
+- 裸 URL 自动链接（`find_bare_url()` `:401`，对应预览 `linkify:true`）；`[[wikilink]]` 不再写成 `TargetMode=External` 的无效外部链接，按 `[[原文]]` 输出
+- 代码块从「每行一个段落」改为**一个段落 + `<w:br/>` 换行**（预览里 `pre` 是单一区块；逐行拆段会在末尾多出空段落、复制时被当成多个段落）
+- 表格补 `<w:tblGrid>`（按列数均分正文宽度，缺它时 Word 自行推断列宽、容易宽窄不齐）；单元格行距随正文字号
+- 任务字形 ☐/☑ 在 MiSans / 微软雅黑 / 宋体 / Segoe UI 里**都没有字形**（cmap 实测），显式指定 `Segoe UI Symbol` + fontTable 替代名链（`MS Gothic, Apple Symbols, Arial Unicode MS, Noto Sans Symbols 2, DejaVu Sans`）
+- `esc()` 归一换行（换行一律用 `<w:br/>`，避免 XML 折叠语义把换行变成不可控空白）
+
+**改动文件**：`src-tauri/src/docx_export.rs`（主体）、`src/App.tsx`（传字号/行高 + 白底配色）、`src/lib/docxPalette.ts` + `tests/docxPalette.test.ts`（新增）、`src-tauri/Cargo.toml`（+`image`）、`docx-export-test.md`（新增：全格式人工验收样本）。
+
+**人工验收样本**：仓库根新增 `docx-export-test.md`，一次性覆盖 front matter、H1–H6、行内格式/转义/特殊字符、公式、分隔线、三级无序/有序/起始值/嵌套/宽松紧凑/任务列表、引用（嵌套 + 内含列表代码）、表格（对齐 + 行内格式 + 管道转义）、代码块（带/不带语言、缩进式、特殊字符、长行）、脚注（含未定义引用与孤立定义）、图片（相对 PNG / 相对 WebP / data URL / 远程 / SVG / HTML img）、行内与块级 HTML、已知差异样例，文末附《对照检查表》与差异汇总（下一节起增补为 27 项，含 SVG 矢量与原生公式两条），供人工在真实 Word / WPS 里逐项比对。
+
+**验证（当时）**：`cargo test` → **81 passed / 0 failed / 6 ignored**（末节的 109 passed 含其后新增项）；`npm test` → **243 passed**；`npx tsc --noEmit` 无输出；`cargo build` ✓；`check-version` / `check-tauri-versions` / `check-tauri-args` / `check-i18n --strict` / `check-themes` 全绿。全格式样本另做包级校验：`docx-export-test.md` 导出后 13 个部件 XML 全部良构（0 错误）、WebP 已转 PNG、SVG 跳过、4 张图片嵌入、脚注 3 条（含孤立定义按段落保留）、有序列表 numId 100–123 各自独立且 `startOverride` 正确（`3.` → 3）。
+
+**已知未做（明确留白）**：定义列表（`Tag::DefinitionList`）、块级 HTML 表格（降级为文本）、SVG 与 EXIF 方向矫正。这些都不属于「预览能看、导出看不到」，故不在本次范围。（其中 **SVG 与 LaTeX 公式已在下一节补做**。）
+
+### 导出 Word：公式转 Word 原生公式、SVG 转矢量
+
+上一节把「公式只留 TeX 源码」「SVG 跳过」列为明确留白。用户问「公式为什么不能转成 docx 支持的可编辑公式？受什么制约？」「svg 为什么不能导出到 docx 里呢？或者转换后导出呢？」——本节把两条都做掉，一起进 0.3.5。
+
+**LaTeX → OMML（Word 原生公式）**
+
+- 选型实测（临时 cargo 探针 `omml-probe`）：
+  - **tex2word-math 1.0.6**（MIT，`github.com/yfyang86/rstex2word`，2026-07 发布、下载量数百，源码约 46 KB 且**零外部依赖**）：入口 `to_omath(latex) -> "<m:oMath>…</m:oMath>"`。**18/18 常规公式 + 40/40 边界/畸形输入全部良构、0 panic**；`&` `<` `>` 正确转义并带 `xml:space="preserve"`；覆盖 `\frac \sqrt[3] \sum \int`（含上下限）`\lim \alpha \mathbb \mathcal \vec \hat \bar \text{中文} cases aligned pmatrix align \binom \operatorname`。缺口：`{}^{14}C` 这类前置上标退化、未知宏静默丢弃
+  - **deckmint-math 0.1.7 否决**：`aligned`/`cases` 直接失败，且 `\vec` 产出**结构不良的 XML**（`</m:groupChrPr>` 标签不匹配）
+  - `mitex-parser` / `latex2mathml` 记在案（后者只到 MathML，而 MathML→OMML 没有可用的成熟 Rust 实现；`MML2OMML.XSL` 不可再分发）
+- 做法：**vendor**（`src-tauri/src/omml/{mod,omml,parser,symbols}.rs` + `LICENSE-MIT`），只改两处 `use` 路径（上游按 lib 根写 `crate::parser` / `crate::symbols`）。理由：不在关键路径上依赖一个刚发布、下载量数百的 crate；源码零依赖、体量小，上游停更也不影响构建
+- 接线：`Event::InlineMath` → `<m:oMath>`；`Event::DisplayMath` → `<m:oMathPara><m:oMathParaPr><m:jc m:val="centerGroup"/>`；`w:document` 根补 `xmlns:m`；`m:t` 统一补 `xml:space="preserve"`（与 `w:t` 同规则，否则首尾空格被吞）
+- **不丢内容**：`omml_of()`（`:566`）用 `catch_unwind` 兜住第三方解析器的 panic，并且**结果里一个 `<m:t` 都没有时也判失败**（整段未知宏会被静默丢掉）→ 退回原来的等宽 TeX 源码。已知限制：公式编号 `\tag` 不支持
+
+**SVG → 矢量 + PNG 回退**
+
+- Word 的矢量路子是 `a:extLst` 里的扩展：`a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"` → `asvg:svgBlip`（命名空间 `http://schemas.microsoft.com/office/drawing/2016/SVG/main`）指向 SVG 部件；**必须同时给 PNG 回退位图** —— LibreOffice 缺回退图时整张空白（tdf#126084）
+- 关系类型怎么定：先查 [MS-ODRAWXML] 规范（2.26 节 `svgBlip` / `CT_SVGBlip`）确认元素与命名空间，但规范里**没有** SVG 专用关系类型；于是直查本机 WPS 的 OOXML 二进制（`kso.dll`）：既有 `{96DAC541…}` + `asvg:svgBlip` + `xmlns:asvg`，又把 `image/svg+xml` 与 `media/image%d.svg` 放进同一张「媒体部件」表，而它的关系类型清单里**只有 `relationships/image`** ⇒ 两个部件都用标准 image 关系类型、靠内容类型区分（`[Content_Types].xml` 必须有 `<Default Extension="svg" ContentType="image/svg+xml"/>`）
+- 栅格化：resvg 0.48（纯 Rust：usvg / tiny-skia / fontdb / skrifa / harfrust），**`text` + `system-fonts` 必开**（SVG 内的文字、中文靠系统字体渲染，否则文字静默消失）；字体库用 `OnceLock` 缓存一次（每次遍历系统字体会明显拖慢导出）；倍率取「宽约 1000px」（限制 1–3 倍，4096px 上限）
+- 尺寸取 **SVG 固有尺寸**（96dpi：240×120 px → 180×90 pt，与 Word 自己插入时一致），不是放大后的回退位图像素
+- 栅格化失败不丢图：只嵌矢量（Word 2016+ / WPS 仍能显示）并在日志里告警
+
+**回归断言**（新增 7 项）
+
+| 断言 | 覆盖 |
+|---|---|
+| `display_and_inline_math_become_native_omml` | 行内→`m:oMath`、上标→`m:sSup`、积分→`m:nary`、块级→`m:oMathPara` + `m:jc centerGroup`、`xmlns:m` 存在、TeX 源码不残留、文档良构 |
+| `math_text_preserves_spaces` | `m:t` 带 `xml:space="preserve"` |
+| `unparsable_math_falls_back_to_tex_source` | 未知宏整段转换不出 → 退回源码而不是空白公式 |
+| `sniff_svg_recognizes_text_xml_shapes` | BOM / XML 声明 / DOCTYPE / 注释 / 大小写；二进制与普通文本不误判 |
+| `svg_rasterizes_vector_and_text_to_png` | 固有尺寸、PNG 可解析、宽高比、失败返回 None；**有/无 `<text>` 两张图字节必须不同**（证明系统字体真的把文字画出来了） |
+| `svg_is_embedded_as_vector_with_png_fallback` | `image1.svg` 与 `image1.png` 同时存在、`svgBlip` 结构与 rId 配对、EMU 取固有尺寸（2286000×1143000）、两条 image 关系、`[Content_Types]` 声明 svg、回退图 720×360 |
+| `svg_extra_css_units_and_content_detection` / `invalid_svg_is_skipped_without_losing_text` | 扩展名不是 `.svg` 也按内容识别；`2in` 按 96dpi 换算；损坏/残缺 SVG 不 panic 且正文不丢 |
+
+**自动化踩坑（教训）**：为拿「Word 官方产物」做依据，曾用 `New-Object -ComObject Word.Application` 起自动化。事后查明本机 `.docx` 归 **WPS**（`WPS.Docx.6`），`Word.Application` 是 WPS 兼容层提供的：它没有 `OMath.Type` / `BuildUp`（真 Word 有），所以此前「Word 识别 20 个公式」应更正为「**WPS** 识别 20 个公式」；更要紧的是它会在用户正开着的 WPS 实例里建文档/保存，弹出保存提示打扰用户。**决定：不再用 Office/WPS 自动化**；后续规格依据改为「公开规范 + 本机二进制字符串 + 包级校验」，人工验收交给用户。
+
+**验证**：`cargo test` → **109 passed / 0 failed / 6 ignored**（+28，含 vendor 引擎自带用例）；`npm test` → 243 passed；`npx tsc --noEmit` 无输出；`cargo check --all-targets` 零告警。全格式样本重新导出（`target/export-test.docx`，239.8 KB）：17 个部件、6 张图（`image5` / `image6` 各有 `.svg` + `.png`，`svgBlip` → `rIdSvg5` / `rIdSvg6` 成对）、`m:oMath` 18 处、`m:oMathPara` 3 处、TeX 源码残留 0 处、`[Content_Types].xml` 含 svg 声明。
+
+### 导出 Word：第一轮实机验收的 8 条问题（2026-10-21）
+
+用户拿 `docx-export-test.md` 导出后在真实 Word/WPS 里逐节核对，回了 8 条问题（每条给「位置 / 预览里 / Word 里 / 期望 / 附注」，未标优先级 ⇒ 由我们按「内容是否丢失 / 结构是否错误 / 观感」排 P0→P4）。
+
+**P0 换行整体失效（【1】【4】）**
+
+| 现象 | 根因 | 改法 |
+|---|---|---|
+| 同段内的**软换行**（单个换行）、**硬换行**（行尾两空格、行尾反斜杠）在 Word 里都不换行，仍属一个自然段；代码块、多行引用被**合并成一行** | `const BR: &str = "<w:br/>"` 被直接拼进 `<w:p>` 的内容里。`w:br` 是 **run 级元素**（`CT_R` 的成员），挂在段落层级不是合法段落内容，Word/WPS 会**整段忽略**（XML 仍良构，所以日志和结构校验都看不到） | `BR` 改为 `"<w:r><w:br/></w:r>"`，三处调用（软/硬换行、行内 `<br>`、代码块行间）一次性修好 |
+
+回归断言：`soft_and_hard_breaks_stay_in_run`（三种写法都换行、`\` 不残留、仍是同一段落）+ `assert_br_only_inside_runs()`（`<w:br/>` 计数 == `<w:r><w:br/></w:r>` 计数、不得出现 `</w:r><w:br/>`），并加进 `code_block_is_one_paragraph_with_line_breaks` 与端到端样本用例。**注意**：旧断言只查 `doc.contains("<w:br/>")`，裸写也能过 ⇒ 这类断言必须改成「包裹计数相等」。
+
+**P0 首行缩进/层级错乱（【6】引用）**
+
+- **现象**：三级嵌套引用导出后「没有层级」，且同一引用被看成多个断开的引用块
+- **根因**：引用块此前是**逐段落**写 `Quote` 样式的 `w:pBdr` + `w:shd` + `w:ind`。相邻段落的边框在 WPS 里**不会合并**，段间距处露出缺口；嵌套只体现为 `ind left = 300 × 层数`
+- **改法**：整块引用（含其内部的段落、列表、嵌套引用）先渲染到临时缓冲，最后整体裹进一个**单元格表格**：`w:tblW pct 5000` + `tblBorders/w:left sz=24`（3pt＝预览 4px，取主题强调色）+ `w:shd fill=--editor-surface` + `w:tblCellMar` 上下 0.5em / 左右 1em（＝预览 `padding: 0.5em 1em`）。嵌套引用就是**父单元格里的内层表格**，层级由单元格外边距自然递进 —— 因此不需要 `w:tblInd`，也不再有任何段落级边框。`Quote` 样式退化为「只保留文字色」，`p_start_ind` 里的引用缩进分支删除；仅当引用是文档最后一个块时补一个零间距空段落（Word 要求表格后至少一个段落）
+- 空引用（`>` 单独一行）也要有合法单元格内容（`w:tc` 至少一个块级元素）⇒ 补一个 `Quote` 空段落
+
+回归断言：`quote_is_one_continuous_container_with_nesting` —— 两层引用 = 2 个 `<w:tbl>` / 2 个 `<w:tr>`；嵌套表格的起始位置**在外层表格闭合之前**（真嵌套）；同一单元格里同时含「第一段」「第二段」（连续容器）；`<w:pBdr>` 计数为 0；`Quote` 样式里不得再有 `w:pBdr`/`w:shd` 且有 `w:color 666666`。**并补了 `xml_is_well_formed(&doc)`** —— 正是它抓到了首版 `format!` 的实参错误（`<w:top <w:val="none"/>`，标签名后直接跟 `<`）。
+
+**P1 编号被嵌套列表带跑（【3】）**
+
+- **现象**：`1. 第一章 / 1. 第一节 / 2. 第二节 / 2. 第二章` 里第二章显示成 **3**
+- **根因**：P1 已经做到「每个列表各自的 `w:num`」，但**计数器挂在 `w:abstractNum` 上**：所有列表仍指向同一个 abstractNum（有序 0 / 无序 1），只靠 `w:lvlOverride/w:startOverride` 重置。WPS 的实现在「层级切换」时才重置 ⇒ 二级列表（第一节、第二节）把父级计数器推到了 3
+- **改法**：**每个列表（顶层与嵌套）独占一个 `w:abstractNum`**（单 `w:lvl`、`ilvl=0`、`w:start` 写在 lvl 内），`w:num` 与 abstractNum **一一对应**，有序列表再额外写 `startOverride`（双保险）。`ListInstance` 增加 `bullet_depth`（字形层级 = 祖先里无序列表数）与 `depth`（`w:ind` 缩进层级 = 总嵌套深度）；`list_stack` 简化为 `Vec<usize>`（`lists` 的下标）
+- 项目符号字形同时定稿（承接前两节的反复）：一级 `• U+2022` 跟随正文字体；二/三级 `◦ U+25E6` / `▪ U+25AA` **显式指定 `Microsoft YaHei`**（MiSans / 宋体没有这两个字形），`fontTable.xml` 为雅黑挂替代名链 `Segoe UI Symbol → PingFang SC → Apple Symbols → Arial Unicode MS → DejaVu Sans`；四级及以后循环。`BULLET_LEVELS` / `BULLET_GLYPH_FONT` 常量集中表达
+
+回归断言：`every_list_gets_its_own_abstract_num`（3 个列表 → 3 个 abstractNum、`w:num 100/101/102` 分别指向 `abstractNumId 0/1/2`、`num_ids` 序列必须是 `[100,101,101,100,102]`——证明第一章/第二章**同一实例**而二级是另一实例）；`bullet_glyphs_stay_same_size_and_have_real_glyphs`（三级字形为 `• ◦ ▪`、**断言绝不出现** `○`/`■`、一级层级不得写 `w:rPr`、二三级恰好 2 处雅黑 `w:rFonts`、fontTable 有雅黑条目与替代名链）；`nested_list_under_bold_item_keeps_levels` / `nested_lists_get_own_instance_with_preview_levels` 改为断言 `w:ind 1440` 且**不得出现 `ilvl=1`**。
+
+**P1 脚注字号参差（【8】）**
+
+- **现象**：脚注里的列表项、多段脚注的第二段比脚注正文**大一圈**；行内代码甚至比脚注正文还大
+- **根因**：只有脚注「首段」被改写为 `FootnoteText`（带 0.83 倍字号），其余段落沿用 `ListParagraph`（基于 `Normal` = 正文字号），行内代码的 0.9 倍也是按**正文字号**算的
+- **改法**：引入脚注字号上下文 —— `Metrics::FOOTNOTE_RATIO = 0.83`、`sz_scale_from(base_sz, scale)`、`footnote_sz()`、`DocxBuilder::in_footnote` + `base_sz()`。脚注内：每个 run 显式写脚注字号（`run_with` 的非等宽分支）、段落级 `w:pPr/w:rPr` 写脚注字号（列表项/第二段），行内代码与 `CodeBlock` = 脚注字号 × 0.9。`styles.xml` 的 `FootnoteText` 用同一个 `footnote_sz()`
+
+回归断言：`footnote_inner_paragraphs_use_footnote_size`（footnotes.xml 里只出现脚注字号 20、不得出现正文字号 24；行内代码必须是 18；≥2 处段落级 `<w:rPr><w:sz 20/></w:rPr>`；document.xml 里不得出现 20）与端到端样本用例（`word/footnotes.xml` 不得含 `w:sz 30`）。
+
+**P2 预览侧：任务项行内元素被挤断 + 内容重复（【5】）**
+
+- **现象**（用户明确说明「这是预览的渲染问题，不是导出问题」）：`- [x] 带 \`行内代码\` 与 **加粗** 的任务` 在预览里内容出现两遍，且 `code`/`strong` 在宽度不足时被「行内硬换行」
+- **根因**（Node 里最小复现）：`markdown-it-task-lists@2.1.1` 在 `{label: true, labelAfter: true}` 下会把 **`token.content`（原始 Markdown 文本，含反引号与 `**`）** 再塞进一个额外 `<label for=…>`，而已渲染的行内节点仍在原处 ⇒ 内容两份；同时 `.task-list-item { display: flex }` 让「已渲染内容」与「追加的 label」各成一个 flex 项，宽度不足时被**逐个挤压**
+- **改法**：`markdownRenderer.ts` 改为 `labelAfter: false`（`<label>` 包住勾选框与内容，只产生一个子项）；`globals.css` 给 `.task-list-item > label` 加 `min-width: 0` 并注释说明为什么必须是单个 flex 项。`labelAfter: false` 下 `li.textContent` 不变 ⇒ `Editor.tsx` 的勾选回写逻辑不受影响
+
+回归断言（新增 `tests/taskList.test.ts`，已加入 `npm test` 列表）：行内内容只出现一次（计数 1）且不得泄漏 `` `行内代码` `` / `**加粗**` 原始文本；`<li class="task-list-item…"><label><input …>` 结构成立、不得出现 `</strong>…<label` 这种「追加式第二 label」；纯文本任务项仍是可点击 label；非任务项不得出现 `<label>`。
+
+**P3 【2】字形尺寸**：见上文 bullet 三条（`•` `◦` `▪`，同尺寸 + 显式字体 + 替代名链）。
+
+**P4 【7】语法高亮（已按用户决定实现）**：`代码块被合并成一行` 属 P0 的 `<w:br/>` 问题，已修。着色方案由用户选定「前端预着色、逐 token 与预览一致」，实现如下：
+
+- **不在 Rust 侧另写分词器**：预览的着色 = highlight.js 的 token 划分 + 主题 `--code-*` 颜色，任何独立实现都必然有出入。改为前端**直接读预览 DOM**（`.editor-content pre.hljs > code`，该面板在 `Editor.tsx` 里「永远挂载」，各视图模式都在）：
+  - 键：`<code class="language-rust">` 的 `language-*`（与 Rust 侧取围栏 info 第一个词的规则一致；预览的 `data-lang="auto"` 表示无语言 ⇒ 空语言）+ `U+001F` + **规范化代码**（`normalizeCodeText`：CRLF/CR → `\n`、去末尾换行 —— 必须与 Rust 的 `normalize_code()` 同规则，否则查表静默落空）；
+  - 值：`[[类路径, 文本], …]`，**类路径是祖先链**（如 `hljs-meta hljs-keyword`）而不是单个类名 —— 主题里有 `.hljs-meta .hljs-keyword` 这类后代选择器，只看最内层会取错色；
+  - 样式：每个路径取**真实元素的 computed style**（`color` / `fontWeight ≥ 600` / `fontStyle`），因此换主题、改自定义 CSS、`.hljs-strong` 的粗体都自动跟随；纯文本片段以 `<code>` 自身为宿主（继承 `.hljs` 的正文色）。
+- **Rust 侧**：`DocxTheme.code_highlights`（`#[serde(default)]`，形状与前端一致：`styles` + `blocks`），`CodeStyle { color, bold, italic }`、`CodeHighlights`；`code_block_content()` 按片段写 run（等宽 + 0.9em + `w:color`/`w:b`/`w:i`），片段内换行仍走 `BR`（run 级 `<w:br/>`），**段落结构不变**（一个代码块一个段落）；查不到就退回原来的单色等宽（缩进式代码块、预览未渲染、语言不匹配、预览防抖未跟上）。颜色用现有 `css_color_to_hex()` 归一（`rgb(207, 34, 46)` → `CF222E`），读不出颜色时退回正文色，绝不让文字消失。
+- **有用的副作用**：mermaid 这类被插件改写成 `<div>` 的围栏不会硬套代码配色（它压根不是 `pre.hljs`）；`pre` 里由 `Editor.tsx` 注入的悬浮按钮/语言标签也不会混进片段（收集从 `<code>` 开始）。
+- **暗色主题的白底适配**：页面上按深底配的 token 是亮色（`liquidglass-prism` 暗色变体的 `--code-keyword` 是 `#67e8f9`，亮度 0.63），直接搬到白底 Word 就是「白纸上的荧光字」—— 与 0.3.5 修的「暗色主题导出不可读」同一类问题。现在暗色主题用 `darkenForWhite()`（**保留色相**、压到 WCAG 相对亮度 ≤ 0.3）逐 token 压暗，无着色片段直接用 docx 调色板算出的正文色；**浅色主题原样搬预览颜色**（预览本身就是白底，颜色本就合适）—— 这条界线与 `docxPalette` 一致：只有「底色变了」的暗色主题才需要换算。
+
+回归断言：Rust 侧 `code_block_uses_frontend_highlight_spans_with_colors`（6 片段在换行处拆成 7 个 run、`rgb()`→`CF222E`、加粗/斜体、无类片段兜底色、`doc_text` 拼接等于原代码、`assert_br_only_inside_runs`）、`code_block_falls_back_to_mono_without_highlight_data`（**键含语言** ⇒ 同文本不同语言不串味；`normalize_code` 契约）、`frontend_highlight_payload_deserializes_and_colors_runs`（**JS↔Rust 接线**：把前端产出的 JSON 形状原样反序列化再渲染，字段名/数组形状一改就红）；前端新增 `tests/codeHighlight.test.ts`（7 条，用最小假 DOM 驱动收集函数）：键/规范化规则一致、片段带祖先链、注入的按钮与标签不混入、**片段拼接必须正好等于键里的代码**、取不到预览 DOM 时给空表、**暗色主题把荧光色压到白底可读且保留色相（浅色主题不动）**，以及用**真实渲染器**输出钉住「`pre.hljs > code[class=language-*]` + 围栏内容去缩进」的形状（渲染器改形状时会红，而不是静默丢掉高亮）。
+
+仍未对齐的（写入 `docx-export-test.md` 「已知差异」第 9 条）：**超长代码行的横向滚动** —— Word 段落没有这个概念，导出按页面宽度折行。
+
+**关于验收表头那行「预览 20px + 1.2 倍行高 → 导出 15pt、单倍、段后 15 磅」**：这是**正确换算**，不是没生效 —— 1px = 0.75pt（20px = 15pt = 小三）；Word 的「单倍行距」本身≈1.2 倍字号，所以 CSS 的 1.2 倍行高正好落在 Word 的「单倍」；段后 15 磅＝预览 `p { margin-bottom: 1em }` 的 1em。已写入正式版说明的「其他」一节。
+
+**新增/加强的测试基建**
+
+- `xml_is_well_formed()` 加强：先做「标签内不得再出现 `<`」扫描（quick-xml 默认**不**校验属性语法，`<w:top <w:val="none"/>` 它能读过去却会被 Word 判定损坏），再逐个解析属性；并补元测试 `xml_well_formedness_checker_rejects_broken_attributes` 守住校验器本身
+- 新增端到端用例 `acceptance_sample_package_is_well_formed`：把仓库根的 **`docx-export-test.md`（用户逐项验收用的样本）**整份导出，逐部件做 XML 良构 + 「无裸 `<w:br/>`」+「front matter 不泄漏」+「脚注内不得出现正文字号」检查 —— 此前这条路径只有 `#[ignore]` 的人工探针
+
+**验证（本轮结束时）**：`cargo test` → **118 passed / 0 failed / 6 ignored**（共 124 个用例，其中 `docx_export` 模块 67 个、含 4 个人工探针）；`npm test` → **254 passed**（+7，全部来自新增的 `tests/codeHighlight.test.ts`）；`npx tsc --noEmit` 无输出；`cargo check --all-targets` 零告警；6 个 `check:*` 全过。样本重新导出（`target/export-test.docx`，248 KB）→ 17 个部件（其中 9 个 XML/rels）全部用 .NET `XmlDocument.Load` 解析零失败、`<w:br/>` **27 处全部包在 run 内（裸写 0）**、24 个列表 → **24 个 abstractNum**、引用表格 8 个（含嵌套）、段落级 `pBdr` 仅剩 3 处（都是 `---` 分隔线）、`footnotes.xml` 字号只有 25（脚注字号）与 23（脚注内行内代码）、正文段落级字号只有 27；**6 个代码块的查表键全部命中**（含「列表项里缩进的围栏」与「引用里的围栏」），颜色是主题真色（`hljs-keyword` `0E7490`、字符串 `1D4ED8`、数字 `7C3AED` 且**带斜体** —— 该细节只有读 computed style 才能拿到），无语言的块与缩进式代码块按预期保持单色。
+
+**语法高亮的端到端验证（无头浏览器探针）**：`scripts/probe-code-highlight.mjs` —— 往 Vite dev 服务器临时放一个探针页（真实 `renderMarkdown()` 渲染样本 + 复刻 `Editor.tsx` 往 `pre` 注入的按钮/语言标签），用 Chrome 无头 `--dump-dom` 跑完，断言「命中块数 == `pre.hljs` 数」「片段拼接 == 代码」「末尾无换行」「注入内容不混入」「围栏内容与页面读到的文本一致（跨实现契约）」「颜色是真 `rgb()`」「存在空类路径兜底」，产出 `target/highlight-payload.json` 供导出探针使用。实测：6 个 `pre.hljs` 全命中、6 个查表键在 Rust 侧全部命中（含列表里缩进的围栏与引用里的围栏）；再加 `--theme liquidglass-prism --dark` 验暗色主题的白底适配：预览里的亮色 token `#67e8f9`（亮度 0.63）被压成 `#3f8e99`（亮度 ≤ 0.3、色相不变），无着色片段取传入的 `#333333`，断言全过。
+
 ## v0.3.4
 
 > 本节为**未开发完成的备忘**，仅记录待办，发布前需整理成正式版本说明。

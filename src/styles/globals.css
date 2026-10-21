@@ -2163,6 +2163,13 @@ a {
   margin-left: 0;
   line-height: var(--line-height, 1.8);
 }
+/* 任务项的 `<label>` 把勾选框与任务文本一起包住（markdown-it-task-lists 的 label 模式，
+   见 markdownRenderer.ts 里 `labelAfter: false` 的说明）：这样 flex 容器只有**一个**子项，
+   宽度不足时按普通文本换行；若让行内元素各成一个 flex 项，每项都会被单独挤压而「行内硬换行」。 */
+.editor-content .task-list-item > label {
+  cursor: pointer;
+  min-width: 0;
+}
 .editor-content .task-list-item-checkbox {
   appearance: auto;
   width: 1em;

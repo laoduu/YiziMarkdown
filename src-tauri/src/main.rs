@@ -17,6 +17,9 @@ mod ai_proxy;
 mod docx_export;
 mod pdf_export;
 
+// LaTeX 公式 → Word 原生公式（OMML）：vendor 的 tex2word-math（MIT），见 src/omml/
+mod omml;
+
 // WebDAV 云端存储（v0.3.0）
 mod remote_cache;
 mod webdav;
@@ -1823,6 +1826,9 @@ mod tests {
                 mono_font: "Consolas".into(),
                 border: "D5E2FF".into(),
                 surface: "F0F7FF".into(),
+                font_size_px: Some(16.0),
+                line_height: Some(1.8),
+                code_highlights: docx_export::CodeHighlights::default(),
             },
         )
         .await

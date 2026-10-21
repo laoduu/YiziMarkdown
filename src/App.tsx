@@ -31,6 +31,8 @@ import { deriveDocumentTitle } from './lib/docTitle'
 import CloudSaveDialog from './components/CloudSaveDialog'
 import { ContextMenuHost } from './components/ContextMenu'
 import { windowOps } from './lib/windowOps'
+import { buildDocxPalette } from './lib/docxPalette'
+import { collectCodeHighlights } from './lib/docxCodeHighlight'
 // 导出 PDF 用的内联样式（globals.css 已包含 Tailwind prose / 编辑器排版；KaTeX 样式保证公式还原）
 import globalsCss from './styles/globals.css?inline'
 import exportTocCss from './styles/export-toc.css?inline'
@@ -945,18 +947,61 @@ function App() {
         const lastSep = tab.filePath ? Math.max(tab.filePath.lastIndexOf('\\'), tab.filePath.lastIndexOf('/')) : -1
         const baseDir = tab.filePath && lastSep >= 0 ? tab.filePath.substring(0, lastSep) : null
         const cs = getComputedStyle(document.documentElement)
-        const accent = (cs.getPropertyValue('--editor-cursor') || '').trim() || (isDark ? '#8ab4f8' : '#0066cc')
-        const text = (cs.getPropertyValue('--editor-text') || '').trim() || '#333333'
+        /**
+         * 把主题变量解析成具体颜色。
+         * 变量值可能是 `var(...)` 链（如 `--font-editor: var(--font-sans)`），
+         * 交给浏览器解析后取 computed 值；值非法时浏览器会丢弃，此时用兜底色。
+         */
+        const probe = document.createElement('span')
+        probe.style.display = 'none'
+        document.body.appendChild(probe)
+        const colorVar = (name: string, fallback: string) => {
+          const raw = cs.getPropertyValue(name).trim()
+          if (!raw) return fallback
+          probe.style.color = ''
+          probe.style.color = raw
+          if (!probe.style.color) return fallback
+          return getComputedStyle(probe).color || fallback
+        }
+        const accentRaw = colorVar('--editor-cursor', isDark ? '#8ab4f8' : '#0066cc')
+        const textRaw = colorVar('--editor-text', '#333333')
         const mono = (cs.getPropertyValue('--font-mono') || '').trim() || 'Consolas'
         // 表格样式对齐预览：表头底色 --editor-surface、网格线 --editor-border
-        const surface = (cs.getPropertyValue('--editor-surface') || '').trim() || '#f5f5f5'
-        const border = (cs.getPropertyValue('--editor-border') || '').trim() || '#dddddd'
+        const surfaceRaw = colorVar('--editor-surface', '#f5f5f5')
+        const borderRaw = colorVar('--editor-border', '#dddddd')
+        probe.remove()
+        // docx 页面恒为白底：暗色主题的亮色正文/近黑底色不可照搬（见 lib/docxPalette.ts），
+        // 顺带把 rgb()/#rgb 归一成 #rrggbb（Rust 侧只解析十六进制）
+        const palette = buildDocxPalette({
+          isDark,
+          accent: accentRaw,
+          text: textRaw,
+          surface: surfaceRaw,
+          border: borderRaw,
+        })
         // 用 invokeTauriOrThrow：导出失败必须抛错显示，不能吞错假装成功
         await invokeTauriOrThrow('export_docx', {
           path: savedPath,
           md: tab.content,
           baseDir,
-          theme: { accent, text, font: previewFontFamily, monoFont: mono, surface, border },
+          theme: {
+            accent: palette.accent,
+            text: palette.text,
+            font: previewFontFamily,
+            monoFont: mono,
+            surface: palette.surface,
+            border: palette.border,
+            // 预览字号/行高：docx 必须与用户设定的预览排版一致
+            // （此前固定 11pt / 1.5 倍行距，与预览的 20px / 2.0 完全不符）
+            fontSizePx: previewFontSize,
+            lineHeight: previewLineHeight,
+            // 代码块语法高亮：直接读预览 DOM（分词与颜色都与预览一致，见该函数注释）。
+            // 暗色主题的 token 是给深色页面配的亮色，导出到白底文档要压暗（同 palette 的处理）
+            codeHighlights: collectCodeHighlights(document.querySelector('.editor-content'), {
+              isDark,
+              baseColor: palette.text,
+            }),
+          },
         })
       } else if (format === 'pdf') {
         await invokeTauriOrThrow('export_pdf', { path: savedPath, html: buildExportHtml({ print: true }) })
@@ -991,7 +1036,7 @@ function App() {
       console.error('[export] failed:', e)
       showToast(t('app.exportFailed'))
     }
-  }, [currentTab, showToast, buildExportHtml, previewFontFamily, isDark])
+  }, [currentTab, showToast, buildExportHtml, previewFontFamily, isDark, previewFontSize, previewLineHeight])
 
   const handleFolderChange = useCallback((folderPath: string) => {
     setCurrentFolder(folderPath)

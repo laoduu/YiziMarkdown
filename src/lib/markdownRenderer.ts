@@ -99,7 +99,12 @@ export function createMarkdownIt(
     }
   })
 
-  md.use(taskLists, { enabled: true, label: true, labelAfter: true })
+  // `labelAfter: false`（默认值）：`<label><input> 任务文本（含 `code`/**加粗**）</label>`。
+  //
+  // 不能用 `labelAfter: true` —— 那样插件会把 `token.content`（**原始 Markdown 文本**，含反引号与
+  // `**`）塞进一个额外的 `<label>`，而已经渲染好的行内内容仍在原处，于是「带 `代码` 与 **加粗** 的项」
+  // 会在预览里**重复出现两遍**（第二遍是未渲染的源码）。
+  md.use(taskLists, { enabled: true, label: true, labelAfter: false })
   // 脚注（学术引用）：[^n] 上标 → 点击跳文末定义，定义带 ↩ 返回链（markdown-it-footnote 原生行为）
   md.use(footnote)
   injectSourceLineMap(md)
