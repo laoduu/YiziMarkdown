@@ -142,6 +142,7 @@ export const tr = {
     next: 'Sonraki (Enter)',
     replaceOne: 'Değiştir',
     replaceAll: 'Tümünü değiştir',
+    widthHandleHint: 'Basılı tutup sürükleyerek genişliği ayarlayın',
   },
   settings: {
     updateTitle: 'Çevrimiçi güncelleme',

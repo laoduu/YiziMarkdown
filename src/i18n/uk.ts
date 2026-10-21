@@ -142,6 +142,7 @@ export const uk = {
     next: 'Наступний (Enter)',
     replaceOne: 'Замінити',
     replaceAll: 'Замінити все',
+    widthHandleHint: 'Утримуйте й тягніть, щоб змінити ширину',
   },
   settings: {
     updateTitle: 'Онлайн-оновлення',

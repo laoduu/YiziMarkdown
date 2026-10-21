@@ -142,6 +142,7 @@ export const fr = {
     next: 'Suivant (Entrée)',
     replaceOne: 'Remplacer',
     replaceAll: 'Tout remplacer',
+    widthHandleHint: 'Maintenir et faire glisser pour ajuster la largeur',
   },
   settings: {
     updateTitle: 'Mise à jour en ligne',

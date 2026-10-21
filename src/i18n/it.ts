@@ -142,6 +142,7 @@ export const it = {
     next: 'Successivo (Invio)',
     replaceOne: 'Sostituisci',
     replaceAll: 'Sostituisci tutto',
+    widthHandleHint: 'Tieni premuto e trascina per regolare la larghezza',
   },
   settings: {
     updateTitle: 'Aggiornamento online',

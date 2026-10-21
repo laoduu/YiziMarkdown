@@ -142,6 +142,7 @@ export const pt = {
     next: 'Próximo (Enter)',
     replaceOne: 'Substituir',
     replaceAll: 'Substituir tudo',
+    widthHandleHint: 'Segure e arraste para ajustar a largura',
   },
   settings: {
     updateTitle: 'Atualização online',

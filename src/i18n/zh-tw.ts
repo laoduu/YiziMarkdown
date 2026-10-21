@@ -141,6 +141,7 @@ export const zhTW = {
     next: '下一個 (Enter)',
     replaceOne: '替換',
     replaceAll: '全部替換',
+    widthHandleHint: '按住拖曳調整寬度',
   },
   settings: {
     updateTitle: '線上更新',

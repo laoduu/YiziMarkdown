@@ -141,6 +141,7 @@ export const zh = {
     next: '下一个 (Enter)',
     replaceOne: '替换',
     replaceAll: '全部替换',
+    widthHandleHint: '按住拖动调整宽度',
   },
   settings: {
     updateTitle: '在线更新',

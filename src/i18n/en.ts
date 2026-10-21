@@ -141,6 +141,7 @@ export const en = {
     next: 'Next (Enter)',
     replaceOne: 'Replace',
     replaceAll: 'Replace All',
+    widthHandleHint: 'Hold and drag to adjust width',
   },
   settings: {
     updateTitle: 'Software Update',

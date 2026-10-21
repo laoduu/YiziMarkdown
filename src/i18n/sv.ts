@@ -142,6 +142,7 @@ export const sv = {
     next: 'Nästa (Enter)',
     replaceOne: 'Ersätt',
     replaceAll: 'Ersätt alla',
+    widthHandleHint: 'Håll ned och dra för att justera bredden',
   },
   settings: {
     updateTitle: 'Onlineuppdatering',

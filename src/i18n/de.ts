@@ -142,6 +142,7 @@ export const de = {
     next: 'Nächste (Enter)',
     replaceOne: 'Ersetzen',
     replaceAll: 'Alle ersetzen',
+    widthHandleHint: 'Gedrückt halten und ziehen, um die Breite anzupassen',
   },
   settings: {
     updateTitle: 'Online-Update',

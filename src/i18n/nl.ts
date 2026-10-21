@@ -142,6 +142,7 @@ export const nl = {
     next: 'Volgende (Enter)',
     replaceOne: 'Vervangen',
     replaceAll: 'Alles vervangen',
+    widthHandleHint: 'Houd vast en sleep om de breedte aan te passen',
   },
   settings: {
     updateTitle: 'Online-update',

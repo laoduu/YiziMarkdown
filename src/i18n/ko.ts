@@ -142,6 +142,7 @@ export const ko = {
     next: '다음 (Enter)',
     replaceOne: '바꾸기',
     replaceAll: '모두 바꾸기',
+    widthHandleHint: '길게 눌러 드래그하면 너비 조정',
   },
   settings: {
     updateTitle: '온라인 업데이트',

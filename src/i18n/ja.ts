@@ -142,6 +142,7 @@ export const ja = {
     next: '次へ (Enter)',
     replaceOne: '置換',
     replaceAll: 'すべて置換',
+    widthHandleHint: '長押ししてドラッグで幅を調整',
   },
   settings: {
     updateTitle: 'オンライン更新',
