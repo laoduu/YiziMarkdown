@@ -37,6 +37,16 @@
     var isDocsPage = DOC_TABS.some(function (t) { return t.page === currentPage; }) ||
         /\/help\/?$/.test(location.pathname);
 
+    // 跨页锚点不要走全局 smooth：从首页点到帮助中心时，浏览器会从页首一路动画到目标，
+    // 看起来像「没定位准」。进页面时瞬时到位，加载完再恢复平滑（页内点目录仍然平滑）。
+    if (isDocsPage && location.hash) {
+        var rootEl = document.documentElement;
+        rootEl.style.scrollBehavior = 'auto';
+        window.addEventListener('load', function () {
+            setTimeout(function () { rootEl.style.scrollBehavior = ''; }, 400);
+        });
+    }
+
     function resolve(link) {
         if (link.page) return link.page;
         return isDocsPage ? HOME + '#' + link.hash : '#' + link.hash;

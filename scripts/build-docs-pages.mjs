@@ -180,7 +180,7 @@ function pageTemplate(cfg, body, hash) {
     <link rel="icon" type="image/png" href="assets/icon.png">
     <link rel="shortcut icon" href="assets/favicon.ico">
     <link rel="stylesheet" href="assets/css/style.css">
-    <link rel="stylesheet" href="assets/css/help.css?v=3">
+    <link rel="stylesheet" href="assets/css/help.css?v=4">
 
     <script type="application/ld+json">
     {
@@ -258,9 +258,9 @@ ${body}
 
 <div id="site-footer"></div>
 
-<script src="assets/js/site-chrome.js"></script>
+<script src="assets/js/site-chrome.js?v=2"></script>
 <script src="assets/js/icons.js"></script>
-<script src="assets/js/help.js"></script>
+<script src="assets/js/help.js?v=2"></script>
 
 </body>
 </html>

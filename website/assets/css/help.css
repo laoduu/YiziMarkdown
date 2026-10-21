@@ -230,7 +230,7 @@ kbd {
 .theme-shot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 0 0 18px; }
 .theme-shot { text-align: center; }
 .theme-shot img {
-    width: 100%; border-radius: 8px; border: 1px solid #e2e8f0; display: block;
+    width: 100%; height: auto; border-radius: 8px; border: 1px solid #e2e8f0; display: block;
     background: #f8fafc;
 }
 .theme-shot span { display: block; margin-top: 6px; font-size: 13px; color: var(--gray); }
@@ -299,9 +299,8 @@ kbd {
 /* 标签栏占掉 44px，页头与侧栏随之下移 */
 body.has-docs-tabs .help-header { padding-top: 148px; }
 body.has-docs-tabs .help-sidebar { top: 132px; max-height: calc(100vh - 156px); }
-body.has-docs-tabs .help-section,
-body.has-docs-tabs .help-sub h3,
-body.has-docs-tabs .help-sub h4 { scroll-margin-top: 124px; }
+/* 固定导航(64) + 标签栏(44) + 一点呼吸空间；[id] 覆盖 section 与小节 div */
+body.has-docs-tabs .help-content [id] { scroll-margin-top: 124px; }
 
 /* 生成页页头 */
 .docs-breadcrumb {

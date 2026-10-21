@@ -67,6 +67,24 @@
 
 **注意**：官网仍是手工部署，本次只改了仓库里的 `website/`。以后改 `docs/THEME-DESIGN-SPEC.md` 或 `src-tauri/skill-guide.md`，需要跑一次 `npm run docs:site` 再提交生成物。
 
+### 官网文档锚点定位修正（首页 → 帮助中心）
+
+**现象**：从首页各模块点「完整说明」跳到 `help.html#slideshow` 等位置时，落点偏高——真正的小节标题往往在视口下方，还要再滚一段。
+
+**根因**：
+
+1. 帮助中心的 23 张截图都没写 `width/height`，又用了 `loading="lazy"`。浏览器先按「图片高度 0」算锚点位置并滚过去，图片随后加载把目标整体往下推。实测 `#slideshow` 最终停在 `top=944px`（视口 900），比目标偏高约 820px。
+2. 全站 `html { scroll-behavior: smooth }`，跨页带 hash 进入时会从页首一路动画到目标，加载过程中的中间态看起来也像「没定位准」。
+
+**修复**：
+
+- 给 `help.html` 全部 23 张图补 `width/height`（WebP 原始像素），`.theme-shot img` 补 `height:auto`：加载前后占位一致，实测渲染宽高比与原始比例误差 < 0.005。
+- `help.css` 把 `scroll-margin-top:124px` 提升到 `.help-content [id]`，section、小节 div、小标题都能对齐到导航(64) + 标签栏(44) + 15px 间距。
+- `site-chrome.js`：文档页带 hash 首次进入时临时关掉 smooth，落位后恢复；页内点目录仍然平滑。
+- `help.css` / `help.js` / `site-chrome.js` 带 `?v=` 版本号，避免部署后命中旧缓存。
+
+**验证**：从首页实际点击 6 个入口（edit / slideshow / ai / appearance / shortcuts / faq），1440 与 390 两档全部落在 `top=124px, gap=15px`；侧栏小节目录同样对齐。
+
 ### 导出 Word：项目符号变方框（根因＝Unicode 码位 + 强制 Symbol 字体）
 
 **现象**（用户反馈）：导出的 docx 里无序列表项目符号变方框 / 错误字符，选中符号时字体栏显示 `Symbol`。
