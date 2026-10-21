@@ -590,6 +590,8 @@ HUD 的「提词」按钮只在**当前页有备注**时才出现。
 
 在程序目录下的 `themes/` 文件夹放入 `.css` 文件，重启后自动识别并在设置中显示。CSS 文件需使用 `.editor-content` 前缀限定样式范围，避免影响设置面板。
 
+想给主题换一套气质，建议先看程序目录下的 `docs/THEME-DESIGN-SPEC.md`（主题设计规范）：令牌分层总览、每类令牌的设计指引、明暗双模式规范，以及新增主题的检查清单。该文件随程序一起分发，就在 `docs/` 目录里。
+
 ### 深色模式
 
 在 设置 > 外观 中开启「深色模式」开关，即时生效。
@@ -654,7 +656,7 @@ YiziMarkdown/
 ├── readme.md               # 项目说明
 ├── help.md                 # 帮助文档（本文件）
 ├── welcome.md              # 欢迎文档
-├── changelog.md            # 开发日志
+├── docs/                   # 文档（THEME-DESIGN-SPEC.md 主题设计规范等）
 ├── user.css                # 用户自定义样式
 ├── keybindings.json        # 快捷键配置
 ├── md-icon.ico             # Markdown 文件关联图标

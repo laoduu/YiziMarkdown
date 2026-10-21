@@ -168,7 +168,7 @@ YiziMarkdown/
 ├── YiziMarkdown.exe        # Головна програма
 ├── readme.md               # Опис проекту (цей файл)
 ├── welcome.md              # Привітальний документ
-├── changelog.md            # Журнал розробки
+├── docs/                   # Документація (специфікація дизайну тем THEME-DESIGN-SPEC.md тощо)
 ├── user.css                # Користувацькі стилі
 ├── keybindings.json        # Налаштування гарячих клавіш
 ├── themes/                 # CSS-файли тем

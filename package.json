@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/check-version.mjs && node scripts/check-tauri-versions.mjs && tsc && node scripts/check-tauri-args.mjs && node scripts/check-i18n.mjs --strict && node scripts/check-themes.mjs && vite build",
+    "build": "node scripts/check-version.mjs && node scripts/check-tauri-versions.mjs && tsc && node scripts/check-tauri-args.mjs && node scripts/check-i18n.mjs --strict && node scripts/check-themes.mjs && node scripts/check-docs.mjs && vite build",
     "test": "node --disable-warning=ExperimentalWarning --experimental-transform-types --test tests/remotePath.test.ts tests/slides.test.ts tests/slideTypography.test.ts tests/slideColumns.test.ts tests/slideTiles.test.ts tests/frontMatter.test.ts tests/liveBlocks.test.ts tests/themeOrder.test.ts tests/userCss.test.ts tests/docTitle.test.ts tests/footnote.test.ts tests/update.test.ts tests/updateManifest.test.ts tests/editorStorage.test.ts tests/docxPalette.test.ts tests/taskList.test.ts tests/codeHighlight.test.ts",
     "check:version": "node scripts/check-version.mjs",
     "check:tauri-versions": "node scripts/check-tauri-versions.mjs",
@@ -15,6 +15,7 @@
     "check:i18n:strict": "node scripts/check-i18n.mjs --strict",
     "check:themes": "node scripts/check-themes.mjs",
     "check:themes:strict": "node scripts/check-themes.mjs --strict",
+    "check:docs": "node scripts/check-docs.mjs",
     "make:manifest": "node --disable-warning=ExperimentalWarning --experimental-transform-types scripts/make-manifest.mjs",
     "tos:upload": "node --disable-warning=ExperimentalWarning --experimental-transform-types scripts/upload-tos.mjs",
     "tos:endpoint": "node --disable-warning=ExperimentalWarning --experimental-transform-types scripts/upload-tos.mjs --print-endpoint",

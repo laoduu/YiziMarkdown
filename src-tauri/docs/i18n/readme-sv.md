@@ -168,7 +168,7 @@ YiziMarkdown/
 ├── YiziMarkdown.exe        # Huvudprogram
 ├── readme.md               # Projekbeskrivning (den här filen)
 ├── welcome.md              # Välkomstdokument
-├── changelog.md            # Utvecklingslogg
+├── docs/                   # Dokumentation (temadesignspecifikation THEME-DESIGN-SPEC.md m.m.)
 ├── user.css                # Anpassade stilar
 ├── keybindings.json        # Genvägsconfiguration
 ├── themes/                 # Tema CSS-filer

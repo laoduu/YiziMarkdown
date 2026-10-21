@@ -173,7 +173,7 @@ YiziMarkdown/
 ├── YiziMarkdown.exe        # 主程序
 ├── readme.md               # 项目说明（本文件）
 ├── welcome.md              # 欢迎文档
-├── changelog.md            # 开发日志
+├── docs/                   # 文档（THEME-DESIGN-SPEC.md 主题设计规范等）
 ├── user.css                # 用户自定义样式
 ├── keybindings.json        # 快捷键配置
 ├── themes/                 # 主题 CSS 文件

@@ -167,7 +167,7 @@ YiziMarkdown/
 ├── YiziMarkdown.exe        # 主程式
 ├── readme.md               # 專案說明（本文件）
 ├── welcome.md              # 歡迎文件
-├── changelog.md            # 開發日誌
+├── docs/                   # 文件（THEME-DESIGN-SPEC.md 主題設計規範等）
 ├── user.css                # 使用者自訂樣式
 ├── keybindings.json        # 快捷鍵配置
 ├── themes/                 # 主題 CSS 檔案

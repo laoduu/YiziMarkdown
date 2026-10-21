@@ -4,16 +4,20 @@
 
 .DESCRIPTION
     步骤：
-      1. 把根目录的文档同步到 src-tauri/（**打包实际读取的是 src-tauri 下那一份**）
+      1. 把根目录**会进包的**文档同步到 src-tauri/（**打包实际读取的是 src-tauri 下那一份**）：
+         help.md / welcome.md / README.md 三份根文档，加 `docs/` 整树镜像（排除 `docs/changelog/`，
+         发布说明只走 GitHub Releases 与官网）。根 `changelog.md` 是开发日志，**不进包**
       2. 校验 release 版 exe 与全部 bundle 资源齐备
       3. 组装 .release_tmp/portable/YiziMarkdown-<版本>/ 并压缩为
          .release_tmp/YiziMarkdown_<版本>_x64-portable.zip
       4. 用 git archive 生成 .release_tmp/YiziMarkdown_<版本>_source.zip
 
     为什么要写成脚本：`src-tauri/tauri.conf.json` 的 bundle.resources 路径**相对 src-tauri/**，
-    所以根目录的 help.md / welcome.md / changelog.md / README.md 在 src-tauri 下各有一份副本，
-    打包读的是副本。build.rs 只调 tauri_build::build()，没有自动 copy —— 手动同步极易漏，
-    漏了就会把旧文档打进安装包（App 内帮助/欢迎页还是老内容）。
+    所以根目录的文档在 src-tauri 下都有一份副本，打包读的是副本。build.rs 只调 tauri_build::build()，
+    没有自动 copy —— 手动同步极易漏（`docs/` 就漏过一次：docs/THEME-DESIGN-SPEC.md 主题设计规范
+    长期没进包，见 changelog.md v0.3.5「打包：docs/ 随版分发」）。
+    门禁：`npm run build` 会跑 scripts/check-docs.mjs，断言这些副本与源逐字节一致；
+    而 `tauri build` 的 beforeBuildCommand 就是 `npm run build` ⇒ 出安装包之前必然检查到。
 
     两个产物的来源不同，脚本会就此做校验：
       - 便携版取**工作区**文件（含未提交改动）
@@ -46,11 +50,14 @@ if (-not $version) { throw '无法从 src-tauri/tauri.conf.json 读取 version' 
 Write-Host "版本: $version" -ForegroundColor Cyan
 
 # ---- 1. 同步根目录文档到 src-tauri（打包读的是后者）----
+#      进包文档的口径（v0.3.5 起，与 scripts/check-docs.mjs 一致）：
+#        · 根三份文档：help.md / welcome.md / README.md（→ 小写 readme.md）
+#        · docs/ 整树镜像，排除 docs/changelog/（发布说明只走 GitHub Releases 与官网）
+#      根 changelog.md 是**开发日志，不进包**（全仓零引用）⇒ 不再有 src-tauri/changelog.md 副本
 $syncMap = @{
-    'help.md'      = 'src-tauri/help.md'
-    'welcome.md'   = 'src-tauri/welcome.md'
-    'changelog.md' = 'src-tauri/changelog.md'
-    'README.md'    = 'src-tauri/readme.md'   # 注意：目标是小写 readme.md
+    'help.md'    = 'src-tauri/help.md'
+    'welcome.md' = 'src-tauri/welcome.md'
+    'README.md'  = 'src-tauri/readme.md'   # 注意：目标是小写 readme.md
 }
 foreach ($src in $syncMap.Keys) {
     $dst = $syncMap[$src]
@@ -61,6 +68,40 @@ foreach ($src in $syncMap.Keys) {
     if ($a -ne $b) { throw "同步失败: $src -> $dst" }
     Write-Host "  同步 $src -> $dst" -ForegroundColor DarkGray
 }
+
+# docs/ 整树镜像：复制缺的、覆盖旧的、删掉包里多出来的（残留的旧文件比缺文件更隐蔽）
+$docsSrc = 'docs'
+$docsDst = 'src-tauri/docs'
+$docsExclude = @('changelog')
+$sep = [IO.Path]::DirectorySeparatorChar
+$docsSrcRoot = (Resolve-Path $docsSrc).Path
+$docsDstRoot = (Resolve-Path $docsDst).Path
+$copied = 0
+foreach ($f in Get-ChildItem $docsSrc -Recurse -File) {
+    $rel = $f.FullName.Substring($docsSrcRoot.Length + 1)
+    if ($docsExclude -contains $rel.Split($sep)[0]) { continue }
+    $target = Join-Path $docsDst $rel
+    New-Item -ItemType Directory -Path (Split-Path -Parent $target) -Force | Out-Null
+    Copy-Item $f.FullName $target -Force
+    if ((Get-FileHash $f.FullName -Algorithm MD5).Hash -ne (Get-FileHash $target -Algorithm MD5).Hash) {
+        throw "同步失败: docs/$rel"
+    }
+    $copied++
+}
+$removed = @()
+foreach ($f in Get-ChildItem $docsDst -Recurse -File) {
+    $rel = $f.FullName.Substring($docsDstRoot.Length + 1)
+    if (($docsExclude -contains $rel.Split($sep)[0]) -or (-not (Test-Path (Join-Path $docsSrc $rel)))) {
+        Remove-Item $f.FullName -Force
+        $removed += $rel
+    }
+}
+# 镜像语义下空目录也不留（例如某个语种的 readme 被撤掉）
+foreach ($d in Get-ChildItem $docsDst -Recurse -Directory | Sort-Object { $_.FullName.Length } -Descending) {
+    if (-not (Get-ChildItem $d.FullName -Recurse -File)) { Remove-Item $d.FullName -Force -Recurse }
+}
+$extraNote = if ($removed.Count) { '；删除多余 ' + ($removed -join ', ') } else { '' }
+Write-Host ("  同步 docs/ -> src-tauri/docs/（{0} 个文件，排除 {1}{2}）" -f $copied, ($docsExclude -join ', '), $extraNote) -ForegroundColor DarkGray
 
 # ---- 2. 校验 exe 与资源 ----
 $exe = 'src-tauri/target/release/yizimarkdown.exe'
@@ -73,7 +114,7 @@ if ($exeVer -ne $version) {
 }
 
 $items = @('themes', 'templates', 'skills', 'docs', 'user.css', 'keybindings.json',
-    'readme.md', 'welcome.md', 'changelog.md', 'help.md', 'skill-guide.md', 'icons/md-icon.ico')
+    'readme.md', 'welcome.md', 'help.md', 'skill-guide.md', 'icons/md-icon.ico')
 foreach ($it in $items) {
     if (-not (Test-Path "src-tauri/$it")) { throw "缺少打包资源: src-tauri/$it" }
 }
@@ -112,9 +153,9 @@ if (-not (git rev-parse --verify --quiet "$Ref^{commit}")) {
 }
 
 # 便携版取工作区、源码包取提交 —— 有未提交改动时两者会不一致，先提醒。
-# 只检查**真正会被打进便携版**的路径（根目录四份文档 + src-tauri 全部资源），
-# 否则改个脚本也会误报。
-$bundledPaths = @('help.md', 'welcome.md', 'changelog.md', 'README.md', 'src-tauri')
+# 只检查**真正会被打进便携版**的路径（根目录三份文档 + docs/ + src-tauri 全部资源），
+# 否则改个脚本也会误报。根 changelog.md 是开发日志、不进包，故不在列表里。
+$bundledPaths = @('help.md', 'welcome.md', 'README.md', 'docs', 'src-tauri')
 $dirty = @(git status --porcelain --untracked-files=no -- $bundledPaths)
 if ($dirty.Count -gt 0) {
     Write-Warning "打包内容有 $($dirty.Count) 处未提交改动：便携版含这些改动，源码包($Ref)不含。发版前请先提交。"

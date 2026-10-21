@@ -169,7 +169,7 @@ YiziMarkdown/
 ├── YiziMarkdown.exe        # Hoofdprogramma
 ├── readme.md               # Projectbeschrijving (dit bestand)
 ├── welcome.md              # Welkomstdocument
-├── changelog.md            # Ontwikkelingslogboek
+├── docs/                   # Documentatie (theme-ontwerpspecificatie THEME-DESIGN-SPEC.md enz.)
 ├── user.css                # Gebruikers aangepaste stijlen
 ├── keybindings.json        # Sneltoetsconfiguratie
 ├── themes/                 # Thema CSS-bestanden

@@ -169,7 +169,7 @@ YiziMarkdown/
 ├── YiziMarkdown.exe        # 메인 프로그램
 ├── readme.md               # 프로젝트 설명(본 파일)
 ├── welcome.md              # 환영 문서
-├── changelog.md            # 개발 로그
+├── docs/                   # 문서(테마 디자인 규격 THEME-DESIGN-SPEC.md 등)
 ├── user.css                # 사용자 정의 스타일
 ├── keybindings.json        # 단축키 설정
 ├── themes/                 # 테마 CSS 파일

@@ -167,7 +167,7 @@ YiziMarkdown/
 ├── YiziMarkdown.exe        # Ana program
 ├── readme.md               # Proje açıklaması (bu dosya)
 ├── welcome.md              # Hoş geldiniz belgesi
-├── changelog.md            # Geliştirme günlüğü
+├── docs/                   # Belgeler (tema tasarım spesifikasyonu THEME-DESIGN-SPEC.md vb.)
 ├── user.css                # Kullanıcı özel stil dosyası
 ├── keybindings.json        # Kısayol tuşu yapılandırması
 ├── themes/                 # Tema CSS dosyaları

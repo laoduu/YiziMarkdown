@@ -168,7 +168,7 @@ YiziMarkdown/
 ├── YiziMarkdown.exe        # Main program
 ├── readme.md               # Project description (this file)
 ├── welcome.md              # Welcome document
-├── changelog.md            # Development log
+├── docs/                   # Documentation (theme design spec THEME-DESIGN-SPEC.md etc.)
 ├── user.css                # User custom styles
 ├── keybindings.json        # Shortcut key configuration
 ├── themes/                 # Theme CSS files

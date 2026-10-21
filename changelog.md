@@ -207,6 +207,37 @@ cargo test write_bullet_probe -- --ignored --nocapture
 
 **语法高亮的端到端验证（无头浏览器探针）**：`scripts/probe-code-highlight.mjs` —— 往 Vite dev 服务器临时放一个探针页（真实 `renderMarkdown()` 渲染样本 + 复刻 `Editor.tsx` 往 `pre` 注入的按钮/语言标签），用 Chrome 无头 `--dump-dom` 跑完，断言「命中块数 == `pre.hljs` 数」「片段拼接 == 代码」「末尾无换行」「注入内容不混入」「围栏内容与页面读到的文本一致（跨实现契约）」「颜色是真 `rgb()`」「存在空类路径兜底」，产出 `target/highlight-payload.json` 供导出探针使用。实测：6 个 `pre.hljs` 全命中、6 个查表键在 Rust 侧全部命中（含列表里缩进的围栏与引用里的围栏）；再加 `--theme liquidglass-prism --dark` 验暗色主题的白底适配：预览里的亮色 token `#67e8f9`（亮度 0.63）被压成 `#3f8e99`（亮度 ≤ 0.3、色相不变），无着色片段取传入的 `#333333`，断言全过。
 
+### 打包：`docs/` 整树随版分发（此前 THEME-DESIGN-SPEC.md 没进包）+ 开发日志不进安装包
+
+**现象**（用户反馈）：`docs/THEME-DESIGN-SPEC.md`（主题设计规范，71 KB，14 章 + 2 附录）在仓库里，但安装版与便携版的 `docs/` 目录里都没有 —— 用户拿不到这份「关键文件」，官网又在引导「想给主题换一套气质，先看 docs/THEME-DESIGN-SPEC.md」，进了包才说得通。
+
+**根因**：`src-tauri/tauri.conf.json` 的 `bundle.resources` 路径**相对 src-tauri/**，所以真正的打包源是 `src-tauri/docs/`；而它与根 `docs/` 是**两份拷贝**，历史上靠**手工挑一批文件**复制（i18n 多语 readme、index.png、slideshow-style-mapping.md），`THEME-DESIGN-SPEC.md` 就这么漏了。`scripts/make-portable.ps1` 的同步表里只有根目录四份 md，`docs/` 从未纳入 —— 脚本头部那句「手动同步极易漏，漏了就会把旧文档打进安装包」正是这个坑，只是当年没把 `docs/` 一起纳进去。
+
+**反向的一处**：根 `changelog.md`（261 KB 完整技术记录）**被当资源打进了安装包与便携版**，但全仓**零引用**（应用运行时只读 `welcome.md` / `help.md` / `skill-guide.md`；更新说明来自 `latest.json` 的 `notes`）。它只对开发者有意义，进包只增加体积与「两份副本」的维护面。
+
+**改法**：
+
+1. **`docs/` 整树镜像进包**：`docs/THEME-DESIGN-SPEC.md` 补进 `src-tauri/docs/`；`make-portable.ps1` 新增 docs 镜像段（复制缺的 → 覆盖旧的 → 删掉包里多出来的 → 逐文件 MD5 校验），排除 `docs/changelog/`（发布说明只走 GitHub Releases 与官网，不进包）
+2. **开发日志不进包**：`bundle.resources` 去掉 `changelog.md`，便携版清单 `$items` 同步去掉，`$bundledPaths`（未提交改动提醒）改成「根三份文档 + docs + src-tauri」；**删除只用于打包的副本 `src-tauri/changelog.md`**（留着就是第三份「改错目录」的坑）
+3. **新增门禁 `scripts/check-docs.mjs`**（`npm run check:docs`，已挂进 `npm run build`；而 `tauri build` 的 `beforeBuildCommand` 就是 `npm run build` ⇒ **出安装包之前必然跑到**）：
+   - `src-tauri/docs/**` ≡ `docs/**` − `changelog/`（文件集合 + 逐字节；缺失/多余/不同都报错并点名文件）
+   - 根文档副本逐字节一致：`help.md` / `welcome.md` / `README.md` → `src-tauri/{help.md,welcome.md,readme.md}`
+   - 开发日志不得进包：`bundle.resources` 里不得有 `changelog.md`，`src-tauri/changelog.md` 不得存在
+   - 该进包的资源不能缺席：`bundle.resources` 必须含 `docs` / `help.md` / `welcome.md` / `readme.md`（镜像了却没进 resources ＝ 白同步）
+4. **文档口径同步**：`help.md`（程序目录说明 + 自定义主题一节新增指向 `docs/THEME-DESIGN-SPEC.md` 的引导）、`README.md` 与 14 份 `docs/i18n/readme-*.md` 的目录树里 `changelog.md` → `docs/`，`website/help.html` 同改（`docs/i18n` 那 14 份按语种各写一句本地化注释，保持各语言目录树结构一致）
+
+**为什么不只补这一个文件**：漏文件的机制是「两份拷贝 + 手工挑子集」——只补一份文件，下一个新文档还会漏。镜像语义把「仓库里有什么文档」与「包里有什么文档」交给同一条规则（`docs/` 减去 `changelog/`）决定，门禁保证它不被绕过；对偶的 `check-themes.mjs` 守的正是同一类坑（`src/assets/themes/` 副本）。
+
+**验证**：
+
+- `node scripts/check-docs.mjs` → `docs/` 17 个文件与包内副本一致（排除 `docs/changelog/`）、根文档副本 3/3 一致、开发日志未进包 ✓
+- **反向逐条验证**（每改一处跑一次，全部 exit 1 且报错点名文件）：删 `src-tauri/docs/THEME-DESIGN-SPEC.md` → 「docs/ 有 1 个文件没进包：THEME-DESIGN-SPEC.md」；改一字节 `src-tauri/docs/slideshow-style-mapping.md` → 「内容不同」；`copy changelog.md src-tauri/changelog.md` → 「开发日志不进包」；改一字节 `src-tauri/help.md` → 副本漂移；新增 `src-tauri/docs/stale.md` → 「陈旧副本」；临时删掉 resources 里的 `"docs"` → 「缺少 docs」；每次复原后回到 exit 0
+- **镜像语义实跑**：故意造三种漂移（删 `THEME-DESIGN-SPEC.md` / 改过 `slideshow-style-mapping.md` / 多出 `stale.md`）后 `pwsh scripts/make-portable.ps1 -SkipZip`：日志 `同步 docs/ -> src-tauri/docs/（17 个文件，排除 changelog；删除多余 stale.md）`，随后按预期停在 exe 版本校验（0.3.4 vs 0.3.5，需重新 `npm run tauri:build`），复检 exit 0 —— 同步段确实把三种漂移都修回来了
+- **既有漂移顺带修掉**：`src-tauri/readme.md` 与根 `README.md` 在主题清单两行的对齐空格上不一致（打包时会被覆盖，但仓库里两份不同）；现已同步
+- `npm run build` 全链（含 `check:docs`、`tsc`、`vite build`）通过
+
+**留的尾巴**：`src-tauri/skills/` 与 `src-tauri/keybindings.json` 也是「根副本 → 包内副本」，但没纳入本门禁 —— `keybindings.json` 应用运行时会写（开发态就可能变），不是纯镜像；`skills/` 与本次改动无关。两者都不是文档，要守得各自定规则。
+
 ## v0.3.4
 
 > 本节为**未开发完成的备忘**，仅记录待办，发布前需整理成正式版本说明。
