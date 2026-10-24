@@ -207,6 +207,27 @@ fn collect_system_fonts() -> Result<Vec<String>, String> {
 
 #[cfg(target_os = "macos")]
 fn collect_system_fonts() -> Result<Vec<String>, String> {
+    // 首选 NSFontManager（CoreText）：只取已安装字体家族，通常几十毫秒。
+    // 旧实现走 `system_profiler SPFontsDataType -json`，要枚举每个字体文件，macOS 上常要数秒，
+    // 这正是「进入编辑器设置就卡住」的主因之一。JXA 不可用 / 解析失败时再回退。
+    let script = "ObjC.import('AppKit'); JSON.stringify(ObjC.deepUnwrap($.NSFontManager.sharedFontManager.availableFontFamilies));";
+    if let Ok(output) = Command::new("osascript")
+        .args(["-l", "JavaScript", "-e", script])
+        .output()
+    {
+        if output.status.success() {
+            if let Ok(mut fonts) = serde_json::from_slice::<Vec<String>>(&output.stdout) {
+                fonts.retain(|f| !f.trim().is_empty());
+                if !fonts.is_empty() {
+                    fonts.sort();
+                    fonts.dedup();
+                    return Ok(fonts);
+                }
+            }
+        }
+    }
+
+    // 回退：system_profiler（慢，但兼容性最好）
     let output = Command::new("system_profiler")
         .args(["SPFontsDataType", "-json"])
         .output()

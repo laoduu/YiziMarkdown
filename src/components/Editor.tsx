@@ -11,6 +11,8 @@ import { languages } from '@codemirror/language-data'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useEditorStore, type ViewMode } from '../stores/editorStore'
 import { findOutlineByLine, computeOutlineItems } from '../lib/headingId'
+import { numberOrderedLines } from '../lib/listFormat'
+import { isTaskLine, toggleTaskAtLine } from '../lib/taskList'
 import { liveEditExtension } from '../lib/cm-live-render'
 import { frontMatterField, frontMatterLines } from '../lib/cm-frontmatter'
 import { headingFoldExtension } from '../lib/cm-heading-fold'
@@ -120,7 +122,7 @@ export function insertFootnoteAtView(view: EditorView): void {
 }
 
 export interface EditorRef {
-  insertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'link' | 'tag' | 'block') => void
+  insertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'ordered' | 'link' | 'tag' | 'block') => void
   insertCodeBlock: () => void
   insertFootnote: () => void
   toggleSearch: () => void
@@ -245,23 +247,27 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
       const target = e.target as HTMLInputElement
       if (target.type !== 'checkbox' || !target.closest('.task-list-item')) return
 
-      // 找到 checkbox 所在的行内容
       const li = target.closest('li')
       if (!li) return
-      const text = li.textContent?.trim() || ''
       const isChecked = target.checked
 
-      // 在源码中匹配对应行并更新
-      const lines = content.split('\n')
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i]
-        const taskMatch = line.match(/^- \[([ xX])\] (.+)$/)
-        if (taskMatch && taskMatch[2].trim() === text) {
-          lines[i] = line.replace(/^- \[([ xX])\]/, isChecked ? '- [x]' : '- [ ]')
-          onContentChange(lines.join('\n'))
-          break
+      // 首选 data-source-line：渲染器已经把源码行号写在 <li> 上。
+      // 不再用 textContent 全等匹配 —— 行内公式经 KaTeX 渲染后文本已经变了，
+      // 行内标签/HTML、重复文案、嵌套任务都会匹配失败或串行。
+      const hinted = Number(li.getAttribute('data-source-line'))
+      let next = hinted > 0 ? toggleTaskAtLine(content, hinted, isChecked) : null
+      if (next == null) {
+        // 兜底：按任务项在预览中的顺序号，对应源码里的第 N 个任务行
+        const items = Array.from(container.querySelectorAll('li.task-list-item'))
+        const index = items.indexOf(li)
+        if (index >= 0) {
+          const taskLines = content.split('\n')
+            .map((line, i) => (isTaskLine(line) ? i + 1 : 0))
+            .filter((n) => n > 0)
+          if (taskLines[index]) next = toggleTaskAtLine(content, taskLines[index], isChecked)
         }
       }
+      if (next != null && next !== content) onContentChange(next)
     }
 
     container.addEventListener('click', handleClick)
@@ -741,6 +747,10 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   const viewReadyRef = useRef(false)
   // 同步滚动：driver lock + guard
   const syncGuardRef = useRef(false)
+  // 大纲跳转后的 scroll spy 抑制窗口。
+  // 跳转会把目标滚到视口中央，而 scroll spy 以视口 1/3 判定"当前标题" ——
+  // 滚动事件会把高亮改回目标的上一条，表现为"第一次点击落在上一条，点两次才准"。
+  const spySuppressUntilRef = useRef(0)
   const activeScrollPaneRef = useRef<'editor' | 'preview' | null>(null)
   const activeScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // 同步滚动 cleanup holders
@@ -803,6 +813,8 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     const intentEvents = ['wheel', 'pointerdown', 'touchstart', 'keydown'] as const
     const markActive = (which: 'editor' | 'preview') => {
       activeScrollPaneRef.current = which
+      // 用户主动滚动优先于大纲跳转的抑制窗口
+      spySuppressUntilRef.current = 0
       if (activeScrollTimerRef.current) clearTimeout(activeScrollTimerRef.current)
       activeScrollTimerRef.current = setTimeout(() => { activeScrollPaneRef.current = null }, 250)
     }
@@ -816,6 +828,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     // ---- 编辑器 → 预览 ----
     const onEditorScroll = () => {
       if (syncGuardRef.current || activeScrollPaneRef.current === 'preview') return
+      if (Date.now() < spySuppressUntilRef.current) return
       const v = viewRef.current
       if (!v) return
       // 获取编辑器视口顶部 1/3 处的行号
@@ -840,6 +853,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     // ---- 预览 → 编辑器 ----
     const onPreviewScroll = () => {
       if (syncGuardRef.current || activeScrollPaneRef.current === 'editor') return
+      if (Date.now() < spySuppressUntilRef.current) return
       const v = viewRef.current
       if (!v) return
       const wrapTop = preview.getBoundingClientRect().top
@@ -890,6 +904,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       const scroller = view.scrollDOM
       const onScroll = () => {
         if (syncGuardRef.current) return
+        if (Date.now() < spySuppressUntilRef.current) return
         const top = scroller.scrollTop + scroller.clientHeight / 3
         const lineObj = view.lineBlockAtHeight(top)
         const line = view.state.doc.lineAt(lineObj.from).number
@@ -906,6 +921,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       if (!container) return
       const onScroll = () => {
         if (syncGuardRef.current) return
+        if (Date.now() < spySuppressUntilRef.current) return
         const wrapTop = container.getBoundingClientRect().top
         const threshold = wrapTop + container.clientHeight / 3
         const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6')
@@ -1004,7 +1020,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   }, [viewMode, getPreviewLines, findNearestLine])
 
   useImperativeHandle(ref, () => ({
-    insertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'link' | 'tag' | 'block') => {
+    insertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'ordered' | 'link' | 'tag' | 'block') => {
       const view = viewRef.current
       if (!view) return
       const { from, to } = view.state.selection.main
@@ -1035,6 +1051,19 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
           insertText = markdown
           newFrom = from + markdown.length
           newTo = from + markdown.length
+        }
+      } else if (mode === 'ordered') {
+        // 多行选区按行号递增（1. 2. 3.…），不再每行都写 `1. `。
+        // 空行跳过编号；已有编号会被重新排，避免连点两次叠加。
+        if (selectedText) {
+          const numbered = numberOrderedLines(selectedText)
+          insertText = numbered
+          newFrom = from + (numbered.match(/^\s*\d+[.)]\s+/)?.[0].length ?? 0)
+          newTo = from + numbered.length
+        } else {
+          insertText = '1. '
+          newFrom = from + insertText.length
+          newTo = from + insertText.length
         }
       } else if (mode === 'tag') {
         // HTML 标签对包裹（如 <sup></sup>）：按第一个 >< 边界拆成开/闭标签。
@@ -1116,6 +1145,11 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       setInternalSearchOpen(prev => !prev)
     },
     navigateToLine: ({ id, line }: { id: string; line: number }) => {
+      // 抑制随后的 scroll spy：程序化跳转的滚动事件不应把高亮改回上一条标题。
+      // 同时直接点亮被点击的标题 —— 跳转把目标放在视口中央，而 spy 以 1/3 处判定，
+      // 若只靠 scroll 事件，高亮会停在目标的上一条（本次要修的就是这个）。
+      spySuppressUntilRef.current = Date.now() + 700
+      useEditorStore.getState().setActiveHeadingId(id)
       const view = viewRef.current
       if (viewMode === 'edit' || viewMode === 'live') {
         // 源代码模式：按行号跳转
@@ -1339,6 +1373,29 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   }, [])
 
   // 主题设置变更时动态 reconfigure（不重建编辑器）
+  // Live mode: click task checkbox to write back to source (same line-based logic as preview).
+  useEffect(() => {
+    const view = viewRef.current
+    if (!view) return
+    const onTaskClick = (e: MouseEvent) => {
+      const target = e.target as HTMLInputElement | null
+      if (!target || target.type !== 'checkbox' || !target.classList.contains('cm-md-task-checkbox')) return
+      e.preventDefault()
+      e.stopPropagation()
+      const pos = Number(target.dataset.taskPos)
+      if (!Number.isFinite(pos)) return
+      const line = view.state.doc.lineAt(pos)
+      const next = toggleTaskAtLine(view.state.doc.toString(), line.number, target.checked)
+      if (next == null) return
+      const nextLine = next.split('\n')[line.number - 1]
+      if (nextLine !== line.text) {
+        view.dispatch({ changes: { from: line.from, to: line.to, insert: nextLine } })
+      }
+    }
+    view.dom.addEventListener('click', onTaskClick)
+    return () => view.dom.removeEventListener('click', onTaskClick)
+  }, [])
+
   useEffect(() => {
     const view = viewRef.current
     if (!view) return

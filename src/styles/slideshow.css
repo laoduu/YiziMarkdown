@@ -730,6 +730,72 @@
    嵌套层 li 会同时命中 ul/ol 两条 ::before 规则，属性合并后
    圆点的 background/border-radius 与数字的 content 叠加，
    渲染成一块实心椭圆（数字与背景同色不可见）。 */
+/* Task list: match preview (checkbox + text, no extra bullet dot).
+   The .editor-content reset does not apply in slideshow because slide bodies are outside it,
+   so .ys-slide ul > li::before used to draw an extra dot for every task item. */
+.ys-slide .contains-task-list {
+  padding-left: 0;
+}
+
+.ys-slide .contains-task-list > .task-list-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5em;
+  padding-left: 0;
+}
+
+/* 嵌套任务列表独占下一行（与预览同一结构：label 的兄弟节点） */
+.ys-slide .task-list-item > ul,
+.ys-slide .task-list-item > ol {
+  flex: 1 0 100%;
+  margin: 0.2em 0 0;
+}
+
+.ys-slide .contains-task-list > .task-list-item::before {
+  content: none;
+  display: none;
+}
+
+.ys-slide .task-list-item-checkbox {
+  width: 1em;
+  height: 1em;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--editor-accent, #4f46e5);
+}
+
+/* [toc] in a slide: keep the same look as preview, but without the slide bullet markers. */
+.ys-slide .markdown-toc {
+  margin: 0.8em 0;
+  padding: 0.6em 0.9em;
+  border-left: 3px solid var(--editor-accent, #4f46e5);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--editor-accent, #4f46e5) 8%, transparent);
+  text-align: left;
+}
+
+.ys-slide .markdown-toc ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.ys-slide .markdown-toc li {
+  padding-left: 0;
+  margin: 0.18em 0;
+}
+
+.ys-slide .markdown-toc li::before {
+  content: none;
+  display: none;
+}
+
+.ys-slide .markdown-toc a {
+  color: inherit;
+  text-decoration: none;
+}
+
 .ys-slide ul > li::before {
   content: '';
   position: absolute;

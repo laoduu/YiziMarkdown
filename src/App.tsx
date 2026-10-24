@@ -33,6 +33,8 @@ import { ContextMenuHost } from './components/ContextMenu'
 import { windowOps } from './lib/windowOps'
 import { buildDocxPalette } from './lib/docxPalette'
 import { collectCodeHighlights } from './lib/docxCodeHighlight'
+import { prepareMarkdownForDocx } from './lib/docxPrepare'
+import { renderMermaidSvgForExport } from './plugins/built-in/mermaid'
 import { buildExportHtml as buildExportDocumentHtml } from './lib/exportHtml'
 // 导出 PDF 用的内联样式（globals.css 已包含 Tailwind prose / 编辑器排版；KaTeX 样式保证公式还原）
 import globalsCss from './styles/globals.css?inline'
@@ -289,7 +291,7 @@ function App() {
         case 'heading2': editorRef.current?.insertMarkdown('## ', 'prefix'); break
         case 'heading3': editorRef.current?.insertMarkdown('### ', 'prefix'); break
         case 'unorderedList': editorRef.current?.insertMarkdown('- ', 'prefix'); break
-        case 'orderedList': editorRef.current?.insertMarkdown('1. ', 'prefix'); break
+        case 'orderedList': editorRef.current?.insertMarkdown('1. ', 'ordered'); break
         case 'blockquote': editorRef.current?.insertMarkdown('> ', 'prefix'); break
         case 'link': editorRef.current?.insertMarkdown('[', 'link'); break
         case 'image': editorRef.current?.insertMarkdown('![', 'link'); break
@@ -843,7 +845,7 @@ function App() {
     }
   }, [openFile])
 
-  const handleInsertMarkdown = useCallback((markdown: string, mode?: 'wrap' | 'prefix' | 'link' | 'tag' | 'block') => {
+  const handleInsertMarkdown = useCallback((markdown: string, mode?: 'wrap' | 'prefix' | 'ordered' | 'link' | 'tag' | 'block') => {
     // 代码块特殊处理：光标定位到两个 ``` 之间
     if (markdown === '\n```\n\n```\n') {
       editorRef.current?.insertCodeBlock()
@@ -973,10 +975,19 @@ function App() {
           surface: surfaceRaw,
           border: borderRaw,
         })
+        // DOCX 只能读 Markdown：先把预览里已经「不是 Markdown」的内容落回可解析形式
+        //   · [toc] → 层级项目符号列表
+        //   · ```mermaid → SVG data URL（Rust 转 PNG/SVG 嵌入）
+        const docxMd = await prepareMarkdownForDocx(
+          tab.content,
+          enabledPlugins.includes('mermaid')
+            ? (code) => renderMermaidSvgForExport(code, (pluginConfigs.mermaid?.theme as string) || 'default')
+            : undefined,
+        )
         // 用 invokeTauriOrThrow：导出失败必须抛错显示，不能吞错假装成功
         await invokeTauriOrThrow('export_docx', {
           path: savedPath,
-          md: tab.content,
+          md: docxMd,
           baseDir,
           theme: {
             accent: palette.accent,
@@ -1030,7 +1041,7 @@ function App() {
       console.error('[export] failed:', e)
       showToast(t('app.exportFailed'))
     }
-  }, [currentTab, showToast, buildExportHtml, previewFontFamily, isDark, previewFontSize, previewLineHeight])
+  }, [currentTab, showToast, buildExportHtml, previewFontFamily, isDark, previewFontSize, previewLineHeight, enabledPlugins, pluginConfigs])
 
   const handleFolderChange = useCallback((folderPath: string) => {
     setCurrentFolder(folderPath)

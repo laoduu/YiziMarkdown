@@ -47,22 +47,24 @@ const hrLine = lineClass('cm-md-hr-line')
 
 /** 创建任务列表 checkbox widget，和预览模式使用同样的 appearance:auto 样式 */
 class TaskCheckboxWidget extends WidgetType {
-  constructor(readonly checked: boolean) { super() }
+  constructor(readonly checked: boolean, readonly pos: number) { super() }
   toDOM() {
     const cb = document.createElement('input')
     cb.type = 'checkbox'
     cb.checked = this.checked
     cb.className = 'cm-md-task-checkbox'
-    cb.style.cssText = 'appearance:auto;width:1em;height:1em;margin:0 0.5em 0 0;cursor:pointer;accent-color:var(--editor-accent);vertical-align:middle;pointer-events:none'
+    // 记录行首位置：Editor 里用事件委托回写源码（与预览同一套 toggleTaskAtLine）
+    cb.dataset.taskPos = String(this.pos)
+    cb.style.cssText = 'appearance:auto;width:1em;height:1em;margin:0 0.5em 0 0;cursor:pointer;accent-color:var(--editor-accent);vertical-align:middle;pointer-events:auto'
     return cb
   }
-  eq(other: TaskCheckboxWidget) { return other.checked === this.checked }
+  eq(other: TaskCheckboxWidget) { return other.checked === this.checked && other.pos === this.pos }
   ignoreEvent() { return true }
 }
 
-function taskCheckboxWidget(checked: boolean) {
+function taskCheckboxWidget(checked: boolean, pos: number) {
   return Decoration.widget({
-    widget: new TaskCheckboxWidget(checked),
+    widget: new TaskCheckboxWidget(checked, pos),
     side: -1,
     block: false,
   })
@@ -239,7 +241,7 @@ function buildDecorations(view: EditorView): DecorationSet {
               if (!caretTouches) {
                 // 隐藏标记，插入真实 checkbox widget
                 ranges.push(hideDeco.range(markerStart, markerEnd))
-                ranges.push(taskCheckboxWidget(isChecked).range(markerStart))
+                ranges.push(taskCheckboxWidget(isChecked, lo.from).range(markerStart))
               }
               ranges.push(isChecked ? taskItemLineChecked.range(lo.from) : taskItemLine.range(lo.from))
             } else {

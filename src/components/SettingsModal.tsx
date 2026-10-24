@@ -1,6 +1,6 @@
 import { invokeTauri, invokeTauriOrThrow } from '../lib/tauri'
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { X, Loader2, ChevronRight, FolderOpen, Palette, FileText, Keyboard, Settings2, Eye, EyeOff, Info, Github, History, BookOpen, ExternalLink, Zap, Globe, Puzzle, Bot, Cloud, Boxes, Download, RefreshCw } from 'lucide-react'
+import { X, Loader2, ChevronRight, FolderOpen, Palette, FileText, Keyboard, Settings2, Eye, EyeOff, Info, Github, History, BookOpen, ExternalLink, Zap, Globe, Puzzle, Bot, Cloud, Boxes, Download, RefreshCw, Presentation, Layers, Sparkles } from 'lucide-react'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useUpdateStore } from '../stores/updateStore'
 import type { UpdateBlocker } from '../lib/updateClient'
@@ -60,7 +60,7 @@ interface SettingsModalProps {
   defaultTab?: CategoryKey
 }
 
-type CategoryKey = 'general' | 'appearance' | 'editor' | 'liveMode' | 'ai' | 'cloud' | 'plugins' | 'shortcuts' | 'templates' | 'about' | 'products'
+type CategoryKey = 'general' | 'appearance' | 'editor' | 'liveMode' | 'ai' | 'cloud' | 'plugins' | 'shortcuts' | 'templates' | 'docs' | 'about' | 'products'
 
 const categories: Array<{ key: CategoryKey; labelKey: string; icon: React.ReactNode }> = [
   { key: 'general', labelKey: 'settings.general', icon: <Settings2 size={16} /> },
@@ -72,6 +72,7 @@ const categories: Array<{ key: CategoryKey; labelKey: string; icon: React.ReactN
   { key: 'plugins', labelKey: 'settings.plugins', icon: <Puzzle size={16} /> },
   { key: 'shortcuts', labelKey: 'settings.shortcuts', icon: <Keyboard size={16} /> },
   { key: 'templates', labelKey: 'settings.templates', icon: <FolderOpen size={16} /> },
+  { key: 'docs', labelKey: 'settings.docs', icon: <BookOpen size={16} /> },
   { key: 'about', labelKey: 'settings.about', icon: <Info size={16} /> },
   { key: 'products', labelKey: 'settings.products', icon: <Boxes size={16} /> },
 ]
@@ -586,23 +587,58 @@ function AnimationDemo({ mode }: { mode: string }) {
 }
 
 // ===================== 编辑器设置（改动即时生效并自动保存） =====================
+const LOCAL_FONTS_CACHE_KEY = 'yizimarkdown.localFonts.v1'
+const FONT_PAGE_SIZE = 80
+
+/** 读取本地字体缓存：只在这台机器上缓存，首次仍需用户点一次「加载本地字体」 */
+function readLocalFontsCache(): string[] | null {
+  try {
+    const raw = localStorage.getItem(LOCAL_FONTS_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) && parsed.every((f) => typeof f === 'string') ? parsed : null
+  } catch {
+    return null
+  }
+}
+
 function EditorSettings() {
   const { t } = useI18n()
   const store = useSettingsStore()
-  const [systemFonts, setSystemFonts] = useState(fallbackFonts)
-  const [fontsLoaded, setFontsLoaded] = useState(false)
+  const [systemFonts, setSystemFonts] = useState<string[]>(() => readLocalFontsCache() || fallbackFonts)
+  const [fontsLoaded, setFontsLoaded] = useState(() => !!readLocalFontsCache())
+  const [fontsLoading, setFontsLoading] = useState(false)
   const [fontFilter, setFontFilter] = useState('')
+  const [fontLimit, setFontLimit] = useState(FONT_PAGE_SIZE)
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
 
-  useEffect(() => {
-    invokeTauri<string[]>('get_system_fonts').then((f) => { if (f && f.length > 0) setSystemFonts(f); setFontsLoaded(true) })
-  }, [])
+  /**
+   * 进入编辑器设置时**不再**自动读取系统字体。
+   * macOS 的 `system_profiler SPFontsDataType -json` 要枚举所有字体文件，动辄数秒；
+   * 而且一次性渲染上千个字体按钮会同步触发大量字体匹配，面板直接卡住。
+   * 改为用户主动点击后读取，结果写入 localStorage，下次进入直接用缓存。
+   */
+  const loadLocalFonts = async () => {
+    setFontsLoading(true)
+    try {
+      const fonts = await invokeTauri<string[]>('get_system_fonts')
+      if (fonts && fonts.length > 0) {
+        setSystemFonts(fonts)
+        try { localStorage.setItem(LOCAL_FONTS_CACHE_KEY, JSON.stringify(fonts)) } catch { /* 配额不足时忽略缓存 */ }
+      }
+    } finally {
+      setFontsLoaded(true)
+      setFontsLoading(false)
+    }
+  }
 
   const handleRestore = () => {
     store.updateSettings({ ...DEFAULTS_EDITOR })
   }
 
   const filtered = fontFilter ? systemFonts.filter(f => f.toLowerCase().includes(fontFilter.toLowerCase())) : systemFonts
+  // 只渲染前 N 项：系统字体动辄上千个，全部挂到 DOM 里每个都带 font-family，滚动和打开都会卡
+  const visibleFonts = filtered.slice(0, fontLimit)
   const cur = mode === 'edit' ? store.fontFamily : store.previewFontFamily
   const setFont = (v: string) => store.setField(mode === 'edit' ? 'fontFamily' : 'previewFontFamily', v)
 
@@ -702,16 +738,34 @@ function EditorSettings() {
                 )
               })}
             </div>
-            <input type="text" value={fontFilter} onChange={(e) => setFontFilter(e.target.value)} placeholder={t('settings.searchLocalFonts')} className="settings-input mb-1.5" />
-            <div className="border border-[var(--editor-border)] rounded-lg overflow-hidden bg-[var(--editor-surface)]" style={{ maxHeight: '150px', overflowY: 'auto' }}>
-              {!fontsLoaded && <div className="flex items-center justify-center gap-2 py-3 text-xs text-[var(--sidebar-text)]"><Loader2 size={12} className="animate-spin" /> {t('common.loading')}</div>}
-              {filtered.map((f) => (
+            <div className="flex items-center gap-2 mb-1.5">
+              {!fontsLoaded
+                ? <p className="flex-1 text-[11px] leading-snug text-[var(--sidebar-text)]">{t('settings.localFontsHint')}</p>
+                : <span className="flex-1" />}
+              <button onClick={loadLocalFonts} disabled={fontsLoading} className="settings-btn-secondary shrink-0" style={{ padding: '3px 9px', fontSize: 11 }}>
+                {fontsLoading ? <span className="inline-flex items-center gap-1"><Loader2 size={11} className="animate-spin" /> {t('common.loading')}</span> : t('settings.loadLocalFonts')}
+              </button>
+            </div>
+            <input
+              type="text"
+              value={fontFilter}
+              onChange={(e) => { setFontFilter(e.target.value); setFontLimit(FONT_PAGE_SIZE) }}
+              placeholder={t('settings.searchLocalFonts')}
+              className="settings-input"
+            />
+            <div className="border border-[var(--editor-border)] rounded-lg overflow-hidden bg-[var(--editor-surface)] mt-1.5" style={{ maxHeight: '150px', overflowY: 'auto' }}>
+              {visibleFonts.map((f) => (
                 <button key={f} onClick={() => setFont(`'${f}', sans-serif`)}
                   className={`w-full px-3 py-1.5 text-left text-xs hover:bg-[var(--editor-hover)] flex items-center justify-between ${cur.includes(f) ? 'bg-[var(--editor-accent)] text-white' : 'text-[var(--editor-text)]'}`}>
                   <span>{f}</span><span className="text-[11px] opacity-60" style={{ fontFamily: `'${f}', sans-serif` }}>Aa</span>
                 </button>
               ))}
-              {fontsLoaded && filtered.length === 0 && <div className="px-3 py-3 text-xs text-[var(--sidebar-text)] text-center">{t('common.noMatch')}</div>}
+              {filtered.length === 0 && <div className="px-3 py-3 text-xs text-[var(--sidebar-text)] text-center">{t('common.noMatch')}</div>}
+              {filtered.length > fontLimit && (
+                <button onClick={() => setFontLimit((n) => n + FONT_PAGE_SIZE)} className="w-full px-3 py-2 text-[11px] text-[var(--editor-accent)] hover:bg-[var(--editor-hover)]">
+                  {t('settings.showMoreFonts')} ({filtered.length - fontLimit})
+                </button>
+              )}
             </div>
             <input type="text" value={cur} onChange={(e) => setFont(e.target.value)} placeholder={t('settings.manualFont')} className="settings-input mt-1.5" />
           </Section>
@@ -1272,6 +1326,40 @@ function UpdateCard() {
 }
 
 // ===================== 关于 =====================
+// ===================== 文档集合（帮助中心 / 演示语法 / 主题规范 / 技能规范） =====================
+function DocumentationSettings() {
+  const { t } = useI18n()
+  const openUrl = (url: string) => invokeTauri('open_url', { url })
+
+  const docs = [
+    { key: 'docsHelp', icon: <BookOpen size={16} />, url: 'https://md.yizigpt.com/help.html', label: t('settings.docsHelp') },
+    { key: 'docsSlideshow', icon: <Presentation size={16} />, url: 'https://md.yizigpt.com/slideshow-syntax.html', label: t('settings.docsSlideshow') },
+    { key: 'docsTheme', icon: <Layers size={16} />, url: 'https://md.yizigpt.com/theme-spec.html', label: t('settings.docsTheme') },
+    { key: 'docsSkill', icon: <Sparkles size={16} />, url: 'https://md.yizigpt.com/skill-spec.html', label: t('settings.docsSkill') },
+  ]
+
+  return (
+    <div className="settings-content-scroll">
+      <div className="px-5 py-2 text-[11px] text-[var(--sidebar-text)]">{t('settings.docsHint')}</div>
+      <div className="px-4 pb-4 space-y-1">
+        {docs.map((doc) => (
+          <button
+            key={doc.key}
+            onClick={() => openUrl(doc.url)}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors hover:bg-[var(--editor-hover)] text-[var(--editor-text)]"
+            style={{ background: 'var(--editor-surface)', border: '1px solid var(--editor-border)' }}
+          >
+            <span style={{ color: 'var(--editor-accent)', flexShrink: 0 }}>{doc.icon}</span>
+            <span className="flex-1 text-[13px]">{doc.label}</span>
+            <span className="text-[10px] text-[var(--sidebar-text)] truncate" style={{ maxWidth: 170 }}>{doc.url.replace(/^https?:\/\//, '')}</span>
+            <ExternalLink size={12} style={{ color: 'var(--sidebar-text)', opacity: 0.5, flexShrink: 0 }} />
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function AboutSettings() {
   const { t } = useI18n()
   const [version, setVersion] = useState('')
@@ -1875,8 +1963,8 @@ export default function SettingsModal({ isOpen, onClose, defaultTab }: SettingsM
     general: <GeneralSettings />, appearance: <AppearanceSettings />, editor: <EditorSettings />,
     liveMode: <LiveModeSettings />, ai: <AISettings />, cloud: <CloudSettings />,
     plugins: <PluginsSettings />,
-    shortcuts: <ShortcutsSettings />, templates: <TemplatesSettings />, about: <AboutSettings />,
-    products: <OtherProductsSettings />,
+    shortcuts: <ShortcutsSettings />, templates: <TemplatesSettings />, docs: <DocumentationSettings />,
+    about: <AboutSettings />, products: <OtherProductsSettings />,
   }
 
   return (

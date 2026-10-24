@@ -933,7 +933,9 @@ a {
 
 .editor-content p {
   margin-bottom: 1em;
-  line-height: var(--line-height);
+  /* 预览排版跟随「预览行高」；再回退到编辑器行高。
+     此前这里固定用 --line-height，导致设置里的「预览行高」在预览模式完全不生效。 */
+  line-height: var(--preview-line-height, var(--line-height));
 }
 
 .editor-content ul,
@@ -2160,10 +2162,19 @@ a {
 .editor-content .task-list-item {
   list-style: none;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.5em;
   margin-left: 0;
-  line-height: var(--line-height, 1.8);
+  /* 与正文段落一致：预览模式跟随「预览行高」 */
+  line-height: var(--preview-line-height, var(--line-height, 1.8));
+}
+/* 嵌套任务列表是 label 的兄弟节点（markdown-it 结构）：flex 一行放不下
+   ⇒ 让它独占一整行，否则嵌套列表会跑到父项文字的右侧。 */
+.editor-content .task-list-item > ul,
+.editor-content .task-list-item > ol {
+  flex: 1 0 100%;
+  margin: 0.2em 0 0;
 }
 /* 任务项的 `<label>` 把勾选框与任务文本一起包住（markdown-it-task-lists 的 label 模式，
    见 markdownRenderer.ts 里 `labelAfter: false` 的说明）：这样 flex 容器只有**一个**子项，
@@ -2184,6 +2195,48 @@ a {
 .editor-content .task-list-item-label {
   cursor: pointer;
 }
+
+/* ===== [toc] 目录 ===== */
+/* 与导出 HTML 的侧栏目录区分：这是正文里的目录块，跟随当前主题与预览行高。 */
+.editor-content .markdown-toc {
+  margin: 1em 0 1.4em;
+  padding: 0.7em 1em;
+  border-left: 3px solid var(--editor-accent);
+  border-radius: 6px;
+  background: var(--editor-surface);
+  line-height: var(--preview-line-height, var(--line-height));
+}
+
+.editor-content .markdown-toc ul {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.editor-content .markdown-toc li {
+  margin: 0.22em 0;
+  line-height: inherit;
+}
+
+.editor-content .markdown-toc li::marker {
+  content: none;
+}
+
+.editor-content .markdown-toc a {
+  color: var(--editor-text);
+  text-decoration: none;
+}
+
+.editor-content .markdown-toc a:hover {
+  color: var(--editor-accent);
+  text-decoration: underline;
+}
+
+.editor-content .markdown-toc-level-2 { padding-left: 1em; }
+.editor-content .markdown-toc-level-3 { padding-left: 2em; }
+.editor-content .markdown-toc-level-4 { padding-left: 3em; }
+.editor-content .markdown-toc-level-5 { padding-left: 4em; }
+.editor-content .markdown-toc-level-6 { padding-left: 5em; }
 
 /* ===== 划词助手浮动工具栏 ===== */
 .selection-toolbar {

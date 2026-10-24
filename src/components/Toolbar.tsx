@@ -69,7 +69,7 @@ interface ToolbarProps {
   onSaveToCloud: () => void
   onToggleSidebar: () => void
   onToggleDark: () => void
-  onInsertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'link' | 'tag' | 'block') => void
+  onInsertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'ordered' | 'link' | 'tag' | 'block') => void
   /** 插入脚注（正文 [^n] + 文末定义行），逻辑在编辑器内（EditorRef.insertFootnote） */
   onInsertFootnote: () => void
   onExport: (format: 'html' | 'md' | 'txt' | 'docx' | 'pdf') => void
@@ -510,7 +510,7 @@ export default function Toolbar({
         <ToolbarButton icon={<Heading3 size={16} />} tooltip={t('toolbar.heading3')} onClick={() => onInsertMarkdown('### ', 'prefix')} />
         <ToolbarDivider />
         <ToolbarButton icon={<List size={16} />} tooltip={t('toolbar.unorderedList')} onClick={() => onInsertMarkdown('- ', 'prefix')} />
-        <ToolbarButton icon={<ListOrdered size={16} />} tooltip={t('toolbar.orderedList')} onClick={() => onInsertMarkdown('1. ', 'prefix')} />
+        <ToolbarButton icon={<ListOrdered size={16} />} tooltip={t('toolbar.orderedList')} onClick={() => onInsertMarkdown('1. ', 'ordered')} />
         <ToolbarButton icon={<CheckSquare size={16} />} tooltip={t('toolbar.taskList')} onClick={() => onInsertMarkdown('- [ ] ', 'prefix')} />
         <ToolbarButton icon={<Quote size={16} />} tooltip={t('toolbar.quote')} onClick={() => onInsertMarkdown('> ', 'prefix')} />
         <ToolbarDivider />

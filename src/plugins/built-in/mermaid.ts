@@ -94,3 +94,30 @@ function escapeHtml(str: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
 }
+
+/**
+ * 仅供 DOCX 导出使用：重新渲染一份**纯文本标签**的 SVG。
+ *
+ * 预览默认用 `htmlLabels: true`，流程图文字装在 `<foreignObject>` 里；Rust 侧的
+ * resvg 不支持 foreignObject，直接复用预览 SVG 会导出「有框无字」的图。
+ * 所以导出时单独用 `htmlLabels: false` 渲染一次，再交给 Rust 转 PNG/SVG 嵌入 Word。
+ * 预览本身不调用这个函数，外观不受影响。
+ */
+export async function renderMermaidSvgForExport(code: string, theme = 'default'): Promise<string | null> {
+  if (!mermaidModule) {
+    const ok = await mermaidPlugin.load()
+    if (!ok || !mermaidModule) return null
+  }
+  mermaidModule.initialize({
+    startOnLoad: false,
+    theme,
+    securityLevel: 'loose',
+    // v11 根级 htmlLabels 优先于 flowchart.htmlLabels
+    htmlLabels: false,
+  })
+  const { svg } = await mermaidModule.render(
+    `mmd-export-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    code,
+  )
+  return svg
+}

@@ -4,6 +4,7 @@ import footnote from 'markdown-it-footnote'
 import hljs from 'highlight.js'
 import { generateHeadingId } from './headingId.ts'
 import { splitFrontMatter } from './frontMatter.ts'
+import { tocPlugin } from './toc.ts'
 
 // ---- Core ruler：给块级元素注入 data-source-line 属性 ----
 const BLOCK_OPEN_TYPES = new Set([
@@ -110,6 +111,8 @@ export function createMarkdownIt(
   injectSourceLineMap(md)
   injectFenceSourceLine(md)
   injectHeadingIds(md)
+  // [toc] / [[toc]]：必须在 inline 规则之后、渲染之前替换成目录 HTML
+  tocPlugin(md)
 
   // 注入插件扩展
   if (pluginExtenders) {

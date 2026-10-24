@@ -3473,6 +3473,22 @@ mod tests {
     }
 
     #[test]
+    fn mixed_inline_syntax_in_task_list_exports_clean_text_and_one_glyph() {
+        // 专项：任务项里混排行内代码、加粗、行内 HTML（与预览/实时模式同一份 Markdown）。
+        // 导出必须：内容只出现一次、不泄漏 `**` / 反引号、勾选字形只出现一次。
+        let doc = xml_of("- [ ] 含 **加粗** 与 `代码`\n  - [x] 嵌套 <sup>2</sup>\n");
+        let text = doc_text(&doc);
+        assert_eq!(text.matches("加粗").count(), 1, "加粗内容重复或被吞: {}", text);
+        assert_eq!(text.matches("代码").count(), 1, "行内代码重复或被吞: {}", text);
+        assert!(!text.contains("**"), "加粗标记泄漏到 Word: {}", text);
+        assert!(!text.contains("`代码`"), "反引号泄漏到 Word: {}", text);
+        assert_eq!(doc.matches("☐").count(), 1, "未完成任务字形应只有一个: {}", doc);
+        assert_eq!(doc.matches("☑").count(), 1, "已完成任务字形应只有一个: {}", doc);
+        assert!(!doc.contains("<w:numPr>"), "任务项不应再叠加项目符号/编号: {}", doc);
+        assert!(doc.contains("<w:vertAlign w:val=\"superscript\"/>"), "行内 <sup> 未生效: {}", doc);
+    }
+
+    #[test]
     fn superscript_subscript_and_inline_html_map_to_runs() {
         // 应用的上标/下标走 HTML 标签（工具条插入 `<sup></sup>` / `<sub></sub>`，预览 `html:true` 才渲染），
         // 所以导出只认这两个标签；`^a^` / `~b~` 这类拓展语法**预览不识别**（字面显示），

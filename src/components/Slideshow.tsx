@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react'
 import { Sun, Moon, Palette, Check, X, ListOrdered, Sparkles, Type } from 'lucide-react'
 import { renderMarkdown } from '../lib/markdownRenderer'
+import { replaceTocPlaceholders, renderDeckTocHtml, type DeckTocEntry } from '../lib/toc'
 import { extendMarkdownIt, postRender as pluginPostRender } from '../plugins/registry'
 import {
   stripFrontMatter, parseFrontMatter, splitSlides, splitColumns, extractNotes, extractDirectives,
@@ -231,6 +232,21 @@ export default function Slideshow({
     })
   }, [content])
 
+  /**
+   * 整册目录：演示文稿按页独立渲染，`[toc]` 不能只统计当前页。
+   * 条目 = 有标题的页（排除封面/结尾页和目录页自身），点击翻到对应页。
+   */
+  const deckTocHtml = useMemo(() => {
+    const entries: DeckTocEntry[] = []
+    slides.forEach((s, i) => {
+      if (!s.title || s.kind === 'cover' || s.kind === 'thanks') return
+      if (/^\s*\[{1,2}toc\]{1,2}\s*$/mi.test(s.src)) return
+      const marks = /^(#{1,6})\s/m.exec(s.src)?.[1].length
+      entries.push({ text: s.title, slide: i, level: marks ? Math.min(6, marks) : 2 })
+    })
+    return renderDeckTocHtml(entries)
+  }, [slides])
+
   // 惰性 HTML 渲染缓存：仅渲染窗口内的页面；content 变化时随 slides 重建清空
   const htmlCacheRef = useRef(new Map<number, string>())
   useEffect(() => { htmlCacheRef.current.clear() }, [slides])
@@ -240,6 +256,7 @@ export default function Slideshow({
     const cache = htmlCacheRef.current
     let html = cache.get(index)
     if (html === undefined) {
+      const withToc = (src: string) => (deckTocHtml ? replaceTocPlaceholders(src, deckTocHtml) : src)
       const parts = slide.colParts
       html = parts
         // 分栏：每栏各自渲染（各栏的 mermaid / 公式 / 本地图片由 processSection 统一后处理，
@@ -250,14 +267,14 @@ export default function Slideshow({
         // 栏外文案（colBefore / colAfter）则**包一层 .ys-col-aside**：它是页级内容，
         // 必须与页标题区分开，否则「栏内对齐」那几条针对页级子元素的规则会连它一起改
         // （见 slideshow.css 的 .ys-col-aside 说明）。
-        ? `${slide.colIntro ? renderMarkdown(slide.colIntro, pluginExtenders) : ''}${
-            slide.colBefore ? `<div class="ys-col-aside">${renderMarkdown(slide.colBefore, pluginExtenders)}</div>` : ''
+        ? `${slide.colIntro ? renderMarkdown(withToc(slide.colIntro), pluginExtenders) : ''}${
+            slide.colBefore ? `<div class="ys-col-aside">${renderMarkdown(withToc(slide.colBefore), pluginExtenders)}</div>` : ''
           }<div class="ys-cols" style="--ys-cols:${parts.length}">${
-            parts.map((p) => `<div class="ys-col">${renderMarkdown(p, pluginExtenders)}</div>`).join('')
+            parts.map((p) => `<div class="ys-col">${renderMarkdown(withToc(p), pluginExtenders)}</div>`).join('')
           }</div>${
-            slide.colAfter ? `<div class="ys-col-aside">${renderMarkdown(slide.colAfter, pluginExtenders)}</div>` : ''
+            slide.colAfter ? `<div class="ys-col-aside">${renderMarkdown(withToc(slide.colAfter), pluginExtenders)}</div>` : ''
           }`
-        : renderMarkdown(slide.src, pluginExtenders)
+        : renderMarkdown(withToc(slide.src), pluginExtenders)
       // 封面页：拼接 front matter 提供的作者/日期 meta 行
       if (slide.kind === 'cover' && slideMetaRef.current.author) {
         const meta = slideMetaRef.current
@@ -267,7 +284,7 @@ export default function Slideshow({
       cache.set(index, html)
     }
     return html
-  }, [pluginExtenders])
+  }, [pluginExtenders, deckTocHtml])
 
   const total = slides.length
   const cur = slides[h]
@@ -326,6 +343,17 @@ export default function Slideshow({
     // 更长，必须撑到新页水渍铺满——否则 mask 孔洞里的旧内容会提前消失。
     leavingTimerRef.current = setTimeout(() => setLeavingIdx(null), anim === 'dissolve' ? 1000 : 600)
   }, [h, dir, anim])
+
+  // 整册目录里的条目带 data-slide：点击翻到对应页（演示文稿没有跨页锚点）
+  const onDeckClick = useCallback((e: ReactMouseEvent<HTMLDivElement>) => {
+    const a = (e.target as HTMLElement | null)?.closest('a[data-slide]')
+    if (!a) return
+    const idx = Number(a.getAttribute('data-slide'))
+    if (!Number.isInteger(idx)) return
+    e.preventDefault()
+    e.stopPropagation()
+    goTo(idx)
+  }, [goTo])
 
   // 瓷砖转场的格子层：在提交后、绘制前把每格填好内容。
   // 每格 = 窗口（矩形或 clip-path 形状）+ 一份【整页克隆】负偏移对齐，
@@ -840,7 +868,7 @@ export default function Slideshow({
         <span>{t('slideshow.exit')}</span>
       </button>
 
-      <div className={`ys-deck ys-dir-${dir}${anim !== 'slide' ? ` ys-anim-${anim}` : ''}${isMac ? ' ys-mac' : ''}`} ref={deckRef}>
+      <div className={`ys-deck ys-dir-${dir}${anim !== 'slide' ? ` ys-anim-${anim}` : ''}${isMac ? ' ys-mac' : ''}`} ref={deckRef} onClick={onDeckClick}>
         {slides.map((slide, i) => {
           const active = i === h
           const past = i < h
