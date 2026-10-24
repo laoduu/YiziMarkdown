@@ -324,25 +324,50 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
     return () => container.removeEventListener('click', handleLinkClick)
   }, [])
 
-  // 解析本地图片路径为 data URL（Tauri 环境下）
+  // 解析本地图片路径为 data URL（Tauri 环境下）；任何加载失败都回退成 alt 文本
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
 
     const tauri = (window as any).__TAURI_INTERNALS__
-    if (!tauri || typeof tauri.invoke !== 'function') return
+    const canInvoke = !!tauri && typeof tauri.invoke === 'function'
+
+    // 段落里只有图片（没有文字）时按块级排版；css 的 :only-child 不数文本节点，
+    // 所以这里显式打标，避免把「文字 + 行内图 + 文字」也当成独占一行。
+    container.querySelectorAll('p').forEach((p) => {
+      if (!p.querySelector('img')) return
+      if ((p.textContent || '').trim()) p.classList.remove('img-para')
+      else p.classList.add('img-para')
+    })
 
     const imgs = container.querySelectorAll('img')
     imgs.forEach((img) => {
-      const src = img.getAttribute('src')
-      if (!src || src.startsWith('http') || src.startsWith('data:') || src.startsWith('asset://')) return
+      const src = img.getAttribute('src') || ''
+
+      const bindFallback = () => {
+        if (img.dataset.brokenBound) return
+        img.dataset.brokenBound = '1'
+        img.addEventListener('error', () => replaceBrokenImage(img), { once: true })
+        // 绑定之前就已经失败（缓存命中的破图）也补一次
+        if (img.complete && img.naturalWidth === 0) replaceBrokenImage(img)
+      }
+
+      const isLocal = !!src && !src.startsWith('http') && !src.startsWith('data:') &&
+        !src.startsWith('asset://') && !src.startsWith('blob:')
+
+      if (!canInvoke || !isLocal) {
+        bindFallback()
+        return
+      }
+
       resolveLocalImageSrc(src, docBaseDir).then((path) => {
-        if (!path) return
+        if (!path) { replaceBrokenImage(img); return }
         return tauri.invoke('read_image_base64', { path })
           .then((dataUrl: string) => {
             img.setAttribute('src', dataUrl)
+            bindFallback()
           })
-      }).catch(() => {})
+      }).catch(() => replaceBrokenImage(img))
     })
   }, [renderedHtml, docBaseDir])
 
@@ -717,6 +742,21 @@ function buildEditorTheme(fontFamily: string, fontSize: string, lineHeight: stri
       },
     },
   })
+}
+
+/**
+ * 图片加载失败时用 alt 文本替换 <img>。
+ * 预览里直接显示浏览器破图标会撑高行距、还会在表格里把列宽顶开；
+ * 用 inline span（`.img-broken`）保持与原图片相同的位置感。
+ */
+function replaceBrokenImage(img: HTMLImageElement): void {
+  if (!img.isConnected) return
+  const alt = (img.getAttribute('alt') || '').trim()
+  const span = document.createElement('span')
+  span.className = 'img-broken'
+  span.textContent = alt || '[图片加载失败]'
+  span.title = img.getAttribute('src') || ''
+  img.replaceWith(span)
 }
 
 const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearchToggle, isSearchOpen: externalSearchOpen, viewMode: externalViewMode, onCursorChange, onToast }, ref) => {

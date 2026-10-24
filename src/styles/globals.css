@@ -1109,10 +1109,60 @@ a {
 }
 
 .editor-content img {
+  /* Tailwind Preflight gives every img `display:block`; that forces inline images
+     onto their own line. Block layout is opt-in below for image-only paragraphs. */
+  display: inline;
   max-width: 100%;
   height: auto;
   border-radius: var(--radius-md);
+  margin: 0 0.25em;
+  vertical-align: middle;
+}
+
+/* Inline images (text before/after in the same paragraph) must stay on the text
+   baseline. prose/themes give every img 1em+ vertical margins, which inflates the
+   line box so much that the image looks like it occupies its own line.
+
+   The doubled `.editor-content` is deliberate: theme files ship
+   `.editor-content.theme-x img { margin: 1em 0 }` (specificity 0,2,1) and are
+   appended to <head> at runtime, i.e. after this sheet. Matching at 0,2,2 keeps
+   inline images tight in every theme. */
+.editor-content.editor-content p img,
+.editor-content.editor-content li img,
+.editor-content.editor-content td img,
+.editor-content.editor-content th img,
+.editor-content.editor-content a img {
+  display: inline;
+  margin: 0 0.25em;
+  vertical-align: middle;
+}
+
+/* `p.img-para` is added by Editor.tsx when the block contains only image(s),
+   no text (text nodes are not counted by CSS `:only-child`). */
+.editor-content.editor-content .img-para > img {
+  display: block;
   margin: 1em 0;
+}
+
+.editor-content td img,
+.editor-content th img {
+  max-width: 100%;
+}
+
+/* Long unbreakable content (data URI, long code) must not widen the table. */
+.editor-content td code,
+.editor-content th code {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Broken image fallback (rendered by Editor.tsx as a span). */
+.editor-content .img-broken {
+  display: inline;
+  color: var(--sidebar-text);
+  font-size: 0.9em;
+  font-style: italic;
+  white-space: normal;
 }
 
 .editor-content table {
@@ -2164,7 +2214,8 @@ a {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5em;
+  column-gap: 0.5em;
+  row-gap: 0.15em;
   margin-left: 0;
   /* 与正文段落一致：预览模式跟随「预览行高」 */
   line-height: var(--preview-line-height, var(--line-height, 1.8));
@@ -2174,7 +2225,7 @@ a {
 .editor-content .task-list-item > ul,
 .editor-content .task-list-item > ol {
   flex: 1 0 100%;
-  margin: 0.2em 0 0;
+  margin: 0.1em 0 0;
 }
 /* 任务项的 `<label>` 把勾选框与任务文本一起包住（markdown-it-task-lists 的 label 模式，
    见 markdownRenderer.ts 里 `labelAfter: false` 的说明）：这样 flex 容器只有**一个**子项，

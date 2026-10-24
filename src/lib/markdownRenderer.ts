@@ -105,6 +105,15 @@ export function createMarkdownIt(
   // 不能用 `labelAfter: true` —— 那样插件会把 `token.content`（**原始 Markdown 文本**，含反引号与
   // `**`）塞进一个额外的 `<label>`，而已经渲染好的行内内容仍在原处，于是「带 `代码` 与 **加粗** 的项」
   // 会在预览里**重复出现两遍**（第二遍是未渲染的源码）。
+  // `data:image/svg+xml` 放行：markdown-it 默认只允许 gif/png/jpeg/webp 的 data URI，
+  // SVG 会被判为非法链接而退回源码文本（表现为 data URI 裸露在正文里、不换行撑破容器；
+  // 引用式图片定义同样会解析失败）。只额外放行 SVG，不放开整个 `data:`。
+  const defaultValidateLink = md.validateLink.bind(md)
+  md.validateLink = (url: string) => {
+    if (/^data:image\/svg\+xml(?:[;,]|$)/i.test(url.trim())) return true
+    return defaultValidateLink(url)
+  }
+
   md.use(taskLists, { enabled: true, label: true, labelAfter: false })
   // 脚注（学术引用）：[^n] 上标 → 点击跳文末定义，定义带 ↩ 返回链（markdown-it-footnote 原生行为）
   md.use(footnote)

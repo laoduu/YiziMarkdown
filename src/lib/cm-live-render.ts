@@ -23,6 +23,23 @@ import { tags as t } from '@lezer/highlight'
 import { liveBlocksBundle } from './cm-live-blocks'
 import { frontMatterField } from './cm-frontmatter'
 import { propertiesPanel } from './cm-properties'
+import { resolveLocalImageSrc } from './localImages.ts'
+import { useEditorStore } from '../stores/editorStore.ts'
+import { invokeTauri } from './tauri.ts'
+import {
+  analyzeFootnotes,
+  decodeHtmlEntity,
+  inSpans,
+  inlineCodeSpans,
+  isStandaloneImageLine,
+  parseHtmlTag,
+  parseImageMarkdown,
+  parseReferenceDefinition,
+  parseReferenceImage,
+  sanitizeInlineStyle,
+  VOID_HTML_TAGS,
+  type ReferenceDefinition,
+} from './liveSyntax.ts'
 
 const HIDDEN_MARK_NODES = new Set<string>([
   'HeaderMark', 'EmphasisMark', 'StrikethroughMark',
@@ -101,27 +118,163 @@ class FnDefMarkWidget extends WidgetType {
 
 const fnDefLine = lineClass('cm-md-footnote-def')
 const fnSepLine = lineClass('cm-md-footnote-sep')
+// 脚注续行在 lezer 里是缩进代码块（整行被标成 monospace + 底色）。
+// 这个类只负责把「代码块外观」还原成正文，语义上它不是代码。
+const fnBodyLine = lineClass('cm-md-fn-body')
 
 // ---- 行内 HTML 配对标签（<sup>1</sup> 等）：与预览 html:true 行为对齐 ----
 // 白名单 = 预览里有视觉语义的常用行内标签；白名单外标签保持原文（不猜渲染）。
-const HTML_TAG_RE = new RegExp(`<(/?)(${['sup', 'sub', 'u', 'mark', 'kbd', 'small', 'del', 'ins', 'b', 'strong', 'i', 'em', 's', 'strike'].join('|')})(?:\\s[^>]*)?>`, 'gi')
+const HTML_INLINE_TAGS = new Set([
+  'sup', 'sub', 'u', 'mark', 'kbd', 'small', 'del', 'ins', 'b', 'strong',
+  'i', 'em', 's', 'strike', 'cite', 'q', 'abbr', 'dfn', 'var', 'samp',
+  'code', 'tt', 'big', 'label', 'span', 'font', 'br', 'img', 'a',
+])
 
-/** 行内代码区间（同行成对反引号）：脚注/HTML 扫描需跳过 —— 预览不渲染代码内容里的语法 */
-function inlineCodeSpans(text: string): Array<[number, number]> {
-  const spans: Array<[number, number]> = []
-  const re = /`[^`]*`/g
-  let m: RegExpExecArray | null
-  while ((m = re.exec(text))) spans.push([m.index, m.index + m[0].length])
-  return spans
+/** 语义标签 → CSS 类（span/font 走行内 style，不额外上类） */
+const HTML_TAG_CLASS: Record<string, string> = {
+  sup: 'cm-md-html-sup',
+  sub: 'cm-md-html-sub',
+  u: 'cm-md-html-u',
+  ins: 'cm-md-html-ins',
+  s: 'cm-md-html-s',
+  del: 'cm-md-html-del',
+  strike: 'cm-md-html-strike',
+  b: 'cm-md-html-b',
+  strong: 'cm-md-html-strong',
+  i: 'cm-md-html-i',
+  em: 'cm-md-html-em',
+  small: 'cm-md-html-small',
+  mark: 'cm-md-html-mark',
+  kbd: 'cm-md-html-kbd',
+  cite: 'cm-md-html-cite',
+  q: 'cm-md-html-q',
+  abbr: 'cm-md-html-abbr',
+  dfn: 'cm-md-html-abbr',
+  var: 'cm-md-html-var',
+  samp: 'cm-md-html-mono',
+  tt: 'cm-md-html-mono',
+  big: 'cm-md-html-big',
+  code: 'cm-md-code',
+  a: 'cm-md-link',
+  span: 'cm-md-html-span',
+  font: 'cm-md-html-span',
 }
-const inSpans = (spans: Array<[number, number]>, i: number) => spans.some(([a, b]) => i >= a && i < b)
+
+const HTML_TAG_TOKEN_RE = /<\/?[a-zA-Z][a-zA-Z0-9:-]*(?:"[^"]*"|'[^']*'|[^>"'])*>/g
+
+/** mark decoration 按 (class, style) 缓存：同一行里重复标签不重复建对象 */
+const htmlMarkCache = new Map<string, Decoration>()
+function htmlMark(cls: string, style: string): Decoration {
+  const key = `${cls}\u0000${style}`
+  const cached = htmlMarkCache.get(key)
+  if (cached) return cached
+  const deco = Decoration.mark({
+    class: cls || undefined,
+    attributes: style ? { style } : undefined,
+    inclusive: false,
+  })
+  htmlMarkCache.set(key, deco)
+  return deco
+}
 
 const hideDeco = Decoration.mark({ class: 'cm-md-hiding-span' })
+
+/** 实体解码后的可见文字（如 &copy; → ©） */
+class EntityWidget extends WidgetType {
+  constructor(readonly text: string) { super() }
+  toDOM() {
+    const s = document.createElement('span')
+    s.className = 'cm-md-entity'
+    s.textContent = this.text
+    return s
+  }
+  eq(other: EntityWidget) { return other.text === this.text }
+  ignoreEvent() { return true }
+}
+
+/** HTML/演示指令注释：光标不在该行时折叠成一枚淡淡的 chip */
+class CommentChipWidget extends WidgetType {
+  constructor(readonly raw: string) { super() }
+  toDOM() {
+    const el = document.createElement('span')
+    el.className = 'cm-md-comment-chip'
+    const oneLine = this.raw.replace(/\s+/g, ' ').trim()
+    el.textContent = oneLine.length > 32 ? `${oneLine.slice(0, 30)}…` : oneLine
+    el.title = this.raw
+    return el
+  }
+  eq(other: CommentChipWidget) { return other.raw === this.raw }
+  ignoreEvent() { return true }
+}
+
+/** 行内 <br>：直接插入一个 br 元素（预览里就是一个换行） */
+class BrWidget extends WidgetType {
+  toDOM(): HTMLElement { return document.createElement('br') }
+  eq() { return true }
+  ignoreEvent() { return true }
+}
+
+/** 行内图片：文字中间 `![alt](src)` 渲染为小图，光标进入该行后恢复源码 */
+class InlineImageWidget extends WidgetType {
+  constructor(
+    private readonly src: string,
+    private readonly alt: string,
+    private readonly title: string,
+  ) { super() }
+
+  eq(other: InlineImageWidget) {
+    return other.src === this.src && other.alt === this.alt && other.title === this.title
+  }
+
+  toDOM(): HTMLElement {
+    const wrap = document.createElement('span')
+    wrap.className = 'cm-md-inline-image'
+    const img = document.createElement('img')
+    img.alt = this.alt
+    if (this.title) img.title = this.title
+    img.loading = 'lazy'
+    img.draggable = false
+    const fail = () => {
+      wrap.classList.add('cm-md-inline-image--broken')
+      wrap.textContent = this.alt || this.src
+    }
+    img.onerror = fail
+    wrap.appendChild(img)
+
+    if (/^(https?:|data:|blob:)/i.test(this.src)) {
+      img.src = this.src
+    } else {
+      const store = useEditorStore.getState()
+      const tab = store.tabs.find((t) => t.id === store.activeTabId)
+      let baseDir: string | null = null
+      if (tab?.filePath) {
+        const sep = Math.max(tab.filePath.lastIndexOf('\\'), tab.filePath.lastIndexOf('/'))
+        baseDir = sep > 0 ? tab.filePath.substring(0, sep) : null
+      }
+      resolveLocalImageSrc(this.src, baseDir)
+        .then((resolved) => resolved ? invokeTauri<string>('read_image_base64', { path: resolved }) : null)
+        .then((dataUrl) => { if (dataUrl) img.src = dataUrl; else fail() })
+        .catch(fail)
+    }
+    return wrap
+  }
+  ignoreEvent() { return false }
+}
 
 const HEADING_LEVELS: Record<string, number> = {
   ATXHeading1: 1, ATXHeading2: 2, ATXHeading3: 3,
   ATXHeading4: 4, ATXHeading5: 5, ATXHeading6: 6,
   SetextHeading1: 1, SetextHeading2: 2,
+}
+
+/** 节点是否有某个祖先（表格单元格里的行内标记交给表格 widget 渲染） */
+function hasAncestor(node: { parent: any }, name: string): boolean {
+  let cur = node.parent
+  while (cur) {
+    if (cur.name === name) return true
+    cur = cur.parent
+  }
+  return false
 }
 
 function buildDecorations(view: EditorView): DecorationSet {
@@ -134,6 +287,53 @@ function buildDecorations(view: EditorView): DecorationSet {
   const seenFencedLines = new Set<number>()
   const seenHeadingLines = new Set<number>()
   const seenHrLines = new Set<number>()
+  // 嵌套列表的外层 BulletList / OrderedList 会把子列表的行也扫一遍，
+  // 子列表节点自己又扫一遍 ⇒ 同一行被插两个 checkbox。这里按行去重。
+  const seenTaskLines = new Set<number>()
+
+  const doc = view.state.doc
+  const allLines = doc.toString().split('\n')
+
+  /**
+   * 光标是否落在某个围栏代码块内（用块节点范围判断，而不是只看当前行）。
+   * 用于让头尾 ``` 与语言标签在进入块时一起显形：块内任意一行都可直接编辑。
+   */
+  const caretInsideFenceBlock = (start: any): boolean => {
+    let cur: any = start
+    while (cur) {
+      if (cur.name === 'FencedCode' || cur.name === 'CodeBlock') {
+        const s = doc.lineAt(cur.from).number
+        const e = doc.lineAt(Math.min(cur.to, doc.length)).number
+        return fromLine <= e && toLine >= s
+      }
+      cur = cur.parent
+    }
+    return false
+  }
+
+  // 脚注全文分析：引用编号 + 定义块（含缩进续行）。lezer-markdown 的 GFM 扩展集
+  // 不含 footnote，所以只能行扫描；顺带把「续行」从缩进代码块里排除。
+  const footnoteAnalysis = analyzeFootnotes(allLines)
+  // 引用式链接/图片的定义表（label → 目标）。用于把 `![alt][ref]` 也渲染成图片，
+  // 与预览的 markdown-it 行为对齐；定义缺失时保留源码（预览此时也当普通文本）。
+  const refDefs = new Map<string, ReferenceDefinition>()
+  for (const lineText of allLines) {
+    const def = parseReferenceDefinition(lineText)
+    if (def && def.dest) refDefs.set(def.label.toLowerCase(), def)
+  }
+  // 代码块行（围栏 + 缩进）：行内实体/HTML/脚注扫描必须跳过，否则会把代码内容也渲染掉。
+  // 脚注续行在 lezer 里是 CodeBlock，但语义上不是代码，排除掉。
+  const codeLines = new Set<number>()
+  tree.iterate({
+    enter(node) {
+      if (node.name !== 'FencedCode' && node.name !== 'CodeBlock') return
+      const sL = doc.lineAt(node.from).number
+      const eL = doc.lineAt(Math.min(node.to, doc.length)).number
+      for (let ln = sL; ln <= eL; ln++) {
+        if (!footnoteAnalysis.continuationLines.has(ln - 1)) codeLines.add(ln)
+      }
+    },
+  })
 
   // 标记光标所在行，用于CSS过渡动画
   const caretLineClass = Decoration.line({ class: 'cm-md-caret-line' })
@@ -165,7 +365,66 @@ function buildDecorations(view: EditorView): DecorationSet {
         const lineEndAtNode = view.state.doc.lineAt(Math.min(nTo, view.state.doc.length)).number
         const caretTouches = lineEndAtNode >= fromLine && lineAtNode <= toLine
 
+        // 表格里的行内内容由表格 widget 统一渲染（整表被 replace），不要在这里重复装饰。
+        if (name === 'Image' || name === 'Comment' || name === 'Entity' || name === 'Escape') {
+          if (hasAncestor(node.node, 'Table')) return false
+        }
+
+        // 转义：\* → 显示 *（只隐藏反斜杠；光标进入该行时 CSS 让它重新出现，保持可编辑）
+        if (name === 'Escape') {
+          if (nTo - nFrom >= 2) ranges.push(hideDeco.range(nFrom, nFrom + 1))
+          return
+        }
+
+        // HTML 实体：&copy; → ©（光标所在行保持源码）
+        if (name === 'Entity') {
+          if (caretTouches) return
+          const raw = view.state.doc.sliceString(nFrom, nTo)
+          const decoded = decodeHtmlEntity(raw)
+          if (decoded !== raw) {
+            ranges.push(Decoration.replace({ widget: new EntityWidget(decoded) }).range(nFrom, nTo))
+          }
+          return
+        }
+
+        // 行内注释：<!-- … -->（演示指令也走这里）。折叠成 chip，光标进入该行显示源码。
+        if (name === 'Comment') {
+          if (caretTouches) return
+          const raw = view.state.doc.sliceString(nFrom, nTo)
+          ranges.push(Decoration.replace({ widget: new CommentChipWidget(raw) }).range(nFrom, nTo))
+          return
+        }
+
+        // 行内图片：![alt](src) / ![alt][ref] 出现在文字中间
+        // （独占一行的交给块级 ImageWidget）
+        if (name === 'Image') {
+          if (caretTouches) return
+          const raw = view.state.doc.sliceString(nFrom, nTo)
+          if (isStandaloneImageLine(view.state.doc.lineAt(nFrom).text)) return
+          const parsed = parseImageMarkdown(raw) ?? parseReferenceImage(raw, refDefs)
+          // 引用式但定义缺失：保留完整源码（预览此时也显示原始文本）
+          if (!parsed) return
+          ranges.push(Decoration.replace({
+            widget: new InlineImageWidget(parsed.src, parsed.alt, parsed.title),
+          }).range(nFrom, nTo))
+          return
+        }
+
+        // 引用式链接的 label 部分：`[foo][bar]` / `[baz][]` 里 `[bar]` / `[]` 只是定位用的，
+        // 预览里完全不显示。LinkReference（定义行）的 LinkLabel 不能隐藏 —— 那是行首的 `[label]`；
+        // Image 的 label 也不隐藏（未解析成功的引用式图片会整段保留源码）。
+        if (name === 'LinkLabel') {
+          const parent = node.node.parent
+          if (parent && parent.name === 'Link' && nTo > nFrom) ranges.push(hideDeco.range(nFrom, nTo))
+          return
+        }
+
         if (HIDDEN_MARK_NODES.has(name)) {
+          // 围栏块处于编辑态时，``` 围栏与语言标签必须可见（与代码行一样可编辑）
+          if ((name === 'CodeMark' || name === 'CodeInfo') && caretInsideFenceBlock(node.node)) return
+          // 图片自身的 `![` / `]` 不隐藏：解析成功的图片整节点已被 widget 替换；
+          // 解析失败（引用式定义缺失）时要让用户看到完整源码。
+          if (hasAncestor(node.node, 'Image')) return
           if (nTo > nFrom) {
             let hideTo = nTo
             if (name === 'HeaderMark') {
@@ -233,15 +492,19 @@ function buildDecorations(view: EditorView): DecorationSet {
             const lo = view.state.doc.line(ln)
             const lineText = lo.text
             // 匹配任务列表行：- [ ] / - [x] / * [ ] / + [x]
-            const taskMatch = lineText.match(/^(\s*)([-*+])\s\[[ xX]\]\s/)
+            // 保留行首缩进（嵌套任务靠它定位），只把 `- [ ] ` 换成 checkbox。
+            const taskMatch = lineText.match(/^(\s*)([-*+]\s)(\[[ xX]\])(\s|$)/)
             if (taskMatch) {
-              const markerStart = lo.from
-              const markerEnd = lo.from + taskMatch[0].length // "- [ ] " or "- [x] "
-              const isChecked = /\[[xX]\]/.test(lineText)
-              if (!caretTouches) {
-                // 隐藏标记，插入真实 checkbox widget
-                ranges.push(hideDeco.range(markerStart, markerEnd))
-                ranges.push(taskCheckboxWidget(isChecked, lo.from).range(markerStart))
+              const markerStart = lo.from + taskMatch[1].length
+              const isChecked = /\[[xX]\]/.test(taskMatch[3])
+              if (!seenTaskLines.has(lo.from)) {
+                seenTaskLines.add(lo.from)
+                if (!caretTouches) {
+                  // 隐藏标记，插入真实 checkbox widget
+                  const hideLen = taskMatch[2].length + taskMatch[3].length + (taskMatch[4] ? 1 : 0)
+                  ranges.push(hideDeco.range(markerStart, markerStart + hideLen))
+                  ranges.push(taskCheckboxWidget(isChecked, lo.from).range(markerStart))
+                }
               }
               ranges.push(isChecked ? taskItemLineChecked.range(lo.from) : taskItemLine.range(lo.from))
             } else {
@@ -265,7 +528,26 @@ function buildDecorations(view: EditorView): DecorationSet {
           const eL = view.state.doc.lineAt(Math.min(nTo, view.state.doc.length)).number
           for (let ln = sL; ln <= eL; ln++) {
             const lo = view.state.doc.line(ln)
-            if (/^\s*\d+[.)]\s/.test(lo.text)) {
+            const lineText = lo.text
+            // 有序任务列表：`1. [ ]` / `2. [x]`（与无序任务同一套 checkbox 与回写）
+            // 序号保留 —— 预览里 `<ol>` 的编号同样在 checkbox 前面，不能连编号一起隐藏。
+            const taskMatch = lineText.match(/^(\s*\d+[.)]\s+)(\[[ xX]\])(\s|$)/)
+            if (taskMatch) {
+              const isChecked = /\[[xX]\]/.test(taskMatch[2])
+              const markerStart = lo.from + taskMatch[1].length
+              if (!seenTaskLines.has(lo.from)) {
+                seenTaskLines.add(lo.from)
+                if (!caretTouches) {
+                  // 隐藏 `[ ]` 及紧随的一个空格，让 checkbox 稳稳占住这个位置
+                  const hideLen = taskMatch[2].length + (taskMatch[3] ? 1 : 0)
+                  ranges.push(hideDeco.range(markerStart, markerStart + hideLen))
+                  ranges.push(taskCheckboxWidget(isChecked, lo.from).range(markerStart))
+                }
+              }
+              ranges.push(isChecked ? taskItemLineChecked.range(lo.from) : taskItemLine.range(lo.from))
+              continue
+            }
+            if (/^\s*\d+[.)]\s/.test(lineText)) {
               ranges.push(orderedItemLine.range(lo.from))
             }
           }
@@ -276,6 +558,7 @@ function buildDecorations(view: EditorView): DecorationSet {
           const sL = view.state.doc.lineAt(nFrom).number
           const eL = view.state.doc.lineAt(Math.min(nTo, view.state.doc.length)).number
           for (let ln = sL; ln <= eL; ln++) {
+            if (footnoteAnalysis.continuationLines.has(ln - 1)) continue
             const lo = view.state.doc.line(ln)
             if (!seenFencedLines.has(lo.from)) { seenFencedLines.add(lo.from); ranges.push(fencedLine.range(lo.from)) }
           }
@@ -284,90 +567,115 @@ function buildDecorations(view: EditorView): DecorationSet {
       },
     })
   }
-  // 脚注：lezer-markdown 的 GFM 扩展集不含 footnote，[^n] 语法不产生树节点 ⇒ 树迭代之外
-  // 按行正则扫描。与 caret-reveal 模型一致：光标所在行显示原始语法（保持可编辑）。
-  // 全文预扫：① 引用编号映射（按首次出现顺序，与 markdown-it-footnote 同款）；
-  // ② 第一个定义行的位置（其上加分隔线，对齐预览 footnotes-sep）。
-  const refOrder = new Map<string, number>()
-  let firstDefLineIdx = -1
-  {
-    let inFence = false
-    const allLines = view.state.doc.toString().split('\n')
-    for (let i = 0; i < allLines.length; i++) {
-      const lineText = allLines[i]
-      if (/^\s{0,3}(?:```|~~~)/.test(lineText)) { inFence = !inFence; continue }
-      if (inFence) continue
-      const isDefMark = /^\[\^[^\]]+\]:/.test(lineText)
-      if (isDefMark && firstDefLineIdx < 0) firstDefLineIdx = i
-      const codeSpans = inlineCodeSpans(lineText)
-      const refRe = /\[\^([^\]\s]+)\]/g
-      let m: RegExpExecArray | null
-      while ((m = refRe.exec(lineText))) {
-        if (isDefMark && m.index === 0) continue  // 定义行自身的标记不算引用
-        if (inSpans(codeSpans, m.index)) continue // 行内代码里的不算
-        if (!refOrder.has(m[1])) refOrder.set(m[1], refOrder.size + 1)
-      }
-    }
-  }
+  // 脚注：引用编号与定义块（含多行/多段续行）来自 liveSyntax.analyzeFootnotes。
+  // 与 caret-reveal 模型一致：光标所在行显示原始语法（保持可编辑）。
+  const firstDefLineIdx = footnoteAnalysis.firstDefinitionLine
   for (const range of view.visibleRanges) {
     let pos = range.from
     while (pos <= range.to) {
       const line = view.state.doc.lineAt(pos)
       pos = line.to + 1
+      const lineIdx = line.number - 1
       const caretTouches = line.number >= fromLine && line.number <= toLine
       const text = line.text
-      const codeSpans = inlineCodeSpans(text)
-      const defMatch = text.match(/^\[\^([^\]]+)\]:\s?/)
+      const def = footnoteAnalysis.byMarkerLine.get(lineIdx)
       // 定义行的行类/分隔线**恒定**（不随 caret 进出）：字号行距稳定 ⇒ 无高度跳变，
       // 光标进出定义区时下方内容不再位移（否则点按瞬间的坐标映射会失准）
-      if (defMatch) {
+      if (def) {
         ranges.push(fnDefLine.range(line.from))
-        if (line.number - 1 === firstDefLineIdx) ranges.push(fnSepLine.range(line.from))
+        if (lineIdx === firstDefLineIdx) ranges.push(fnSepLine.range(line.from))
         if (!caretTouches) {
           // 「[^n]: 」记号替换为与预览一致的序号「n.」；caret 行显示原始语法（可编辑）
-          const num = refOrder.get(defMatch[1]) ?? 0
-          ranges.push(Decoration.replace({ widget: new FnDefMarkWidget(num) }).range(line.from, line.from + defMatch[0].length))
+          const num = footnoteAnalysis.order.get(def.label) ?? 0
+          ranges.push(Decoration.replace({ widget: new FnDefMarkWidget(num) })
+            .range(line.from + def.markerStart, line.from + def.markerEnd))
         }
+      }
+      // 缩进续行（多行 / 多段定义）：套用脚注定义样式，并隐藏 4 格缩进 ——
+      // 预览里续行与首行同一左边界，实时如果保留缩进会再叠一层 padding。
+      if (footnoteAnalysis.continuationLines.has(lineIdx)) {
+        ranges.push(fnDefLine.range(line.from))
+        ranges.push(fnBodyLine.range(line.from))
+        const indent = /^[ \t]{1,4}/.exec(text)
+        if (indent && !caretTouches) ranges.push(hideDeco.range(line.from, line.from + indent[0].length))
       }
       if (caretTouches) continue
-      let scanFrom = defMatch ? defMatch[0].length : 0
-      const refRe = /\[\^([^\]\s]+)\]/g
-      refRe.lastIndex = scanFrom
+      // 代码块内容不参与行内扫描（否则 ``` 里的 &amp;/$x$/<sup> 都会被渲染）
+      if (codeLines.has(line.number)) continue
+      const codeSpans = inlineCodeSpans(text)
       let m: RegExpExecArray | null
+
+      // 脚注引用 [^n] → 上标 [1]，编号按全文首次出现顺序（与 markdown-it-footnote 同款）
+      const refRe = /\[\^([^\]\s]+)\]/g
+      refRe.lastIndex = def ? def.markerEnd : 0
       while ((m = refRe.exec(text))) {
-        if (defMatch && m.index === 0) continue  // 定义行自身的标记已由序号 widget 接管
         if (inSpans(codeSpans, m.index)) continue
-        const num = refOrder.get(m[1]) ?? 0
+        const num = footnoteAnalysis.order.get(m[1]) ?? 0
         const s = line.from + m.index
-        const e = s + m[0].length
-        ranges.push(Decoration.replace({ widget: new FnRefWidget(num) }).range(s, e))
+        ranges.push(Decoration.replace({ widget: new FnRefWidget(num) }).range(s, s + m[0].length))
       }
-      // 行内 HTML 配对标签：隐藏开/闭记号，内容按标签语义渲染
-      const opens = new Map<string, number[]>()
-      HTML_TAG_RE.lastIndex = 0
+
+      // 行内 HTML：按白名单解析标签，隐藏记号、给内容套语义类（style 只保留文字视觉属性）
+      const opens: Array<{ start: number; end: number; name: string; cls: string; style: string }> = []
+      HTML_TAG_TOKEN_RE.lastIndex = 0
       let hm: RegExpExecArray | null
-      while ((hm = HTML_TAG_RE.exec(text))) {
+      while ((hm = HTML_TAG_TOKEN_RE.exec(text))) {
         if (inSpans(codeSpans, hm.index)) continue
-        const tag = hm[2].toLowerCase()
-        if (!hm[1]) {
-          const arr = opens.get(tag) || []
-          arr.push(hm.index)
-          opens.set(tag, arr)
-        } else {
-          const arr = opens.get(tag)
-          if (arr && arr.length) {
-            const openIdx = arr.pop()!
-            const openLen = (text.slice(openIdx).match(/^<[^>]*>/) || [''])[0].length
-            const openEndAbs = line.from + openIdx + openLen
-            const closeStartAbs = line.from + hm.index
-            ranges.push(hideDeco.range(openEndAbs - openLen, openEndAbs))
-            ranges.push(hideDeco.range(closeStartAbs, closeStartAbs + hm[0].length))
-            if (closeStartAbs > openEndAbs) {
-              ranges.push(Decoration.mark({ class: `cm-md-html-${tag}` }).range(openEndAbs, closeStartAbs))
-            }
+        const parsed = parseHtmlTag(hm[0])
+        if (!parsed) continue
+        const tag = parsed.name
+        if (!HTML_INLINE_TAGS.has(tag)) continue
+        const startAbs = line.from + hm.index
+        const endAbs = startAbs + hm[0].length
+
+        if (parsed.closing) {
+          let idx = -1
+          for (let k = opens.length - 1; k >= 0; k--) {
+            if (opens[k].name === tag) { idx = k; break }
           }
+          if (idx < 0) { ranges.push(hideDeco.range(startAbs, endAbs)); continue }
+          const open = opens[idx]
+          opens.splice(idx, 1)
+          ranges.push(hideDeco.range(open.start, open.end))
+          ranges.push(hideDeco.range(startAbs, endAbs))
+          if (startAbs > open.end) {
+            ranges.push(htmlMark(open.cls, open.style).range(open.end, startAbs))
+          }
+          continue
         }
+
+        if (parsed.selfClosing || VOID_HTML_TAGS.has(tag)) {
+          if (tag === 'br') {
+            ranges.push(Decoration.replace({ widget: new BrWidget() }).range(startAbs, endAbs))
+          } else if (tag === 'img') {
+            const src = (parsed.attrs.src || '').trim()
+            if (src) {
+              ranges.push(Decoration.replace({
+                widget: new InlineImageWidget(src, parsed.attrs.alt || '', parsed.attrs.title || ''),
+              }).range(startAbs, endAbs))
+            } else {
+              ranges.push(hideDeco.range(startAbs, endAbs))
+            }
+          } else {
+            ranges.push(hideDeco.range(startAbs, endAbs))
+          }
+          continue
+        }
+
+        const style = sanitizeInlineStyle(parsed.attrs.style || '')
+        const fontColor = parsed.attrs.color || ''
+        const safeColor = fontColor && !/url\s*\(|expression|javascript:/i.test(fontColor) ? fontColor : ''
+        const mergedStyle = [style, safeColor ? `color: ${safeColor}` : ''].filter(Boolean).join('; ')
+        opens.push({
+          start: startAbs,
+          end: endAbs,
+          name: tag,
+          cls: HTML_TAG_CLASS[tag] || '',
+          style: mergedStyle,
+        })
       }
+      // 本行内没等到闭合标签的开记号：预览里同样不可见，这里直接隐藏
+      for (const open of opens) ranges.push(hideDeco.range(open.start, open.end))
     }
   }
   // 按 from 排序，同 from 时 line decoration (side < 0) 排在 mark decoration (side >= 0) 之前
@@ -477,6 +785,15 @@ export const liveEditTheme = EditorView.theme({
   // 用 padding-top 而非 margin-top：margin 在行盒之外、不属于任何行，
   // 点进间隙时 CM 的 posAtCoords 只能就近吸附 ⇒ 光标定位漂移；padding 属于行盒，点击必命中本行。
   '.cm-md-footnote-sep': { borderTop: '1px solid var(--code-comment)', paddingTop: '0.8em' },
+  // 脚注续行：lezer 把它当缩进代码块，token 样式是 monospace + 底色。
+  // 这里把「代码外观」还原成正文（续行的可视内容由块级 widget 负责渲染）。
+  '.cm-md-fn-body, .cm-md-fn-body span': {
+    fontFamily: 'inherit',
+    backgroundColor: 'transparent',
+    padding: '0',
+    borderRadius: '0',
+    color: 'var(--editor-text)',
+  },
   // 行内 HTML 配对标签的语义渲染（标签记号已隐藏）
   '.cm-md-html-sup': { verticalAlign: 'super', fontSize: '0.8em' },
   '.cm-md-html-sub': { verticalAlign: 'sub', fontSize: '0.8em' },
@@ -487,6 +804,40 @@ export const liveEditTheme = EditorView.theme({
   '.cm-md-html-small': { fontSize: '0.85em' },
   '.cm-md-html-mark': { backgroundColor: 'color-mix(in srgb, #ffd54d 35%, transparent)' },
   '.cm-md-html-kbd': { fontFamily: 'var(--font-mono)', backgroundColor: 'var(--code-inline-bg)', padding: '0.1em 0.35em', borderRadius: '4px', fontSize: '0.85em' },
+  '.cm-md-html-cite': { fontStyle: 'italic' },
+  '.cm-md-html-abbr': { textDecoration: 'underline dotted', textUnderlineOffset: '3px', cursor: 'help' },
+  '.cm-md-html-var': { fontStyle: 'italic', fontFamily: 'var(--font-mono)' },
+  '.cm-md-html-mono': { fontFamily: 'var(--font-mono)', fontSize: '0.9em' },
+  '.cm-md-html-big': { fontSize: '1.15em' },
+  '.cm-md-html-span': {},
+  '.cm-md-html-q::before': { content: '"\\201C"' },
+  '.cm-md-html-q::after': { content: '"\\201D"' },
+  // 行内注释 / 演示指令折叠成的 chip
+  '.cm-md-comment-chip': {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.78em',
+    color: 'var(--code-comment)',
+    backgroundColor: 'var(--code-inline-bg)',
+    padding: '0.05em 0.4em',
+    borderRadius: '4px',
+    opacity: '0.85',
+    whiteSpace: 'nowrap',
+    cursor: 'text',
+  },
+  // 行内图片：限制高度，避免撑破行高与 CodeMirror 的高度测量
+  '.cm-md-inline-image': { display: 'inline-block', verticalAlign: 'middle', maxWidth: '100%' },
+  '.cm-md-inline-image img': {
+    maxWidth: '100%',
+    maxHeight: '4em',
+    height: 'auto',
+    borderRadius: '4px',
+    verticalAlign: 'middle',
+  },
+  '.cm-md-inline-image--broken': {
+    color: 'var(--editor-accent)',
+    fontSize: '0.85em',
+    fontStyle: 'italic',
+  },
   // 标记过渡动画：默认隐藏（caret不在行上时）
   '.cm-md-hiding-span': {
     opacity: '0',
