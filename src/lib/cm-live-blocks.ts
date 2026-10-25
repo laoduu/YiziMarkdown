@@ -12,6 +12,7 @@ import { syntaxTree } from '@codemirror/language'
 // 而 Node 的 ESM 解析器不做扩展名补全（见 lib/remotePath.ts 的同类说明）。
 import { useSettingsStore } from '../stores/settingsStore.ts'
 import { useEditorStore } from '../stores/editorStore.ts'
+import { getCurrentLang, translate } from '../i18n/index.ts'
 import { resolveLocalImageSrc } from './localImages.ts'
 import { invokeTauri } from './tauri.ts'
 import { getMarkdownIt } from './markdownRenderer.ts'
@@ -49,6 +50,15 @@ import {
 // DecorationSet 是**类型导出**：写在值导入里 Vite/esbuild 能丢弃，
 // 但 Node 的类型剥离器（tests/liveBlocks.test.ts 要加载本模块）不能。
 import type { DecorationSet } from '@codemirror/view'
+
+/* ------------------------------------------------------------------ */
+/*  i18n                                                              */
+/* ------------------------------------------------------------------ */
+
+/** 表格右键菜单文案：每次打开时按当前语言取，切换语言后无需重开文档。 */
+const tTable = (key: string): string => translate(getCurrentLang(), `tableMenu.${key}`)
+/** 实时模式内的悬浮按钮 / 空状态文案。 */
+const tLive = (key: string): string => translate(getCurrentLang(), `live.${key}`)
 
 /* ------------------------------------------------------------------ */
 /*  Data types                                                        */
@@ -378,7 +388,7 @@ class CodeBlockWidget extends WidgetType {
     // 换行开关：与预览模式右上角的按钮保持一致（默认横向滚动，点一下变自动换行）
     const wrapBtn = document.createElement('button')
     wrapBtn.className = 'code-block-wrap-btn'
-    wrapBtn.title = '切换换行'
+    wrapBtn.title = tLive('toggleWrap')
     wrapBtn.innerHTML = WRAP_ICON
     wrapBtn.addEventListener('click', (e) => {
       e.preventDefault()
@@ -389,7 +399,7 @@ class CodeBlockWidget extends WidgetType {
     })
     const copyBtn = document.createElement('button')
     copyBtn.className = 'code-block-copy-btn'
-    copyBtn.title = '复制代码'
+    copyBtn.title = tLive('copyCode')
     copyBtn.innerHTML = COPY_ICON
     copyBtn.addEventListener('click', async (e) => {
       e.preventDefault()
@@ -399,7 +409,7 @@ class CodeBlockWidget extends WidgetType {
         copyBtn.innerHTML = CHECK_ICON
         setTimeout(() => { copyBtn.innerHTML = COPY_ICON }, 1500)
       } catch {
-        copyBtn.title = '复制失败'
+        copyBtn.title = tLive('copyFailed')
       }
     })
     actions.appendChild(wrapBtn)
@@ -539,7 +549,7 @@ class TocWidget extends WidgetType {
     // 点目录条目 = 滚动；点目录空白处 = 回到源码（让 [toc] 可编辑）
     revealSourceOnClick(nav, view, this.pos)
     if (this.headings.length === 0) {
-      nav.textContent = '（当前文档没有标题）'
+      nav.textContent = tLive('tocEmpty')
       return nav
     }
     const ul = document.createElement('ul')
@@ -1055,7 +1065,7 @@ class EditableTableWidget extends WidgetType {
       const handle = document.createElement('button')
       handle.type = 'button'
       handle.className = 'row-handle'
-      handle.title = '选择整行'
+      handle.title = tTable('selectRow')
       handle.innerHTML = TABLE_HANDLE_ICON
       handle.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation() })
       handle.addEventListener('click', (e) => {
@@ -1071,7 +1081,7 @@ class EditableTableWidget extends WidgetType {
       const handle = document.createElement('button')
       handle.type = 'button'
       handle.className = 'col-handle'
-      handle.title = '选择整列'
+      handle.title = tTable('selectColumn')
       handle.innerHTML = TABLE_HANDLE_ICON
       handle.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation() })
       handle.addEventListener('click', (e) => {
@@ -1087,7 +1097,7 @@ class EditableTableWidget extends WidgetType {
     const addCol = document.createElement('button')
     addCol.type = 'button'
     addCol.className = 'add-col'
-    addCol.title = '添加列'
+    addCol.title = tTable('addColumn')
     const addColPlus = document.createElement('span')
     addColPlus.className = 'add-plus'
     addColPlus.textContent = '+'
@@ -1102,7 +1112,7 @@ class EditableTableWidget extends WidgetType {
     const addRow = document.createElement('button')
     addRow.type = 'button'
     addRow.className = 'add-row'
-    addRow.title = '添加行'
+    addRow.title = tTable('addRow')
     const addRowPlus = document.createElement('span')
     addRowPlus.className = 'add-plus'
     addRowPlus.textContent = '+'
@@ -1425,38 +1435,38 @@ class EditableTableWidget extends WidgetType {
       menu.className = 'table-menu'
       menu.setAttribute('role', 'menu')
 
-      menu.appendChild(buildMenuItem(TABLE_MENU_ICONS.cut, '剪切', () => {
+      menu.appendChild(buildMenuItem(TABLE_MENU_ICONS.cut, tTable('cut'), () => {
         void writeClipboard(selectionToTsv()).then(() => clearSelectedCells())
       }))
-      menu.appendChild(buildMenuItem(TABLE_MENU_ICONS.copy, '复制', () => {
+      menu.appendChild(buildMenuItem(TABLE_MENU_ICONS.copy, tTable('copy'), () => {
         void writeClipboard(selectionToTsv())
         closeTableMenu()
       }))
-      menu.appendChild(buildMenuItem(TABLE_MENU_ICONS.paste, '粘贴', () => {
+      menu.appendChild(buildMenuItem(TABLE_MENU_ICONS.paste, tTable('paste'), () => {
         void readClipboard().then((text) => {
           if (text) pasteIntoSelection(text)
           else closeTableMenu()
         })
       }))
       menu.appendChild(separator())
-      menu.appendChild(buildSubmenuItem(TABLE_MENU_ICONS.format, '文本格式', [
-        [TABLE_MENU_ICONS.alignLeft, '左对齐', () => applyAlign('left')],
-        [TABLE_MENU_ICONS.alignCenter, '居中对齐', () => applyAlign('center')],
-        [TABLE_MENU_ICONS.alignRight, '右对齐', () => applyAlign('right')],
+      menu.appendChild(buildSubmenuItem(TABLE_MENU_ICONS.format, tTable('format'), [
+        [TABLE_MENU_ICONS.alignLeft, tTable('alignLeft'), () => applyAlign('left')],
+        [TABLE_MENU_ICONS.alignCenter, tTable('alignCenter'), () => applyAlign('center')],
+        [TABLE_MENU_ICONS.alignRight, tTable('alignRight'), () => applyAlign('right')],
       ]))
 
       const insertItems: HTMLElement[] = []
       if (singleRow) {
         // 表头（r1=0）没有「上方」行，插到分隔行之后作为第一条正文行
-        insertItems.push(buildMenuItem(TABLE_MENU_ICONS.rowAbove, '在上方插入行', () =>
+        insertItems.push(buildMenuItem(TABLE_MENU_ICONS.rowAbove, tTable('insertRowAbove'), () =>
           applyTableSource((source) => insertTableRow(source, r1 === 0 ? 2 : r1 + 1))))
-        insertItems.push(buildMenuItem(TABLE_MENU_ICONS.rowBelow, '在下方插入行', () =>
+        insertItems.push(buildMenuItem(TABLE_MENU_ICONS.rowBelow, tTable('insertRowBelow'), () =>
           applyTableSource((source) => insertTableRow(source, r2 + 2))))
       }
       if (singleCol) {
-        insertItems.push(buildMenuItem(TABLE_MENU_ICONS.colLeft, '在左侧插入列', () =>
+        insertItems.push(buildMenuItem(TABLE_MENU_ICONS.colLeft, tTable('insertColumnLeft'), () =>
           applyTableSource((source) => insertTableColumn(source, c1))))
-        insertItems.push(buildMenuItem(TABLE_MENU_ICONS.colRight, '在右侧插入列', () =>
+        insertItems.push(buildMenuItem(TABLE_MENU_ICONS.colRight, tTable('insertColumnRight'), () =>
           applyTableSource((source) => insertTableColumn(source, c2 + 1))))
       }
       if (insertItems.length > 0) {
@@ -1466,15 +1476,15 @@ class EditableTableWidget extends WidgetType {
 
       const moveItems: HTMLElement[] = []
       if (singleRow && r1 > 0) {
-        moveItems.push(buildMenuItem(TABLE_MENU_ICONS.up, '上移该行', () =>
+        moveItems.push(buildMenuItem(TABLE_MENU_ICONS.up, tTable('moveRowUp'), () =>
           applyTableSource((source) => moveTableRow(source, r1 + 1, -1))))
-        moveItems.push(buildMenuItem(TABLE_MENU_ICONS.down, '下移该行', () =>
+        moveItems.push(buildMenuItem(TABLE_MENU_ICONS.down, tTable('moveRowDown'), () =>
           applyTableSource((source) => moveTableRow(source, r1 + 1, 1))))
       }
       if (singleCol) {
-        moveItems.push(buildMenuItem(TABLE_MENU_ICONS.left, '左移该列', () =>
+        moveItems.push(buildMenuItem(TABLE_MENU_ICONS.left, tTable('moveColumnLeft'), () =>
           applyTableSource((source) => moveTableColumn(source, c1, -1))))
-        moveItems.push(buildMenuItem(TABLE_MENU_ICONS.right, '右移该列', () =>
+        moveItems.push(buildMenuItem(TABLE_MENU_ICONS.right, tTable('moveColumnRight'), () =>
           applyTableSource((source) => moveTableColumn(source, c1, 1))))
       }
       if (moveItems.length > 0) {
@@ -1484,17 +1494,17 @@ class EditableTableWidget extends WidgetType {
 
       if (singleCol) {
         menu.appendChild(separator())
-        menu.appendChild(buildMenuItem(TABLE_MENU_ICONS.sortAsc, '按此列升序排序', () =>
+        menu.appendChild(buildMenuItem(TABLE_MENU_ICONS.sortAsc, tTable('sortAscending'), () =>
           applyTableSource((source) => sortTableRows(source, c1, 'asc'))))
-        menu.appendChild(buildMenuItem(TABLE_MENU_ICONS.sortDesc, '按此列降序排序', () =>
+        menu.appendChild(buildMenuItem(TABLE_MENU_ICONS.sortDesc, tTable('sortDescending'), () =>
           applyTableSource((source) => sortTableRows(source, c1, 'desc'))))
       }
 
       menu.appendChild(separator())
-      menu.appendChild(buildMenuItem(TABLE_MENU_ICONS.eraser, '清空选中的单元格', () => clearSelectedCells()))
+      menu.appendChild(buildMenuItem(TABLE_MENU_ICONS.eraser, tTable('clearCells'), () => clearSelectedCells()))
       menu.appendChild(buildMenuItem(
         TABLE_MENU_ICONS.trash,
-        wholeRows ? '删除选中的行' : wholeCols ? '删除选中的列' : '删除选中的单元格',
+        wholeRows ? tTable('deleteRows') : wholeCols ? tTable('deleteColumns') : tTable('deleteCells'),
         () => deleteSelection(),
       ))
 

@@ -26,7 +26,7 @@ import { renderMarkdown } from '../lib/markdownRenderer'
 import { extendMarkdownIt, postRender as pluginPostRender } from '../plugins/registry'
 import { invokeTauri } from '../lib/tauri'
 import { resolveLocalImageSrc } from '../lib/localImages'
-import { useI18n } from '../i18n'
+import { getCurrentLang, translate, useI18n } from '../i18n'
 
 // const markdownHighlight = HighlightStyle.define([
 //   // 标题
@@ -391,12 +391,12 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
       const actions = document.createElement('div')
       actions.className = 'code-block-actions'
       actions.innerHTML = `
-        <button class="code-block-wrap-btn" title="切换换行">
+        <button class="code-block-wrap-btn" title="${t('live.toggleWrap')}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M3 6h18M3 12h12M3 18h6"/>
           </svg>
         </button>
-        <button class="code-block-copy-btn" title="复制代码">
+        <button class="code-block-copy-btn" title="${t('live.copyCode')}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
             <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
@@ -754,7 +754,7 @@ function replaceBrokenImage(img: HTMLImageElement): void {
   const alt = (img.getAttribute('alt') || '').trim()
   const span = document.createElement('span')
   span.className = 'img-broken'
-  span.textContent = alt || '[图片加载失败]'
+  span.textContent = alt || `[${translate(getCurrentLang(), 'live.imageLoadFailed')}]`
   span.title = img.getAttribute('src') || ''
   img.replaceWith(span)
 }

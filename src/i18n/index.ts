@@ -7,22 +7,24 @@
  *   t('toolbar.newFile')            → "新建文件"
  *   t('home.recentCount', { n: 3 }) → "3 个最近文件"
  */
-import { useSettingsStore } from '../stores/settingsStore'
-import { en } from './en'
-import { zh } from './zh'
-import { zhTW } from './zh-tw'
-import { ja } from './ja'
-import { ko } from './ko'
-import { de } from './de'
-import { fr } from './fr'
-import { es } from './es'
-import { pt } from './pt'
-import { it } from './it'
-import { pl } from './pl'
-import { nl } from './nl'
-import { tr } from './tr'
-import { sv } from './sv'
-import { uk } from './uk'
+// 相对导入带 .ts 扩展名：`node --test` 的类型剥离不做扩展名补全，
+// 而 `src/lib/cm-live-blocks.ts` 需要在自己的测试里直接加载本模块。
+import { useSettingsStore } from '../stores/settingsStore.ts'
+import { en } from './en.ts'
+import { zh } from './zh.ts'
+import { zhTW } from './zh-tw.ts'
+import { ja } from './ja.ts'
+import { ko } from './ko.ts'
+import { de } from './de.ts'
+import { fr } from './fr.ts'
+import { es } from './es.ts'
+import { pt } from './pt.ts'
+import { it } from './it.ts'
+import { pl } from './pl.ts'
+import { nl } from './nl.ts'
+import { tr } from './tr.ts'
+import { sv } from './sv.ts'
+import { uk } from './uk.ts'
 
 export type Language = keyof typeof dicts
 

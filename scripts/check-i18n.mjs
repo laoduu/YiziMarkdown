@@ -229,6 +229,45 @@ if (unknownPrefixes.length) {
 }
 if (usedButUndefined.length) process.exit(1)
 
+// ---- 4) 硬编码中文 UI 文案 ----
+// 上面的检查只保证「用了 t() 的键都存在且有译文」，查不到**压根没走 t()** 的文案。
+// 典型漏网：表格右键菜单、悬浮按钮 title、图片失败占位文本 —— 切到其他语言仍显示中文。
+// 这里只扫**直接写进 UI 属性 / DOM 文本**的中文字面量，示例内容（插入模板等）不受影响。
+const HAN = /[\u4e00-\u9fa5]/
+const UI_LITERAL_PATTERNS = [
+  // el.title = '…中文…' / el.textContent = '…中文…' / placeholder = '…中文…'
+  /\.(?:title|textContent|innerText|placeholder|ariaLabel)\s*=\s*(['"])([^'"]*)\1/g,
+  // title="…中文…" / placeholder="…中文…" / aria-label="…中文…"
+  /\b(?:title|placeholder|aria-label)\s*=\s*"([^"]*)"/g,
+]
+const hardCodedUi = []
+for (const file of srcFiles) {
+  const rel = file.slice(root.length + 1).replace(/\\/g, '/')
+  const lines = readFileSync(file, 'utf8').split(/\r?\n/)
+  lines.forEach((line, i) => {
+    const trimmed = line.trim()
+    if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return
+    for (const re of UI_LITERAL_PATTERNS) {
+      re.lastIndex = 0
+      let m
+      while ((m = re.exec(line))) {
+        // JSX 表达式 / 模板插值里没有中文字面量；只有纯字面量才会命中
+        const value = m[2] ?? m[1] ?? ''
+        if (HAN.test(value)) hardCodedUi.push(`${rel}:${i + 1} → ${trimmed}`)
+      }
+    }
+  })
+}
+
+console.log(`\n=== 硬编码中文 UI 文案 ===`)
+if (hardCodedUi.length === 0) {
+  console.log('✓ 未发现直接写入 DOM / 属性的中文文案')
+} else {
+  console.log(`✗ ${hardCodedUi.length} 处（切到其他语言仍显示中文，应改走 t()）`)
+  for (const line of hardCodedUi) console.log(`    ${line}`)
+}
+if (hardCodedUi.length) process.exit(1)
+
 // 退出码语义：
 //   - 占位符不一致 = 真 bug（插值失效），必须失败
 //   - 缺键 = 未翻译，默认只告警；加 --strict 才视为失败
