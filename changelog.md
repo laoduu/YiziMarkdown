@@ -2,7 +2,7 @@
 
 ## v0.3.7
 
-> **未发布**（截至 2026-10-25）：`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已升到 `0.3.7`，但**未打包、未打 tag**；本次修复随下一个正式版本发布。用户向说明见 `docs/changelog/CHANGELOG-V0.3.7.md`。
+> **未发布**（截至 2026-10-25）：`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已升到 `0.3.7`，但**未打包、未打 tag**；0.3.7 即下一个正式版本，发布时随包提供。用户向说明见 `docs/changelog/CHANGELOG-V0.3.7.md`。
 
 ### 实时模式文案接入多语言，补上硬编码门禁（2026-10-25）
 
