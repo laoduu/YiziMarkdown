@@ -28,6 +28,7 @@ import {
   parseReferenceImage,
   parseTableAlignments,
   parseTableRow,
+  planListLine,
   sanitizeInlineStyle,
   setTableColumnAlign,
   sortTableRows,
@@ -287,4 +288,59 @@ test('TOC_LINE_RE：[toc] / [[toc]] 独立成行', () => {
   assert.equal(TOC_LINE_RE.test('[[toc]]'), true)
   assert.equal(TOC_LINE_RE.test('  [toc]  '), true)
   assert.equal(TOC_LINE_RE.test('see [toc] here'), false)
+})
+
+test('planListLine：无序列表记号按行计算，缩进保留', () => {
+  const plain = planListLine('- 第一项', false)
+  assert.equal(plain?.kind, 'bullet')
+  assert.deepEqual(plain?.marker, { from: 0, to: 2 })
+  assert.equal(plain?.checkbox, null)
+
+  const nested = planListLine('  * 嵌套项', false)
+  assert.equal(nested?.kind, 'bullet')
+  assert.deepEqual(nested?.marker, { from: 2, to: 4 })
+
+  assert.equal(planListLine('普通正文', false), null)
+  assert.equal(planListLine('# 标题', false), null)
+  assert.equal(planListLine('', false), null)
+})
+
+test('planListLine：任务列表——光标不在本行才渲染 checkbox', () => {
+  const away = planListLine('- [ ] 待办', false)
+  assert.equal(away?.kind, 'task-bullet')
+  assert.equal(away?.checked, false)
+  // 隐藏 `- [ ] `（含后随空格），checkbox 插在缩进之后
+  assert.deepEqual(away?.marker, { from: 0, to: 6 })
+  assert.equal(away?.checkbox, 0)
+
+  // 光标在本行：marker 仍然存在（交给 caret-line CSS 还原源码），但不插 checkbox
+  const here = planListLine('- [x] 完成', true)
+  assert.equal(here?.kind, 'task-bullet')
+  assert.equal(here?.checked, true)
+  assert.deepEqual(here?.marker, { from: 0, to: 6 })
+  assert.equal(here?.checkbox, null)
+
+  const nested = planListLine('  - [ ] 子任务', true)
+  assert.deepEqual(nested?.marker, { from: 2, to: 8 })
+  assert.equal(nested?.checkbox, null)
+  assert.deepEqual(planListLine('  - [ ] 子任务', false)?.checkbox, 2)
+})
+
+test('planListLine：有序任务保留编号，只隐藏 [ ]', () => {
+  const away = planListLine('1. [ ] 有序任务', false)
+  assert.equal(away?.kind, 'task-ordered')
+  assert.deepEqual(away?.marker, { from: 3, to: 7 })
+  assert.equal(away?.checkbox, 3)
+
+  const here = planListLine('2) [x] 已完成', true)
+  assert.equal(here?.kind, 'task-ordered')
+  assert.equal(here?.checked, true)
+  assert.deepEqual(here?.marker, { from: 3, to: 7 })
+  assert.equal(here?.checkbox, null)
+
+  // 普通有序列表：编号本身就是源码的一部分，没有可隐藏的记号
+  const ordered = planListLine('12. 普通项', false)
+  assert.equal(ordered?.kind, 'ordered')
+  assert.equal(ordered?.marker, null)
+  assert.equal(ordered?.checkbox, null)
 })

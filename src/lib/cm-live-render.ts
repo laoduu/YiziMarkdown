@@ -36,6 +36,7 @@ import {
   parseImageMarkdown,
   parseReferenceDefinition,
   parseReferenceImage,
+  planListLine,
   sanitizeInlineStyle,
   VOID_HTML_TAGS,
   type ReferenceDefinition,
@@ -295,6 +296,15 @@ function buildDecorations(view: EditorView): DecorationSet {
   const allLines = doc.toString().split('\n')
 
   /**
+   * 光标 / 选区是否覆盖到某一行。
+   *
+   * ⚠️ 列表在 lezer 里是**一个节点覆盖整个列表**（BulletList / OrderedList），
+   * 所以列表的显隐必须逐行判断；用下面那个节点级的 `caretTouches` 会让
+   * 「点一行」变成「整个列表都显示源码」。
+   */
+  const caretOnLine = (ln: number) => ln >= fromLine && ln <= toLine
+
+  /**
    * 光标是否落在某个围栏代码块内（用块节点范围判断，而不是只看当前行）。
    * 用于让头尾 ``` 与语言标签在进入块时一起显形：块内任意一行都可直接编辑。
    */
@@ -490,34 +500,26 @@ function buildDecorations(view: EditorView): DecorationSet {
           const eL = view.state.doc.lineAt(Math.min(nTo, view.state.doc.length)).number
           for (let ln = sL; ln <= eL; ln++) {
             const lo = view.state.doc.line(ln)
-            const lineText = lo.text
-            // 匹配任务列表行：- [ ] / - [x] / * [ ] / + [x]
-            // 保留行首缩进（嵌套任务靠它定位），只把 `- [ ] ` 换成 checkbox。
-            const taskMatch = lineText.match(/^(\s*)([-*+]\s)(\[[ xX]\])(\s|$)/)
-            if (taskMatch) {
-              const markerStart = lo.from + taskMatch[1].length
-              const isChecked = /\[[xX]\]/.test(taskMatch[3])
+            // ⚠️ 必须按行判断（caretOnLine），不能用节点级 caretTouches：
+            // BulletList 覆盖整个列表，节点级判断会让点一行时整个列表显示源码。
+            const plan = planListLine(lo.text, caretOnLine(ln))
+            // 外层列表会把嵌套的有序子列表行也扫一遍 —— 交给 OrderedList 分支处理
+            if (!plan || plan.kind === 'ordered' || plan.kind === 'task-ordered') continue
+            // 记号始终隐藏，光标行由 .cm-md-caret-line .cm-md-hiding-span 逐行还原源码
+            if (plan.marker) {
+              ranges.push(hideDeco.range(lo.from + plan.marker.from, lo.from + plan.marker.to))
+            }
+            if (plan.kind === 'task-bullet') {
               if (!seenTaskLines.has(lo.from)) {
                 seenTaskLines.add(lo.from)
-                if (!caretTouches) {
-                  // 隐藏标记，插入真实 checkbox widget
-                  const hideLen = taskMatch[2].length + taskMatch[3].length + (taskMatch[4] ? 1 : 0)
-                  ranges.push(hideDeco.range(markerStart, markerStart + hideLen))
-                  ranges.push(taskCheckboxWidget(isChecked, lo.from).range(markerStart))
+                // 光标在本行时不渲染 checkbox（checkbox 在本行应为源码 `- [ ]`）
+                if (plan.checkbox != null) {
+                  ranges.push(taskCheckboxWidget(plan.checked, lo.from).range(lo.from + plan.checkbox))
                 }
               }
-              ranges.push(isChecked ? taskItemLineChecked.range(lo.from) : taskItemLine.range(lo.from))
+              ranges.push(plan.checked ? taskItemLineChecked.range(lo.from) : taskItemLine.range(lo.from))
             } else {
-              // 匹配普通无序列表行：- / * / + 后跟空格
-              const bulletMatch = lineText.match(/^(\s*)([-*+])\s/)
-              if (bulletMatch) {
-                const markerStart = lo.from + bulletMatch[1].length
-                const markerEnd = markerStart + bulletMatch[2].length + 1 // marker + space
-                if (!caretTouches) {
-                  ranges.push(hideDeco.range(markerStart, markerEnd))
-                }
-                ranges.push(bulletItemLine.range(lo.from))
-              }
+              ranges.push(bulletItemLine.range(lo.from))
             }
           }
           return
@@ -528,26 +530,21 @@ function buildDecorations(view: EditorView): DecorationSet {
           const eL = view.state.doc.lineAt(Math.min(nTo, view.state.doc.length)).number
           for (let ln = sL; ln <= eL; ln++) {
             const lo = view.state.doc.line(ln)
-            const lineText = lo.text
-            // 有序任务列表：`1. [ ]` / `2. [x]`（与无序任务同一套 checkbox 与回写）
-            // 序号保留 —— 预览里 `<ol>` 的编号同样在 checkbox 前面，不能连编号一起隐藏。
-            const taskMatch = lineText.match(/^(\s*\d+[.)]\s+)(\[[ xX]\])(\s|$)/)
-            if (taskMatch) {
-              const isChecked = /\[[xX]\]/.test(taskMatch[2])
-              const markerStart = lo.from + taskMatch[1].length
+            // 同上：有序列表也是整块一个节点，必须逐行判断
+            const plan = planListLine(lo.text, caretOnLine(ln))
+            if (!plan || plan.kind === 'bullet' || plan.kind === 'task-bullet') continue
+            if (plan.marker) {
+              ranges.push(hideDeco.range(lo.from + plan.marker.from, lo.from + plan.marker.to))
+            }
+            if (plan.kind === 'task-ordered') {
               if (!seenTaskLines.has(lo.from)) {
                 seenTaskLines.add(lo.from)
-                if (!caretTouches) {
-                  // 隐藏 `[ ]` 及紧随的一个空格，让 checkbox 稳稳占住这个位置
-                  const hideLen = taskMatch[2].length + (taskMatch[3] ? 1 : 0)
-                  ranges.push(hideDeco.range(markerStart, markerStart + hideLen))
-                  ranges.push(taskCheckboxWidget(isChecked, lo.from).range(markerStart))
+                if (plan.checkbox != null) {
+                  ranges.push(taskCheckboxWidget(plan.checked, lo.from).range(lo.from + plan.checkbox))
                 }
               }
-              ranges.push(isChecked ? taskItemLineChecked.range(lo.from) : taskItemLine.range(lo.from))
-              continue
-            }
-            if (/^\s*\d+[.)]\s/.test(lineText)) {
+              ranges.push(plan.checked ? taskItemLineChecked.range(lo.from) : taskItemLine.range(lo.from))
+            } else {
               ranges.push(orderedItemLine.range(lo.from))
             }
           }
@@ -772,6 +769,8 @@ export const liveEditTheme = EditorView.theme({
   // 无序列表：隐藏标记，显示圆点
   '.cm-md-bullet-item': { paddingLeft: '1.5em', position: 'relative' },
   '.cm-md-bullet-item::before': { content: '"\u2022"', position: 'absolute', left: '0.4em', color: 'var(--editor-text)' },
+  // 光标进入该行时 `- ` 被还原成源码，圆点必须让位，否则会显示成「• - 文本」
+  '.cm-md-caret-line.cm-md-bullet-item::before': { content: 'none' },
   // 有序列表：保留数字标记，只加缩进
   '.cm-md-ordered-item': { paddingLeft: '0.2em' },
   // 任务列表：隐藏标记，由 widget 插入真实 checkbox

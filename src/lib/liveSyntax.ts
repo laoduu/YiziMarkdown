@@ -595,6 +595,89 @@ export function analyzeFootnotes(lines: string[]): FootnoteAnalysis {
 export const TOC_LINE_RE = /^\s*\[\[?toc\]\]?\s*$/i
 
 // ---------------------------------------------------------------------------
+// 列表行（实时行级装饰用）
+// ---------------------------------------------------------------------------
+
+export interface ListLinePlan {
+  kind: 'bullet' | 'ordered' | 'task-bullet' | 'task-ordered'
+  checked: boolean
+  /**
+   * 需要隐藏的记号范围（相对行首，不含行首缩进）：
+   *   - `- ` / `* ` / `+ `（含后随空格）
+   *   - 任务项 `- [ ] ` 的整段，或有序任务项 `1. [ ] ` 里的 `[ ] `
+   * 普通有序列表的编号始终可见，返回 null。
+   */
+  marker: { from: number; to: number } | null
+  /**
+   * checkbox widget 的插入位置（相对行首）。**光标在本行时为 null** ——
+   * 实时模式的 caret-reveal 模型要求光标行显示原始语法（`- [ ]` / `[ ]`），
+   * 而不是继续显示一个不是源码的 checkbox。
+   */
+  checkbox: number | null
+}
+
+/**
+ * 解析一行列表项，并按「光标是否在本行」决定要不要渲染 checkbox。
+ *
+ * 列表在 lezer 里是**一个节点覆盖整个列表**，所以渲染层绝不能拿节点级的
+ * `caretTouches` 做判断 —— 那会让点一行时整个列表都变成源码。
+ * 逐行判断的逻辑收在这里，既方便单测，也避免两处正则再次分叉。
+ *
+ * 注意：`marker` 的隐藏与光标无关，始终由调用方添加；
+ * 光标行由 `.cm-md-caret-line .cm-md-hiding-span` 还原成源码。
+ */
+export function planListLine(lineText: string, caretOnLine: boolean): ListLinePlan | null {
+  // 无序任务：- [ ] / * [x] / + [ ]（保留行首缩进，嵌套任务靠它定位）
+  const bulletTask = /^(\s*)([-*+]\s)(\[[ xX]\])(\s|$)/.exec(lineText)
+  if (bulletTask) {
+    const indent = bulletTask[1].length
+    return {
+      kind: 'task-bullet',
+      checked: /\[[xX]\]/.test(bulletTask[3]),
+      marker: {
+        from: indent,
+        to: indent + bulletTask[2].length + bulletTask[3].length + (bulletTask[4] ? 1 : 0),
+      },
+      checkbox: caretOnLine ? null : indent,
+    }
+  }
+
+  // 有序任务：1. [ ] / 2. [x]（编号保留 —— 预览里 <ol> 编号同样在 checkbox 前面）
+  const orderedTask = /^(\s*\d+[.)]\s+)(\[[ xX]\])(\s|$)/.exec(lineText)
+  if (orderedTask) {
+    const markerFrom = orderedTask[1].length
+    return {
+      kind: 'task-ordered',
+      checked: /\[[xX]\]/.test(orderedTask[2]),
+      marker: {
+        from: markerFrom,
+        to: markerFrom + orderedTask[2].length + (orderedTask[3] ? 1 : 0),
+      },
+      checkbox: caretOnLine ? null : markerFrom,
+    }
+  }
+
+  // 普通无序列表：- / * / + 后跟空格
+  const bullet = /^(\s*)([-*+])\s/.exec(lineText)
+  if (bullet) {
+    const indent = bullet[1].length
+    return {
+      kind: 'bullet',
+      checked: false,
+      marker: { from: indent, to: indent + bullet[2].length + 1 },
+      checkbox: null,
+    }
+  }
+
+  // 普通有序列表：编号本身就是源码的一部分，没有可隐藏的记号
+  if (/^\s*\d+[.)]\s/.test(lineText)) {
+    return { kind: 'ordered', checked: false, marker: null, checkbox: null }
+  }
+
+  return null
+}
+
+// ---------------------------------------------------------------------------
 // 图片
 // ---------------------------------------------------------------------------
 

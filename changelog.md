@@ -4,6 +4,23 @@
 
 > **未发布**（截至 2026-10-25）：`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已升到 `0.3.7`，但**未打包、未打 tag**；0.3.7 即下一个正式版本，发布时随包提供。用户向说明见 `docs/changelog/CHANGELOG-V0.3.7.md`。
 
+### 实时模式列表逐行切换源码（2026-10-25）
+
+用户报：实时模式下点击任务列表 / 无序列表 / 有序列表的任意一行，**整个列表一起变成源码**（`- `、`- [ ]` 全露，所有 checkbox 消失），期望只切换被点的那一行。
+
+**根因**：`cm-live-render.ts` 用节点级 `caretTouches` 判断「光标是否在块内」。lezer 把整个列表解析成**一个** `BulletList` / `OrderedList` 节点，所以光标落在任意一行时该布尔值对整个列表都为真，列表里每一行都不再添加隐藏装饰。嵌套列表还被 `seenTaskLines` 去重放大：外层节点判定后，内层跟着整块不隐藏。
+
+**修法**：新增 `liveSyntax.planListLine(lineText, caretOnLine)`，把无序 / 任务 / 有序任务的记号区间与 checkbox 位置收成纯函数，渲染层按**行号**调用：
+
+- 记号隐藏与光标无关，始终添加；光标行由既有的 `.cm-md-caret-line .cm-md-hiding-span` 还原源码（与引用块、脚注、行内标记同一模型）
+- checkbox widget 只在**光标不在该行**时插入；光标在本行显示 `- [ ]` / `[ ]`
+- 光标行的列表圆点伪元素让位（`.cm-md-caret-line.cm-md-bullet-item::before { content: none }`），避免出现「• - 文本」
+- 嵌套列表的去重逻辑保留；父子列表逐行判断互不影响
+
+范围：无序列表、任务列表、有序任务列表与嵌套项。普通有序列表的编号本来就属于源码、始终可见，行为不变；引用块、脚注、围栏代码块、表格 / 公式 / Mermaid 等原子块均未改动。
+
+验证：`tests/liveSyntax.test.ts` 新增 3 组用例（缩进、任务 checkbox 逐行开关、有序任务保留编号）；`npm test` 全过；`npm run build` 通过。
+
 ### 实时模式文案接入多语言，补上硬编码门禁（2026-10-25）
 
 0.3.6 发版时 `check-i18n --strict` 是通过的，但它只校验两件事：各语言键是否齐、`t()` 用到的键是否已定义。**它查不到「压根没走 `t()`」的中文字面量**。`cm-live-blocks.ts` 此前完全没有接入 i18n，0.3.6 新增的表格右键菜单、行列手柄、加行加列提示因此只有中文 —— 切换到英日韩等语言后仍是中文。
