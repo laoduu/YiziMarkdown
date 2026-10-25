@@ -1,5 +1,106 @@
 # YiziMarkdown 开发日志
 
+## v0.3.6
+
+> **未发布**（截至 2026-10-25）：`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已升到 `0.3.6`，但**未打 tag、未触发 Release**。用户向说明见 `docs/changelog/CHANGELOG-V0.3.6.md`。
+>
+> 本节覆盖 `v0.3.5`（`9af7392`）之后的全部应用侧提交：`45b9af9`（预览 / 实时 / 演示 / 导出九项修复 + 升版）与 `ba8db4b`（实时模式语法、表格交互与滚动）。同一区间的三个官网提交 —— `e665246`（演示语法 / 主题规范 / 技能规范三个频道）、`806ad26`（首页帮助中心锚点）、`ca57619`（主题规范令牌分层表折行）—— 已记在下面的 v0.3.5 节；`89103a0` 是 0.3.5 发布记录本身。两者不重复。
+
+### 0.3.6 九项修复：预览 / 实时 / 演示 / 导出（2026-10-24，`45b9af9`）
+
+来源是用户 10-22 记录的 8 条与 10-24 记录的 1 条，逐条修并补回归（`npm test` 267 → 295）。
+
+**① 演示模式任务列表多画一个圆点，嵌套项挤在同一行**
+
+演示页正文不在 `.editor-content` 里，预览那套 `.task-list-item` 重置没生效，`.ys-slide ul > li::before` 又给每个任务项画了一个圆点；任务项自身是 flex 容器，嵌套的 `ul/ol` 没拿到 `flex: 1 0 100%`，于是挤在勾选框右侧。现在 `.ys-slide` 下补一套与预览同构的规则：任务项 `::before` 取 `content: none`、嵌套列表独占整行，勾选框用主题强调色。
+
+**② 预览「行高」设置对段落不起作用**
+
+`--preview-line-height` 只写在容器上，`p` 与 `.task-list-item` 仍在吃主题里的固定行高。两处改为跟随该变量；任务项同时把 `gap: 0.5em` 拆成 `column-gap: 0.5em` / `row-gap: 0.15em`，避免多行任务文本被行间距拉开。
+
+**③ 打开「编辑器设置」就卡住：系统字体全量枚举 + 全量渲染**
+
+macOS 的 `system_profiler SPFontsDataType -json` 要枚举每个字体文件，动辄数秒；读回来上千项一次性挂 DOM，每个按钮还带 `font-family` 预览，面板直接僵住。改成**用户点「加载本地字体」才读取**，结果写 `localStorage`（键 `yizimarkdown.localFonts.v1`，读回时做类型校验），下次进入直接用缓存；列表每次只渲染 80 项 + 「显示更多」，搜索时重置分页。macOS 侧字体枚举优先走 `osascript` + JXA 调 `NSFontManager.availableFontFamilies`（几十毫秒），失败再回退 `system_profiler`。
+
+**④ 大纲点击后高亮停在上一节，要点两次**
+
+跳转把目标标题滚到视口中央，而 scroll spy 按「视口 1/3 处」判定当前标题 —— 跳转产生的滚动事件会把高亮改回目标的上一条。修法：`navigateToLine` 里先直接 `setActiveHeadingId(id)`，再设 700ms 抑制窗口（`spySuppressUntilRef`），窗口内编辑器 / 预览 / 并排三处滚动监听直接返回；用户主动滚轮 / 按下 / 触摸 / 按键会立刻把窗口清零，不拖住正常浏览。
+
+**⑤ Mermaid 图导出 Word 后「有框无字」**
+
+预览用 `htmlLabels: true`，节点文字装在 `<foreignObject>` 里；Rust 侧 resvg 不支持 foreignObject，复用预览 SVG 就只剩线条。新增 `renderMermaidSvgForExport()`：导出时用 `htmlLabels: false` 单独渲染一份纯文本标签的 SVG，再交给 Rust 转 PNG/SVG 嵌入。预览本身不调用它，外观不变；渲染失败 / 插件未启用时**保留原代码块**，不静默丢内容。
+
+**⑥ `[toc]` / `[[toc]]` 只有预览能用**
+
+新建 `src/lib/toc.ts`：markdown-it 插件把独立成段的占位行换成 `<nav class="markdown-toc">`，标题 id 复用渲染器的 `generateHeadingId`（含重复标题计数），所以预览 / PDF / HTML 导出的锚点都能跳，代码块里的 `[toc]` 原样保留。DOCX 走另一条路 —— Rust 只吃 Markdown，`docxPrepare.ts` 把占位行换成按标题层级缩进的项目符号列表（以最浅级别为基准，没有 H1 的文档不会整体缩进）。演示模式更特殊：每页独立渲染，页内根本看不到整册标题，所以改成「整册页面清单」，链接带 `data-slide`，由 Slideshow 的点击委托翻页，而不是页内锚点。
+
+**⑦ 勾选任务后源码没变 / 改错行**
+
+预览里的勾选框此前拿 `li.textContent` 去原文里全等匹配：行内公式被 KaTeX 渲染后文本已变、行内 HTML 带标签、重复文案、嵌套列表都会匹配失败或命中错行。改成渲染时给 `<li>` 带 `data-source-line`，点击后按 1-based 行号精确改那一行的 `[ ]` ↔ `[x]`（`taskList.ts` 纯函数，支持缩进、`*` / `+`、`1. [ ]` 等写法）。预览与实时模式都可点。
+
+**⑧ 设置里没有文档入口**
+
+新增「文档」分类（`BookOpen` 图标），四项直连官网：帮助中心、演示语法、主题设计规范、技能规范。15 个语言词典补齐文案，`check-i18n --strict` 通过。
+
+**⑨ 工具栏「有序列表」给所有选中行都加 `1.`**
+
+预览能把全 `1.` 顺序渲染，源码模式却原样显示。新增 `listFormat.ts` 的 `numberOrderedLines()`：多行选区按 1、2、3 连续编号，跳过空行、保留原缩进、已有编号整体重排（重复点击不会叠编号）。
+
+**验证**：`npx tsc --noEmit` 无输出；`check-i18n --strict` 与其余 `check:*` 通过；`npm test` **295 passed**（新增 `docxPrepare` / `listFormat` / `taskList` / `toc` 四组）；`cargo test` **119 passed**；`vite build` 通过。版本号同步升到 `0.3.6`。
+
+### 实时模式语法补齐：行内 HTML / 图片 / 注释 / 脚注 / 公式（2026-10-25，`ba8db4b`）
+
+验收清单落在仓库根的 `live-syntax-test.md`，P0 / P1 逐项可勾。P2（`==高亮==`、`^上标^`、`~下标~`、`:emoji:`、定义列表、callout、wikilink、标题属性）按约定**本轮不做**，仍然显示源码。
+
+**行内层**：行内 HTML 按白名单渲染（`sub/sup/u/ins/del/s/mark/kbd/small/b/strong/i/em/code/var/samp/cite/q/abbr/big` 等），`style` 只保留视觉相关属性、危险值丢弃；`<br>` 真的换行；`<a>` 只保留链接样式（点击落到编辑光标，不跳转）；`<img>` 行内显示。HTML 实体（命名 / 十六进制 / 十进制）与反斜杠转义按 Markdown 语义还原。
+
+**图片**：行内 `![](…)`、引用式 `![alt][label]`、折叠式 `![alt][]` 都能渲染；`title` 带引号 / 括号的 URL、失败回退都有覆盖；独立成行的图片才升级为块级 widget，段落中「文字 + 图片」仍保持行内。
+
+**链接与注释**：引用式链接解析 `[text][label]` 与定义行，定义行收成 chip（不占正文）；行内 `<!-- … -->` 与多行 HTML 注释 / 演示指令块都收成 chip，点击显形源码。
+
+**脚注**：编号按定义顺序生成，定义块支持多行、多段续行；引用与定义共用一套 `analyzeFootnotes()` 分析结果，光标所在行仍显示原始语法可编辑。
+
+**任务与围栏**：有序列表任务项（`1. [ ]`）与嵌套任务列表都识别；围栏代码块变为可编辑 widget —— 点击正文显形源码、带语言标签与复制按钮。
+
+**公式**：块级公式与「整行只有一个行内公式」的行都会保留其余语法（不把整行吞成公式源码）；表格单元格内的内联排版一并走同一套行内渲染。
+
+**`[toc]`**：实时模式新增 `TocWidget`，与预览同一观感；点条目滚动到标题、点空白回到源码。
+
+实现上把可复用的解析逻辑沉到新文件 `src/lib/liveSyntax.ts`（849 行纯函数）：HTML 标签 / 实体 / 内联样式消毒、表格行与对齐、脚注分析、图片与引用定义、标题收集、行内公式切分、`TOC_LINE_RE` 等，UI 层只负责组装 decoration / widget。
+
+### 实时表格：拖选、行列手柄、右键菜单、TSV 剪贴板（2026-10-25，`ba8db4b`）
+
+表格 widget 从「能改单元格」扩到接近 Obsidian 的交互：
+
+- **拖选**：鼠标按下拖过单元格形成矩形选区，`Ctrl+C` 按 TSV 复制（可直接粘进 Excel / 网页表格），`Ctrl+V` 按 TSV 回填，选区支持整行 / 整列 / 多格
+- **行列手柄**：悬浮行首 / 列首出现 handle，点击选中整行 / 整列；表格边缘的 `+` 直接追加行 / 列
+- **右键菜单**：剪切 / 复制 / 粘贴；文本格式（左 / 中 / 右对齐）；插入（上方 / 下方行、左侧 / 右侧列）；移动（上 / 下 / 左 / 右）；按此列升序 / 降序排序；清空选中单元格；删除选中的行 / 列 / 单元格 —— 菜单按选区形态动态出现，靠近窗口边缘会自动翻转
+- **源码改写**：所有结构改写（插入 / 删除 / 移动 / 对齐 / 排序 / 追加）下沉到 `liveSyntax.ts` 的纯函数，补 20 项回归断言；`\|` 转义保持原样，不会被拆成新列
+
+剪贴板优先走系统 `navigator.clipboard`，不可用时回退到进程内缓冲，避免「读不到剪贴板就整块失效」。
+
+### 拖选底色「慢一拍」与写回后滚回顶部（2026-10-25，`ba8db4b`）
+
+**底色慢一拍**：`table tr:hover > th/td` 的特异性是 (0,1,3)，高于 `td.cell-selected` 的 (0,1,1)，鼠标所在行的 hover 底色盖住了选中底色 —— 纵向拖选时必须先越过整行、进入下一行才看到变色。改成 `table tr:hover > td:not(.cell-selected)`，并给选中规则同级的 `table tr > td.cell-selected`；拖选期间（`.table-wrap.is-selecting`）把 hover 染色直接置透明。
+
+**滚回顶部**：整张表是 `Decoration.replace` 的 widget，任何改写都会重建整块 DOM；此时焦点若在被移除的单元格 / 菜单按钮上，WebView2 会把 `.cm-scroller` 甩回顶部。新增 `withStableViewport()`：改写前记录 `scrollTop` 与 `window.scrollY`，改写后连续两帧校正（CM 的重新测量发生在 rAF 里），容差 2px，避免长文档里删一行就迷路。
+
+### 预览图片排版、破图回退与表格长代码（2026-10-25，`ba8db4b`）
+
+- **行内图片被强制独占一行**：Tailwind Preflight 给所有 `img` 设了 `display: block`。`.editor-content img` 改回 `display: inline`，并加 `vertical-align: middle`、`margin: 0 0.25em`；主题文件里有 `.editor-content.theme-x img { margin: 1em 0 }`（特异性 0,2,1，运行时后插入 `<head>`），所以用**叠一层的** `.editor-content.editor-content p img`（0,2,2）压住，保证每个主题下行内图都贴文字基线
+- **图片独占段落仍要占整行**：CSS 的 `:only-child` 不数文本节点，「文字 + 图片 + 文字」也会被误判。改由 `Editor.tsx` 显式判断段落里有没有文字，只有纯图片段落才打 `p.img-para`，走块级排版
+- **破图撑高行距、顶开表格列宽**：图片加载失败时浏览器破图标会撑高行盒。现在统一绑定 `error` 回退（并补查 `complete && naturalWidth === 0` 的缓存命中断言），把 `<img>` 换成 `.img-broken` 行内 span，显示 alt 文本（没有 alt 就显示「图片加载失败」），`title` 留原路径
+- **SVG data URI 被当成非法链接**：markdown-it 默认只允许 gif / png / jpeg / webp 的 data URI，SVG 会退回源码文本、裸露在正文里并撑破容器。`validateLink` 只额外放行 `data:image/svg+xml`，其余 `data:` 仍拒绝；测试同时断言 `javascript:` 链接仍被拦截
+- **表格里的长代码 / data URI 把列撑宽**：单元格内 `code` 改为 `white-space: pre-wrap; word-break: break-word`
+
+### 大纲解析：跳过围栏、front matter、HTML 注释与缩进代码块（2026-10-25，`ba8db4b`）
+
+`computeOutlineItems()` 原先是逐行正则，于是代码围栏里的 `# 注释`、开头的 `---` 元信息、HTML 注释块、四空格缩进的代码行都会被当成标题；重复标题的计数也被污染，导致大纲条目和锚点错位。改成状态机：跟踪围栏字符与长度（**更长的围栏不会被内部短反引号提前闭合**）、front matter、HTML 注释、缩进代码块；保留真实源码行号与唯一 id。新增 5 条回归（围栏内 `#`、围栏长度、front matter / 注释、缩进代码、代码块后标题的行号与 id）。
+
+### 0.3.6 测试与门禁（2026-10-25）
+
+`npm test` 从 **295 → 326**：`liveSyntax` 20 条、`imageData` 6 条、`outline` 5 条，共 31 条新增。`npx tsc --noEmit` 无输出，`npm run build`（含 `check-version` / `check-tauri-versions` / `check-i18n --strict` / `check-themes` / `check-docs` / `check-docs-site`）通过。另新增人工验收清单 `live-syntax-test.md`，覆盖实时模式 P0 / P1 的全部语法点与已知边界（P2 未实现项也列在里面，避免误判为回归）。
+
 ## v0.3.5
 
 > 已发布（2026-10-21，`v0.3.5` = `9af7392`）。用户向说明见 `docs/changelog/CHANGELOG-V0.3.5.md`。
