@@ -25,7 +25,7 @@ export const DOC_PAGES = [
     description:
       'YiziMarkdown 演示模式语法完整参考：用 --- 分页、*** 分栏，自动版式推断规则，显式 layout / align / fragments 指令，片段逐步显示、切换动画、演讲者备注与播放快捷键。',
     keywords: 'YiziMarkdown,演示模式,幻灯片语法,Markdown分页,分栏,自动版式,演讲者备注',
-    meta: ['适用版本 v0.3.5', '纯 Markdown', '零标记'],
+    meta: ['适用版本 v0.3.6', '纯 Markdown', '零标记'],
     searchPlaceholder: '搜索语法，例如「分栏」「指令」',
     icons: [
       'file-text', 'presentation', 'settings', 'list', 'sparkles', 'file-text',
@@ -58,7 +58,7 @@ export const DOC_PAGES = [
     description:
       'YiziMarkdown 技能（Skill）规范：skills.json 字段与逗号规则、提示词编写技巧、自定义技能创建步骤、存储位置与版本更新覆盖机制，以及修改后不生效等常见问题。',
     keywords: 'YiziMarkdown,Skill,技能,自定义技能,skills.json,提示词,AI助手',
-    meta: ['适用版本 v0.3.5', '用户目录可改'],
+    meta: ['适用版本 v0.3.6', '用户目录可改'],
     searchPlaceholder: '搜索技能配置，例如「needsDoc」',
     icons: ['zap', 'folder-open', 'settings', 'pencil-line', 'code', 'sparkles', 'circle-help']
   }
