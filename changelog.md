@@ -4,6 +4,25 @@
 
 > **未发布**（截至 2026-10-25）：`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已升到 `0.3.7`，但**未打包、未打 tag**；0.3.7 即下一个正式版本，发布时随包提供。用户向说明见 `docs/changelog/CHANGELOG-V0.3.7.md`。
 
+### 多级嵌套列表中中文输入法无法上屏（2026-10-25）
+
+用户报：实时模式下在**多级嵌套**的有序 / 无序 / 任务列表里打中文，拼音字母（如 `nihao`）直接变成普通英文，候选词上不了屏；平级列表与普通段落正常。
+
+**根因**：嵌套列表的外层 `BulletList` / `OrderedList` 与子列表节点会把同一行各扫一遍，同一行的 `- ` 被套上**两层** `cm-md-hiding-span`：
+
+```html
+<span class="cm-md-hiding-span"><span class="cm-md-hiding-span">- </span></span>
+```
+
+0.3.6 点进列表时整块显示源码、没有隐藏 span，所以没暴露；0.3.7 改成逐行后，**正在编辑的那一行也带隐藏 span**。重复的嵌套 span 让 CodeMirror 在每次输入时重排这层 DOM，输入法正在合成的文本节点被替换，合成被取消，拼音就留成了普通字母。
+
+**修法**：
+
+- 新增 `seenListLines`，与 `seenTaskLines` 同理按行去重：外层节点扫过的行，内层节点不再重复加装饰。嵌套行现在只有一个圆点类、一个隐藏 span
+- `liveRenderPlugin.update` 在 `view.composing` 为真时直接返回，不在输入法合成期间重建装饰；`compositionend` 后的那次正常 update 再刷新
+
+验证：多级嵌套（有序 → 无序 → 任务 → 有序任务）下微软拼音可正常上屏；`npm test` 329 项全过；`npm run build` 通过。
+
 ### 实时模式列表逐行切换源码（2026-10-25）
 
 用户报：实时模式下点击任务列表 / 无序列表 / 有序列表的任意一行，**整个列表一起变成源码**（`- `、`- [ ]` 全露，所有 checkbox 消失），期望只切换被点的那一行。
@@ -15,7 +34,8 @@
 - 记号隐藏与光标无关，始终添加；光标行由既有的 `.cm-md-caret-line .cm-md-hiding-span` 还原源码（与引用块、脚注、行内标记同一模型）
 - checkbox widget 只在**光标不在该行**时插入；光标在本行显示 `- [ ]` / `[ ]`
 - 光标行的列表圆点伪元素让位（`.cm-md-caret-line.cm-md-bullet-item::before { content: none }`），避免出现「• - 文本」
-- 嵌套列表的去重逻辑保留；父子列表逐行判断互不影响
+- 嵌套列表的行装饰按行去重（新增 `seenListLines`）：外层与子级列表节点不再重复给同一行加圆点类 / 隐藏 span，父子列表逐行判断互不影响
+- 输入法合成期间（`view.composing`）不重建装饰，避免合成中的文本节点被替换
 
 范围：无序列表、任务列表、有序任务列表与嵌套项。普通有序列表的编号本来就属于源码、始终可见，行为不变；引用块、脚注、围栏代码块、表格 / 公式 / Mermaid 等原子块均未改动。
 

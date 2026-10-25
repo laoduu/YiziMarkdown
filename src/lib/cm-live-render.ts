@@ -291,6 +291,10 @@ function buildDecorations(view: EditorView): DecorationSet {
   // 嵌套列表的外层 BulletList / OrderedList 会把子列表的行也扫一遍，
   // 子列表节点自己又扫一遍 ⇒ 同一行被插两个 checkbox。这里按行去重。
   const seenTaskLines = new Set<number>()
+  // 同上：行装饰（圆点 / 记号隐藏）也必须按行去重。重复的 mark 会生成嵌套的
+  // `cm-md-hiding-span`，每次输入都让 CodeMirror 重排这层 DOM —— 中文输入法
+  // 正在合成的文本节点被拆掉，候选词就上不了屏。
+  const seenListLines = new Set<number>()
 
   const doc = view.state.doc
   const allLines = doc.toString().split('\n')
@@ -505,6 +509,9 @@ function buildDecorations(view: EditorView): DecorationSet {
             const plan = planListLine(lo.text, caretOnLine(ln))
             // 外层列表会把嵌套的有序子列表行也扫一遍 —— 交给 OrderedList 分支处理
             if (!plan || plan.kind === 'ordered' || plan.kind === 'task-ordered') continue
+            // 同一行可能被父、子两层列表节点各扫一次；只装饰一次
+            if (seenListLines.has(lo.from)) continue
+            seenListLines.add(lo.from)
             // 记号始终隐藏，光标行由 .cm-md-caret-line .cm-md-hiding-span 逐行还原源码
             if (plan.marker) {
               ranges.push(hideDeco.range(lo.from + plan.marker.from, lo.from + plan.marker.to))
@@ -533,6 +540,9 @@ function buildDecorations(view: EditorView): DecorationSet {
             // 同上：有序列表也是整块一个节点，必须逐行判断
             const plan = planListLine(lo.text, caretOnLine(ln))
             if (!plan || plan.kind === 'bullet' || plan.kind === 'task-bullet') continue
+            // 同上：嵌套列表节点会重复扫同一行
+            if (seenListLines.has(lo.from)) continue
+            seenListLines.add(lo.from)
             if (plan.marker) {
               ranges.push(hideDeco.range(lo.from + plan.marker.from, lo.from + plan.marker.to))
             }
@@ -685,6 +695,10 @@ const liveRenderPlugin = ViewPlugin.fromClass(
     decorations: DecorationSet
     constructor(view: EditorView) { this.decorations = buildDecorations(view) }
     update(u: ViewUpdate) {
+      // 中文/日文输入法合成期间不要重建装饰：重算会让 CodeMirror 重新同步这一行的
+      // DOM，正在合成的文本节点被替换后输入法会丢失合成状态（表现为候选词上不了屏）。
+      // 合成结束后 compositionend 会带来一次正常 update，届时再刷新。
+      if (u.view.composing) return
       if (u.docChanged || u.viewportChanged || u.selectionSet) {
         this.decorations = buildDecorations(u.view)
       }
