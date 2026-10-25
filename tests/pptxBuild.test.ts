@@ -94,10 +94,10 @@ function sampleScene(): SlideScene {
   }
 }
 
-async function buildXml(): Promise<{ xml: string; zip: JSZip }> {
+async function buildXml(scene: SlideScene = sampleScene()): Promise<{ xml: string; zip: JSZip }> {
   const buffer = await buildPptx({
     title: '测试演示',
-    scenes: [sampleScene()],
+    scenes: [scene],
     includeNotes: true,
     includeFooter: true,
   })
@@ -108,18 +108,53 @@ async function buildXml(): Promise<{ xml: string; zip: JSZip }> {
 
 test('PPTX：公式转成 mc:AlternateContent + a14:m + OMML，且命名空间已声明', async () => {
   const { xml } = await buildXml()
-  // 行内 + 显示各一处
+  // 行内 + 显示各一处（各包一个形状）
   assert.equal((xml.match(/<mc:AlternateContent/g) || []).length, 2, xml.slice(0, 2000))
   assert.match(xml, /<m:oMathPara xmlns:m="http:\/\/schemas\.openxmlformats\.org\/officeDocument\/2006\/math">/)
+  assert.match(xml, /<m:oMathParaPr><m:jc m:val="centerGroup"\/><\/m:oMathParaPr>/)
   // 行内公式的 m: 前缀必须就地声明，否则 XML 非法
-  assert.match(xml, /<a14:m xmlns:a14="[^"]+" xmlns:m="http:\/\/schemas\.openxmlformats\.org\/officeDocument\/2006\/math">/)
+  assert.match(xml, /<a14:m><m:oMath xmlns:m="http:\/\/schemas\.openxmlformats\.org\/officeDocument\/2006\/math">/)
   // 兜底文本仍保留 TeX
   assert.match(xml, /\$x\^2\$/)
   assert.match(xml, /\$y\$/)
   // 私有区标记不得残留
   assert.ok(!xml.includes('\uE000'), '导出后仍有公式占位标记')
-  // OMML run 带字号/颜色
-  assert.match(xml, /<m:r><a:rPr lang="en-US" sz="2000"><a:solidFill><a:srgbClr val="F8FAFC"\/>/)
+  // OMML run 带字号/颜色/Cambria Math
+  assert.match(xml, /<m:r><a:rPr lang="en-US" sz="2000"><a:solidFill><a:srgbClr val="F8FAFC"\/><\/a:solidFill><a:latin typeface="Cambria Math"/)
+})
+
+test('PPTX：公式的 MC 信封包住整个 p:sp（PowerPoint 原生写法），不写在 a:p 里', async () => {
+  const { xml } = await buildXml()
+  assert.match(xml, /<mc:AlternateContent xmlns:mc="[^"]+"><mc:Choice xmlns:a14="[^"]+" Requires="a14"><p:sp>/)
+  // 段落内部一旦出现 AlternateContent，PowerPoint 会把公式整段丢掉（空白）
+  assert.ok(
+    !/<a:p>(?:(?!<\/a:p>)[\s\S])*?<mc:AlternateContent/.test(xml),
+    'MC 信封不能出现在段落内部',
+  )
+  // Fallback 必须是形状（spTree 的合法子元素），而不是裸 run
+  assert.match(xml, /<\/mc:Choice><mc:Fallback><p:sp>/)
+})
+
+test('PPTX：缺少或空 OMML 时回退成 TeX，不生成空公式（PowerPoint 空白）', async () => {
+  const scene = sampleScene()
+  scene.nodes = [
+    {
+      t: 'math',
+      x: 1, y: 1, w: 4, h: 0.8,
+      tex: 'a+b', sizePt: 22, color: 'F8FAFC', latin: LATIN, ea: EA,
+    },
+    {
+      t: 'math',
+      x: 1, y: 2, w: 4, h: 0.8,
+      tex: 'c', omml: '<m:oMath><m:r><m:t></m:t></m:r></m:oMath>',
+      sizePt: 22, color: 'F8FAFC', latin: LATIN, ea: EA,
+    },
+  ]
+  const { xml } = await buildXml(scene)
+  assert.ok(!xml.includes('<a14:m'), '空 OMML 不应生成原生公式')
+  assert.ok(!xml.includes('<mc:AlternateContent'), '没有可用公式时不需要 MC 信封')
+  assert.match(xml, /\$a\+b\$/)
+  assert.match(xml, /\$c\$/)
 })
 
 test('PPTX：根节点补 mc/a14 命名空间', async () => {

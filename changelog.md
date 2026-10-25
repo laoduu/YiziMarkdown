@@ -24,12 +24,13 @@
 
 **验证**：临时端到端环境（headless Edge + 桩 Tauri 命令，见 `e2e-pptx/`，验证后删除）真实跑 `exportPptx`，导出 9 页样例（浅色 / 暗色 + 自动压缩各一份），LibreOffice → PDF → PNG 逐页目检：封面、章节页、列表页、表格、代码块、分栏卡片、Mermaid、图片、页脚、渐变下划线全部通过；52 个 XML part 全部良构。`npm test` 全部通过（新增 `pptxBuild` 9 项 + `pptxTheme` 8 项）；`npm run build` 通过。
 
-**验证阶段揪出的 4 个真 bug**（都已修 + 加回归测试）：
+**验证阶段揪出的 5 个真 bug**（都已修 + 加回归测试）：
 
 1. **颜色解析**：Chrome 对普通颜色的 computed value 一律是逗号分隔的 `rgb(245, 248, 255)`，早先按空白切通道 → 解析失败 → `flattenColor` 静默返回 `000000` → 整个 deck 黑底黑字、整页空白。现已分别处理逗号 / 空格 / 斜杠三种语法，并对 `oklch()` 等用 canvas 兜底归一
 2. **暗色表格行条纹**：`flattenColor(color, bg)` 的 `bg` 常常是本模块刚产出的 `0D1117`（无 `#`），`parseColor` 不认 → 退回白底 → 暗色主题里的半透明叠色全变成浅色。现在 6/8 位无 `#` hex 也能解析
 3. **Mermaid 整块丢失**：栅格化后 `.mermaid` 里只有一个 `<img>`，既没有块级子元素也没有文本，`collectInline` 会跳过 `IMG`；现对「单图片容器」直接输出图片节点，并加了「既无图也无文字必须告警」的兜底。同时给 Mermaid 的 `<img>` 打 `data-ys-mermaid`，避免把主题给图片加的阴影/圆角照搬到 SVG 上
 4. **圆角单位**：PptxGenJS 的 `rectRadius` 收的是**英寸**（内部再除一次短边得到 `adj`），早先传的是点 → 12px 圆角被放大成短边一半，代码块变胶囊形。现在按 `radiusPt / 72` 传入并封顶短边一半
+5. **公式在 PowerPoint 里空白**：`mc:AlternateContent` 早先写在 `<a:p>` 段落内部，而 PowerPoint 自己的公式只把信封写在**形状层**；同时 OMML 缺失/为空时仍会生成空的 `<a14:m>`，PowerPoint 选中 Choice 后就是一块空白。现在按 PowerPoint 的写法把整个 `<p:sp>` 包进 `mc:AlternateContent`（Fallback 是同形状的 TeX 文本版），并在 OMML 没有可见文字时直接回退 `$TeX$`，绝不再产出空公式
 
 **已知取舍**：表格单元格只保留纯文本（`\n` 分隔段落，不支持单元格内图片）；行内图片（与文字混排）不导出；`[toc]` 不生成超链接；超密内容在 warn 模式下会裁到页面外（改选自动压缩即可）。
 

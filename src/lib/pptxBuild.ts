@@ -4,8 +4,9 @@
  * 分工：
  *   · pptxgenjs 负责「合法的 PresentationML 骨架」：slide / shape / text / table / image；
  *   · 这里负责 PPTX 里 pptxgenjs 表达不了、或者表达得不对的四件事，用 JSZip 直接改 XML：
- *       1. 原生公式（`a14:m` + OMML）—— 以私有区标记定位 run，整段替换成
- *          `mc:AlternateContent`，`mc:Fallback` 保留纯文本，老旧播放器也能看；
+ *       1. 原生公式（`a14:m` + OMML）—— 以私有区标记定位 run，把整个 `<p:sp>` 包进
+ *          `mc:AlternateContent`（这才是 PowerPoint 自己写的结构），`mc:Fallback`
+ *          是一份纯文本形状，老旧播放器也能看；
  *       2. CJK 字体拆分 —— run 的 fontFace 写成 `latin|ea` 哨兵，生成后拆到
  *          `a:latin` / `a:ea` / `a:cs`，避免中文被西文字体渲染成方框；
  *       3. 渐变装饰（封面/标题下划线）—— 形状按 `yz-grad-*` 命名，把 solidFill 换成 gradFill；
@@ -54,29 +55,61 @@ function escapeXml(s: string): string {
     .replace(/"/g, '&quot;')
 }
 
-/** 给 OMML 的每个 `m:r` 补上字号/颜色（DrawingML 里公式 run 的 rPr 是 a:rPr，不是 w:rPr）。 */
+/** DrawingML 里公式 run 的 rPr 是 a:rPr（不是 w:rPr），并自带 Cambria Math 字体。 */
+const MATH_FONT = 'Cambria Math'
+
 function decorateOmml(omml: string, sizePt: number, color: string): string {
   const sz = Math.max(100, Math.round(sizePt * 100))
   return omml.replace(/<m:r>(?:(?!<\/m:r>)[\s\S])*?<\/m:r>/g, (run) => {
     if (run.includes('<a:rPr')) return run
     if (!run.includes('<m:t')) return run
-    const rpr = `<a:rPr lang="en-US" sz="${sz}"><a:solidFill><a:srgbClr val="${color}"/></a:solidFill></a:rPr>`
+    const rpr = `<a:rPr lang="en-US" sz="${sz}">`
+      + `<a:solidFill><a:srgbClr val="${color}"/></a:solidFill>`
+      + `<a:latin typeface="${MATH_FONT}" pitchFamily="18" charset="0"/>`
+      + `</a:rPr>`
     return run.replace(/<m:t/, rpr + '<m:t')
   })
 }
 
-function mathAlternateContent(job: MathJob): string {
+/** OMML 里是否有**可见**文字。空公式在 PowerPoint 里就是一块空白，必须回退成 TeX。 */
+function hasVisibleMath(omml?: string): boolean {
+  if (!omml) return false
+  const re = /<m:t\b[^>]*>([\s\S]*?)<\/m:t>/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(omml))) {
+    if (m[1].replace(/<[^>]*>/g, '').trim()) return true
+  }
+  return false
+}
+
+/**
+ * 单个公式 run 的原生结构：`<a14:m>` 直接嵌在 `<a:p>` 里。
+ *
+ * 注意这里**不在 run 外包 mc:AlternateContent**：PowerPoint 只会把 MC 信封写在
+ * 形状层（`p:spTree` 里包住整个 `p:sp`），段落内部套 AlternateContent 时公式会被
+ * 整段丢掉（表现为空白）。命名空间按 PowerPoint 的写法就地声明在数学元素上。
+ */
+function mathRunXml(job: MathJob): string {
   const omml = decorateOmml(job.omml || '', job.sizePt, job.color)
-  // 行内公式：`m:` 前缀必须就地声明，否则生成的 slide XML 是非法 XML
-  // （显示公式把它声明在 m:oMathPara 上；行内没有那层，只能声明在 a14:m 上）。
   const inner = job.display
-    ? `<a14:m xmlns:a14="${A14_NS}"><m:oMathPara xmlns:m="${MATH_NS}">${omml}</m:oMathPara></a14:m>`
-    : `<a14:m xmlns:a14="${A14_NS}" xmlns:m="${MATH_NS}">${omml}</a14:m>`
-  const fallbackText = escapeXml(`$${job.tex}$`)
-  return `<mc:AlternateContent xmlns:mc="${MC_NS}" xmlns:a14="${A14_NS}">`
-    + `<mc:Choice Requires="a14">${inner}</mc:Choice>`
-    + `<mc:Fallback><a:r><a:t xml:space="preserve">${fallbackText}</a:t></a:r></mc:Fallback>`
-    + `</mc:AlternateContent>`
+    ? `<m:oMathPara xmlns:m="${MATH_NS}">`
+      + `<m:oMathParaPr><m:jc m:val="centerGroup"/></m:oMathParaPr>`
+      + `${omml}</m:oMathPara>`
+    : omml.replace(/^<m:oMath(\s|>)/, (_m, tail: string) => `<m:oMath xmlns:m="${MATH_NS}"${tail}`)
+  return `<a14:m>${inner}</a14:m>`
+}
+
+/** 公式的纯文本形态（Fallback / 转换失败时用），沿用原 run 的字号与颜色。 */
+function plainMathRun(run: string, job: MathJob): string {
+  const rpr = /<a:rPr\b[^>]*\/>|<a:rPr\b[^>]*>[\s\S]*?<\/a:rPr>/.exec(run)?.[0] || ''
+  return `<a:r>${rpr}<a:t xml:space="preserve">${escapeXml(`$${job.tex}$`)}</a:t></a:r>`
+}
+
+function findMathJob(shape: string, jobs: Map<string, MathJob>): MathJob | undefined {
+  for (const job of jobs.values()) {
+    if (shape.includes(`>${job.marker}</a:t>`)) return job
+  }
+  return undefined
 }
 
 function fontSentinel(latin: string, ea: string): string {
@@ -309,20 +342,35 @@ async function postprocessSlideXml(
 ): Promise<string> {
   let out = xml
 
-  // 1) 公式：把带私有区标记的 <a:r> 整段换成 mc:AlternateContent
+  // 1) 公式：把含私有区标记的 <p:sp> 整体包进 mc:AlternateContent。
+  //    PowerPoint 自己的公式就是这么写的：Choice 里是带 a14:m 的原生形状，
+  //    Fallback 里是同一形状的纯文本版。段落内部再套 MC 会被 PowerPoint 丢弃。
   if (jobs.size) {
-    out = out.replace(/<a:r>(?:(?!<\/a:r>)[\s\S])*?<\/a:r>/g, (run) => {
-      for (const job of jobs.values()) {
-        if (!run.includes(`>${job.marker}</a:t>`)) continue
-        // 保留原 run 的字号/颜色做 fallback（字体哨兵交给后续统一拆分）
-        const rpr = /<a:rPr\b[^>]*\/>|<a:rPr\b[^>]*>[\s\S]*?<\/a:rPr>/.exec(run)?.[0] || ''
-        const ac = mathAlternateContent(job).replace(
-          '<mc:Fallback><a:r><a:t',
-          `<mc:Fallback><a:r>${rpr}<a:t`,
-        )
-        return ac
-      }
-      return run
+    const RUN_RE = /<a:r>(?:(?!<\/a:r>)[\s\S])*?<\/a:r>/g
+    out = out.replace(/<p:sp>[\s\S]*?<\/p:sp>/g, (sp) => {
+      const job = findMathJob(sp, jobs)
+      if (!job) return sp
+
+      // 转换失败 / OMML 为空时不要生成空公式（PowerPoint 会显示一块空白），
+      // 直接保留 TeX 纯文本，至少让用户看见内容。
+      let hasNative = false
+      const choice = sp.replace(RUN_RE, (run) => {
+        const j = findMathJob(run, jobs)
+        if (!j) return run
+        if (!hasVisibleMath(j.omml)) return plainMathRun(run, j)
+        hasNative = true
+        return mathRunXml(j)
+      })
+      if (!hasNative) return choice
+
+      const fallback = sp.replace(RUN_RE, (run) => {
+        const j = findMathJob(run, jobs)
+        return j ? plainMathRun(run, j) : run
+      })
+      return `<mc:AlternateContent xmlns:mc="${MC_NS}">`
+        + `<mc:Choice xmlns:a14="${A14_NS}" Requires="a14">${choice}</mc:Choice>`
+        + `<mc:Fallback>${fallback}</mc:Fallback>`
+        + `</mc:AlternateContent>`
     })
   }
 
