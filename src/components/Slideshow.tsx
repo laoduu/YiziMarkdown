@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react'
-import { Sun, Moon, Palette, Check, X, ListOrdered, Sparkles, Type } from 'lucide-react'
-import { renderMarkdown } from '../lib/markdownRenderer'
-import { replaceTocPlaceholders, renderDeckTocHtml, type DeckTocEntry } from '../lib/toc'
+import { Sun, Moon, Palette, Check, X, ListOrdered, Sparkles, Type, FileDown } from 'lucide-react'
 import { extendMarkdownIt, postRender as pluginPostRender } from '../plugins/registry'
 import {
-  stripFrontMatter, parseFrontMatter, splitSlides, splitColumns, extractNotes, extractDirectives,
-  detectLayout, COLUMN_BREAK, type SlideKind, type SlideLayout,
-} from '../lib/slides'
+  parseDeck, buildDeckTocHtml, buildSlideHtml, deckChapters,
+  scopeThemeVars, type DeckSlide,
+} from '../lib/slideDeck'
 import { orderThemes } from '../lib/themeOrder'
 import { enterFullscreen, exitFullscreen, toggleFullscreen } from '../lib/fullscreen'
 import { resolveLocalImageSrc } from '../lib/localImages'
@@ -26,31 +24,6 @@ import { CUSTOM_THEME, readUserCss } from '../lib/themeLoader'
 import { normalizeUserCss } from '../lib/userCss'
 import '../styles/slideshow.css'
 
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-}
-
-interface Slide {
-  /** 页面 Markdown 源（HTML 惰性渲染，见 htmlCache） */
-  src: string
-  notes: string
-  kind: SlideKind
-  title?: string
-  align?: 'left' | 'center' | 'right'
-  /** 该页顶层列表是否参与片段逐步显示（版式 + deck/页级 fragments 指令共同决定） */
-  fragmentEligible: boolean
-  /** 分栏（页内 `***` 分隔）：栏数；未分栏时 undefined（= 1 栏） */
-  columns?: number
-  /** 各栏 Markdown 源，仅 columns >= 2 时存在（长度 === columns） */
-  colParts?: string[]
-  /** 页标题（页内第一个标题块）：整页渲染在分栏之上，不参与分栏 */
-  colIntro?: string
-  /** 栏前文案（圈定写法里，第一个 `***` 之前的内容）：页级，整页横跨 */
-  colBefore?: string
-  /** 栏后文案（圈定写法里，最后一个 `***` 之后的内容）：页级，整页横跨 */
-  colAfter?: string
-}
-
 interface SlideshowProps {
   content: string
   title?: string
@@ -59,6 +32,17 @@ interface SlideshowProps {
   currentTheme: string
   isDark: boolean
   onExit: () => void
+  /** 演示 HUD 的「导出 PPTX」：由 App 注入（导出逻辑在 lib/pptxExport.ts）。
+   *  传入当前页 + **演示内实际生效**的主题/明暗（HUD 可临时切换，可能与应用设置不同）。 */
+  onExportPptx?: (slideIndex: number, theme: string, dark: boolean) => void
+  /** 打开时直接定位到某页（工具栏「先看演示效果」/ 告警跳页用；0-based） */
+  initialSlide?: number
+  /** 演示已打开时外部请求翻页：每次 `token` 变化即按 `index` 跳页。
+   *  用 token 而不是只给 index —— 连续两次点同一告警页码也要真的跳一次。 */
+  jumpRequest?: { index: number; token: number }
+  /** 有模态弹窗盖在上面（如 PPTX 导出）：暂停键盘/滚轮翻页，避免误操作演示。
+   *  只挂起**演示自己的**快捷键；弹窗内的输入框与按钮照常工作。 */
+  interactionSuspended?: boolean
 }
 
 /** 页面元素的状态类：瓷砖转场克隆整页时必须滤掉，否则克隆会命中
@@ -83,6 +67,10 @@ export default function Slideshow({
   currentTheme,
   isDark,
   onExit,
+  onExportPptx,
+  initialSlide,
+  jumpRequest,
+  interactionSuspended,
 }: SlideshowProps) {
   const { t } = useI18n()
   // 当前文档所在目录：相对路径图片按它解析（云端文档解析到本地镜像）
@@ -92,7 +80,7 @@ export default function Slideshow({
     const sep = Math.max(tab.filePath.lastIndexOf('\\'), tab.filePath.lastIndexOf('/'))
     return sep > 0 ? tab.filePath.substring(0, sep) : null
   })
-  const [h, setH] = useState(0)
+  const [h, setH] = useState(() => Math.max(0, initialSlide ?? 0))
   const [showHelp, setShowHelp] = useState(false)
   // 提词备注：**与幻灯片同屏显示**（不像 PPT 有副屏演示者视图），单屏投影时观众必然看得到。
   // 因此默认收在屏幕左缘外，鼠标移到左缘热区（.ys-notes-edge）才滑出；notesPinned = 按 S 锁定常显。
@@ -139,16 +127,18 @@ export default function Slideshow({
 
   // 纯 markdown → 幻灯片：`---` 分页 + 整页结构自动版式推断。
   // 元数据全量廉价计算；HTML 惰性渲染（htmlCache，仅窗口内页面渲染）。
-  // 注意：slideMetaRef 在此同步填充（useMemo 先于 JSX 渲染执行），
-  // 保证 getSlideHtml 首次渲染封面页时 meta 已就绪。
-  const slideMetaRef = useRef<{ author?: string; date?: string }>({})
+  // 注意：slideMetaRef 在 parsed 之后同步填充，保证 getSlideHtml 首次渲染封面页时 meta 已就绪。
   // deck 级片段开关初始值（front matter slideshow-fragments: on → 初始开启），
   // 默认关闭：列表整页显示，避免目录等内容被迫逐条点击；需要时用户在 HUD 打开
   // 或 front matter 显式声明。HUD 按钮可在播放中随时切换（仅本次播放生效，同主题/明暗）
-  const deckFragmentsInitial = useMemo(
-    () => (parseFrontMatter(content)['slideshow-fragments'] || '').toLowerCase() === 'on',
-    [content]
-  )
+  /** 演示标题 / 页列表：统一由 lib/slideDeck.ts 解析（与 PPTX 导出同源） */
+  const parsed = useMemo(() => parseDeck(content, title), [content, title])
+  const slides: DeckSlide[] = parsed.slides
+  const docTitle = parsed.docTitle
+  const slideMetaRef = useRef<{ author?: string; date?: string }>({})
+  slideMetaRef.current = parsed.meta
+
+  const deckFragmentsInitial = parsed.fragmentsOn
   const [fragmentsOn, setFragmentsOn] = useState(deckFragmentsInitial)
   // 切换动画变体：柔和型 slide（默认，水平滑动）/ fade（溶解淡入）/ zoom（缩放）/ none（无）
   //            强烈型 dissolve（像素溶解）/ blinds（百叶窗）/ checkerboard（棋盘）/ cube（立方体）
@@ -186,101 +176,25 @@ export default function Slideshow({
   const colStyleCls = colStyleClass(slideColStyle)
 
   /**
-   * 演示标题：**front matter 的 `title` 优先**，没有才用文档名（`title` 属性）。
-   * 此前只解析了 author/date，`title` 解析出来却从未使用 ⇒ 元信息里写了 title 也不生效，
-   * HUD 与章节名一律显示文档名。
-   */
-  const docTitle = useMemo(() => parseFrontMatter(content).title || title || '', [content, title])
-
-  const slides: Slide[] = useMemo(() => {
-    const meta = parseFrontMatter(content)
-    slideMetaRef.current = { author: meta.author, date: meta.date }
-    const body = stripFrontMatter(content)
-    // 片段生效版式：内容/列表/路线图页的顶层列表逐条出现（目录 agenda 不分段）
-    const FRAGMENT_KINDS: SlideKind[] = ['content', 'content-list', 'roadmap']
-    return splitSlides(body).map((src) => {
-      const { body: b, notes } = extractNotes(src)
-      const { body: b2, directives } = extractDirectives(b)
-      // 分栏：`***` = 栏区边界 / 栏分隔（`---` = 页分隔，已在 splitSlides 消费）。
-      // 页内第一个标题块被抽成 intro（页标题），**不参与分栏** —— 否则标题会落进
-      // 第 1 栏，表现为「左栏带标题、右栏内容顶端高于标题」的错位。
-      // 圈定写法（≥3 条 `***`，见 COLUMN_REGION_MIN）时，栏区**之外**的内容是
-      // before / after，同样按页级渲染（引言 / 落款）。
-      // 版式推断用「intro + 栏外文案 + 各栏重拼」的源：标题仍是首块（cover/content-list 等
-      // 照旧命中），分隔行也不会变成干扰块；未分栏时直接用 b2，与之前逐字节一致。
-      const split = splitColumns(b2)
-      const hasColumns = split.parts.length > 1
-      const layoutSrc = hasColumns
-        ? [split.intro, split.before, ...split.parts, split.after]
-            .filter((s) => s.trim() !== '').join(`\n\n${COLUMN_BREAK}\n\n`)
-        : b2
-      const layout: SlideLayout = detectLayout(layoutSrc)
-      const kind = directives.layout || layout.kind
-      // 页级 fragments 指令可否决（off 强制不分段；未设置时跟随 HUD 开关）
-      const pageFragments = directives.fragments === 'off' ? false
-        : directives.fragments === 'on' ? true
-        : true
-      const fragmentEligible = pageFragments && FRAGMENT_KINDS.includes(kind)
-      return {
-        src: b2, notes, kind, title: layout.title, align: directives.align, fragmentEligible,
-        columns: hasColumns ? split.parts.length : undefined,
-        colParts: hasColumns ? split.parts : undefined,
-        colIntro: hasColumns && split.intro ? split.intro : undefined,
-        colBefore: hasColumns && split.before ? split.before : undefined,
-        colAfter: hasColumns && split.after ? split.after : undefined,
-      }
-    })
-  }, [content])
-
-  /**
    * 整册目录：演示文稿按页独立渲染，`[toc]` 不能只统计当前页。
    * 条目 = 有标题的页（排除封面/结尾页和目录页自身），点击翻到对应页。
    */
-  const deckTocHtml = useMemo(() => {
-    const entries: DeckTocEntry[] = []
-    slides.forEach((s, i) => {
-      if (!s.title || s.kind === 'cover' || s.kind === 'thanks') return
-      if (/^\s*\[{1,2}toc\]{1,2}\s*$/mi.test(s.src)) return
-      const marks = /^(#{1,6})\s/m.exec(s.src)?.[1].length
-      entries.push({ text: s.title, slide: i, level: marks ? Math.min(6, marks) : 2 })
-    })
-    return renderDeckTocHtml(entries)
-  }, [slides])
+  const deckTocHtml = useMemo(() => buildDeckTocHtml(slides), [slides])
 
   // 惰性 HTML 渲染缓存：仅渲染窗口内的页面；content 变化时随 slides 重建清空
   const htmlCacheRef = useRef(new Map<number, string>())
   useEffect(() => { htmlCacheRef.current.clear() }, [slides])
 
   /** 取页面 HTML：命中缓存直接返回，否则渲染并缓存 */
-  const getSlideHtml = useCallback((slide: Slide, index: number): string => {
+  const getSlideHtml = useCallback((slide: DeckSlide, index: number): string => {
     const cache = htmlCacheRef.current
     let html = cache.get(index)
     if (html === undefined) {
-      const withToc = (src: string) => (deckTocHtml ? replaceTocPlaceholders(src, deckTocHtml) : src)
-      const parts = slide.colParts
-      html = parts
-        // 分栏：每栏各自渲染（各栏的 mermaid / 公式 / 本地图片由 processSection 统一后处理，
-        // 作用域是整页 section ⇒ 栏内元素同样被覆盖）；栏数经 --ys-cols 下发（CSS 见 .ys-cols）。
-        // 页标题（colIntro）**不包 div**、直接作为 .ys-slide 的直接子元素 ——
-        // 这样 `.ys-slide > :first-child` 与各版式的 h2 规则仍能命中它，
-        // 标题的整页样式（含下划线装饰）与不分栏时完全一致。
-        // 栏外文案（colBefore / colAfter）则**包一层 .ys-col-aside**：它是页级内容，
-        // 必须与页标题区分开，否则「栏内对齐」那几条针对页级子元素的规则会连它一起改
-        // （见 slideshow.css 的 .ys-col-aside 说明）。
-        ? `${slide.colIntro ? renderMarkdown(withToc(slide.colIntro), pluginExtenders) : ''}${
-            slide.colBefore ? `<div class="ys-col-aside">${renderMarkdown(withToc(slide.colBefore), pluginExtenders)}</div>` : ''
-          }<div class="ys-cols" style="--ys-cols:${parts.length}">${
-            parts.map((p) => `<div class="ys-col">${renderMarkdown(withToc(p), pluginExtenders)}</div>`).join('')
-          }</div>${
-            slide.colAfter ? `<div class="ys-col-aside">${renderMarkdown(withToc(slide.colAfter), pluginExtenders)}</div>` : ''
-          }`
-        : renderMarkdown(withToc(slide.src), pluginExtenders)
-      // 封面页：拼接 front matter 提供的作者/日期 meta 行
-      if (slide.kind === 'cover' && slideMetaRef.current.author) {
-        const meta = slideMetaRef.current
-        const metaLine = [meta.author, meta.date].filter(Boolean).join(' · ')
-        html += `<div class="ys-cover-meta">${escapeHtml(metaLine)}</div>`
-      }
+      html = buildSlideHtml(slide, {
+        pluginExtenders,
+        deckTocHtml,
+        meta: slideMetaRef.current,
+      })
       cache.set(index, html)
     }
     return html
@@ -290,21 +204,9 @@ export default function Slideshow({
   const cur = slides[h]
 
   // 章节标记：封面/章节页的标题作为其后续页的章节名，供页脚展示；章节页带序号
-  const { chapter, sectionNums } = useMemo(() => {
-    const nums: number[] = []
-    let sec = 0
-    for (const s of slides) {
-      if (s.kind === 'section') sec += 1
-      nums.push(s.kind === 'section' ? sec : 0)
-    }
-    // 当前页所属章节 = 从第 0 页到第 h 页中最后一个封面/章节页的标题
-    let curChapter = docTitle
-    for (let i = 0; i <= h; i++) {
-      const s = slides[i]
-      if (s && (s.kind === 'cover' || s.kind === 'section') && s.title) curChapter = s.title
-    }
-    return { chapter: curChapter, sectionNums: nums }
-  }, [slides, h, docTitle])
+  const chapters = useMemo(() => deckChapters(slides, docTitle), [slides, docTitle])
+  const chapter = chapters[h]?.chapter ?? docTitle
+  const sectionNums = useMemo(() => chapters.map((c) => c.num), [chapters])
 
   // ===== 片段逐步显示 =====
   // 片段 = 当前页顶层列表项（data-fragment 标记）。
@@ -343,6 +245,22 @@ export default function Slideshow({
     // 更长，必须撑到新页水渍铺满——否则 mask 孔洞里的旧内容会提前消失。
     leavingTimerRef.current = setTimeout(() => setLeavingIdx(null), anim === 'dissolve' ? 1000 : 600)
   }, [h, dir, anim])
+
+  // slides 变短（文档被替换/清空）时把当前页夹回范围内：h 是索引，越界会让 cur 变 undefined
+  useEffect(() => {
+    if (h < slides.length) return
+    setH(Math.max(0, slides.length - 1))
+  }, [h, slides.length])
+
+  // 外部请求翻页（PPTX 导出告警里的页码）。只在 token 变化时执行：
+  // 直接依赖 index 会在父组件重渲染时重复触发，而同一页连续点两次也应各跳一次。
+  const jumpTokenRef = useRef(-1)
+  useEffect(() => {
+    if (!jumpRequest || jumpRequest.token === jumpTokenRef.current) return
+    jumpTokenRef.current = jumpRequest.token
+    if (!slides.length) return
+    goTo(Math.max(0, Math.min(slides.length - 1, jumpRequest.index)))
+  }, [jumpRequest, slides.length, goTo])
 
   // 整册目录里的条目带 data-slide：点击翻到对应页（演示文稿没有跨页锚点）
   const onDeckClick = useCallback((e: ReactMouseEvent<HTMLDivElement>) => {
@@ -532,6 +450,9 @@ export default function Slideshow({
   }, [onExit])
 
   const onKey = useCallback((e: KeyboardEvent) => {
+    // 弹窗（如 PPTX 导出）盖在演示上时，演示快捷键整体让位：
+    // 否则 Esc 会连弹窗带演示一起退出、方向键会翻页。弹窗自己处理自己的键。
+    if (interactionSuspended) return
     const k = e.key
     // 排版面板里的 select / 滑杆需要方向键（改值），不能被翻页快捷键抢走；
     // 但 Escape 必须放行 —— 关闭浮层是演示模式的强预期（见下面的分支）。
@@ -579,7 +500,7 @@ export default function Slideshow({
       if (notesPinned) { setNotesPinned(false); return }   // 先收起锁定的备注，再退出
       requestExit()
     }
-  }, [next, prev, slides.length, requestExit, showHelp, REVEAL_ALL, goTo, typeMenuOpen, animMenuOpen, themeMenuOpen, cur, notesPinned])
+  }, [next, prev, slides.length, requestExit, showHelp, REVEAL_ALL, goTo, typeMenuOpen, animMenuOpen, themeMenuOpen, cur, notesPinned, interactionSuspended])
 
   useEffect(() => {
     window.addEventListener('keydown', onKey)
@@ -590,6 +511,8 @@ export default function Slideshow({
   const wheelLockRef = useRef(false)
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
+      // 模态弹窗打开时滚轮只作用于弹窗（否则在弹窗里滚动会翻演示的页）
+      if (interactionSuspended) return
       // 鼠标在浮层/面板上滚轮：不翻页（否则拖滑杆/翻主题列表时页面会乱翻）
       const tgt = e.target
       if (tgt instanceof Element && tgt.closest('.ys-hud-panel, .ys-theme-menu')) return
@@ -635,7 +558,7 @@ export default function Slideshow({
     }
     window.addEventListener('wheel', onWheel, { passive: false })
     return () => window.removeEventListener('wheel', onWheel)
-  }, [next, prev])
+  }, [next, prev, interactionSuspended])
 
   // 进入时尝试全屏；卸载时退出全屏
   // enterFullscreen() 已内建处理窗口最大化状态（先取消最大化再进全屏）
@@ -731,21 +654,9 @@ export default function Slideshow({
       if (!themeCss) return
       // user.css 的变量块（:root / :root.theme-*）也要进幻灯片 —— 它定义的变量
       // 会覆盖基底主题的；元素规则照旧丢弃（幻灯片版式由 slideshow.css 全权控制）
-      const userRaw = isCustom ? await readUserCss().catch(() => '') : ''
-      const userVars = userRaw
-        ? normalizeUserCss(userRaw, CUSTOM_THEME)
-            .split('}')
-            .filter((part) => /^[^{}]*:root\.theme-/.test(part.slice(0, part.indexOf('{'))))
-            .join('}')
-        : ''
-      const vars = (themeCss + userVars)
-        .split('}')
-        .filter((part) => /^[^{}]*:root\.theme-/.test(part.slice(0, part.indexOf('{'))))
-        .join('}')
-        .replace(
-          /:root\.theme-[a-zA-Z0-9_-]+(\.dark)?/g,
-          (_m, darkVariant?: string) => `.yizi-slideshow.theme-${theme}${darkVariant || ''}`
-        )
+      const rawUser = isCustom ? await readUserCss().catch(() => '') : ''
+      const userRaw = rawUser ? normalizeUserCss(rawUser, CUSTOM_THEME) : ''
+      const vars = scopeThemeVars(themeCss, userRaw, theme)
       let el = document.getElementById('yizimarkdown-slideshow-theme-css')
       if (!el) { el = document.createElement('style'); el.id = 'yizimarkdown-slideshow-theme-css'; document.head.appendChild(el) }
       el.textContent = vars
@@ -958,6 +869,21 @@ export default function Slideshow({
           >
             <Type size={14} />
           </button>
+          {onExportPptx && (
+            <button
+              className="ys-icon-btn"
+              title={t('slideshow.exportPptx')}
+              onClick={(e) => {
+                e.currentTarget.blur()
+                setThemeMenuOpen(false)
+                setAnimMenuOpen(false)
+                setTypeMenuOpen(false)
+                onExportPptx(h, theme, dark)
+              }}
+            >
+              <FileDown size={14} />
+            </button>
+          )}
         </div>
         <span className="ys-hint">{t('slideshow.hintBar')}</span>
       </div>

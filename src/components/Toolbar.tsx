@@ -72,7 +72,7 @@ interface ToolbarProps {
   onInsertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'ordered' | 'link' | 'tag' | 'block') => void
   /** 插入脚注（正文 [^n] + 文末定义行），逻辑在编辑器内（EditorRef.insertFootnote） */
   onInsertFootnote: () => void
-  onExport: (format: 'html' | 'md' | 'txt' | 'docx' | 'pdf') => void
+  onExport: (format: 'html' | 'md' | 'txt' | 'docx' | 'pdf' | 'pptx') => void
   onSearch: () => void
   onSettings: () => void
   onPresent: () => void
@@ -407,6 +407,11 @@ export default function Toolbar({
                 icon={<FormatBadge letter="P" />} 
                 label={t('toolbar.exportPdf')} 
                 onClick={() => { onExport('pdf'); setShowExportMenu(false); }} 
+              />
+              <ExportMenuItem 
+                icon={<FormatBadge letter="S" />} 
+                label={t('toolbar.exportPptx')} 
+                onClick={() => { onExport('pptx'); setShowExportMenu(false); }} 
               />
             </div>
           )}

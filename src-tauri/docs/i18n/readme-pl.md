@@ -93,7 +93,7 @@ Stworzyliśmy niezwykle eleganckie doświadczenie w trybie edycji WYSIWYG. Ponad
 - **Tworzenie z szablonu**: menu rozwijane „Utwórz z szablonu" na pasku narzędzi; tworzenie nowego dokumentu na podstawie wybranego szablonu Markdown;也可以 w Ustawienia → Ogólne ustawić domyślny szablon; potem `Ctrl+N` automatycznie go zastosuje
 - **Zapis / automatyczny zapis**: ręczny zapis + automatyczny zapis w konfigurowalnych odstępach (5~180 s, domyślnie 60 s)
 - **Zapis jako**: automatyczne otwieranie okna „Zapis jako" przy zapisie nowego pliku
-- **Eksport**: pięć formatów - HTML / Markdown / zwykły tekst / Word (DOCX) / PDF; DOCX używa natywnej semantyki Worda (listy/tabele/bloki kodu/cytaty/listy zadań), style tabel zgodne z podglądem, obrazy obsługują ścieżki lokalne, obrazy sieciowe i tagi HTML `<img>` (szerokość można ustawić atrybutem `width`); PDF odwzorowuje podgląd i automatycznie dzieli na strony
+- **Eksport**: sześć formatów - HTML / Markdown / zwykły tekst / Word (DOCX) / PDF / PPTX; DOCX używa natywnej semantyki Worda (listy/tabele/bloki kodu/cytaty/listy zadań), style tabel zgodne z podglądem, obrazy obsługują ścieżki lokalne, obrazy sieciowe i tagi HTML `<img>` (szerokość można ustawić atrybutem `width`); PDF odwzorowuje podgląd i automatycznie dzieli na strony; PPTX dziedziczy motyw, tryb jasny/ciemny i układ widoku prezentacji, tworząc edytowalne obiekty tekstowe, tabele, obrazy, kształty i natywne równania
 - **Powiązanie .md**: jednym kliknięciem ustaw edytor Markdown jako domyślny w systemie; kliknięcie dwukrotne .md otwiera bezpośrednio (rejestr Windows / LaunchServices macOS)
 
 ### Pamięć w chmurze (WebDAV)

@@ -94,7 +94,7 @@ Vi har skapat en extremt elegant upplevelse för WYSIWYG-läge; det stöder ocks
 - **Skapa från mall**: Verktygsfältet "Skapa från mall" dropdown-meny, skapar nytt dokument baserat på vald malls Markdown-struktur; kan också ställa in standardmall i Inställningar → Allmänt, sedan `Ctrl+N` tillämpar automatiskt
 - **Spara / Automatisk sparning**: Manuell sparning + konfigurerbar intervall automatisk sparning (5~180 sekunder, standard 60 sekunder)
 - **Spara som**: Visar automatiskt dialogruta för spara som vid sparning av nya filer
-- **Exportera**: Fem format: HTML / Markdown / ren text / Word (DOCX) / PDF; DOCX använder Words inbyggda semantik (listor/tabeller/kodblock/citat/uppgiftslistor), tabellstilar matchar förhandsvisningen, bilder stöder lokala sökvägar, webbilder och HTML-`<img>`-taggar (bredd kan styras med `width`-attributet); PDF matchar förhandsvisningen med automatisk paginering
+- **Exportera**: Sex format: HTML / Markdown / ren text / Word (DOCX) / PDF / PPTX; DOCX använder Words inbyggda semantik (listor/tabeller/kodblock/citat/uppgiftslistor), tabellstilar matchar förhandsvisningen, bilder stöder lokala sökvägar, webbilder och HTML-`<img>`-taggar (bredd kan styras med `width`-attributet); PDF matchar förhandsvisningen med automatisk paginering; PPTX ärver tema, ljust/mörkt och layout från presentationsvyn och ger redigerbar text, tabeller, bilder, former och inbyggda ekvationer
 - **.md-fil association**: Enklicksställ in som systemstandard Markdown-redigeringsprogram i inställningar, dubbelklicka på .md för att öppna direkt (Windows-register / macOS LaunchServices)
 
 ### Molnlagring (WebDAV)

@@ -130,6 +130,16 @@ export interface SettingsState {
    *  跳过 0.3.5 不影响 0.3.6 的提示；清单版本相同也不会反复打扰 */
   skippedUpdateVersion: string
 
+  // PPTX 导出（v0.4.0）
+  /** 「PPTX 导出说明」首次提示是否已读：只在第一次打开导出弹窗时展示 */
+  pptxExportHintSeen: boolean
+  /** 导出时写入演讲者备注（默认开） */
+  pptxIncludeNotes: boolean
+  /** 导出时写入页脚（章节名 + 页码，默认开） */
+  pptxIncludeFooter: boolean
+  /** 内容超页处理：warn = 照常导出并列出页码；shrink = 自动回缩字号重排 */
+  pptxOverflowMode: 'warn' | 'shrink'
+
   // AI 面板运行时状态（不持久化）
   /** AI 面板是否打开 */
   aiPanelOpen: boolean
@@ -225,6 +235,12 @@ export const useSettingsStore = create<SettingsState>()(
       autoCheckUpdate: true,
       skippedUpdateVersion: '',
 
+      // PPTX 导出（v0.4.0）：首次提示未读；默认写备注与页脚；超页默认「警告并列出页码」
+      pptxExportHintSeen: false,
+      pptxIncludeNotes: true,
+      pptxIncludeFooter: true,
+      pptxOverflowMode: 'warn',
+
       // AI 面板运行时状态
       aiPanelOpen: false,
       aiPendingAction: null,
@@ -247,7 +263,8 @@ export const useSettingsStore = create<SettingsState>()(
       // v11: 演示模式分栏 —— 新增 slideColAlign / slideColStyle
       // v12: 在线更新 —— 新增 autoCheckUpdate（默认开）/ skippedUpdateVersion（默认空）
       // v13: 内容区可拖拽调宽 —— 新增 contentMaxWidth（默认 900，与改动前一致）
-      version: 13,
+      // v14: PPTX 导出 —— 新增首次提示标记 / 备注 / 页脚 / 超页策略
+      version: 14,
       migrate: (persisted: unknown) => {
         // 自动迁移旧字体栈到 MiSans 方案
         const oldFont = "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
@@ -306,6 +323,14 @@ export const useSettingsStore = create<SettingsState>()(
           state.contentMaxWidth = clampNumber(
             state.contentMaxWidth, CONTENT_WIDTH_MIN, CONTENT_WIDTH_MAX, CONTENT_WIDTH_DEFAULT
           )
+          // v14：PPTX 导出。存量存档没有这四个键 ⇒ 补默认值。
+          // 超页策略只认枚举值（手改 localStorage 写入非法值会让分段按钮全灭）。
+          if (typeof state.pptxExportHintSeen !== 'boolean') state.pptxExportHintSeen = false
+          if (typeof state.pptxIncludeNotes !== 'boolean') state.pptxIncludeNotes = true
+          if (typeof state.pptxIncludeFooter !== 'boolean') state.pptxIncludeFooter = true
+          if (state.pptxOverflowMode !== 'warn' && state.pptxOverflowMode !== 'shrink') {
+            state.pptxOverflowMode = 'warn'
+          }
         }
         return state
       },

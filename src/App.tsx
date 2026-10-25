@@ -7,6 +7,7 @@ import SettingsModal from './components/SettingsModal'
 import TabBar from './components/TabBar'
 import HomePage from './components/HomePage'
 import Slideshow from './components/Slideshow'
+import PptxExportDialog from './components/PptxExportDialog'
 import AIChatPanel from './components/AIChatPanel'
 import { PanelLeftClose, PanelLeft, Loader2 } from 'lucide-react'
 import { invokeTauri, invokeTauriOrThrow } from './lib/tauri'
@@ -106,7 +107,7 @@ const STARTUP_UPDATE_DELAY_MS = 3000
 
 function App() {
   const { t } = useI18n()
-  const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, contentMaxWidth, enabledPlugins, pluginConfigs, setField, aiPanelOpen, updateSettings, userThemeEnabled, userThemeName, customCssBase } = useSettingsStore()
+  const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, contentMaxWidth, enabledPlugins, pluginConfigs, setField, aiPanelOpen, updateSettings, userThemeEnabled, userThemeName, customCssBase, slideColStyle, slideColAlign } = useSettingsStore()
   const {
     activeTabId, currentTab,
     openFile, openRemoteFile, openNewFile, closeTab, switchTab,
@@ -122,6 +123,19 @@ function App() {
   const [storageWarning, setStorageWarning] = useState<string | null>(null)
   const [showShortcutsPanel, setShowShortcutsPanel] = useState(false)
   const [isSlideshow, setIsSlideshow] = useState(false)
+  /** PPTX 导出弹窗：工具栏与演示 HUD 共用。
+   *  theme/dark 由**入口**决定 —— HUD 里可能临时切过主题，导出必须与眼前看到的一致。 */
+  const [pptxDialog, setPptxDialog] = useState<{
+    theme: string
+    dark: boolean
+    /** HUD 入口才有：0-based 当前页，用于「只导当前页」 */
+    currentSlide?: number
+  } | null>(null)
+  /** 从工具栏「先看演示效果 / 告警跳页」启动演示时的首屏页码（0-based） */
+  const [slideshowStart, setSlideshowStart] = useState<number | undefined>(undefined)
+  /** 演示已打开时外部请求翻页：token 递增，保证同一页连续点两次也各跳一次 */
+  const [slideJump, setSlideJump] = useState<{ index: number; token: number } | undefined>(undefined)
+  const slideJumpTokenRef = useRef(0)
   const [currentFolder, setCurrentFolder] = useState<string | null>(null)
   /** 远程冲突待用户决策 */
   const [conflict, setConflict] = useState<{ tabId: string; name: string; remotePath: string } | null>(null)
@@ -866,7 +880,28 @@ function App() {
   const startSlideshow = useCallback(() => {
     const tab = useEditorStore.getState().currentTab()
     if (!tab) return
+    // 从工具栏「演示」进入：永远从第一页开始（清掉上次跳页残留）
+    setSlideshowStart(undefined)
+    setSlideJump(undefined)
     setIsSlideshow(true)
+  }, [])
+
+  /** 从指定页启动演示（PPTX 弹窗的「先看演示效果」/ 告警页码跳转） */
+  const presentFromSlide = useCallback((index: number) => {
+    setSlideshowStart(Math.max(0, index))
+    setSlideJump(undefined)
+    setIsSlideshow(true)
+  }, [])
+
+  /** 演示已打开时翻到指定页（导出告警里点页码） */
+  const jumpToSlide = useCallback((index: number) => {
+    slideJumpTokenRef.current += 1
+    setSlideJump({ index, token: slideJumpTokenRef.current })
+  }, [])
+
+  /** 演示 HUD 的「导出 PPTX」：使用演示内**实际生效**的主题/明暗，而不是应用设置 */
+  const openPptxFromSlideshow = useCallback((slideIndex: number, theme: string, dark: boolean) => {
+    setPptxDialog({ theme, dark, currentSlide: slideIndex })
   }, [])
 
   // 将 AI 回复插入到编辑器光标处
@@ -911,9 +946,16 @@ function App() {
     })
   }, [currentTheme, isDark, t])
 
-  const handleExport = useCallback(async (format: 'html' | 'md' | 'txt' | 'docx' | 'pdf') => {
+  const handleExport = useCallback(async (format: 'html' | 'md' | 'txt' | 'docx' | 'pdf' | 'pptx') => {
     const tab = currentTab()
     if (!tab) return
+
+    // PPTX 不是「立即写盘」：先开弹窗（范围/备注/页脚/超页策略），由弹窗自己选路径再生成。
+    // 这里只把「入口主题/明暗」传进去（工具栏入口 = 应用当前设置）。
+    if (format === 'pptx') {
+      setPptxDialog({ theme: currentTheme, dark: isDark })
+      return
+    }
 
     // 有路径沿用文件名；无路径从文档推导（元信息 title → 第一个标题行），推不出用 document
     let baseName = tab.filePath
@@ -1041,7 +1083,7 @@ function App() {
       console.error('[export] failed:', e)
       showToast(t('app.exportFailed'))
     }
-  }, [currentTab, showToast, buildExportHtml, previewFontFamily, isDark, previewFontSize, previewLineHeight, enabledPlugins, pluginConfigs])
+  }, [currentTab, showToast, buildExportHtml, previewFontFamily, isDark, previewFontSize, previewLineHeight, enabledPlugins, pluginConfigs, currentTheme])
 
   const handleFolderChange = useCallback((folderPath: string) => {
     setCurrentFolder(folderPath)
@@ -1057,6 +1099,13 @@ function App() {
   const filePath = tab?.filePath || null
   const isSaved = tab?.isSaved ?? true
   const viewMode = tab?.viewMode || 'edit'
+
+  // 导出时解析相对图片的基准目录（与 DOCX 导出同一规则：Markdown 文件所在目录）
+  const docBaseDir = (() => {
+    if (!tab?.filePath) return null
+    const sep = Math.max(tab.filePath.lastIndexOf('\\'), tab.filePath.lastIndexOf('/'))
+    return sep > 0 ? tab.filePath.substring(0, sep) : null
+  })()
 
   const wordCount = content.length
   const readingTime = Math.max(1, Math.ceil(wordCount / 300))
@@ -1331,7 +1380,46 @@ function App() {
           pluginConfigs={pluginConfigs}
           currentTheme={currentTheme}
           isDark={isDark}
-          onExit={() => setIsSlideshow(false)}
+          initialSlide={slideshowStart}
+          jumpRequest={slideJump}
+          interactionSuspended={pptxDialog !== null}
+          onExportPptx={openPptxFromSlideshow}
+          onExit={() => {
+            setIsSlideshow(false)
+            setSlideshowStart(undefined)
+            setSlideJump(undefined)
+            setPptxDialog(null)
+          }}
+        />
+      )}
+
+      {/* 导出 PPTX：工具栏 / 演示 HUD 共用同一个弹窗（弹窗内部先选路径再生成） */}
+      {pptxDialog && tab && (
+        <PptxExportDialog
+          open
+          onClose={() => setPptxDialog(null)}
+          source={{
+            content: tab.content,
+            title: tab.name || '',
+            theme: pptxDialog.theme,
+            dark: pptxDialog.dark,
+            customCssBase,
+            colStyle: slideColStyle,
+            colAlign: slideColAlign,
+            enabledPlugins,
+            pluginConfigs,
+            docBaseDir,
+            currentSlide: pptxDialog.currentSlide,
+          }}
+          onPreview={() => {
+            setPptxDialog(null)
+            presentFromSlide(0)
+          }}
+          onJumpToSlide={(index) => {
+            setPptxDialog(null)
+            if (isSlideshow) jumpToSlide(index)
+            else presentFromSlide(index)
+          }}
         />
       )}
 

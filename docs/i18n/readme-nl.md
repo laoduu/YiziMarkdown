@@ -95,7 +95,7 @@ We hebben een uiterst elegante ervaring gecreëerd voor de WYSIWYG-modus. Tegeli
 - **Nieuw vanuit sjabloon**: Werkbalk "Nieuw vanuit sjabloon" dropdownmenu maakt een nieuw document aan op basis van het geselecteerde Markdown-sjabloon; ook in te stellen als standaardsjabloon via Instellingen → Algemeen, waarna `Ctrl+N` automatisch het sjabloon toepast
 - **Opslaan / automatisch opslaan**: Handmatig opslaan + configureerbaar automatisch opslaan (5–180 seconden, standaard 60 seconden)
 - **Opslaan als**: Nieuwe bestanden openen automatisch het "Opslaan als"-dialoogvenster bij het opslaan
-- **Exporteren**: Vijf formaten — HTML / Markdown / platte tekst / Word (DOCX) / PDF; DOCX gebruikt native Word-semantiek (lijsten/tabellen/codeblokken/citaten/takenlijsten), tabelstijlen komen overeen met de voorvertoning, afbeeldingen ondersteunen lokale paden, webafbeeldingen en HTML-`<img>`-tags (breedte regelbaar via het `width`-attribuut); PDF komt overeen met de voorvertoning en pagineert automatisch
+- **Exporteren**: Zes formaten — HTML / Markdown / platte tekst / Word (DOCX) / PDF / PPTX; DOCX gebruikt native Word-semantiek (lijsten/tabellen/codeblokken/citaten/takenlijsten), tabelstijlen komen overeen met de voorvertoning, afbeeldingen ondersteunen lokale paden, webafbeeldingen en HTML-`<img>`-tags (breedte regelbaar via het `width`-attribuut); PDF komt overeen met de voorvertoning en pagineert automatisch; PPTX neemt het thema, licht/donker en de lay-out van de presentatieweergave over en levert bewerkbare tekst-, tabel-, afbeeldings-, vorm- en native formule-objecten
 - **.md-bestandskoppeling**: Stel met één klik in als standaard Markdown-editor; dubbelklik op .md om direct te openen (Windows register / macOS LaunchServices)
 
 ### Cloudopslag (WebDAV)

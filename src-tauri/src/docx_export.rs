@@ -630,7 +630,7 @@ const SVG_RASTER_MAX_PX: f64 = 4096.0;
 /// 为什么需要：Word 2016+/365 认识 `asvg:svgBlip`（矢量、可缩放），但旧版 Word / WPS /
 /// LibreOffice 只认位图，LibreOffice 在没有回退图时**什么都不显示**（tdf#126084），
 /// 因此矢量与回退图必须同时写进包里。
-fn svg_to_png(data: &[u8]) -> Option<(Vec<u8>, f64, f64)> {
+pub(crate) fn svg_to_png(data: &[u8]) -> Option<(Vec<u8>, f64, f64)> {
     let mut opt = resvg::usvg::Options::default();
     opt.fontdb = system_fontdb();
     let tree = resvg::usvg::Tree::from_data(data, &opt).ok()?;
@@ -660,7 +660,7 @@ fn svg_to_png(data: &[u8]) -> Option<(Vec<u8>, f64, f64)> {
 /// 引擎是 vendor 进来的 `crate::omml`（tex2word-math v1.0.6，MIT，见 `src/omml/`）。
 /// **任何异常都退回 None**（解析器 panic、结果里一个字符都没有），调用方随后退回
 /// 「等宽 TeX 源码」——公式宁可显示成源码，也绝不静默丢弃。
-fn omml_of(tex: &str) -> Option<String> {
+pub(crate) fn omml_of(tex: &str) -> Option<String> {
     let tex = tex.trim();
     if tex.is_empty() {
         return None;

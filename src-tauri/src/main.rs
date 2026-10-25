@@ -60,6 +60,47 @@ fn save_file(path: String, content: String) -> Result<(), String> {
     }
 }
 
+/// 写入二进制文件（PPTX 导出）。前端把 `ArrayBuffer` 转成 base64 传过来 ——
+/// 走字符串而不是 `Vec<u8>`：Tauri 的 IPC 对数字数组序列化开销远大于 base64 字符串
+/// （几 MB 的 PPTX 会差一个数量级），而 base64 只多 33% 体积。
+#[tauri::command]
+fn save_binary_file(path: String, base64: String) -> Result<(), String> {
+    use base64::Engine as _;
+    let data = base64::engine::general_purpose::STANDARD
+        .decode(base64.trim())
+        .map_err(|e| format!("Invalid base64: {}", e))?;
+    fs::write(&path, &data).map_err(|e| format!("Failed to save file: {}", e))
+}
+
+/// LaTeX → OMML（`<m:oMath>…</m:oMath>`），供 PPTX 导出注入原生可编辑公式。
+/// 与 DOCX 导出同源（`docx_export::omml_of`），失败时前端回退成纯文本。
+#[tauri::command]
+fn latex_to_omml(tex: String) -> Result<String, String> {
+    docx_export::omml_of(&tex).ok_or_else(|| "Failed to convert LaTeX to OMML".to_string())
+}
+
+/// SVG → PNG（PPTX 里的 Mermaid 图）。复用 DOCX 侧那套 `resvg`（含系统字体库），
+/// 返回 data URL 与 SVG 固有尺寸 —— 前端用它保持宽高比。
+#[derive(Serialize)]
+struct RasterizedSvg {
+    data_url: String,
+    width: f64,
+    height: f64,
+}
+
+#[tauri::command]
+fn rasterize_svg(svg: String) -> Result<RasterizedSvg, String> {
+    use base64::Engine as _;
+    let (png, width, height) =
+        docx_export::svg_to_png(svg.as_bytes()).ok_or_else(|| "Failed to rasterize SVG".to_string())?;
+    let b64 = base64::engine::general_purpose::STANDARD.encode(png);
+    Ok(RasterizedSvg {
+        data_url: format!("data:image/png;base64,{}", b64),
+        width,
+        height,
+    })
+}
+
 #[tauri::command]
 async fn save_file_dialog(app: tauri::AppHandle, file_name: Option<String>, extensions: Option<Vec<String>>) -> Result<Option<String>, String> {
     use tauri_plugin_dialog::DialogExt;
@@ -1613,6 +1654,9 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             read_file,
             save_file,
+            save_binary_file,
+            latex_to_omml,
+            rasterize_svg,
             save_file_dialog,
             read_directory,
             create_directory,

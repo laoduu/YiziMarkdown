@@ -1,5 +1,39 @@
 # YiziMarkdown 开发日志
 
+## v0.4.0
+
+> **未发布**（截至 2026-10-25）：`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已升到 `0.4.0`，但**未打包、未打 tag**。用户向说明见 `docs/changelog/CHANGELOG-V0.4.0.md`。
+
+### 演示模式一键导出 PPTX（2026-10-25）
+
+把演示模式导出成**原生可编辑**的 PowerPoint：文本、表格、图片、形状、列表圆点、原生 OMML 公式都是独立对象，只有 Mermaid 图表是位图（与 DOCX 导出同源，resvg 栅格化）。
+
+**为什么不是截图**：整页 PNG 在 PPT 里不可编辑、不可选、不可换主题，与「演示即文档」的定位冲突；而 DOM 已经在演示里排好版，量出来就是坐标。
+
+**架构（四层，职责单一）**：
+
+1. `src/lib/slideDeck.ts` —— 从 `Slideshow.tsx` 抽出的**唯一**解析/渲染来源：`parseDeck` / `buildSlideHtml` / 主题作用域化 / 章节切分。演示与导出共用，避免两套排版漂移
+2. `src/lib/pptxFrame.ts` —— 隐藏 iframe **1280×720 真实视口**复刻演示（`vw/vh` 只有这样才是 16:9 全屏的解析基准）；等样式/字体/图片就绪，Mermaid → PNG、本地图片 → data URL
+3. `src/lib/pptxScene.ts` —— DOM 测量 → 场景图（inch 坐标 + 富文本 run + 形状/图片/表格/公式节点）；圆点与序号是**手绘形状**，几何/颜色/字号从伪元素 computed style 读
+4. `src/lib/pptxBuild.ts` + JSZip 后处理 —— PptxGenJS 生成原生 PPTX，再补 OMML（`a14:m` + `mc:AlternateContent`）、`latin|ea` 字体拆分、渐变下划线（`gradFill`）、多余 `<a:pPr>` 清理、`xml:space="preserve"`
+
+**换算**：13.333×7.5in，1px = 1/96in = 0.75pt；正文基准 26.88px → 20.16pt；`defineLayout` 用 `width: 40/3` 得到精确 12192000×6858000 EMU。
+
+**入口**：工具栏导出菜单 + 演示 HUD 两处，共用一个 `PptxExportDialog`（弹窗打开时挂起演示的键盘/滚轮翻页，避免误翻页）；基准固定 1280×720，不跟随窗口。
+**告警本地化**：`PptxWarning` 用结构化 `messageKey` + `messageArgs`（`pptxExport.warn*`，15 种语言），弹窗按当前界面语言渲染；`tests/pptxWarnings.test.ts` 从源码抽取所有 key 逐个语言核对，避免动态 key 拼错后把 `pptxExport.warnXxx` 原文抛给用户。
+
+**验证**：临时端到端环境（headless Edge + 桩 Tauri 命令，见 `e2e-pptx/`，验证后删除）真实跑 `exportPptx`，导出 9 页样例（浅色 / 暗色 + 自动压缩各一份），LibreOffice → PDF → PNG 逐页目检：封面、章节页、列表页、表格、代码块、分栏卡片、Mermaid、图片、页脚、渐变下划线全部通过；52 个 XML part 全部良构。`npm test` 全部通过（新增 `pptxBuild` 9 项 + `pptxTheme` 8 项）；`npm run build` 通过。
+
+**验证阶段揪出的 4 个真 bug**（都已修 + 加回归测试）：
+
+1. **颜色解析**：Chrome 对普通颜色的 computed value 一律是逗号分隔的 `rgb(245, 248, 255)`，早先按空白切通道 → 解析失败 → `flattenColor` 静默返回 `000000` → 整个 deck 黑底黑字、整页空白。现已分别处理逗号 / 空格 / 斜杠三种语法，并对 `oklch()` 等用 canvas 兜底归一
+2. **暗色表格行条纹**：`flattenColor(color, bg)` 的 `bg` 常常是本模块刚产出的 `0D1117`（无 `#`），`parseColor` 不认 → 退回白底 → 暗色主题里的半透明叠色全变成浅色。现在 6/8 位无 `#` hex 也能解析
+3. **Mermaid 整块丢失**：栅格化后 `.mermaid` 里只有一个 `<img>`，既没有块级子元素也没有文本，`collectInline` 会跳过 `IMG`；现对「单图片容器」直接输出图片节点，并加了「既无图也无文字必须告警」的兜底。同时给 Mermaid 的 `<img>` 打 `data-ys-mermaid`，避免把主题给图片加的阴影/圆角照搬到 SVG 上
+4. **圆角单位**：PptxGenJS 的 `rectRadius` 收的是**英寸**（内部再除一次短边得到 `adj`），早先传的是点 → 12px 圆角被放大成短边一半，代码块变胶囊形。现在按 `radiusPt / 72` 传入并封顶短边一半
+
+**已知取舍**：表格单元格只保留纯文本（`\n` 分隔段落，不支持单元格内图片）；行内图片（与文字混排）不导出；`[toc]` 不生成超链接；超密内容在 warn 模式下会裁到页面外（改选自动压缩即可）。
+
+
 ## v0.3.7
 
 > **未发布**（截至 2026-10-25）：`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已升到 `0.3.7`，但**未打包、未打 tag**；0.3.7 即下一个正式版本，发布时随包提供。用户向说明见 `docs/changelog/CHANGELOG-V0.3.7.md`。

@@ -94,7 +94,7 @@ We have created an extremely elegant experience for WYSIWYG mode; it also suppor
 - **Create from template**: Toolbar "Create from template" dropdown menu, creates new document based on selected template's Markdown structure; also can set default template in Settings → General, then `Ctrl+N` automatically applies
 - **Save / Auto-save**: Manual save + configurable interval auto-save (5~180 seconds, default 60 seconds)
 - **Save as**: Automatically pops up save-as dialog when saving new files
-- **Export**: Five formats: HTML / Markdown / plain text / Word (DOCX) / PDF; DOCX uses native Word semantics (lists/tables/code blocks/quotes/task lists), table styles match the preview, images support local paths, web images and HTML `<img>` tags (width can be controlled with the `width` attribute); PDF matches the preview with automatic pagination
+- **Export**: Six formats: HTML / Markdown / plain text / Word (DOCX) / PDF / PPTX; DOCX uses native Word semantics (lists/tables/code blocks/quotes/task lists), table styles match the preview, images support local paths, web images and HTML `<img>` tags (width can be controlled with the `width` attribute); PDF matches the preview with automatic pagination; PPTX inherits the presentation view's theme, light/dark mode and layout, producing editable text, tables, images, shapes and native equations
 - **.md file association**: One-click set as system default Markdown editor in settings, double-click .md to open directly (Windows registry / macOS LaunchServices)
 
 ### Cloud Storage (WebDAV)

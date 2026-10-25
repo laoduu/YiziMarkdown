@@ -9,7 +9,7 @@
     <meta name="author" content="YiziPaper">
     <meta name="robots" content="index, follow">
     <meta name="docs-src" content="docs/slideshow-style-mapping.md">
-    <meta name="docs-hash" content="1c677634d5d70a6aae9b45d9858fb60fbaea927cb3bbc674ae4063a5f320db75">
+    <meta name="docs-hash" content="b33776a61848cc0c8184b0225f4ddec3d9815574e40c843da917e452fac57bc7">
     <link rel="canonical" href="https://md.yizigpt.com/slideshow-syntax.html">
 
     <!-- Open Graph -->
@@ -93,8 +93,10 @@
 <p>相关代码：</p>
 <ul>
 <li>分页与版式推断：<code>src/lib/slides.ts</code></li>
+<li>解析与渲染（演示 / 导出共用）：<code>src/lib/slideDeck.ts</code></li>
 <li>渲染与主题继承：<code>src/components/Slideshow.tsx</code></li>
 <li>幻灯片样式：<code>src/styles/slideshow.css</code></li>
+<li>PPTX 导出：<code>src/lib/pptxExport.ts</code>（编排）、<code>pptxFrame.ts</code>（1280×720 测量）、<code>pptxScene.ts</code>（DOM → 场景图）、<code>pptxBuild.ts</code>（PptxGenJS + XML 后处理）</li>
 </ul>
 </div>
 
@@ -529,7 +531,130 @@ date: 2026-08-13
 
 </section>
 
-<section class="help-section" id="扩展版式进阶" data-icon="code-2" data-kw="扩展版式（进阶） 如需新增或调整某类版式的观感，编辑 src/styles/slideshow.css 中 .ys-layout-&lt;类型&gt; 规则即可（ cover / section / thanks / agenda / content / content-list / table / roadmap / figure / image / quote / code / chart / formula ）。版式识别逻辑在 src/lib/slides.ts 的 detectLayout ；标题颜色在主题文件的 --">
+<section class="help-section" id="导出为-pptx" data-icon="code-2" data-kw="导出为 PPTX 演示模式可以一键导出 .pptx ， 不需要在 Markdown 里加任何标记 。导出结果是 PowerPoint 里的 原生可编辑对象 （文字、表格、图片、形状、原生公式），不是整页截图。">
+<h2><a class="anchor" href="#导出为-pptx">#</a>导出为 PPTX</h2>
+<p>演示模式可以一键导出 <code>.pptx</code>，<strong>不需要在 Markdown 里加任何标记</strong>。导出结果是 PowerPoint 里的<strong>原生可编辑对象</strong>（文字、表格、图片、形状、原生公式），不是整页截图。</p>
+<div class="help-sub" id="入口" data-kw="入口 编辑器工具栏 →「导出」菜单 →「PPTX」 演示模式右下角 HUD →「导出 PPTX」 两处打开的是 同一个导出弹窗 ：HUD 入口多一个「只导当前页」选项；工具栏入口没有当前页，但提供「先看演示效果」按钮。 导出时： 主题、明暗、版式、演示字号、填充比例、分栏样式全部沿用演示的同一套解析与 CSS（演示与导出共用 src/lib/slideDeck.ts ），暗色主题所见即所得，不会强制白底。 基准固定为 16:9 / 1280×720 ，与当前窗口大小无关；演示窗口更宽或更窄都不会改变导出结果。 先选">
+<h3>入口</h3>
+<ul>
+<li>编辑器工具栏 →「导出」菜单 →「PPTX」</li>
+<li>演示模式右下角 HUD →「导出 PPTX」</li>
+</ul>
+<p>两处打开的是<strong>同一个导出弹窗</strong>：HUD 入口多一个「只导当前页」选项；工具栏入口没有当前页，但提供「先看演示效果」按钮。</p>
+<p>导出时：</p>
+<ul>
+<li>主题、明暗、版式、演示字号、填充比例、分栏样式全部沿用演示的同一套解析与 CSS（演示与导出共用 <code>src/lib/slideDeck.ts</code>），暗色主题所见即所得，不会强制白底。</li>
+<li>基准固定为 <strong>16:9 / 1280×720</strong>，与当前窗口大小无关；演示窗口更宽或更窄都不会改变导出结果。</li>
+<li>先选保存路径，再逐页测量生成；弹窗里有进度与「取消导出」。</li>
+<li>弹窗打开期间，演示的翻页键与滚轮翻页会挂起，避免误翻页。</li>
+</ul>
+</div>
+<div class="help-sub" id="弹窗选项" data-kw="弹窗选项 选项 默认 说明 范围 全部页 可选当前页（仅 HUD 入口）或自定义页码区间 演讲者备注 开启 把 &lt;!-- notes: … --&gt; 写进 PPT 的演讲者备注 页脚 开启 每页底部写「章节名 + 页码」 超页处理 警告并列出页码 也可选「自动压缩字号」：逐档缩小到 94% → 60%，让浏览器真实重排，而不是拉伸图片 导出结束后弹窗会列出告警（超页、公式回退、图片/图表失败等）；点告警旁的页码可直接跳到演示中的对应页。选择「警告并列出页码」时，超出可视区的内容会保持原尺寸， 底部可能被裁到页外 ；介">
+<h3>弹窗选项</h3>
+<div class="help-table-wrap"><table class="docs-table docs-table--nowrap-first">
+<thead>
+<tr>
+<th>选项</th>
+<th>默认</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>范围</td>
+<td>全部页</td>
+<td>可选当前页（仅 HUD 入口）或自定义页码区间</td>
+</tr>
+<tr>
+<td>演讲者备注</td>
+<td>开启</td>
+<td>把 <code>&lt;!-- notes: … --&gt;</code> 写进 PPT 的演讲者备注</td>
+</tr>
+<tr>
+<td>页脚</td>
+<td>开启</td>
+<td>每页底部写「章节名 + 页码」</td>
+</tr>
+<tr>
+<td>超页处理</td>
+<td>警告并列出页码</td>
+<td>也可选「自动压缩字号」：逐档缩小到 94% → 60%，让浏览器真实重排，而不是拉伸图片</td>
+</tr>
+</tbody>
+</table></div>
+<p>导出结束后弹窗会列出告警（超页、公式回退、图片/图表失败等）；点告警旁的页码可直接跳到演示中的对应页。选择「警告并列出页码」时，超出可视区的内容会保持原尺寸，<strong>底部可能被裁到页外</strong>；介意裁切就选「自动压缩字号」。</p>
+</div>
+<div class="help-sub" id="元素映射" data-kw="元素映射 Markdown / 演示内容 PPTX 里的对象 标题、段落、行内样式 独立文本框；加粗、斜体、删除线、行内代码、链接、字距、行距保留 列表 文本 + 手绘圆点 / 序号形状 （几何、颜色、字号取演示的伪元素样式），不是字符项目符号 表格 原生 PPT 表格；表头底色、行条纹、边框、对齐逐格还原 代码块 等宽文本框 + 背景卡片；保留高亮颜色与缩进 引用、卡片、分栏 圆角矩形 + 文本块（背景、边框、阴影按 computed style） 封面 / 章节页的渐变下划线 原生形状 + gradFill （">
+<h3>元素映射</h3>
+<div class="help-table-wrap"><table class="docs-table">
+<thead>
+<tr>
+<th>Markdown / 演示内容</th>
+<th>PPTX 里的对象</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>标题、段落、行内样式</td>
+<td>独立文本框；加粗、斜体、删除线、行内代码、链接、字距、行距保留</td>
+</tr>
+<tr>
+<td>列表</td>
+<td>文本 + <strong>手绘圆点 / 序号形状</strong>（几何、颜色、字号取演示的伪元素样式），不是字符项目符号</td>
+</tr>
+<tr>
+<td>表格</td>
+<td>原生 PPT 表格；表头底色、行条纹、边框、对齐逐格还原</td>
+</tr>
+<tr>
+<td>代码块</td>
+<td>等宽文本框 + 背景卡片；保留高亮颜色与缩进</td>
+</tr>
+<tr>
+<td>引用、卡片、分栏</td>
+<td>圆角矩形 + 文本块（背景、边框、阴影按 computed style）</td>
+</tr>
+<tr>
+<td>封面 / 章节页的渐变下划线</td>
+<td>原生形状 + <code>gradFill</code>（主题色 → 透明）</td>
+</tr>
+<tr>
+<td>行内 / 块级公式（KaTeX）</td>
+<td><strong>原生 OMML 公式</strong>，可在 PowerPoint 里编辑；转换失败回退为 <code>$TeX$</code> 纯文本并告警</td>
+</tr>
+<tr>
+<td>Mermaid 图表</td>
+<td>重新渲染为纯文本标签 SVG 后由 Rust <code>resvg</code> 栅格化嵌入（与 DOCX 导出同源）</td>
+</tr>
+<tr>
+<td>本地 / 远程图片</td>
+<td>内嵌 PNG / JPEG，保留演示里的圆角与阴影</td>
+</tr>
+<tr>
+<td><code>&lt;!-- notes: … --&gt;</code></td>
+<td>演讲者备注（notesSlide）</td>
+</tr>
+<tr>
+<td>页脚（章节名 + 页码）</td>
+<td>独立文本框</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<div class="help-sub" id="已知取舍" data-kw="已知取舍 表格单元格只保留 纯文本 （多段落用换行分隔），单元格内的图片、公式不单独建对象。 与文字混排的 行内图片 不导出；单独成块的图片正常导出。 [toc] 目录导出为文字， 不生成 PPT 内部超链接 。 动画、页面切换、片段分步、HUD、进度条不进入 PPTX：每页只导出「全部内容已显示」的最终状态。 CJK 字体按 latin / ea / cs 拆分写进 XML；本机没有演示所用字体时，PowerPoint 可能回退到相近字体，宽度会略有差异。 极密内容即使缩到 60% 仍可能超页，此时弹窗会继续告警">
+<h3>已知取舍</h3>
+<ul>
+<li>表格单元格只保留<strong>纯文本</strong>（多段落用换行分隔），单元格内的图片、公式不单独建对象。</li>
+<li>与文字混排的<strong>行内图片</strong>不导出；单独成块的图片正常导出。</li>
+<li><code>[toc]</code> 目录导出为文字，<strong>不生成 PPT 内部超链接</strong>。</li>
+<li>动画、页面切换、片段分步、HUD、进度条不进入 PPTX：每页只导出「全部内容已显示」的最终状态。</li>
+<li>CJK 字体按 <code>latin / ea / cs</code> 拆分写进 XML；本机没有演示所用字体时，PowerPoint 可能回退到相近字体，宽度会略有差异。</li>
+<li>极密内容即使缩到 60% 仍可能超页，此时弹窗会继续告警。</li>
+</ul>
+</div>
+</section>
+
+<section class="help-section" id="扩展版式进阶" data-icon="file-text" data-kw="扩展版式（进阶） 如需新增或调整某类版式的观感，编辑 src/styles/slideshow.css 中 .ys-layout-&lt;类型&gt; 规则即可（ cover / section / thanks / agenda / content / content-list / table / roadmap / figure / image / quote / code / chart / formula ）。版式识别逻辑在 src/lib/slides.ts 的 detectLayout ；标题颜色在主题文件的 --">
 <h2><a class="anchor" href="#扩展版式进阶">#</a>扩展版式（进阶）</h2>
 <p>如需新增或调整某类版式的观感，编辑 <code>src/styles/slideshow.css</code> 中 <code>.ys-layout-&lt;类型&gt;</code> 规则即可（<code>cover / section / thanks / agenda / content / content-list / table / roadmap / figure / image / quote / code / chart / formula</code>）。版式识别逻辑在 <code>src/lib/slides.ts</code> 的 <code>detectLayout</code>；标题颜色在主题文件的 <code>--editor-h1/h2/h3</code> 变量中调整。</p>
 
