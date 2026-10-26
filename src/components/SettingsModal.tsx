@@ -21,6 +21,7 @@ import {
   testConnection,
 } from '../lib/webdav'
 import { normalizeBaseUrl } from '../lib/remotePath'
+import { liveAnimPreviewCss } from '../lib/liveAnimKeyframes'
 import { DEFAULT_THEME, orderThemes } from '../lib/themeOrder'
 import { CUSTOM_THEME, applyThemeStyles, readUserCss } from '../lib/themeLoader'
 import { sanitizeUserCss } from '../lib/userCss'
@@ -536,29 +537,23 @@ function AnimationDemo({ mode }: { mode: string }) {
   
   return (
     <div onClick={triggerAnimation} className="cursor-pointer select-none">
-      <style>{`
-        .demo-anim-blur { animation: demo-blur 0.45s ease forwards; }
-        .demo-anim-flash { animation: demo-flash 0.5s ease forwards; }
-        .demo-anim-glow { animation: demo-glow 0.55s ease forwards; }
-        .demo-anim-ripple { animation: demo-ripple 0.7s ease forwards; }
-        @keyframes demo-blur { 0% { filter: blur(3px); } 100% { filter: blur(0); } }
-        @keyframes demo-flash { 0% { filter: brightness(1); } 30% { filter: brightness(1.6); } 100% { filter: brightness(1); } }
-        @keyframes demo-glow { 0% { filter: blur(3px) brightness(0.8); } 30% { filter: blur(0.5px) brightness(1.6); } 100% { filter: blur(0) brightness(1); } }
-        @keyframes demo-ripple { 0% { filter: blur(3px) brightness(0.8); } 20% { filter: blur(1px) brightness(1.7); } 50% { filter: blur(0) brightness(1.3); } 100% { filter: blur(0) brightness(1); } }
-        
+      <style>{liveAnimPreviewCss() + `
+        /* .demo-mark 对应真实的 .cm-md-hiding-span（cm-live-render.ts）：
+           同为 0.18s ease / max-width 0→5em / opacity 0→1；
+           染成强调色是预览的示意设计（让学员看清哪些是标记），参数不再自成一套 */
         .demo-mark {
           display: inline-block;
           overflow: hidden;
           max-width: 0;
           opacity: 0;
-          transition: max-width 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+          transition: opacity 0.18s ease, max-width 0.18s ease;
           color: var(--editor-accent);
           font-family: var(--font-mono);
           font-size: 0.85em;
         }
         .demo-active .demo-mark {
-          max-width: 3em;
-          opacity: 0.6;
+          max-width: 5em;
+          opacity: 1;
         }
       `}</style>
       
@@ -641,6 +636,8 @@ function EditorSettings() {
   const visibleFonts = filtered.slice(0, fontLimit)
   const cur = mode === 'edit' ? store.fontFamily : store.previewFontFamily
   const setFont = (v: string) => store.setField(mode === 'edit' ? 'fontFamily' : 'previewFontFamily', v)
+  // 底部预览：左源码 / 右预览，两侧都渲染真正的设置值（不是写死的示例）
+  const sourceSampleLines = t('settings.sourceSampleText').split('\n')
 
   return (
     <>
@@ -770,11 +767,53 @@ function EditorSettings() {
             <input type="text" value={cur} onChange={(e) => setFont(e.target.value)} placeholder={t('settings.manualFont')} className="settings-input mt-1.5" />
           </Section>
           <Section title={t('settings.preview')}>
-            <div className="p-3 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg text-[var(--editor-text)]" style={{ fontFamily: store.fontFamily, fontSize: `${store.fontSize}px`, lineHeight: store.lineHeight }}>
-              <div className="text-[11px] text-[var(--sidebar-text)] mb-1">{t('settings.sourceMode')}</div>
-              <div style={{ fontFamily: "'Consolas', monospace", background: 'var(--editor-bg)', padding: '6px', borderRadius: '4px', fontSize: '12px' }}>function hello() {'{'}<br/>&nbsp;&nbsp;console.log("Hello, YiziMarkdown!");<br/>{'}'}</div>
-              <div className="mt-2 text-[11px] text-[var(--sidebar-text)] mb-1">{t('settings.previewMode')}</div>
-              <div style={{ fontFamily: store.previewFontFamily, fontSize: `${store.previewFontSize}px`, lineHeight: store.previewLineHeight }}><h3 style={{ fontWeight: 600, margin: '0.3em 0 0.2em' }}>{t('settings.headingSample')}</h3><p>{t('settings.sampleText')}</p></div>
+            {/* 左源码 / 右预览：本页的字体、字号、行距、行号、换行、鼠标指针样式全部按当前设置实时渲染 */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg border border-[var(--editor-border)] overflow-hidden">
+                <div className="px-3 py-1.5 text-[11px] text-[var(--sidebar-text)] bg-[var(--editor-surface)] border-b border-[var(--editor-border)]">{t('settings.sourceMode')}</div>
+                <div
+                  className="p-2.5 overflow-x-auto"
+                  style={{
+                    fontFamily: store.fontFamily,
+                    fontSize: `${store.fontSize}px`,
+                    lineHeight: store.lineHeight,
+                    background: 'var(--editor-bg)',
+                    color: 'var(--editor-text)',
+                    // 鼠标指针与真实编辑器同源（themeCursor 注入的两档主题色 I-beam），移上来即可看到所选样式
+                    cursor: store.cursorStyle === 'bold'
+                      ? 'var(--cursor-bold, text)'
+                      : 'var(--cursor-standard, var(--cursor-bold, text))',
+                  }}
+                >
+                  <div className="flex">
+                    {store.showLineNumbers && (
+                      <div className="select-none text-right opacity-40 pr-2 mr-2 shrink-0" style={{ borderRight: '1px solid var(--editor-border)' }}>
+                        {sourceSampleLines.map((_, i) => (<div key={i}>{i + 1}</div>))}
+                      </div>
+                    )}
+                    <div style={{ whiteSpace: store.wordWrap ? 'pre-wrap' : 'pre' }}>
+                      {sourceSampleLines.map((line, i) => (<div key={i}>{line}</div>))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-lg border border-[var(--editor-border)] overflow-hidden">
+                <div className="px-3 py-1.5 text-[11px] text-[var(--sidebar-text)] bg-[var(--editor-surface)] border-b border-[var(--editor-border)]">{t('settings.previewMode')}</div>
+                <div
+                  className="p-2.5"
+                  style={{
+                    fontFamily: store.previewFontFamily,
+                    fontSize: `${store.previewFontSize}px`,
+                    lineHeight: store.previewLineHeight,
+                    background: 'var(--editor-bg)',
+                    color: 'var(--editor-text)',
+                    minHeight: '110px',
+                  }}
+                >
+                  {/* sampleText 是词典里的渲染示例 HTML（<strong>/<a>/<code>），内容自有且静态，可安全直出 */}
+                  <p className="m-0" dangerouslySetInnerHTML={{ __html: t('settings.sampleText') }} />
+                </div>
+              </div>
             </div>
           </Section>
         </div>

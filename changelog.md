@@ -6,6 +6,34 @@
 >
 > 原计划的 `0.3.7` 从未打包、未打 tag、未发过 release，其全部改动（实时模式列表逐行切换、嵌套列表输入法、界面文案多语言与硬编码门禁）已并入本节，不再单独保留 `## v0.3.7` 小节，`docs/changelog/CHANGELOG-V0.3.7.md` 同步并入 `CHANGELOG-V0.4.0.md`。
 
+### 设置-实时模式：动画预览与真实效果脱节——抽单一事实源（2026-10-26）
+
+用户反馈：四种「点击显示源码」动画在实际 live 中体验有区别，但设置的动画预览点起来四个感觉都一样。
+
+**根因**（两处独立手写的 keyframes 从未同步）：
+
+- 真实动画在 `cm-live-render.ts` 的 CodeMirror theme（`live-txt-*`：blur 2px / flash 峰值 1.5 / glow 2px+0.9 / ripple 2.5px+0.85 多段）
+- 预览在 `SettingsModal.tsx` AnimationDemo 里手写另一套 `demo-*`（blur 3px / flash 1.6 / glow 3px+0.8 / ripple 3px+0.8…），v0.1.4 起两份拷贝各自演化
+- 卡片上的 CSS 说明文案（i18n anim*Css）写的是真实值 → 与下方预览同屏自相矛盾
+- 结构性放大「趋同感」：预览把 blur/glow/ripple 的起始帧都夸大成 blur(3px)，起手几乎一样；flash 起始是零变化，在 13px 小字上不可见；预览的标记出现过渡 0.4s / opacity 0.6（真实 hiding-span 是 0.18s / 1），观感焦点被拖到标记滑入上 → 四个方案在预览里读作同一个「糊一下再对焦」
+
+**修法（单一事实源）**：新增 `src/lib/liveAnimKeyframes.ts`，四种方案的参数（各帧 filter 值 / 时长 / easing）只定义一次；`cm-live-render.ts` 的 theme 条目（liveAnimThemeEntries）与设置预览 CSS（liveAnimPreviewCss）都由它生成，杜绝再漂移。预览的 `.demo-mark` 过渡同步真实 `.cm-md-hiding-span`（0.18s ease、max-width 0→5em、opacity 0→1，保留强调色作为标记示意）。同时校准 15 个语言的卡片 CSS 说明文案：`animFocusCss`/`animFlashCss` 本就带真实值，`animGlowCss`/`animRippleCss` 此前只有模糊词组（「blur + brightness 组合」），补上真实数值序列（glow `blur 2px→0.5px→0 + brightness 0.9→1.5→1`、ripple `blur 2.5px→1px→0 + brightness 0.85→1.6→1.25→1`），保留各语言描述性短语；断言脚本从 LIVE_ANIMATIONS 提取数值序列与 15 语言文案逐值比对，全部一致 ✓。
+
+**验证**：esbuild 加载事实源模块，断言 CM theme 条目与预览 CSS 逐帧一致 ✓；filmstrip（负 animation-delay 冻结 0/25/50/100% 进度）对比修复前后——修复后预览与真实动画逐帧一致 ✓；实机 HMR 后设置面板预览渲染正常 ✓；tsc / build / test 全过 ✓。
+
+### 设置-编辑器：底部预览改为「左源码 / 右预览」真实设定值（2026-10-26）
+
+用户反馈：编辑器页设定了字体、字号、行距（源码侧/预览侧两套）、鼠标指针样式、行号、自动换行，但底部预览左侧是一段写死的 Consolas 代码片段（完全不随设置变），右侧只是标题+示例文字——真正该预览的「正文在当前设定下的样子」反而看不到。
+
+**修法**：预览区改为左右双栏，两侧都渲染 i18n 的**正文示例**并实时套用当前设定值：
+
+- 左「源码」栏：`fontFamily` / `fontSize` / `lineHeight` 按源码侧设定渲染 markdown 源码原文（`**加粗**`、`[链接](…)`、`` `行内代码` `` 原样显示）；行号 gutter 随「显示行号」开关显隐；`wordWrap` 切换 `pre-wrap` / `pre`（不换行时水平滚动）；鼠标移入显示当前「鼠标指针样式」——直接用真实编辑器同源的主题色 I-beam 变量（`--cursor-bold` / `--cursor-standard`，由 themeCursor.ts 注入 `<html>`）
+- 右「预览」栏：`previewFontFamily` / `previewFontSize` / `previewLineHeight` 渲染渲染态正文示例 HTML（strong/a/code，`dangerouslySetInnerHTML` 直出词典内静态内容）
+
+**i18n**：15 个语言新增 `settings.sourceSampleText`（源码态示例，`\n` 转义分行）；升级 `settings.sampleText` 为渲染态正文（原实现把 `<strong>` 标签当纯文本显示在预览里）；删除改版后的死键 `settings.headingSample`。
+
+**验证**：`check-i18n --strict` / `tsc` / `test` / `build` 全过 ✓；实机 HMR 渲染正常，用户确认 ✓。
+
 ### 官网：一级导航新增「文档」下拉 + 帮助中心同步全屏行为（2026-10-26）
 
 三个规范文档此前只靠帮助中心旁挂的二级标签栏（docs-tabs）曝光，一级导航没有独立位置。改 `site-chrome.js`（5 页共用外壳）：`LINKS` 增加「文档」下拉，子菜单 = 演示语法 / 主题规范 / 技能规范（帮助中心仍为独立一级项）；高亮逻辑改为「文档页点亮『文档』触发器、help.html 点亮『帮助中心』」（此前帮助中心在所有文档页都高亮）。桌面 hover 展开（CSS：菜单盒 `::before` 铺透明接力区跨过导航底边，保住 hover 不断开），触屏无 hover 走 JS 点按 + Esc 关闭；≤900px 移动端子菜单变缩进列表点按展开。缓存 bump：`site-chrome.js?v=3`、`style.css?v=1`（style.css 首次带版本号）。文档页内部 docs-tabs 未动，`check-docs-site` 通过；Edge headless dump DOM 三页冒烟验证高亮状态正确。

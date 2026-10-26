@@ -23,6 +23,7 @@ import { tags as t } from '@lezer/highlight'
 import { liveBlocksBundle } from './cm-live-blocks'
 import { frontMatterField } from './cm-frontmatter'
 import { propertiesPanel } from './cm-properties'
+import { liveAnimThemeEntries } from './liveAnimKeyframes.ts'
 import { resolveLocalImageSrc } from './localImages.ts'
 import { useEditorStore } from '../stores/editorStore.ts'
 import { invokeTauri } from './tauri.ts'
@@ -866,45 +867,10 @@ export const liveEditTheme = EditorView.theme({
     opacity: '1',
     maxWidth: '5em',
   },
-  // ====== 动画方案：聚焦（blur）— 默认 ======
-  '.cm-md-anim-blur': {
-    animation: 'live-txt-blur 0.45s ease forwards',
-  },
-  '@keyframes live-txt-blur': {
-    '0%': { filter: 'blur(2px)' },
-    '100%': { filter: 'blur(0)' },
-  },
-
-  // ====== 动画方案：闪光（flash） ======
-  '.cm-md-anim-flash': {
-    animation: 'live-txt-flash 0.5s ease forwards',
-  },
-  '@keyframes live-txt-flash': {
-    '0%': { filter: 'brightness(1)' },
-    '30%': { filter: 'brightness(1.5)' },
-    '100%': { filter: 'brightness(1)' },
-  },
-
-  // ====== 动画方案：辉光（glow） ======
-  '.cm-md-anim-glow': {
-    animation: 'live-txt-glow 0.55s ease forwards',
-  },
-  '@keyframes live-txt-glow': {
-    '0%': { filter: 'blur(2px) brightness(0.9)' },
-    '30%': { filter: 'blur(0.5px) brightness(1.5)' },
-    '100%': { filter: 'blur(0) brightness(1)' },
-  },
-
-  // ====== 动画方案：涟漪（ripple） ======
-  '.cm-md-anim-ripple': {
-    animation: 'live-txt-ripple 0.7s ease forwards',
-  },
-  '@keyframes live-txt-ripple': {
-    '0%': { filter: 'blur(2.5px) brightness(0.85)' },
-    '20%': { filter: 'blur(1px) brightness(1.6)' },
-    '50%': { filter: 'blur(0) brightness(1.25)' },
-    '100%': { filter: 'blur(0) brightness(1)' },
-  },
+  // ====== 四种动画方案（聚焦 blur / 闪光 flash / 辉光 glow / 涟漪 ripple） ======
+  // keyframes 是唯一事实源，定义在 liveAnimKeyframes.ts；设置面板的动画预览（AnimationDemo）
+  // 消费同一份数据，两处不会再漂移。改动画参数请改那边，不要在这里手写拷贝。
+  ...liveAnimThemeEntries(),
   // 标题行过渡：字体大小和内边距平滑变化
   '.cm-md-heading-line': {
     transition: 'font-size 0.18s ease, padding-top 0.18s ease, padding-bottom 0.18s ease',
