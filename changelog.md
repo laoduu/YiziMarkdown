@@ -2,9 +2,47 @@
 
 ## v0.4.0
 
-> **未发布**（截至 2026-10-25）：`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已升到 `0.4.0`，但**未打包、未打 tag**。用户向说明见 `docs/changelog/CHANGELOG-V0.4.0.md`。
+> **未发布**（截至 2026-10-26）：`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已升到 `0.4.0`，但**未打包、未打 tag**。用户向说明见 `docs/changelog/CHANGELOG-V0.4.0.md`。
 >
 > 原计划的 `0.3.7` 从未打包、未打 tag、未发过 release，其全部改动（实时模式列表逐行切换、嵌套列表输入法、界面文案多语言与硬编码门禁）已并入本节，不再单独保留 `## v0.3.7` 小节，`docs/changelog/CHANGELOG-V0.3.7.md` 同步并入 `CHANGELOG-V0.4.0.md`。
+
+### 全屏与窗口状态整治：单一状态源 + 操作矩阵实测（2026-10-26）
+
+用户报了 4 个全屏问题：全屏中拖动标题栏后窗口变得很大不还原、全屏中点最大化后底部出现黑带、最大化后进全屏退出不再回到最大化、全屏按钮图标状态不切换；另加一个 Esc 后窗口按钮残留绿色焦点框。
+
+**根因**：窗口状态有 3 个互不同步的来源——DOM `document.fullscreenElement`、原生 `is_fullscreen` / `is_maximized`、`fullscreen.ts` 的模块级 `toggleSavedMaximized` 标记——彼此只靠 `WindowControls` 的 500ms 轮询勉强对齐。任何一条退出路径只要不经过 `toggleFullscreen`（Esc、演示卸载、原生事件），状态就分叉：
+
+- **全屏中拖标题栏**：全屏态没有禁用拖动，`startDragging` 把 1920×1080 的全屏窗口整体拖到 (180,81)，大半个窗口出屏，退出全屏才恢复（实测 A2）
+- **全屏中点最大化**：该钮直接 `toggleMaximize`，窗口变成原生最大化 `-8,-8,1928,1040`，底部露出 40px 任务栏/黑带（实测 A4）
+- **最大化 → 全屏 → 退出**：Esc 退出不走 `toggleFullscreen`，`toggleSavedMaximized` 无人消费，窗口停在进入前被取消掉的最大化状态（实测 A7：退化回 1216×809）
+- **图标状态不切换**：`WindowControls` 自带轮询 + 本地 state，与 DOM 事件各自为政
+
+**修法（四层，职责单一）**：
+
+1. **新增 `src/stores/windowStateStore.ts`** —— 窗口状态唯一数据源：`fullscreen`（DOM ∪ 原生取并集）、`maximized`、`preFullscreen` 进入前快照。`fullscreenchange` 事件即时刷新 + 500ms 轮询兜底（原生最大化变化没有 DOM 事件）；**「全屏 → 非全屏」转移钩子**消费快照统一还原——按钮 / Esc / 演示卸载等所有退出路径共享同一还原逻辑，快照先置 null 再异步还原（幂等，不会二次消费）
+2. **`fullscreen.ts` 去模块状态** —— 删掉 `toggleSavedMaximized`；`enterFullscreen` 进入前（取消最大化之前）调 store 拍快照；`toggleFullscreen` 简化为纯进出，不再自带还原逻辑
+3. **全屏态 UI 守卫** —— `Toolbar`：标题栏拖动、空白处双击、右键菜单「最大化」项在全屏中一律禁用/隐藏；`WindowControls`：改读 store（删组件内轮询与本地 state）；**Windows 全屏中隐藏最大化按钮位**（此时它与全屏钮都是「退出全屏」图标，两个相同图标并排无意义；mac 保留中键，mac 中键本身就是原生全屏切换）
+4. **`Slideshow.tsx` 复用共享快照** —— 删掉自管的 `savedWindowState` 存/恢复（18 行），演示退出与手动全屏退出行为完全一致
+
+**焦点框**：全局 `:focus-visible` 规则给窗口按钮也画了 2px 焦点框，点击触发 Esc（如退全屏）后焦点落在按钮上、按 modality 切换显示出来。修法：`btn` 通用样式与关闭钮加 `focus-visible:outline-none`（沿用 `slideshow.css` 的先例），全局规则保留，不影响键盘可达性。
+
+**验证方式**（WebView2 调试端口开不了：wry 总是 `set_additional_browser_arguments` 覆盖 `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` env，浏览器进程命令行里只有 wry 默认参数）：改用 **Win32 几何 + UIA 定位按钮 + SendInput + 截图** 在真实 dev 窗口上跑操作矩阵。UIA 细节：WebView2 按钮 `GetClickablePoint()` 抛 `NoClickablePointException`，用 `BoundingRectangle` 中心；按钮 Name 即 `title` 属性（`最小化/最大化/进入全屏/退出全屏/关闭/还原`）。修复前后各跑一轮对比：
+
+| # | 操作 | 修复前 | 修复后 |
+|---|------|--------|--------|
+| A1 | F11 进/退全屏 | ✅ | ✅ |
+| A2 | 全屏 → 拖标题栏 | ❌ 1920×1080 窗口被拖出屏外 | ✅ 拖动禁用，窗口不动 |
+| A4 | 全屏 → 点最大化钮 | ❌ 原生最大化 + 底部 40px 黑带 | ✅ 钮隐藏；退出全屏还原原几何，无黑带 |
+| A7 | 最大化 → 全屏 → Esc | ❌ 退化回 1216×809 | ✅ 回到最大化 |
+| A12 | 还原 → Esc | ❌ 按钮残留绿色焦点框 | ✅ 无焦点框 |
+
+`tsc` / `npm run build` / `npm test`（350 项）全过。
+
+### 编辑区两处交互修复：滚动条悬停光标、宽度手柄避开滚动条（2026-10-26）
+
+**滚动条悬停光标**：`.cm-editor-container[data-cursor]` 的容器级 I-beam 光标被 `.cm-scroller`（滚动条的命中元素）继承，hover 滚动条时光标仍是 I-beam。修法：`.cm-scroller` 显式回落 `var(--cursor-arrow, default)`；`.cm-content` 有自己的光标规则（更具体），正文区域不受影响。
+
+**宽度手柄命中条盖住滚动条**：小窗口下正文列顶到面板边缘时，右边缘正好落在纵向滚动条上，以边缘为中心（±`STRIP_HALF` 8px）的命中条把滚动条整段盖住、点不到。修法：`ContentWidthHandles` 新增 `getScrollEl` prop（源码/实时 = `.cm-scroller`，预览 = 面板本体），实测滚动条占位宽（`offsetWidth - clientWidth`），把命中条往内推到「滚动条外沿 + 半宽 + 最小间距 6px」之外；横向滚动条同理抬高条的底端。宽窗口下正文列离边缘远，行为不变。
 
 ### 演示模式一键导出 PPTX（2026-10-25）
 

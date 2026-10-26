@@ -110,9 +110,6 @@ export default function Slideshow({
   const toggleIntentRef = useRef(false)
   const hadFullscreenRef = useRef(false)
 
-  // 记录进入演示前的窗口状态
-  const savedWindowState = useRef<{ isMaximized: boolean; isFullscreen: boolean }>({ isMaximized: false, isFullscreen: false })
-
   // 鼠标活动检测
   const [showExitBtn, setShowExitBtn] = useState(false)
   const mouseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -425,27 +422,13 @@ export default function Slideshow({
     goTo(Math.max(h - 1, 0))
   }, [getFragments, REVEAL_ALL, fragmentsOn, goTo, h])
 
-  // 统一退出：退出全屏后关闭演示，回到打开前的编辑视图
+  // 统一退出：退出全屏后关闭演示，回到打开前的编辑视图。
+  // 窗口状态还原（最大化/原生全屏）由 windowStateStore 的转移钩子消费共享快照完成
+  // （enterFullscreen 内部已拍快照），这里不再自管 savedWindowState。
   const requestExit = useCallback(async () => {
     if (exitingRef.current) return
     exitingRef.current = true
     await exitFullscreen()
-    // 还原之前的窗口状态
-    const tauri = (window as any).__TAURI_INTERNALS__
-    if (tauri?.invoke) {
-      const label = tauri.metadata?.currentWindow?.label || 'main'
-      const { isMaximized, isFullscreen } = savedWindowState.current
-      try {
-        const currentFs = await tauri.invoke('plugin:window|is_fullscreen', { label })
-        if (isFullscreen && !currentFs) {
-          await tauri.invoke('plugin:window|set_fullscreen', { label, fullscreen: true })
-        } else if (!isFullscreen && isMaximized) {
-          // set 语义（幂等）：toggle_window_size 是切换，会在 fullscreen.ts 的
-          // toggleFullscreen 已恢复最大化之后又把最大化取消掉
-          await tauri.invoke('plugin:window|maximize', { label })
-        }
-      } catch {}
-    }
     onExit()
   }, [onExit])
 
@@ -561,19 +544,9 @@ export default function Slideshow({
   }, [next, prev, interactionSuspended])
 
   // 进入时尝试全屏；卸载时退出全屏
-  // enterFullscreen() 已内建处理窗口最大化状态（先取消最大化再进全屏）
+  // enterFullscreen() 内建：进入前把窗口状态拍进 windowStateStore 快照（退出后统一还原），
+  // 且先取消最大化再进全屏（HTML5 fullscreen 从最大化窗口触发只能小窗全屏）
   useEffect(() => {
-    // 记录进入演示前的窗口状态
-    const tauri = (window as any).__TAURI_INTERNALS__
-    if (tauri?.invoke) {
-      const label = tauri.metadata?.currentWindow?.label || 'main'
-      Promise.all([
-        tauri.invoke('plugin:window|is_maximized', { label }),
-        tauri.invoke('plugin:window|is_fullscreen', { label }),
-      ]).then(([maximized, fullscreen]) => {
-        savedWindowState.current = { isMaximized: !!maximized, isFullscreen: !!fullscreen }
-      }).catch(() => {})
-    }
     enterFullscreen().then((ok) => { if (ok) hadFullscreenRef.current = true })
     return () => { exitFullscreen() }
   }, [])

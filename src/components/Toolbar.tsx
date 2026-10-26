@@ -51,6 +51,7 @@ import {
 import WindowControls from './WindowControls'
 import { windowOps } from '../lib/windowOps'
 import { openContextMenu } from './ContextMenu'
+import { useWindowStateStore } from '../stores/windowStateStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { orderThemes } from '../lib/themeOrder'
 import { CUSTOM_THEME, readUserCss } from '../lib/themeLoader'
@@ -230,6 +231,9 @@ export default function Toolbar({
       className="toolbar"
       onMouseDown={(e) => {
         if (e.button !== 0) return
+        // 全屏中禁止标题栏拖动：全屏窗口被 startDragging 拖走后带着 1920×1080
+        // 尺寸漂移出屏（实测 A2），退出全屏才恢复——用户视为「窗口坏掉」
+        if (useWindowStateStore.getState().fullscreen) return
         if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('.relative')) return
         // 不能立即 startDragging：OS 拖动循环会吞掉双击的第二次点击（双击最大化因此从未生效）。
         // 位移超过阈值才真正启动拖动（与 TabBar 拖拽同款手法），纯双击不受影响。
@@ -254,15 +258,18 @@ export default function Toolbar({
       }}
       onDoubleClick={(e) => {
         if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('.relative')) return
+        // 全屏中双击 = 无操作（toggleMaximize 会触发原生最大化，留下 40px 底部缝，实测 A4）
+        if (useWindowStateStore.getState().fullscreen) return
         handleDoubleClick()
       }}
       onContextMenu={(e) => {
         e.preventDefault()
-        // 打开前查一次窗口状态，决定「最大化/还原」与「全屏」标签；mac 无「最大化」项
+        // 打开前查一次窗口状态，决定「最大化/还原」与「全屏」标签；mac 无「最大化」项；
+        // 全屏中不提供「最大化」项（同名操作会打破全屏几何，实测 A4）
         void Promise.all([windowOps.isMaximized(), windowOps.isFullscreen()]).then(([maxed, fs]) => {
           const items = [
             { key: 'minimize', icon: <Minus size={13} />, label: t('window.minimize'), onClick: () => { void windowOps.minimize() } },
-            ...(!isMac ? [{
+            ...(!isMac && !fs ? [{
               key: 'maximize', icon: <Square size={11} />,
               label: maxed ? t('window.restore') : t('window.maximize'),
               onClick: () => { void windowOps.toggleMaximize() },
