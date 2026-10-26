@@ -1781,6 +1781,12 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
               viewMode === 'preview' ? '.editor-content' : '.cm-content'
             ) ?? null
           }}
+          getScrollEl={() => {
+            // 手柄要避开的滚动条长在谁身上：源码/实时是 .cm-scroller（overflow:auto 的就是它）；
+            // 预览面板自己就是滚动容器（previewScrollRef 的 div 是 overflow:auto）。
+            if (viewMode === 'preview') return previewScrollRef.current
+            return editorRef.current?.querySelector<HTMLElement>('.cm-scroller') ?? null
+          }}
         />
       </div>
 

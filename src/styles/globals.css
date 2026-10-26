@@ -802,6 +802,13 @@ a {
 .cm-editor-container[data-cursor='text'] .cm-content {
   cursor: var(--cursor-standard, var(--cursor-bold, text));
 }
+/* 源码/实时的滚动条（以及行号 gutter、正文下方的空白区）不是输入区：
+   .cm-scroller 是滚动条的命中元素，若任由它继承上面容器级的 I-beam，
+   hover 滚动条时光标就不会回到正常形状。这里显式回归 body 的主题箭头；
+   .cm-content 有自己的光标规则（更具体），正文区域仍是 I-beam。 */
+.cm-editor-container[data-cursor] .cm-scroller {
+  cursor: var(--cursor-arrow, default);
+}
 
 /* 点击涟漪：细线三圈，依次扩散（sonar 效果） */
 .editor-click-ripple {

@@ -7,7 +7,10 @@
  *     —— 主题色、上下两端渐变透明 —— 并在竖线**外侧**显示一句提示文案「按住拖动调整宽度」；
  *   · 按住左右拖动改变设置里的 contentMaxWidth，松开鼠标时落库持久化；
  *     拖动时**只保留被抓那一侧**的线与文案，另一侧立即隐藏（两条线同时动容易看花）；
- *   · 双击竖线恢复默认宽度。
+ *   · 双击竖线恢复默认宽度；
+ *   · 命中条永远不与滚动条重合：小窗口下正文列顶到面板边、右边缘正好压着纵向滚动条时，
+ *     把条往内推到「滚动条外沿 + 半宽 + 最小间距」之外（横向滚动条同理，抬高条的底端），
+ *     否则滚动条会被 col-resize 的命中条整段盖住、点不到。
  *
  * 提示文案为什么可能出现在内侧：文案宽度有限，正文列一旦贴着面板边缘（窄窗口），
  * 外侧就只剩几个像素，文案会被编辑区的 overflow-hidden 裁掉。因此这里实测两侧留白，
@@ -35,17 +38,24 @@ const LINE_HEIGHT = 88
 const EDGE_PADDING = 44
 /** 手柄外侧放提示文案的保守留白估计（真实阈值用文案实测宽度，这里只是兜底） */
 const HINT_OUTSIDE_SPACE = 200
+/** 命中条半宽：条宽 w-4 = 16px，以正文列边缘为中心向两侧各探出这么多 */
+const STRIP_HALF = 8
+/** 手柄与滚动条之间必须保住的最小间距（像素） */
+const SCROLLBAR_GAP = 6
 
 interface Props {
   /** 是否显示（并排 split 模式隐藏：两列各有各的居中列，一个手柄对不齐两处） */
   visible: boolean
   /** 当前模式对应的正文列元素：源码/实时 = .cm-content，预览 = .editor-content */
   getContentEl: () => HTMLElement | null
+  /** 当前模式承载滚动条的容器：源码/实时 = .cm-scroller，预览 = overflow:auto 的面板本身
+   *  （手柄要避开的滚动条长在它上面，测宽度就找它） */
+  getScrollEl: () => HTMLElement | null
   /** 模式标识：模式一变正文列就换元素，需要重新测量 */
   mode: string
 }
 
-export default function ContentWidthHandles({ visible, getContentEl, mode }: Props) {
+export default function ContentWidthHandles({ visible, getContentEl, getScrollEl, mode }: Props) {
   const contentMaxWidth = useSettingsStore((s) => s.contentMaxWidth)
   const { t, lang } = useI18n()
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -65,6 +75,8 @@ export default function ContentWidthHandles({ visible, getContentEl, mode }: Pro
   // 用 ref 持有最新的取元素函数，这样测量逻辑不必随父组件每次重渲染而重建
   const getContentElRef = useRef(getContentEl)
   getContentElRef.current = getContentEl
+  const getScrollElRef = useRef(getScrollEl)
+  getScrollElRef.current = getScrollEl
 
   /** 实测正文列相对本行容器的左右边缘，直接写到命中条的 left/right 上（绕开重渲染） */
   const recalc = () => {
@@ -77,9 +89,26 @@ export default function ContentWidthHandles({ visible, getContentEl, mode }: Pro
     const [leftStrip, rightStrip] = stripsRef.current
     // max(0, …)：窗口窄到正文列铺满时，边缘就是面板边缘
     const leftOffset = Math.max(0, contentRect.left - rowRect.left)
-    const rightOffset = Math.max(0, rowRect.right - contentRect.right)
-    if (leftStrip) leftStrip.style.left = `${leftOffset}px`
-    if (rightStrip) rightStrip.style.right = `${rightOffset}px`
+    // 与滚动条保持最小距离：正文列顶到面板边时，右边缘正好落在纵向滚动条上，
+    // 以边缘为中心向两侧各探出 STRIP_HALF 的命中条会把滚动条整段盖住（点不到、拖不动）。
+    // 此时把条往内推到「滚动条外沿 + 半宽 + 最小间距」之外；宽窗口下正文列离边缘远，不受影响。
+    // 滚动条占位宽度 = 滚动容器 offsetWidth/clientWidth 之差（这两个容器都没有边框），
+    // 0 表示当前没有滚动条，不需要避让。
+    const scrollEl = getScrollElRef.current()
+    const vBar = scrollEl ? Math.max(0, scrollEl.offsetWidth - scrollEl.clientWidth) : 0
+    const hBar = scrollEl ? Math.max(0, scrollEl.offsetHeight - scrollEl.clientHeight) : 0
+    const minRight = vBar > 0 ? vBar + STRIP_HALF + SCROLLBAR_GAP : 0
+    const rightOffset = Math.max(minRight, Math.max(0, rowRect.right - contentRect.right))
+    // 横向滚动条同理：把命中条底端抬到它上方；清空时回落到 Tailwind 的 bottom-0
+    const bottomInset = hBar > 0 ? `${hBar + SCROLLBAR_GAP}px` : ''
+    if (leftStrip) {
+      leftStrip.style.left = `${leftOffset}px`
+      leftStrip.style.bottom = bottomInset
+    }
+    if (rightStrip) {
+      rightStrip.style.right = `${rightOffset}px`
+      rightStrip.style.bottom = bottomInset
+    }
     // 外侧留白够不够放下提示文案：不够就翻到内侧，否则会被编辑区的 overflow-hidden 裁掉。
     // 阈值取文案实测宽度（各语言长短差很多），拿不到时退回保守估计。
     const hintWidth = leftStrip?.querySelector<HTMLElement>('[data-cw-hint]')?.offsetWidth ?? HINT_OUTSIDE_SPACE
