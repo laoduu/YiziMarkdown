@@ -52,6 +52,46 @@
         .nav-links a:hover { color: var(--blue); }
         .nav-links a.active { color: var(--blue); font-weight: 700; }
 
+        /* ===== 文档下拉：hover 展开子菜单（触屏没有 hover，走 JS 点按 open 类） ===== */
+        .nav-drop { position: relative; }
+        .nav-drop-trigger {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 0; border: none; background: none; cursor: pointer;
+            font-family: inherit; font-size: 14px; font-weight: 500;
+            color: var(--gray); white-space: nowrap; transition: color 0.2s;
+        }
+        .nav-drop-trigger:hover, .nav-drop-trigger.active { color: var(--blue); }
+        .nav-drop-trigger.active { font-weight: 700; }
+        .nav-drop-caret { transition: transform 0.2s; }
+        .nav-drop:hover .nav-drop-caret,
+        .nav-drop.open .nav-drop-caret { transform: rotate(180deg); }
+        .nav-drop-menu {
+            position: absolute; top: calc(100% + 26px); left: 50%;
+            transform: translateX(-50%) translateY(6px);
+            min-width: 132px; padding: 8px;
+            background: #fff; border: 1px solid rgba(0,0,0,0.07);
+            border-radius: 12px; box-shadow: 0 14px 34px rgba(15,23,42,0.14);
+            opacity: 0; visibility: hidden; pointer-events: none;
+            transition: opacity 0.18s, transform 0.18s, visibility 0.18s;
+        }
+        /* 从触发器移向菜单要跨过导航底边的空隙：铺一块透明接力区保住 hover */
+        .nav-drop-menu::before {
+            content: ''; position: absolute; top: -26px; left: 0; right: 0; height: 26px;
+        }
+        .nav-drop:hover .nav-drop-menu,
+        .nav-drop.open .nav-drop-menu {
+            opacity: 1; visibility: visible; pointer-events: auto;
+            transform: translateX(-50%) translateY(0);
+        }
+        .nav-drop-menu a {
+            display: block; padding: 8px 12px; border-radius: 8px;
+            font-size: 14px; font-weight: 500; color: var(--dark);
+            text-decoration: none; white-space: nowrap;
+            transition: color 0.15s, background 0.15s;
+        }
+        .nav-drop-menu a:hover { color: var(--blue); background: rgba(0,47,167,0.06); }
+        .nav-drop-menu a.active { color: var(--blue); font-weight: 700; background: rgba(0,47,167,0.06); }
+
         /* 指向帮助中心的深度链接 */
         .section-more {
             display: inline-flex; align-items: center; gap: 6px;
@@ -892,6 +932,24 @@
                 margin-top: 12px; justify-content: center;
                 border-bottom: none; color: #fff !important;
             }
+            /* 文档下拉（移动端）：点「文档」展开，子菜单变缩进列表，不做 hover 浮层 */
+            .nav-drop-trigger {
+                width: 100%; justify-content: space-between;
+                padding: 13px 0; font-size: 15px; text-align: left;
+                border-bottom: 1px solid rgba(0,0,0,0.05);
+            }
+            .nav-drop-menu,
+            .nav-drop:hover .nav-drop-menu,
+            .nav-drop.open .nav-drop-menu {
+                position: static; display: none;
+                transform: none; transition: none;
+                min-width: 0; padding: 0 0 0 14px;
+                background: none; border: none; border-radius: 0;
+                box-shadow: none; opacity: 1; visibility: visible; pointer-events: auto;
+            }
+            .nav-drop.open .nav-drop-menu { display: block; }
+            .nav-drop-menu::before { display: none; }
+            .nav-drop-menu a { padding: 10px 0; font-size: 14px; border-bottom: 1px solid rgba(0,0,0,0.05); }
         }
         @media (max-width: 768px) {
             .hero { min-height: auto; padding: 110px 20px 0; }

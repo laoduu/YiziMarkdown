@@ -1,8 +1,11 @@
 /**
  * 官网公共外壳（导航 + 页脚）
  *
- * 首页 index.html 与帮助中心 help.html 共用同一份导航与页脚，
- * 保证整站体验一致：改一处即可同步两个页面。
+ * 首页、帮助中心与三个文档频道页共用同一份导航与页脚，
+ * 保证整站体验一致：改一处即可同步所有页面。
+ *
+ * 一级导航含「文档」下拉（hover / 点按展开三个规范文档），
+ * 文档页内部的二级标签栏（docs-tabs）由 buildDocTabs 单独渲染。
  *
  * 用法：页面里放 <div id="site-nav"></div> / <div id="site-footer"></div>，
  * 再在 main.js 之前引入本文件。
@@ -19,6 +22,9 @@
         { label: '技能规范', page: 'skill-spec.html' }
     ];
 
+    // 顶部「文档」下拉的子菜单 = 三个规范文档（帮助中心保持独立一级项）
+    var DOC_CHANNELS = DOC_TABS.filter(function (t) { return t.page !== HELP; });
+
     // 首页锚点区块；文档页上会自动补 index.html 前缀
     var LINKS = [
         { label: '首页', page: HOME },
@@ -29,6 +35,7 @@
         { label: '快捷键', hash: 'shortcuts' },
         { label: '更新', hash: 'changelog' },
         { label: '常见问题', hash: 'faq' },
+        { label: '文档', docs: true },
         { label: '帮助中心', page: HELP }
     ];
 
@@ -52,10 +59,31 @@
         return isDocsPage ? HOME + '#' + link.hash : '#' + link.hash;
     }
 
+    // 「文档」一级导航：hover（或点按）展开三个规范文档子菜单
+    function buildDocsDropdown() {
+        var docsActive = DOC_CHANNELS.some(function (d) { return d.page === currentPage; });
+        var submenu = DOC_CHANNELS.map(function (d) {
+            var subActive = d.page === currentPage;
+            return '<a href="' + d.page + '"' +
+                (subActive ? ' class="active" aria-current="page"' : '') +
+                '>' + d.label + '</a>';
+        }).join('');
+        return '' +
+            '<div class="nav-drop">' +
+                '<button type="button" class="nav-drop-trigger' + (docsActive ? ' active' : '') + '"' +
+                    ' aria-haspopup="true" aria-expanded="false">文档' +
+                    '<svg class="nav-drop-caret" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5 5 6.5 8 3.5"/></svg>' +
+                '</button>' +
+                '<div class="nav-drop-menu">' + submenu + '</div>' +
+            '</div>';
+    }
+
     function buildNav() {
         var items = LINKS.map(function (link) {
+            if (link.docs) return buildDocsDropdown();
             var url = resolve(link);
-            var active = link.page === HELP && isDocsPage;
+            // 帮助中心只在 help.html 上高亮；三个规范文档页由「文档」下拉高亮
+            var active = link.page === HELP && currentPage === HELP;
             return '<a href="' + url + '"' +
                 (active ? ' class="active" aria-current="page"' : '') +
                 '>' + link.label + '</a>';
@@ -137,6 +165,28 @@
                 links.classList.remove('open');
                 toggle.classList.remove('open');
                 toggle.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
+
+    // 「文档」下拉：桌面 hover 展开（纯 CSS）；这里补点按与 Esc 关闭（触屏没有 hover）
+    var drop = document.querySelector('.nav-drop');
+    if (drop) {
+        var dropTrigger = drop.querySelector('.nav-drop-trigger');
+        dropTrigger.addEventListener('click', function () {
+            var open = drop.classList.toggle('open');
+            dropTrigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+        document.addEventListener('click', function (e) {
+            if (!drop.contains(e.target)) {
+                drop.classList.remove('open');
+                dropTrigger.setAttribute('aria-expanded', 'false');
+            }
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                drop.classList.remove('open');
+                dropTrigger.setAttribute('aria-expanded', 'false');
             }
         });
     }

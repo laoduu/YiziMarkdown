@@ -21,7 +21,7 @@
 
     <link rel="icon" type="image/png" href="assets/icon.png">
     <link rel="shortcut icon" href="assets/favicon.ico">
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/style.css?v=1">
     <link rel="stylesheet" href="assets/css/help.css?v=6">
 
     <script type="application/ld+json">
@@ -112,6 +112,7 @@
                 </figure>
                 <ul>
                     <li><strong>标签栏</strong>：多文件管理，像浏览器一样切换。右侧可切换演示模式与视图。</li>
+                    <li><strong>窗口控制</strong>：右上角为最小化 / 最大化 / 进入全屏 / 关闭；进入全屏后只保留「退出全屏」，退出时自动还原进入前的窗口状态（最大化 / 普通大小）。</li>
                     <li><strong>工具栏</strong>：格式化、表格、代码块、公式、图表、模板、导出、AI 助手入口。</li>
                     <li><strong>侧边栏</strong>：自动生成的文档大纲，点击跳转（<kbd>Ctrl</kbd>+<kbd>\</kbd> 开关）。</li>
                     <li><strong>编辑区</strong>：基于 CodeMirror 6，支持实时预览与标记隐藏。</li>
@@ -428,7 +429,8 @@
                     <li>按 <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd>，或点击标签栏 / 工具栏的「演示」按钮</li>
                     <li>进入后自动全屏，按 <kbd>Esc</kbd> 退出并返回编辑界面</li>
                     <li>鼠标活动时右上角显示半透明退出按钮，1.5 秒无操作自动隐藏</li>
-                    <li>退出时自动还原进入前的窗口状态（全屏 / 最大化 / 普通）</li>
+                    <li>退出时自动还原进入前的窗口状态（全屏 / 最大化 / 普通）——最大化后进全屏，退出仍回到最大化</li>
+                    <li>全屏中标题栏已锁定：不能拖动窗口，也不能双击或右键最大化，避免把全屏窗口拖出屏幕或变成错乱几何</li>
                 </ul>
             </div>
 
@@ -1115,7 +1117,7 @@
 
 <div id="site-footer"></div>
 
-<script src="assets/js/site-chrome.js?v=2"></script>
+<script src="assets/js/site-chrome.js?v=3"></script>
 <script src="assets/js/icons.js"></script>
 <script src="assets/js/help.js?v=2"></script>
 
