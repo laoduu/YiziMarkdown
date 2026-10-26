@@ -39,8 +39,6 @@
       "templates": "templates/",
       "skills": "skills/",
       "docs": "docs/",
-      "user.css": "user.css",
-      "keybindings.json": "keybindings.json",
       "readme.md": "readme.md",
       "welcome.md": "welcome.md",
       "icons/md-icon.ico": "md-icon.ico",

@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "themes": [
+    {
+      "id": "academic",
+      "file": "academic.css",
+      "name": "学术蓝",
+      "desc": "沉稳专业的学术风格",
+      "swatch": ["#f5f8ff", "#002FA7"]
+    },
+    {
+      "id": "vibrant",
+      "file": "vibrant.css",
+      "name": "活力橙",
+      "desc": "暖橙基调，鲜明醒目",
+      "swatch": ["#fff8f0", "#f5d4a0"]
+    },
+    {
+      "id": "tech",
+      "file": "tech.css",
+      "name": "科技感",
+      "desc": "冷蓝灰，亮暗双面",
+      "swatch": ["#0a0e27", "#1a2340"]
+    },
+    {
+      "id": "minimal",
+      "file": "minimal.css",
+      "name": "极简风",
+      "desc": "清爽干净的原始风格",
+      "swatch": ["#ffffff", "#f0f0f0"]
+    },
+    {
+      "id": "magazine",
+      "file": "magazine.css",
+      "name": "杂志感",
+      "desc": "温暖优雅的阅读体验",
+      "swatch": ["#fdf6ec", "#f5e6d0"]
+    },
+    {
+      "id": "nature",
+      "file": "nature.css",
+      "name": "自然风",
+      "desc": "柔和舒适的森林绿调",
+      "swatch": ["#f0f7f0", "#d4e8d4"]
+    },
+    {
+      "id": "liquidglass-prism",
+      "file": "liquidglass-prism.css",
+      "name": "液态玻璃 Prism",
+      "desc": "冰蓝玻璃，光影流转",
+      "swatch": ["#eef3fb", "#2563eb"]
+    },
+    {
+      "id": "lychee",
+      "file": "lychee.css",
+      "name": "荔枝红",
+      "desc": "热情红调，温暖鲜明",
+      "swatch": ["#fff5f5", "#E63946"]
+    },
+    {
+      "id": "violet",
+      "file": "violet.css",
+      "name": "紫罗兰",
+      "desc": "雅致文艺，小众高级",
+      "swatch": ["#faf5fe", "#7209B7"]
+    },
+    {
+      "id": "cyberpunk",
+      "file": "cyberpunk.css",
+      "name": "赛博朋克",
+      "desc": "冷白底霓虹青粉，干净利落的未来感",
+      "swatch": ["#f0f4f8", "#0077b6"]
+    },
+    {
+      "id": "facebook",
+      "file": "facebook.css",
+      "name": "Facebook",
+      "desc": "经典蓝白，简洁社交风",
+      "swatch": ["#f0f2f5", "#1877F2"]
+    },
+    {
+      "id": "matrix",
+      "file": "matrix.css",
+      "name": "黑客帝国",
+      "desc": "白底绿字终端风，暗色经典黑客帝国",
+      "swatch": ["#f5faf5", "#008a2e"]
+    },
+    {
+      "id": "mint",
+      "file": "mint.css",
+      "name": "薄荷冰沙",
+      "desc": "清透薄荷绿，清凉舒适",
+      "swatch": ["#f5fbf8", "#10b981"]
+    },
+    {
+      "id": "sunset",
+      "file": "sunset.css",
+      "name": "落日熔金",
+      "desc": "暖白底琥珀色，暗色金红落日熔金",
+      "swatch": ["#fef8f0", "#b45309"]
+    },
+    {
+      "id": "typewriter",
+      "file": "typewriter.css",
+      "name": "复古打字机",
+      "desc": "老纸底深褐墨色，暗色复古打字机",
+      "swatch": ["#f5f0e8", "#8b6914"]
+    },
+    {
+      "id": "brocade",
+      "file": "brocade.css",
+      "name": "织锦（测试）",
+      "desc": "纹样与流光的开发测试主题",
+      "swatch": ["#faf6ef", "#854d0e"]
+    }
+  ]
+}

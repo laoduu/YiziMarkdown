@@ -6,6 +6,48 @@
 >
 > 原计划的 `0.3.7` 从未打包、未打 tag、未发过 release，其全部改动（实时模式列表逐行切换、嵌套列表输入法、界面文案多语言与硬编码门禁）已并入本节，不再单独保留 `## v0.3.7` 小节，`docs/changelog/CHANGELOG-V0.3.7.md` 同步并入 `CHANGELOG-V0.4.0.md`。
 
+### 设置-外观：主题卡改版为「迷你编辑器窗格」（2026-10-26）
+
+用户反馈：两色渐变条既不像主题、也看不出主题是什么，主题名和诠释被挤在色块下面看不清。
+
+**改法**：每张卡改成一块**该主题自己的迷你编辑器窗格**——左侧栏（首行强调色代表选中项）、标题栏（主题名用 `--editor-h1` 标题色）、正文（主题诠释 + 被主题上色的正文/选中/行内代码/链接示例）、底部状态栏。配色全部取自该主题真实 CSS 令牌，不再是写死的两色渐变。
+
+- **单卡明暗预览**：标题栏右侧的日/月按钮只切这张卡自己的配色（`.is-dark`），**不写全局 `isDark`、也不激活主题**；点卡片其他区域才激活主题。图标用内联 SVG（11px 下 ☀/☾ 字形会糊）。
+- **卡片语义**：由 `<button>` 改为 `<div role="button" tabIndex={0}>`，主题名可点击改名（写入用户层），Enter/Space 激活；新增「新版」胶囊，点开二选一（保留我的 / 用内置新版）。
+- **面板放大**：780×560 → `min(1100px, 92vw)` × `min(760px, 88vh)`，主题网格 `auto-fill minmax(268px, 1fr)`，1280 宽屏上正好三列（每卡约 288px）。
+- 去掉卡片里的闪动光标；删除改版后的死样式 `.settings-theme-card` / `.settings-theme-active` / `.theme-swatch-*`。
+- 卡片令牌抽取是新模块 `src/lib/themePreview.ts`（`:root.theme-<id>[.dark]{}` → 卡片属性作用域，只取变量声明、丢元素规则），配 `tests/themePreview.test.ts` 6 条断言（含花括号逃逸、引号转义）。
+- i18n 15 语言新增 9 个键（预览切换 / 新版 / 更新确认 / 示例文本），`themeEditHint` 改指 `~/Documents/yizimarkdown/themes/`。
+
+### 主题资产分层：内置只读 + 用户层，升级不再覆盖用户修改（2026-10-26）
+
+用户反馈：改过的主题名、改过的内置主题 CSS 一升级就没了（安装器把整份 `themes/*` 覆盖回旧版），装到 `C:\Program Files` 时改名还会静默失败。
+
+**根因**：`themes/*.css` 与 `themes/theme.json` 都当随包资源直接落在安装目录，而 `list_themes` / `read_theme_css` / `write_theme_json` 也全读写安装目录——安装目录既是「内置资产」又是「用户数据」，升级必然二选一。
+
+**新布局**（`src-tauri/src/theme_layer.rs`）：
+
+```text
+<安装目录>/themes/                 内置只读，随包升级
+  builtin.json                     清单：id / file / name / desc / swatch
+  *.css
+~/Documents/yizimarkdown/themes/   用户层，安装器永不触碰
+  themes.user.json                 { schema, renames, order, hidden, overrides }
+  overrides/<id>.css               用户改过的内置主题（同 id 优先）
+  custom/<id>.css                  用户自建主题
+  legacy-import/                   升级瞬间由 NSIS 预安装钩子写入的一次性备份
+```
+
+- **内置 CSS 从不复制到用户层**，用户层只放用户自己的东西，「同文件覆盖」从根上不存在。
+- **覆盖回避靠 sha256**：override 记录 `baseSha256`（依据的内置版本）；内置变了 → 卡片提示「新版」，用户二选一，**绝不静默覆盖**；哈希按当前内置现算，不写进清单，避免清单与 CSS 漂移。
+- **一次性迁移**（仅 `themes.user.json` 不存在时）：旧 `theme.json` 的改名 → `themes.user.json.renames`；安装目录里与当前内置逐字节不同的 CSS → `overrides/`；清单外的自建 CSS → `custom/`；`user.css` / `keybindings.json` 一并迁到用户层（只在用户层仍是默认内容时才写入，不覆盖）。
+- NSIS 新增 `NSIS_HOOK_PREINSTALL`：在安装文件覆盖前把旧安装目录的 `themes/*.css`、`theme.json`、`user.css`、`keybindings.json` 备份到 `legacy-import/`，应用迁移后删除该目录。
+- **应用目录回落只在首次迁移时启用**：`user_layer_is_new()`（`themes.user.json` 不存在）在 `sync_theme_layer()` 之前求值，传给 `sync_legacy_user_files(first_run)`。否则用户以后把 `user.css` 恢复成默认，安装目录里遗留的旧副本又会被当成「用户内容」重新导入，迁移就不再是一次性的。真实升级时的 `legacy-import/` 永远算数。
+- 命令面：新增 `get_theme_catalog`（前端唯一数据源，含 source/hasUpdate）、`rename_theme`、`resolve_theme_update`；`list_themes` / `read_theme_css` / `read_theme_json` 保留为兼容包装；删除 `write_theme_json`（不再有安装目录可写）。工具栏与演示的主题菜单也改用 catalog。
+- 迁移约束写进模块注释：首次迁移把「与当前内置不同」的旧 CSS 视为用户修改，前提是本次发布未改动主题 CSS（本版本满足）。
+
+**验证**：`cargo test theme_layer` 7/7 ✓（目录合并/排序/隐藏/改名归一/override 优先/幂等/保留与跟随）；`migrates_legacy_user_files_without_overwriting_user_content` 用临时副本目录仿真「旧安装 → 新版本」的六种情形（默认内容被备份替换、已有用户内容不被覆盖、无备份回落应用目录、默认内容不写入、非首次运行不回落应用目录、非首次运行仍迁移真实备份）✓；`check-i18n --strict` / `tsc` / `npm test`(356) / `npm run build` 全过 ✓。
+
 ### 设置-实时模式：动画预览与真实效果脱节——抽单一事实源（2026-10-26）
 
 用户反馈：四种「点击显示源码」动画在实际 live 中体验有区别，但设置的动画预览点起来四个感觉都一样。

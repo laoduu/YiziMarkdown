@@ -55,6 +55,7 @@ import { useWindowStateStore } from '../stores/windowStateStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { orderThemes } from '../lib/themeOrder'
 import { CUSTOM_THEME, readUserCss } from '../lib/themeLoader'
+import { loadThemeCatalog } from '../lib/themeCatalog'
 import { COLUMN_REGION_SNIPPET } from '../lib/slides'
 import { useI18n } from '../i18n'
 import LinkModal from './LinkModal'
@@ -161,26 +162,32 @@ export default function Toolbar({
     })
   }, [animSeq])
 
+  // 主题列表：唯一数据源是 Rust `get_theme_catalog`（内置清单 + 用户层合并）。
+  // 菜单顺序在这里做一次归位（默认主题排首），见 lib/themeOrder.ts。
+  const refreshThemes = useCallback(async () => {
+    const catalog = await loadThemeCatalog()
+    if (!catalog.themes.length) return
+    setThemeFiles(orderThemes(catalog.themes.map((entry) => `${entry.id}.css`)))
+    const meta: Record<string, { name: string }> = {}
+    for (const entry of catalog.themes) meta[entry.id] = { name: entry.name }
+    setThemeMeta(meta)
+  }, [])
+
   // 动态加载主题列表和元信息 + 模板列表
   useEffect(() => {
     const load = async () => {
       try {
         const tauri = (window as any).__TAURI_INTERNALS__
         if (tauri && typeof tauri.invoke === 'function') {
-          const [files, json, tmpl] = await Promise.all([
-            tauri.invoke('list_themes') as Promise<string[]>,
-            tauri.invoke('read_theme_json') as Promise<string>,
-            tauri.invoke('list_templates') as Promise<string[]>,
-          ])
-          if (files) setThemeFiles(orderThemes(files))
-          try { setThemeMeta(JSON.parse(json || '{}')) } catch {}
+          const tmpl = (await tauri.invoke('list_templates')) as string[]
           if (tmpl) setTemplates(tmpl)
+          await refreshThemes()
           readUserCss().then((c) => setHasUserCss(!!c.trim())).catch(() => {})
         }
       } catch {}
     }
     load()
-  }, [])
+  }, [refreshThemes])
 
   // user.css 是否非空：每次**打开主题菜单**时重读 —— 保存/清除自定义 CSS 都发生在
   // 设置面板里，Toolbar 无法感知；挂载时读一次会在「清空后菜单条目不消失」上过期
@@ -667,7 +674,7 @@ export default function Toolbar({
           <ToolbarButton
             icon={<Palette size={16} />}
             tooltip={themeMeta[currentTheme]?.name || (currentTheme === 'academic' ? t('toolbar.academic') : currentTheme)}
-            onClick={() => { setShowThemeMenu(!showThemeMenu); if (!showThemeMenu) refreshUserCssFlag() }}
+            onClick={() => { setShowThemeMenu(!showThemeMenu); if (!showThemeMenu) { refreshUserCssFlag(); refreshThemes() } }}
             accent
           />
           {showThemeMenu && (

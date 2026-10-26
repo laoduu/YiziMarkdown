@@ -1712,8 +1712,10 @@ a {
 
 .settings-modal-container {
   position: relative;
-  width: 780px;
-  height: 560px;
+  /* 外观页要放 16 张「迷你编辑器」主题卡，780×560 会挤成两列且正文被裁；
+     1100×760 在 1280 宽屏上正好三列，小屏按视口比例回落。 */
+  width: min(1100px, 92vw);
+  height: min(760px, 88vh);
   display: flex;
   flex-direction: column;
   background: var(--dialog-bg);
@@ -2016,25 +2018,265 @@ a {
   vertical-align: middle;
 }
 
-.settings-theme-card {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 10px;
-  border: 1px solid var(--editor-border);
-  border-radius: var(--radius-md);
-  background: var(--editor-surface);
-  cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
-  text-align: left;
-}
-.settings-theme-card:hover {
-  border-color: var(--editor-accent);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+/* ===== 设置 → 外观：主题卡片（迷你编辑器窗格） =====
+ *
+ * 每张卡是「该主题自己」的一小块界面缩略，而不是色块：标题栏（主题名 + 明暗预览 + 选中勾）、
+ * 正文（诠释 + 正文/选中/行内代码/链接示例）、侧栏、状态栏。配色全部走该主题的真实 CSS 令牌。
+ *
+ * 令牌从哪来：themePreview.ts 把 `:root.theme-<id>[.dark]{}` 里的变量声明抽出来，改写成
+ * `.settings-theme-scope[data-theme-preview="<id>"]:not(.is-dark)` / `.is-dark` 注入一个 <style>。
+ * 选择器带 `:not(.is-dark)` / `.is-dark`，所以每张卡可以独立切明暗，不受全局 isDark 影响。
+ *
+ * 下面这套兜底令牌是给「只覆盖了部分变量的用户自建主题」用的：缺哪个就回落到中性色，
+ * 不能回落到应用当前主题的同名变量（那会串色 —— 卡片上出现别的主题的颜色）。
+ */
+.settings-theme-scope {
+  --editor-bg: #ffffff;
+  --editor-text: #333333;
+  --editor-accent: #0066cc;
+  --editor-border: #e5e5e5;
+  --editor-surface: #f8f8f8;
+  --editor-hover: rgba(0, 0, 0, 0.03);
+  --editor-selection-bg: rgba(0, 102, 204, 0.35);
+  --sidebar-bg: #fafafa;
+  --sidebar-text: #666666;
+  --statusbar-bg: #f5f5f5;
+  --statusbar-text: #888888;
+  --font-sans: 'Microsoft YaHei', 'PingFang SC', system-ui, sans-serif;
+  --font-mono: Consolas, 'Courier New', monospace;
+  --border-radius: 6px;
 }
 
+/* 三列：面板 1100 宽 → 内容区约 888，减去间距每张 ~288px。
+   268 是「标题栏 + 一行示例仍放得下」的下限，低于它宁可掉成两列。 */
+.settings-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+  gap: 12px;
+}
+
+.settings-theme-pane {
+  display: flex;
+  height: 142px;
+  overflow: hidden;
+  text-align: left;
+  background: var(--editor-bg);
+  color: var(--editor-text);
+  border: 1px solid var(--editor-border, rgba(0, 0, 0, 0.12));
+  border-radius: var(--border-radius, 6px);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.07);
+  cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.settings-theme-pane:hover {
+  border-color: var(--editor-accent);
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.12);
+}
+.settings-theme-pane:focus-visible {
+  outline: 2px solid var(--editor-accent);
+  outline-offset: 2px;
+}
+.settings-theme-pane.is-active {
+  border-color: var(--editor-accent);
+  box-shadow: 0 0 0 2px var(--editor-accent), 0 1px 4px rgba(15, 23, 42, 0.1);
+}
+
+/* 侧栏：首行用强调色代表「选中项」 */
+.settings-theme-side {
+  width: 34px;
+  flex: none;
+  padding: 10px 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--editor-border, rgba(0, 0, 0, 0.1));
+}
+.settings-theme-side i {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--sidebar-text);
+  opacity: 0.45;
+}
+.settings-theme-side i:first-child {
+  width: 74%;
+  background: var(--editor-accent);
+  opacity: 0.95;
+}
+.settings-theme-side i:nth-child(2) { width: 90%; }
+.settings-theme-side i:nth-child(3) { width: 58%; }
+
+.settings-theme-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 标题栏：主题名（用 --editor-h1 标题色）+ 新版提示 + 该卡明暗切换 + 选中勾 */
+.settings-theme-titlebar {
+  height: 27px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 7px 0 8px;
+  background: var(--editor-surface);
+  border-bottom: 1px solid var(--editor-border, rgba(0, 0, 0, 0.1));
+}
+.settings-theme-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--editor-accent);
+  opacity: 0.9;
+  flex: none;
+}
+.settings-theme-dot.dim { opacity: 0.32; }
+
+.settings-theme-name {
+  flex: 1;
+  min-width: 0;
+  margin-left: 3px;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: var(--editor-h1, var(--editor-text));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.settings-theme-name.editable { cursor: pointer; }
+.settings-theme-name.editable:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+.settings-theme-name-input {
+  flex: 1;
+  min-width: 0;
+  margin-left: 3px;
+  padding: 0 2px;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--editor-h1, var(--editor-text));
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--editor-accent);
+  outline: none;
+}
+
+/* 内置已有新版：小胶囊，点开二选一（保留我的 / 用内置新版） */
+.settings-theme-new {
+  flex: none;
+  padding: 2px 4px;
+  border: none;
+  border-radius: 4px;
+  background: var(--editor-accent);
+  color: var(--editor-bg);
+  font-family: var(--font-sans);
+  font-size: 9px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* 单卡明暗预览按钮：只切这张卡的配色，不写全局 isDark、也不激活主题 */
+.settings-theme-mode {
+  flex: none;
+  width: 21px;
+  height: 17px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--editor-border, rgba(0, 0, 0, 0.15));
+  border-radius: 4px;
+  background: var(--editor-bg);
+  color: var(--editor-text);
+  opacity: 0.78;
+  cursor: pointer;
+}
+.settings-theme-mode:hover { background: var(--editor-hover); opacity: 1; }
+.settings-theme-mode svg { width: 11px; height: 11px; display: block; }
+
+.settings-theme-check {
+  flex: none;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--editor-accent);
+}
+
+/* 正文：首行 = 主题诠释，下面是被主题上过色的正文/选中/代码/链接示例 */
+.settings-theme-doc {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  color: var(--editor-text);
+}
+.settings-theme-desc {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 7px;
+  font-size: 11px;
+  line-height: 1.6;
+  opacity: 0.92;
+}
+.settings-theme-line {
+  display: block;
+  font-size: 11px;
+  line-height: 1.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.settings-theme-sel {
+  padding: 0 3px;
+  border-radius: 2px;
+  background: var(--editor-selection-bg);
+}
+.settings-theme-code {
+  padding: 1px 5px;
+  border: 1px solid var(--editor-border, rgba(0, 0, 0, 0.1));
+  border-radius: 3px;
+  background: var(--editor-surface);
+  color: var(--editor-text);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+.settings-theme-link {
+  color: var(--editor-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* 状态栏 */
+.settings-theme-statusbar {
+  height: 17px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  background: var(--statusbar-bg);
+}
+.settings-theme-statusbar i {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--statusbar-text);
+  opacity: 0.65;
+}
+.settings-theme-statusbar i:first-child { width: 26px; }
+.settings-theme-statusbar i:last-child { width: 14px; }
+
+
 /* 「设置 → 其他产品」的产品卡：一行一个工具（图标 + 名字/简介 + 域名 + 箭头）
-   与 .settings-theme-card 同族：同一套边框/底色/hover，只是横向排布。 */
+   与主题卡同族：同一套边框/底色/hover，只是横向排布。 */
 .settings-product-card {
   display: flex;
   align-items: center;
@@ -2093,27 +2335,6 @@ a {
 .settings-product-card:hover .settings-product-arrow {
   color: var(--editor-accent);
 }
-
-.settings-theme-active {
-  border-color: var(--editor-accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--editor-accent) 25%, transparent);
-  position: relative;
-}
-.settings-theme-active::after {
-  content: '✓';
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--editor-accent);
-}
-
-/* 主题色块预览 */
-.theme-swatch-minimal { background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%); border: 1px solid #e5e5e5; }
-.theme-swatch-magazine { background: linear-gradient(135deg, #fdf6ec 0%, #f5e6d0 100%); border: 1px solid #e8d5b8; }
-.theme-swatch-tech { background: linear-gradient(135deg, #0a0e27 0%, #1a2340 100%); border: 1px solid #2a3a5c; }
-.theme-swatch-nature { background: linear-gradient(135deg, #f0f7f0 0%, #d4e8d4 100%); border: 1px solid #b8d4b8; }
 
 /* ===== 打印样式 ===== */
 @media print {

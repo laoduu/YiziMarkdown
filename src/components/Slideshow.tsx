@@ -6,6 +6,7 @@ import {
   scopeThemeVars, type DeckSlide,
 } from '../lib/slideDeck'
 import { orderThemes } from '../lib/themeOrder'
+import { loadThemeCatalog } from '../lib/themeCatalog'
 import { enterFullscreen, exitFullscreen, toggleFullscreen } from '../lib/fullscreen'
 import { resolveLocalImageSrc } from '../lib/localImages'
 import { buildTiles, delayFor, impulseVars, tileTotalDuration, tileConfigFor, TILE_ANIM_IDS, TILE_VARIANTS, type SlideAnim } from '../lib/slideTiles'
@@ -604,9 +605,13 @@ export default function Slideshow({
     const tauri = (window as any).__TAURI_INTERNALS__
     if (!tauri?.invoke) return
     tauri.invoke('get_platform').then((p: string) => setIsMac(p === 'macos')).catch(() => {})
-    tauri.invoke('list_themes').then((files: string[]) => setThemes(orderThemes(files || []))).catch(() => {})
-    tauri.invoke('read_theme_json').then((json: string) => {
-      try { setThemeMeta(JSON.parse(json || '{}')) } catch {}
+    // 主题列表来自 Rust 合并目录（内置清单 + 用户层），不再读 theme.json
+    loadThemeCatalog().then((catalog) => {
+      if (!catalog.themes.length) return
+      setThemes(orderThemes(catalog.themes.map((entry) => `${entry.id}.css`)))
+      const meta: Record<string, { name: string }> = {}
+      for (const entry of catalog.themes) meta[entry.id] = { name: entry.name }
+      setThemeMeta(meta)
     }).catch(() => {})
     readUserCss().then((c) => setHasUserCss(!!c.trim())).catch(() => {})
   }, [])

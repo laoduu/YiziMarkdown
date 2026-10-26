@@ -24,6 +24,13 @@ mod omml;
 mod remote_cache;
 mod webdav;
 
+// 主题资产分层：内置只读 + 用户层（见 theme_layer.rs 模块头）
+mod theme_layer;
+use theme_layer::{
+    get_theme_catalog, list_themes, read_theme_css, read_theme_json, rename_theme,
+    resolve_theme_update,
+};
+
 use ai_proxy::{ai_cancel, ai_chat, ai_clear_key, ai_has_key, ai_set_key, ai_verify_key};
 use remote_cache::{webdav_open, webdav_save};
 use webdav::{
@@ -473,7 +480,7 @@ fn get_user_templates_dir() -> Result<PathBuf, String> {
 
 /// dev 模式（exe 位于 <project>/src-tauri/target/...，含 target/debug/deps 的测试二进制）
 /// 下返回项目根目录；安装版返回 None
-fn get_dev_project_root() -> Option<PathBuf> {
+pub(crate) fn get_dev_project_root() -> Option<PathBuf> {
     let mut cur = get_app_root().ok()?;
     for _ in 0..4 {
         if cur.file_name().and_then(|n| n.to_str()) == Some("target") {
@@ -499,26 +506,105 @@ fn get_builtin_templates_dir() -> Result<PathBuf, String> {
     Ok(get_app_root()?.join("templates"))
 }
 
-/// 确保应用根目录下的子目录和默认文件存在
-fn ensure_app_structure(root: &Path) -> Result<(), String> {
-    // 子目录（skills / templates 已迁移到用户文档目录，不再在应用目录创建）
-    fs::create_dir_all(root.join("themes"))
-        .map_err(|e| format!("Failed to create themes dir: {}", e))?;
+/// 获取用户文档中的主题目录：~/Documents/yizimarkdown/themes/
+fn get_user_themes_dir() -> Result<PathBuf, String> {
+    Ok(get_user_config_dir()?.join("themes"))
+}
+
+/// 用户自定义 CSS：~/Documents/yizimarkdown/user.css
+/// 不再放安装目录 —— 安装目录在 `C:\Program Files` 下非提权不可写，且升级会被覆盖。
+fn get_user_css_path() -> Result<PathBuf, String> {
+    Ok(get_user_config_dir()?.join("user.css"))
+}
+
+/// 用户快捷键：~/Documents/yizimarkdown/keybindings.json
+fn get_keybindings_path() -> Result<PathBuf, String> {
+    Ok(get_user_config_dir()?.join("keybindings.json"))
+}
+
+/// 确保用户层目录和默认文件存在。
+///
+/// 注意：这里**只写用户文档目录**，不再触碰安装目录（skills / templates / themes / user.css /
+/// keybindings.json 都已迁到 `~/Documents/yizimarkdown/`）。`_root` 仅保留签名兼容。
+fn ensure_app_structure(_root: &Path) -> Result<(), String> {
+    let themes_dir = get_user_themes_dir()?;
+    for dir in [themes_dir.join("custom"), themes_dir.join("overrides")] {
+        fs::create_dir_all(&dir)
+            .map_err(|e| format!("Failed to create {}: {}", dir.display(), e))?;
+    }
 
     // 默认 user.css
-    let user_css = root.join("user.css");
+    let user_css = get_user_css_path()?;
     if !user_css.exists() {
         fs::write(&user_css, DEFAULT_USER_CSS)
             .map_err(|e| format!("Failed to create user.css: {}", e))?;
     }
 
     // 默认 keybindings.json
-    let kb = root.join("keybindings.json");
+    let kb = get_keybindings_path()?;
     if !kb.exists() {
         fs::write(&kb, DEFAULT_KEYBINDINGS)
             .map_err(|e| format!("Failed to create keybindings.json: {}", e))?;
     }
 
+    Ok(())
+}
+
+/// 把旧版安装目录里的 `user.css` / `keybindings.json` 导入用户层。
+///
+/// 来源优先级：NSIS 预安装钩子的 `legacy-import/`（升级前备份）→ 应用目录（dev / 手动升级）。
+/// 规则：**只在用户层文件仍是默认内容、且备份确实不同于默认内容时才写入**，绝不覆盖用户层；
+/// 处理完删除一次性备份目录。
+///
+/// `legacy-import/` 只会在升级瞬间出现，读到就说明该迁；应用目录回落只允许在**首次迁移**
+/// （用户层 `themes.user.json` 还不存在）时使用 —— 否则用户以后把 user.css 恢复成默认，
+/// 安装目录里遗留的旧副本又会被当成「用户内容」重新导入，等于迁移不是一次性的。
+fn sync_legacy_user_files(first_run: bool) -> Result<(), String> {
+    sync_legacy_user_files_at(
+        &get_user_config_dir()?,
+        &theme_layer::get_legacy_import_dir()?,
+        &get_app_root()?,
+        first_run,
+    )
+}
+
+/// `sync_legacy_user_files` 的路径可注入版本：单测用临时目录，避免污染真实 `~/Documents`。
+fn sync_legacy_user_files_at(
+    user_root: &Path,
+    legacy_dir: &Path,
+    app_root: &Path,
+    allow_app_fallback: bool,
+) -> Result<(), String> {
+    for (name, default_content) in [
+        ("user.css", DEFAULT_USER_CSS),
+        ("keybindings.json", DEFAULT_KEYBINDINGS),
+    ] {
+        let target = user_root.join(name);
+        let candidate = if legacy_dir.join(name).is_file() {
+            Some(legacy_dir.join(name))
+        } else if allow_app_fallback && app_root.join(name).is_file() {
+            Some(app_root.join(name))
+        } else {
+            None
+        };
+        let Some(src) = candidate else { continue };
+
+        let src_text = fs::read_to_string(&src).unwrap_or_default();
+        let target_text = fs::read_to_string(&target).unwrap_or_default();
+        let untouched = target_text.trim().is_empty() || target_text == default_content;
+        let is_user_content = !src_text.trim().is_empty() && src_text != default_content;
+        if untouched && is_user_content {
+            if let Some(parent) = target.parent() {
+                fs::create_dir_all(parent)
+                    .map_err(|e| format!("Failed to create {}: {}", parent.display(), e))?;
+            }
+            fs::write(&target, &src_text)
+                .map_err(|e| format!("Failed to migrate {}: {}", name, e))?;
+        }
+    }
+
+    // 一次性备份：主题迁移与本函数都已读取完毕，删除目录
+    let _ = fs::remove_dir_all(legacy_dir);
     Ok(())
 }
 
@@ -719,11 +805,13 @@ fn get_config_dir() -> Result<serde_json::Value, String> {
     serde_json::json!({
         "appDir": root.to_string_lossy(),
         "userConfigDir": get_user_config_dir()?.to_string_lossy(),
-        "themesDir": root.join("themes").to_string_lossy(),
+        // 用户主题层：自建主题放 custom/，改过的内置主题放 overrides/
+        "themesDir": get_user_themes_dir()?.to_string_lossy(),
+        "builtinThemesDir": theme_layer::get_builtin_themes_dir()?.to_string_lossy(),
         // 模板已迁到用户文档目录（模板内的相对图片路径以此为基准）
         "templatesDir": get_user_templates_dir()?.to_string_lossy(),
-        "userCssPath": root.join("user.css").to_string_lossy(),
-        "keybindingsPath": root.join("keybindings.json").to_string_lossy(),
+        "userCssPath": get_user_css_path()?.to_string_lossy(),
+        "keybindingsPath": get_keybindings_path()?.to_string_lossy(),
     })
     .to_string()
     .parse::<serde_json::Value>()
@@ -731,69 +819,14 @@ fn get_config_dir() -> Result<serde_json::Value, String> {
 }
 
 // ===== 主题管理 =====
-
-/// 列出 themes/ 目录下所有 .css 文件
-#[tauri::command]
-fn list_themes() -> Result<Vec<String>, String> {
-    let root = get_app_root()?;
-    let themes_dir = root.join("themes");
-    if !themes_dir.exists() {
-        return Ok(vec![]);
-    }
-
-    let mut themes: Vec<String> = Vec::new();
-    let entries = fs::read_dir(&themes_dir)
-        .map_err(|e| format!("Failed to read themes dir: {}", e))?;
-
-    for entry in entries.flatten() {
-        let name = entry.file_name().to_string_lossy().to_string();
-        if name.ends_with(".css") {
-            themes.push(name);
-        }
-    }
-    themes.sort();
-    Ok(themes)
-}
-
-/// 读取指定主题 CSS 文件内容
-#[tauri::command]
-fn read_theme_css(name: String) -> Result<String, String> {
-    let root = get_app_root()?;
-    let path = root.join("themes").join(&name);
-    if !path.exists() {
-        return Err(format!("Theme not found: {}", name));
-    }
-    fs::read_to_string(&path)
-        .map_err(|e| format!("Failed to read theme: {}", e))
-}
-
-/// 读取 themes/theme.json（主题元信息）
-#[tauri::command]
-fn read_theme_json() -> Result<String, String> {
-    let root = get_app_root()?;
-    let path = root.join("themes").join("theme.json");
-    if !path.exists() {
-        return Ok("{}".to_string());
-    }
-    fs::read_to_string(&path)
-        .map_err(|e| format!("Failed to read theme.json: {}", e))
-}
-
-/// 写入 themes/theme.json（用户修改主题名称后调用）
-#[tauri::command]
-fn write_theme_json(content: String) -> Result<(), String> {
-    let root = get_app_root()?;
-    let path = root.join("themes").join("theme.json");
-    fs::write(&path, &content)
-        .map_err(|e| format!("Failed to write theme.json: {}", e))
-}
+// 主题命令实现见 theme_layer.rs（内置只读 + 用户层合并、hash 比对、一次性迁移）。
+// 这里保留旧命令名以兼容前端：list_themes / read_theme_css / read_theme_json。
 
 // ===== user.css =====
 
 #[tauri::command]
 fn read_user_css() -> Result<String, String> {
-    let root = get_app_root()?;
-    let path = root.join("user.css");
+    let path = get_user_css_path()?;
     if !path.exists() {
         return Ok(String::new());
     }
@@ -803,8 +836,12 @@ fn read_user_css() -> Result<String, String> {
 
 #[tauri::command]
 fn write_user_css(content: String) -> Result<(), String> {
-    let root = get_app_root()?;
-    fs::write(root.join("user.css"), &content)
+    let path = get_user_css_path()?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create user.css dir: {}", e))?;
+    }
+    fs::write(&path, &content)
         .map_err(|e| format!("Failed to write user.css: {}", e))
 }
 
@@ -1140,8 +1177,7 @@ fn get_skill_guide_path() -> Result<String, String> {
 
 #[tauri::command]
 fn read_keybindings() -> Result<String, String> {
-    let root = get_app_root()?;
-    let path = root.join("keybindings.json");
+    let path = get_keybindings_path()?;
     if !path.exists() {
         return Ok(DEFAULT_KEYBINDINGS.to_string());
     }
@@ -1151,8 +1187,12 @@ fn read_keybindings() -> Result<String, String> {
 
 #[tauri::command]
 fn write_keybindings(content: String) -> Result<(), String> {
-    let root = get_app_root()?;
-    fs::write(root.join("keybindings.json"), &content)
+    let path = get_keybindings_path()?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create keybindings dir: {}", e))?;
+    }
+    fs::write(&path, &content)
         .map_err(|e| format!("Failed to write keybindings: {}", e))
 }
 
@@ -1667,10 +1707,12 @@ fn main() {
             pick_and_read_file,
             pick_image_file,
             get_config_dir,
+            get_theme_catalog,
             list_themes,
             read_theme_css,
             read_theme_json,
-            write_theme_json,
+            rename_theme,
+            resolve_theme_update,
             read_user_css,
             write_user_css,
             read_welcome,
@@ -1754,6 +1796,17 @@ fn main() {
                 .unwrap_or(PathBuf::from("."));
             let _ = ensure_app_structure(&root);
 
+            // 首次迁移判定必须在 sync_theme_layer 之前（它会写出 themes.user.json）
+            let first_theme_run = theme_layer::user_layer_is_new().unwrap_or(false);
+
+            // 主题层一次性迁移（旧 theme.json 改名 / 改过的内置 CSS / 自建主题 → 用户层）；
+            // 迁移失败不阻塞启动，内置主题仍可正常读取
+            let _ = theme_layer::sync_theme_layer();
+
+            // 迁移旧版安装目录里的 user.css / keybindings.json，并清理一次性备份目录。
+            // 应用目录回落只在首次迁移时启用（见函数注释）。
+            let _ = sync_legacy_user_files(first_theme_run);
+
             // 将内置技能同步到用户文档目录（~/Documents/yizimarkdown/skills/）
             let _ = sync_builtin_skills();
 
@@ -1780,6 +1833,102 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn migrates_legacy_user_files_without_overwriting_user_content() {
+        let tmp = std::env::temp_dir().join(format!(
+            "yizimd-legacy-user-files-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&tmp);
+        let user = tmp.join("user");
+        let legacy = tmp.join("legacy");
+        let app = tmp.join("app");
+        for dir in [&user, &legacy, &app] {
+            fs::create_dir_all(dir).unwrap();
+        }
+
+        // 场景 1：用户层还是默认内容 ⇒ 用备份里的用户改动替换
+        fs::write(user.join("user.css"), DEFAULT_USER_CSS).unwrap();
+        fs::write(user.join("keybindings.json"), DEFAULT_KEYBINDINGS).unwrap();
+        fs::write(
+            legacy.join("user.css"),
+            ".editor-content p { line-height: 2 }",
+        )
+        .unwrap();
+        fs::write(legacy.join("keybindings.json"), r#"{"ctrl+q":"closeTab"}"#).unwrap();
+
+        sync_legacy_user_files_at(&user, &legacy, &app, true).unwrap();
+        assert_eq!(
+            fs::read_to_string(user.join("user.css")).unwrap(),
+            ".editor-content p { line-height: 2 }"
+        );
+        assert_eq!(
+            fs::read_to_string(user.join("keybindings.json")).unwrap(),
+            r#"{"ctrl+q":"closeTab"}"#
+        );
+        assert!(!legacy.exists(), "一次性备份应在迁移后删除");
+
+        // 场景 2：用户层已有用户内容 ⇒ 旧备份绝不覆盖（备份仍会被清理）
+        fs::create_dir_all(&legacy).unwrap();
+        fs::write(legacy.join("user.css"), "stale-backup").unwrap();
+        sync_legacy_user_files_at(&user, &legacy, &app, true).unwrap();
+        assert_eq!(
+            fs::read_to_string(user.join("user.css")).unwrap(),
+            ".editor-content p { line-height: 2 }"
+        );
+        assert!(!legacy.exists());
+
+        // 场景 3：没有备份目录（dev / 手动升级）⇒ 回落到应用目录里的旧文件
+        fs::write(app.join("keybindings.json"), r#"{"ctrl+r":"redo"}"#).unwrap();
+        fs::write(user.join("keybindings.json"), DEFAULT_KEYBINDINGS).unwrap();
+        sync_legacy_user_files_at(&user, &legacy, &app, true).unwrap();
+        assert_eq!(
+            fs::read_to_string(user.join("keybindings.json")).unwrap(),
+            r#"{"ctrl+r":"redo"}"#
+        );
+
+        // 场景 4：应用目录里只是默认内容 ⇒ 不写入（避免把「默认」当用户改动）
+        fs::write(user.join("user.css"), DEFAULT_USER_CSS).unwrap();
+        fs::write(app.join("user.css"), DEFAULT_USER_CSS).unwrap();
+        sync_legacy_user_files_at(&user, &legacy, &app, true).unwrap();
+        assert_eq!(
+            fs::read_to_string(user.join("user.css")).unwrap(),
+            DEFAULT_USER_CSS
+        );
+
+        // 场景 5：非首次运行（用户层已存在 themes.user.json）⇒ 不再回落应用目录。
+        // 否则用户把 user.css 恢复默认后，安装目录里遗留的旧副本会被二次导入，
+        // 迁移就不再是「一次性」的了。此时只有 legacy-import/ 仍算数。
+        fs::write(user.join("user.css"), DEFAULT_USER_CSS).unwrap();
+        fs::write(
+            app.join("user.css"),
+            ".editor-content h1 { letter-spacing: 2px }",
+        )
+        .unwrap();
+        sync_legacy_user_files_at(&user, &legacy, &app, false).unwrap();
+        assert_eq!(
+            fs::read_to_string(user.join("user.css")).unwrap(),
+            DEFAULT_USER_CSS,
+            "非首次运行不得把应用目录旧副本当用户改动"
+        );
+
+        // 场景 6：非首次运行但备份目录在（真实升级）⇒ 仍然迁移
+        fs::create_dir_all(&legacy).unwrap();
+        fs::write(
+            legacy.join("user.css"),
+            ".editor-content h2 { letter-spacing: 1px }",
+        )
+        .unwrap();
+        sync_legacy_user_files_at(&user, &legacy, &app, false).unwrap();
+        assert_eq!(
+            fs::read_to_string(user.join("user.css")).unwrap(),
+            ".editor-content h2 { letter-spacing: 1px }"
+        );
+        assert!(!legacy.exists());
+
+        let _ = fs::remove_dir_all(&tmp);
+    }
 
     #[test]
     fn sniffs_supported_image_headers() {

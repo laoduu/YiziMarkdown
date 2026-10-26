@@ -22,9 +22,11 @@ import {
 } from '../lib/webdav'
 import { normalizeBaseUrl } from '../lib/remotePath'
 import { liveAnimPreviewCss } from '../lib/liveAnimKeyframes'
-import { DEFAULT_THEME, orderThemes } from '../lib/themeOrder'
+import { DEFAULT_THEME } from '../lib/themeOrder'
 import { CUSTOM_THEME, applyThemeStyles, readUserCss } from '../lib/themeLoader'
 import { sanitizeUserCss } from '../lib/userCss'
+import { loadThemeCatalog, type ThemeEntry } from '../lib/themeCatalog'
+import { buildThemePreviewCss } from '../lib/themePreview'
 
 const fallbackFonts = [
   'Consolas', 'Courier New', 'Lucida Console', 'Monaco', 'Menlo',
@@ -300,122 +302,246 @@ function UserCssEditor({ onSaved }: { onSaved?: () => void }) {
 }
 
 // ===================== 外观设置（即时生效，只保留恢复默认） =====================
+
+/** 卡片上的日/月图标：11px 下内联 SVG 比 ☀/☾ 字形清晰（字形会糊成一团） */
+function SunIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <circle cx="8" cy="8" r="3.1" fill="currentColor" />
+      <g stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+        <line x1="8" y1="1.2" x2="8" y2="3" /><line x1="8" y1="13" x2="8" y2="14.8" />
+        <line x1="1.2" y1="8" x2="3" y2="8" /><line x1="13" y1="8" x2="14.8" y2="8" />
+        <line x1="3.2" y1="3.2" x2="4.5" y2="4.5" /><line x1="11.5" y1="11.5" x2="12.8" y2="12.8" />
+        <line x1="3.2" y1="12.8" x2="4.5" y2="11.5" /><line x1="11.5" y1="4.5" x2="12.8" y2="3.2" />
+      </g>
+    </svg>
+  )
+}
+
+function MoonIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M10.8 2.2a6.2 6.2 0 1 0 3 8.6 5 5 0 0 1-3-8.6z" fill="currentColor" />
+    </svg>
+  )
+}
+
+interface ThemeCardProps {
+  entry: ThemeEntry
+  /** 令牌来源键：「自定义主题」用基底主题 id，其余用自身 id */
+  previewKey: string
+  active: boolean
+  darkPreview: boolean
+  editable: boolean
+  editing: boolean
+  editName: string
+  onActivate: () => void
+  onToggleDark: () => void
+  onStartEdit: () => void
+  onEditName: (value: string) => void
+  onCommitEdit: () => void
+  onCancelEdit: () => void
+  onShowUpdate: () => void
+}
+
+/** 主题卡 = 迷你编辑器窗格：标题栏放主题名/明暗预览/选中勾，正文是诠释 + 配色示例。 */
+function ThemeCard({
+  entry, previewKey, active, darkPreview, editable, editing, editName,
+  onActivate, onToggleDark, onStartEdit, onEditName, onCommitEdit, onCancelEdit, onShowUpdate,
+}: ThemeCardProps) {
+  const { t } = useI18n()
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={active}
+      aria-label={entry.name}
+      data-theme-preview={previewKey}
+      className={`settings-theme-scope settings-theme-pane${active ? ' is-active' : ''}${darkPreview ? ' is-dark' : ''}`}
+      onClick={onActivate}
+      onKeyDown={(e) => {
+        // 只处理卡片本体；内部输入框/按钮的键盘事件由它们自己处理
+        if (e.target !== e.currentTarget) return
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onActivate()
+        }
+      }}
+    >
+      <span className="settings-theme-side" aria-hidden="true"><i /><i /><i /></span>
+      <span className="settings-theme-main">
+        <span className="settings-theme-titlebar">
+          <span className="settings-theme-dot" aria-hidden="true" />
+          <span className="settings-theme-dot dim" aria-hidden="true" />
+          {editing ? (
+            <input
+              className="settings-theme-name-input"
+              value={editName}
+              onChange={(e) => onEditName(e.target.value)}
+              onBlur={onCommitEdit}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                e.stopPropagation()
+                if (e.key === 'Enter') onCommitEdit()
+                if (e.key === 'Escape') onCancelEdit()
+              }}
+              autoFocus
+            />
+          ) : (
+            <span
+              className={`settings-theme-name${editable ? ' editable' : ''}`}
+              title={editable ? t('settings.clickToEditName') : entry.name}
+              onClick={editable ? (e) => { e.stopPropagation(); onStartEdit() } : undefined}
+            >{entry.name}</span>
+          )}
+          {entry.hasUpdate && (
+            <button
+              type="button"
+              className="settings-theme-new"
+              title={t('settings.themeUpdateTitle')}
+              onClick={(e) => { e.stopPropagation(); onShowUpdate() }}
+            >{t('settings.themeNewVersion')}</button>
+          )}
+          {/* 仅预览该卡的暗色配色，不写全局 isDark、也不激活主题 */}
+          <button
+            type="button"
+            className="settings-theme-mode"
+            title={t('settings.themePreviewToggle')}
+            aria-label={t('settings.themePreviewToggle')}
+            aria-pressed={darkPreview}
+            onClick={(e) => { e.stopPropagation(); onToggleDark() }}
+          >{darkPreview ? <MoonIcon /> : <SunIcon />}</button>
+          {active && <span className="settings-theme-check" aria-hidden="true">✓</span>}
+        </span>
+        <span className="settings-theme-doc">
+          <span className="settings-theme-desc">{entry.desc || t('settings.customThemeDesc')}</span>
+          <span className="settings-theme-line">
+            {t('settings.themeSampleText')} <span className="settings-theme-sel">{t('settings.themeSampleSelection')}</span>
+          </span>
+          <span className="settings-theme-line">
+            <code className="settings-theme-code">inline</code>{' '}
+            <span className="settings-theme-link">{t('settings.themeSampleLink')}</span>
+          </span>
+        </span>
+        <span className="settings-theme-statusbar" aria-hidden="true"><i /><i /></span>
+      </span>
+    </div>
+  )
+}
+
 function AppearanceSettings() {
   const { t } = useI18n()
   const { currentTheme, isDark, customCssBase, setField } = useSettingsStore()
-  const [themeFiles, setThemeFiles] = useState<string[]>([])
-  const [themeMeta, setThemeMeta] = useState<Record<string, { name: string; swatch?: string[]; desc?: string }>>({})
+  const [catalog, setCatalog] = useState<ThemeEntry[]>([])
+  const [cssById, setCssById] = useState<Record<string, string>>({})
+  const [hasUserCss, setHasUserCss] = useState(false)
+  const [darkPreview, setDarkPreview] = useState<Record<string, boolean>>({})
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
-  const [hasUserCss, setHasUserCss] = useState(false)
+  const [updatePrompt, setUpdatePrompt] = useState<ThemeEntry | null>(null)
 
-  // 加载 theme.json 和 themes/ 目录列表；顺带判断 user.css 是否非空（决定「自定义主题」是否出现）
+  // user.css 是否非空：决定「自定义主题」是否出现（合成条目 = 基底主题 + user.css）
   const refreshUserCssFlag = useCallback(() => {
     readUserCss().then((c) => setHasUserCss(!!c.trim()))
   }, [])
 
+  // 目录是唯一数据源；卡片预览需要每套主题的真实令牌，因此一次性读回全部 CSS
+  const refreshCatalog = useCallback(async () => {
+    const cat = await loadThemeCatalog()
+    setCatalog(cat.themes)
+    const keys = new Set<string>([customCssBase])
+    for (const entry of cat.themes) keys.add(entry.id)
+    const loaded: Record<string, string> = {}
+    await Promise.all(Array.from(keys).map(async (id) => {
+      loaded[id] = (await invokeTauri<string>('read_theme_css', { name: `${id}.css` })) || ''
+    }))
+    setCssById(loaded)
+  }, [customCssBase])
+
   useEffect(() => {
-    invokeTauri<string[]>('list_themes').then((l) => setThemeFiles(orderThemes(l || [])))
-    invokeTauri<string>('read_theme_json').then((json) => {
-      try { setThemeMeta(JSON.parse(json || '{}')) } catch { setThemeMeta({}) }
-    })
+    refreshCatalog()
     refreshUserCssFlag()
-  }, [refreshUserCssFlag])
+  }, [refreshCatalog, refreshUserCssFlag])
 
-  // 保存 theme.json
-  const saveThemeMeta = useCallback(async (updated: Record<string, any>) => {
-    setThemeMeta(updated)
-    await invokeTauri('write_theme_json', { content: JSON.stringify(updated, null, 2) })
-  }, [])
+  // 一张 <style> 容纳所有卡片的作用域令牌；明暗由卡片自己的 .is-dark 切换
+  const previewCss = useMemo(() => buildThemePreviewCss([
+    // 「自定义主题」按基底主题预览（user.css 只做覆盖，不改变卡片示例的结构）
+    { key: CUSTOM_THEME, css: cssById[customCssBase] || '' },
+    ...catalog.map((entry) => ({ key: entry.id, css: cssById[entry.id] || '' })),
+  ]), [catalog, cssById, customCssBase])
 
-  // academic 保底主题
-  const academicMeta = { name: t('settings.academic'), swatch: ['#f5f8ff', '#002FA7'], desc: t('settings.academicDesc') }
+  // 合成条目最前（与旧版列表一致）；user.css 非空或正选中它时才出现
+  const customEntry: ThemeEntry | null = (hasUserCss || currentTheme === CUSTOM_THEME) ? {
+    id: CUSTOM_THEME,
+    name: t('settings.customTheme'),
+    desc: t('settings.customThemeDesc'),
+    swatch: catalog.find((e) => e.id === customCssBase)?.swatch || [],
+    source: 'custom',
+    hasUpdate: false,
+  } : null
+  const themeList = customEntry ? [customEntry, ...catalog] : catalog
 
-  // 构建统一主题列表：「自定义主题」最前，academic 次之，其余按 theme.json 顺序，未收录的 CSS 文件追加末尾
-  const themeList: { id: string; name: string; swatch: string[]; desc: string; isPreset: boolean; editable: boolean }[] = []
-  const cssIds = new Set(themeFiles.map(f => f.replace(/\.css$/, '')))
-  // 「自定义主题」= 基底主题 + user.css。user.css 非空时才有内容；已选中它时也保留，
-  // 否则列表里会一个激活项都没有。
-  if (hasUserCss || currentTheme === CUSTOM_THEME) {
-    themeList.push({
-      id: CUSTOM_THEME,
-      name: t('settings.customTheme'),
-      swatch: themeMeta[customCssBase]?.swatch || ['#e8ecf0', '#c0c8d4'],
-      desc: t('settings.customThemeDesc'),
-      isPreset: true,
-      editable: false, // 合成条目，没有对应的主题文件可改名
-    })
-  }
-  // academic 保底
-  themeList.push({ id: 'academic', ...academicMeta, isPreset: true, editable: false })
-  // theme.json 中的预设主题（跳过 academic）
-  for (const [id, meta] of Object.entries(themeMeta)) {
-    if (id === 'academic' || !cssIds.has(id)) continue
-    themeList.push({ id, name: meta.name, swatch: meta.swatch || ['#e8ecf0', '#c0c8d4'], desc: meta.desc || t('settings.customTheme'), isPreset: true, editable: true })
-  }
-  // 不在 theme.json 中的 CSS 文件（用户自定义）
-  for (const id of cssIds) {
-    if (id === 'academic' || themeMeta[id]) continue
-    themeList.push({ id, name: id, swatch: ['#e8ecf0', '#c0c8d4'], desc: t('settings.customTheme'), isPreset: false, editable: true })
-  }
+  const activate = (id: string) => setField('currentTheme', id)
+  const isCardDark = (id: string) => darkPreview[id] ?? isDark
+  const toggleDarkPreview = (id: string) =>
+    setDarkPreview((prev) => ({ ...prev, [id]: !(prev[id] ?? isDark) }))
 
   const handleRestore = () => {
     setField('currentTheme', DEFAULTS_APPEARANCE.currentTheme)
     setField('isDark', DEFAULTS_APPEARANCE.isDark)
   }
 
-  // 开始编辑主题名称
-  const startEdit = (id: string, currentName: string) => {
-    setEditingId(id)
-    setEditName(currentName)
+  const startEdit = (entry: ThemeEntry) => {
+    setEditingId(entry.id)
+    setEditName(entry.name)
   }
 
-  // 保存编辑
-  const commitEdit = (id: string) => {
+  // 改名写入用户层（`rename_theme`），不再改安装目录的 theme.json
+  const commitEdit = async () => {
+    const id = editingId
+    if (!id) return
+    const entry = catalog.find((e) => e.id === id)
     const newName = editName.trim()
-    if (!newName || newName === (themeMeta[id]?.name || id)) {
-      setEditingId(null)
-      return
-    }
-    const updated = { ...themeMeta }
-    if (!updated[id]) {
-      // 自定义主题首次命名，创建条目
-      updated[id] = { name: newName, swatch: ['#e8ecf0', '#c0c8d4'], desc: t('settings.customTheme') }
-    } else {
-      updated[id] = { ...updated[id], name: newName }
-    }
-    saveThemeMeta(updated)
     setEditingId(null)
+    if (!entry || !newName || newName === entry.name) return
+    await invokeTauri('rename_theme', { id, name: newName })
+    await refreshCatalog()
+  }
+
+  // 内置主题有新版本：useBuiltin=true 用内置新版；false 保留自己的修改并清掉提示
+  const resolveUpdate = async (useBuiltin: boolean) => {
+    const entry = updatePrompt
+    setUpdatePrompt(null)
+    if (!entry) return
+    await invokeTauri('resolve_theme_update', { id: entry.id, useBuiltin })
+    await refreshCatalog()
   }
 
   return (
     <>
+      <style>{previewCss}</style>
       <div className="settings-content-scroll">
         <div className="space-y-4">
           <Section title={t('settings.theme')}>
-            <div className="grid grid-cols-2 gap-2">
-              {themeList.map((th) => (
-                <button key={th.id} onClick={() => setField('currentTheme', th.id)}
-                  className={`settings-theme-card ${currentTheme === th.id ? 'settings-theme-active' : ''}`}>
-                  <div className="w-full h-10 rounded-md mb-1.5"
-                    style={{ background: `linear-gradient(135deg, ${th.swatch[0]} 0%, ${th.swatch[1]} 100%)`, border: '1px solid var(--editor-border)' }} />
-                  {editingId === th.id ? (
-                    <input
-                      className="w-full text-xs font-medium text-[var(--editor-text)] bg-transparent border-b border-[var(--editor-accent)] outline-none px-0.5 py-0.5"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      onBlur={() => commitEdit(th.id)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') commitEdit(th.id); if (e.key === 'Escape') setEditingId(null) }}
-                      autoFocus
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  ) : (
-                    <p className={`text-xs font-medium text-[var(--editor-text)] truncate ${th.editable ? 'cursor-pointer hover:text-[var(--editor-accent)]' : ''}`}
-                      title={th.editable ? t('settings.clickToEditName') : undefined}
-                      onClick={(e) => { if (!th.editable) return; e.stopPropagation(); startEdit(th.id, th.name) }}>{th.name}</p>
-                  )}
-                  <p className="text-[10px] text-[var(--sidebar-text)] truncate">{th.desc}</p>
-                </button>
+            <div className="settings-theme-grid">
+              {themeList.map((entry) => (
+                <ThemeCard
+                  key={entry.id}
+                  entry={entry}
+                  previewKey={entry.id === CUSTOM_THEME ? customCssBase : entry.id}
+                  active={currentTheme === entry.id}
+                  darkPreview={isCardDark(entry.id)}
+                  editable={entry.id !== CUSTOM_THEME}
+                  editing={editingId === entry.id}
+                  editName={editName}
+                  onActivate={() => activate(entry.id)}
+                  onToggleDark={() => toggleDarkPreview(entry.id)}
+                  onStartEdit={() => startEdit(entry)}
+                  onEditName={setEditName}
+                  onCommitEdit={commitEdit}
+                  onCancelEdit={() => setEditingId(null)}
+                  onShowUpdate={() => setUpdatePrompt(entry)}
+                />
               ))}
             </div>
             <p className="text-[10px] text-[var(--sidebar-text)] mt-2">{t('settings.themeEditHint')}</p>
@@ -433,6 +559,21 @@ function AppearanceSettings() {
           </Section>
         </div>
       </div>
+
+      {/* 「内置主题已更新」：保留用户修改（默认安全选项）或改用内置新版 */}
+      {updatePrompt && (
+        <div className="tab-close-overlay" onClick={() => setUpdatePrompt(null)}>
+          <div className="tab-close-dialog" onClick={(e) => e.stopPropagation()}>
+            <p className="tab-close-dialog-title">{t('settings.themeUpdateTitle')}</p>
+            <p className="tab-close-dialog-msg">{t('settings.themeUpdateMsg', { name: updatePrompt.name })}</p>
+            <div className="tab-close-dialog-actions">
+              <button className="tab-close-btn-discard" onClick={() => resolveUpdate(true)}>{t('settings.themeUseBuiltin')}</button>
+              <button className="tab-close-btn-cancel" onClick={() => resolveUpdate(false)}>{t('settings.themeKeepMine')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="settings-footer-bar">
         <button onClick={handleRestore} className="settings-btn-secondary">{t('common.restoreDefault')}</button>
       </div>

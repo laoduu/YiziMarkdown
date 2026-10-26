@@ -22,6 +22,9 @@ tauri-plugin-fs = "2"
 tauri-plugin-updater = "2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+# 主题层内容比对（覆盖回避）：按 CSS 字节算 sha256。该 crate 已在 Cargo.lock 中（经其它依赖），
+# 这里只是显式声明直接使用，不引入新下载。
+sha2 = "0.10"
 base64 = "0.22"
 open = "5"
 url = "2"
