@@ -89,7 +89,7 @@
   border-radius: 5px;
   color: var(--editor-accent);
 }
-.theme-nature pre { 
+.editor-content.theme-nature pre { 
   background: var(--editor-surface); 
   padding: 1.2em; 
   border-radius: var(--border-radius); 

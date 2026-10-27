@@ -81,7 +81,7 @@
   padding: 0.2em 0.4em;
   border-radius: 5px;
 }
-.theme-vibrant pre {
+.editor-content.theme-vibrant pre {
   background: var(--editor-surface);
   padding: 1em;
   border-radius: var(--border-radius);

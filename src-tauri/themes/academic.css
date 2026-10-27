@@ -177,7 +177,7 @@
 }
 
 /* 代码块：表面色背景，边框包围，内边距，圆角 */
-.theme-academic pre {
+.editor-content.theme-academic pre {
   background: var(--editor-surface);
   padding: 1em;
   border-radius: var(--border-radius);

@@ -180,97 +180,97 @@
   color: var(--editor-text);
 }
 
-.dark .theme-typewriter h1 {
+.dark .editor-content.theme-typewriter h1 {
   color: #f0d080;
 }
-.dark .theme-typewriter h2 {
+.dark .editor-content.theme-typewriter h2 {
   color: #e8c070;
 }
-.dark .theme-typewriter h3 {
+.dark .editor-content.theme-typewriter h3 {
   color: #d4a853;
 }
-.dark .theme-typewriter blockquote {
+.dark .editor-content.theme-typewriter blockquote {
   color: #a09080;
   border-left-color: #d4a853;
 }
-.dark .theme-typewriter code {
+.dark .editor-content.theme-typewriter code {
   color: #f0d080;
   background: rgba(240, 208, 128, 0.08);
   border-color: rgba(240, 208, 128, 0.15);
 }
-.dark .theme-typewriter a {
+.dark .editor-content.theme-typewriter a {
   color: #f0d080;
 }
-.dark .theme-typewriter th {
+.dark .editor-content.theme-typewriter th {
   color: #b0a898;
   background: rgba(240, 208, 128, 0.06);
 }
-.dark .theme-typewriter strong {
+.dark .editor-content.theme-typewriter strong {
   color: #e0d8c0;
 }
 /* ── 深色模式预览覆盖 ────────────────────────────────────────── */
-.dark .theme-typewriter h1 {
+.dark .editor-content.theme-typewriter h1 {
   color: #d4a853;
   text-shadow: 0 0 8px rgba(212, 168, 83, 0.3);
 }
-.dark .theme-typewriter h1::after {
+.dark .editor-content.theme-typewriter h1::after {
   border-bottom-color: #d4a853;
 }
-.dark .theme-typewriter h2 {
+.dark .editor-content.theme-typewriter h2 {
   color: #c8b870;
 }
-.dark .theme-typewriter h3 {
+.dark .editor-content.theme-typewriter h3 {
   color: #b0a060;
 }
-.dark .theme-typewriter p {
+.dark .editor-content.theme-typewriter p {
   color: #c8c0b0;
 }
-.dark .theme-typewriter blockquote {
+.dark .editor-content.theme-typewriter blockquote {
   color: #8a8070;
   border-left-color: #8a8070;
   background: rgba(212, 168, 83, 0.03);
 }
-.dark .theme-typewriter code {
+.dark .editor-content.theme-typewriter code {
   color: #d4a853;
   background: rgba(212, 168, 83, 0.08);
   border-bottom-color: #d4a853;
 }
-.dark .theme-typewriter pre {
+.dark .editor-content.theme-typewriter pre {
   background: #242420;
   border-left-color: #d4a853;
   box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.3);
 }
-.dark .theme-typewriter pre code {
+.dark .editor-content.theme-typewriter pre code {
   color: #d4a853;
   background: none;
 }
-.dark .theme-typewriter a {
+.dark .editor-content.theme-typewriter a {
   color: #d4a853;
   border-bottom-color: rgba(212, 168, 83, 0.4);
 }
-.dark .theme-typewriter a:hover {
+.dark .editor-content.theme-typewriter a:hover {
   border-bottom-color: #d4a853;
 }
-.dark .theme-typewriter th {
+.dark .editor-content.theme-typewriter th {
   color: #d4a853;
   background: rgba(212, 168, 83, 0.06);
 }
-.dark .theme-typewriter td {
+.dark .editor-content.theme-typewriter td {
   color: #c8c0b0;
   border-color: #444440;
 }
-.dark .theme-typewriter hr {
+.dark .editor-content.theme-typewriter hr {
   background: #555550;
 }
-.dark .theme-typewriter li {
+.dark .editor-content.theme-typewriter li {
   color: #c8c0b0;
 }
-.dark .theme-typewriter li::marker {
+.dark .editor-content.theme-typewriter li::marker {
   color: #d4a853;
 }
-.dark .theme-typewriter strong {
+.dark .editor-content.theme-typewriter strong {
   color: #e8d0a0;
 }
-.dark .theme-typewriter em {
+.dark .editor-content.theme-typewriter em {
   color: #a09080;
 }

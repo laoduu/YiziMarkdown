@@ -166,54 +166,54 @@
 }
 
 /* ── 深色模式完整覆盖 ────────────────────────────────────────── */
-.dark .theme-mint h1 {
+.dark .editor-content.theme-mint h1 {
 }
-.dark .theme-mint h2 {
+.dark .editor-content.theme-mint h2 {
 }
-.dark .theme-mint h3 {
+.dark .editor-content.theme-mint h3 {
 }
-.dark .theme-mint p {
+.dark .editor-content.theme-mint p {
   color: #b0e0d0;
 }
-.dark .theme-mint li {
+.dark .editor-content.theme-mint li {
   color: #b0e0d0;
 }
-.dark .theme-mint em {
+.dark .editor-content.theme-mint em {
   color: #34d399;
 }
-.dark .theme-mint strong {
+.dark .editor-content.theme-mint strong {
   color: #d0f0e0;
 }
-.dark .theme-mint blockquote {
+.dark .editor-content.theme-mint blockquote {
   color: #80d4b0;
   border-left-color: #34d399;
 }
-.dark .theme-mint code {
+.dark .editor-content.theme-mint code {
   color: #34d399;
   background: rgba(52, 211, 153, 0.1);
   border-color: rgba(52, 211, 153, 0.2);
 }
-.dark .theme-mint pre {
+.dark .editor-content.theme-mint pre {
   background: rgba(10, 26, 20, 0.8);
   border-color: #1a3a2a;
 }
-.dark .theme-mint pre code {
+.dark .editor-content.theme-mint pre code {
   color: #6ee7b7;
   background: none;
   border: none;
 }
-.dark .theme-mint a {
+.dark .editor-content.theme-mint a {
   color: #34d399;
   border-bottom-color: rgba(52, 211, 153, 0.3);
 }
-.dark .theme-mint th {
+.dark .editor-content.theme-mint th {
   color: #b0e0d0;
   background: rgba(52, 211, 153, 0.08);
 }
-.dark .theme-mint td {
+.dark .editor-content.theme-mint td {
   color: #b0e0d0;
   border-color: #1a3a2a;
 }
-.dark .theme-mint hr {
+.dark .editor-content.theme-mint hr {
   border-top-color: #1a3a2a;
 }

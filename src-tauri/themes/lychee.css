@@ -127,11 +127,18 @@
 
 /* ═══════════════════════════════════════════════════════════════
    预览模式排版样式
-   作用于预览区渲染后的 HTML 元素（.theme-lychee 容器内）
+   作用于预览区渲染后的 HTML 元素（.editor-content.theme-lychee 容器内）
+
+   ⚠️ 所有元素规则一律带 .editor-content. 前缀（与其余 14 个主题一致）：
+   裸 `.theme-lychee X` 特异性 (0,1,1) 与演示模式的 `.ys-slide X` 打平，
+   而主题 CSS 运行时注入、排在 slideshow.css 之后 ⇒ 同特异性主题赢，
+   规则会漏进幻灯片覆盖版式（标题字号/段距/代码块/列表…）。
+   加前缀后幻灯片（在 .editor-content 之外）不再匹配，版式交回 slideshow.css。
+   暗色 `.dark .theme-lychee` 同理（.dark 在 <html> 上，裸写也会命中幻灯片）。
    ═══════════════════════════════════════════════════════════════ */
 
 /* 一级标题：2em，品牌红色，字重 700，紧凑字间距 */
-.theme-lychee h1 {
+.editor-content.theme-lychee h1 {
   font-size: 2em;
   font-weight: 700;
   margin: 1.5em 0 0.5em;
@@ -139,7 +146,7 @@
 }
 
 /* 二级标题：1.5em，比一级更深的红，字重 600 */
-.theme-lychee h2 {
+.editor-content.theme-lychee h2 {
   font-size: 1.5em;
   font-weight: 600;
   margin: 1.3em 0 0.4em;
@@ -147,19 +154,19 @@
 }
 
 /* 三级标题：1.25em，更深的红 */
-.theme-lychee h3 {
+.editor-content.theme-lychee h3 {
   font-size: 1.25em;
   font-weight: 600;
   margin: 1.2em 0 0.3em;
 }
 
 /* 段落间距 */
-.theme-lychee p {
+.editor-content.theme-lychee p {
   margin: 0 0 var(--paragraph-spacing);
 }
 
 /* 引用块：左边框为品牌红色线，文字使用侧栏文字色（灰红），与正文区分 */
-.theme-lychee blockquote {
+.editor-content.theme-lychee blockquote {
   border-left: 3px solid var(--editor-accent);
   padding: 0.5em 1em;
   margin: 0.5em 0;
@@ -167,7 +174,7 @@
 }
 
 /* 行内代码：等宽字体，字号略小，表面色背景，轻微圆角 */
-.theme-lychee code {
+.editor-content.theme-lychee code {
   font-family: var(--font-mono);
   font-size: 0.9em;
   background: var(--editor-surface);
@@ -176,7 +183,7 @@
 }
 
 /* 代码块：表面色背景，边框包围，内边距，圆角 */
-.theme-lychee pre {
+.editor-content.theme-lychee pre {
   background: var(--editor-surface);
   padding: 1em;
   border-radius: var(--border-radius);
@@ -186,58 +193,66 @@
 }
 
 /* 代码块内的行内代码：去掉重复的背景和内边距 */
-.theme-lychee pre code {
+.editor-content.theme-lychee pre code {
   background: none;
   padding: 0;
 }
 
 /* 链接：品牌红色，无下划线，hover 时显示下划线 */
-.theme-lychee a {
+.editor-content.theme-lychee a {
   color: var(--editor-accent);
   text-decoration: none;
 }
-.theme-lychee a:hover {
+.editor-content.theme-lychee a:hover {
   text-decoration: underline;
 }
 
-/* 图片：自适应宽度，轻微圆角 */
-.theme-lychee img {
+/* 图片：自适应宽度，轻微圆角
+   选择器必须带 .editor-content. 前缀：裸 `.theme-lychee img` 会扩散到整个窗口，
+   命中 CodeMirror 实时模式 widget 边界的内部占位 <img class="cm-widgetBuffer">，
+   给它加 1em 外边距会把任务列表等 widget 行撑高、行间空一行。 */
+.editor-content.theme-lychee img {
   max-width: 100%;
   border-radius: var(--border-radius);
   margin: 1em 0;
 }
 
-/* 表格：满宽，边框合并，表头用表面色背景 */
-.theme-lychee table {
+/* 表格：满宽，边框合并，表头用表面色背景
+   选择器必须带 .editor-content. 前缀：裸 `.theme-lychee th` 会漏进演示模式
+   （幻灯片根 .yizi-slideshow.theme-lychee 带主题类，但在 .editor-content 之外），
+   与 slideshow.css 的 .ys-slide th 叠加；暗色下 `.dark .theme-lychee th`(0,2,1)
+   更会盖掉幻灯片表头底色 ⇒ 表头颜色异常。限定到编辑器容器内后，预览照常、
+   演示模式表头交回 slideshow.css 全权决定（与其余主题一致）。 */
+.editor-content.theme-lychee table {
   width: 100%;
   border-collapse: collapse;
   margin: 1em 0;
 }
-.theme-lychee th,
-.theme-lychee td {
+.editor-content.theme-lychee th,
+.editor-content.theme-lychee td {
   padding: 0.6em 1em;
   border: 1px solid var(--editor-border);
   text-align: left;
 }
-.theme-lychee th {
+.editor-content.theme-lychee th {
   background: var(--editor-surface);
   font-weight: 600;
 }
 
 /* 分隔线：无默认边框，用顶部细线替代 */
-.theme-lychee hr {
+.editor-content.theme-lychee hr {
   border: none;
   border-top: 1px solid var(--editor-border);
   margin: 2em 0;
 }
 
 /* 列表：缩进 2em，列表项间距 */
-.theme-lychee ul,
-.theme-lychee ol {
+.editor-content.theme-lychee ul,
+.editor-content.theme-lychee ol {
   padding-left: 2em;
   margin: 0.5em 0;
 }
-.theme-lychee li {
+.editor-content.theme-lychee li {
   margin: 0.3em 0;
 }
 
@@ -248,29 +263,32 @@
   padding: 2em;
   color: var(--editor-text);
 }
-/* ── 深色模式标题/元素覆盖 ────────────────────────────────────── */
-.dark .theme-lychee h1 {
+/* ── 深色模式标题/元素覆盖 ──────────────────────────────────────
+   同样带 .editor-content. 前缀：.dark 在 <html> 上，裸 `.dark .theme-lychee X`
+   也会命中幻灯片里的同名元素（幻灯片根 .yizi-slideshow.theme-lychee 也在 .dark 内），
+   限定到编辑器容器才不会漏进演示模式。 */
+.dark .editor-content.theme-lychee h1 {
 }
-.dark .theme-lychee h2 {
+.dark .editor-content.theme-lychee h2 {
 }
-.dark .theme-lychee h3 {
+.dark .editor-content.theme-lychee h3 {
 }
-.dark .theme-lychee blockquote {
+.dark .editor-content.theme-lychee blockquote {
   color: #c09090;
   border-left-color: #ef4444;
 }
-.dark .theme-lychee code {
+.dark .editor-content.theme-lychee code {
   color: #f87171;
   background: rgba(248, 113, 113, 0.08);
   border-color: rgba(248, 113, 113, 0.15);
 }
-.dark .theme-lychee a {
+.dark .editor-content.theme-lychee a {
   color: #f87171;
 }
-.dark .theme-lychee th {
+.dark .editor-content.theme-lychee th {
   color: #f0e6e7;
   background: rgba(248, 113, 113, 0.06);
 }
-.dark .theme-lychee strong {
+.dark .editor-content.theme-lychee strong {
   color: #f0d0d0;
 }

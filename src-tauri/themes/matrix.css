@@ -170,97 +170,97 @@
   color: var(--editor-text);
 }
 
-.dark .theme-matrix h1 {
+.dark .editor-content.theme-matrix h1 {
   color: #00ff41;
 }
-.dark .theme-matrix h2 {
+.dark .editor-content.theme-matrix h2 {
   color: #00e639;
 }
-.dark .theme-matrix h3 {
+.dark .editor-content.theme-matrix h3 {
   color: #00cc33;
 }
-.dark .theme-matrix blockquote {
+.dark .editor-content.theme-matrix blockquote {
   color: #40c060;
   border-left-color: #00ff41;
 }
-.dark .theme-matrix code {
+.dark .editor-content.theme-matrix code {
   color: #00ff41;
   background: rgba(0, 255, 65, 0.08);
   border-color: rgba(0, 255, 65, 0.15);
 }
-.dark .theme-matrix a {
+.dark .editor-content.theme-matrix a {
   color: #00ff41;
 }
-.dark .theme-matrix th {
+.dark .editor-content.theme-matrix th {
   color: #00ff41;
   background: rgba(0, 255, 65, 0.06);
 }
-.dark .theme-matrix strong {
+.dark .editor-content.theme-matrix strong {
   color: #80ff90;
 }
 /* ── 深色模式预览覆盖 ────────────────────────────────────────── */
-.dark .theme-matrix h1 {
+.dark .editor-content.theme-matrix h1 {
   color: #00ff41;
   text-shadow: 0 0 8px rgba(0, 255, 65, 0.5), 0 0 20px rgba(0, 255, 65, 0.2);
 }
-.dark .theme-matrix h2 {
+.dark .editor-content.theme-matrix h2 {
   color: #00dd38;
   text-shadow: 0 0 6px rgba(0, 255, 65, 0.3);
 }
-.dark .theme-matrix h3 {
+.dark .editor-content.theme-matrix h3 {
   color: #00cc33;
   text-shadow: 0 0 4px rgba(0, 255, 65, 0.2);
 }
-.dark .theme-matrix p {
+.dark .editor-content.theme-matrix p {
   color: #00e03a;
 }
-.dark .theme-matrix blockquote {
+.dark .editor-content.theme-matrix blockquote {
   color: #00b33c;
   border-left-color: #00ff41;
   background: rgba(0, 255, 65, 0.03);
 }
-.dark .theme-matrix code {
+.dark .editor-content.theme-matrix code {
   color: #39ff14;
   background: rgba(0, 255, 65, 0.1);
   border-color: rgba(0, 255, 65, 0.15);
 }
-.dark .theme-matrix pre {
+.dark .editor-content.theme-matrix pre {
   background: #050a05;
   border-color: #003300;
 }
-.dark .theme-matrix pre code {
+.dark .editor-content.theme-matrix pre code {
   color: #39ff14;
   background: none;
 }
-.dark .theme-matrix a {
+.dark .editor-content.theme-matrix a {
   color: #00ff41;
   border-bottom-color: rgba(0, 255, 65, 0.4);
 }
-.dark .theme-matrix a:hover {
+.dark .editor-content.theme-matrix a:hover {
   border-bottom-color: #00ff41;
 }
-.dark .theme-matrix th {
+.dark .editor-content.theme-matrix th {
   color: #00ff41;
   background: rgba(0, 255, 65, 0.06);
 }
-.dark .theme-matrix td {
+.dark .editor-content.theme-matrix td {
   color: #00e03a;
   border-color: #003300;
 }
-.dark .theme-matrix hr {
+.dark .editor-content.theme-matrix hr {
   background: linear-gradient(90deg, transparent, #00ff41, transparent);
 }
-.dark .theme-matrix li {
+.dark .editor-content.theme-matrix li {
   color: #00e03a;
 }
-.dark .theme-matrix li::marker {
+.dark .editor-content.theme-matrix li::marker {
   color: #00ff41;
 }
-.dark .theme-matrix strong {
+.dark .editor-content.theme-matrix strong {
   color: #80ff90;
   text-shadow: 0 0 6px rgba(128, 255, 144, 0.4);
 }
-.dark .theme-matrix em {
+.dark .editor-content.theme-matrix em {
   color: #5abb6a;
   font-style: italic;
 }

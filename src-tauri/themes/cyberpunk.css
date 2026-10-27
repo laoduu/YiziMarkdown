@@ -179,62 +179,62 @@
 }
 
 /* ── 暗色预览覆盖 ────────────────────────────────────────────── */
-.dark .theme-cyberpunk h1 {
+.dark .editor-content.theme-cyberpunk h1 {
   text-shadow: 0 0 10px rgba(0, 240, 255, 0.6), 0 0 30px rgba(0, 240, 255, 0.2);
   border-bottom-color: #ff00ff;
 }
-.dark .theme-cyberpunk h2 {
+.dark .editor-content.theme-cyberpunk h2 {
   text-shadow: 0 0 8px rgba(255, 0, 255, 0.4);
 }
-.dark .theme-cyberpunk h3 {
+.dark .editor-content.theme-cyberpunk h3 {
   text-shadow: 0 0 6px rgba(0, 212, 255, 0.3);
 }
-.dark .theme-cyberpunk p {
+.dark .editor-content.theme-cyberpunk p {
   color: #d0d0e8;
 }
-.dark .theme-cyberpunk blockquote {
+.dark .editor-content.theme-cyberpunk blockquote {
   color: #a0a0c0;
   border-left-color: #ff00ff;
   background: rgba(255, 0, 255, 0.05);
 }
-.dark .theme-cyberpunk code {
+.dark .editor-content.theme-cyberpunk code {
   color: #00f0ff;
   background: rgba(0, 240, 255, 0.08);
   border-color: rgba(0, 240, 255, 0.15);
 }
-.dark .theme-cyberpunk a {
+.dark .editor-content.theme-cyberpunk a {
   color: #00f0ff;
   border-bottom-color: #00f0ff;
   text-shadow: 0 0 6px rgba(0, 240, 255, 0.4);
 }
-.dark .theme-cyberpunk a:hover {
+.dark .editor-content.theme-cyberpunk a:hover {
   color: #ff00ff;
   border-bottom-color: #ff00ff;
   text-shadow: 0 0 10px rgba(255, 0, 255, 0.6);
 }
-.dark .theme-cyberpunk th {
+.dark .editor-content.theme-cyberpunk th {
   color: #ff00ff;
   background: rgba(255, 0, 255, 0.08);
 }
-.dark .theme-cyberpunk td {
+.dark .editor-content.theme-cyberpunk td {
   color: #d0d0e8;
 }
-.dark .theme-cyberpunk li {
+.dark .editor-content.theme-cyberpunk li {
   color: #d0d0e8;
 }
-.dark .theme-cyberpunk strong {
+.dark .editor-content.theme-cyberpunk strong {
   color: #ffffff;
 }
-.dark .theme-cyberpunk em {
+.dark .editor-content.theme-cyberpunk em {
   color: #cc88ff;
 }
-.dark .theme-cyberpunk img {
+.dark .editor-content.theme-cyberpunk img {
   border-color: #1e1e3a;
 }
-.dark .theme-cyberpunk img:hover {
+.dark .editor-content.theme-cyberpunk img:hover {
   border-color: #00f0ff;
   box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
 }
-.dark .theme-cyberpunk hr {
+.dark .editor-content.theme-cyberpunk hr {
   background: linear-gradient(90deg, transparent, #00f0ff, #ff00ff, transparent);
 }

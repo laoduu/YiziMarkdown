@@ -107,56 +107,56 @@
 }
 
 /* ── 深色模式完整覆盖 ────────────────────────────────────────── */
-.dark .theme-facebook h1 {
+.dark .editor-content.theme-facebook h1 {
 }
-.dark .theme-facebook h2 {
+.dark .editor-content.theme-facebook h2 {
 }
-.dark .theme-facebook h3 {
+.dark .editor-content.theme-facebook h3 {
 }
-.dark .theme-facebook p {
+.dark .editor-content.theme-facebook p {
   color: #e4e6eb;
 }
-.dark .theme-facebook li {
+.dark .editor-content.theme-facebook li {
   color: #e4e6eb;
 }
-.dark .theme-facebook em {
+.dark .editor-content.theme-facebook em {
   color: #a8a8a8;
 }
-.dark .theme-facebook strong {
+.dark .editor-content.theme-facebook strong {
   color: #d0e0f8;
 }
-.dark .theme-facebook blockquote {
+.dark .editor-content.theme-facebook blockquote {
   color: #a8a8a8;
   border-left-color: #2d88ff;
   box-shadow: none;
 }
-.dark .theme-facebook code {
+.dark .editor-content.theme-facebook code {
   color: #2d88ff;
   background: rgba(45, 136, 255, 0.1);
 }
-.dark .theme-facebook pre {
+.dark .editor-content.theme-facebook pre {
   background: #1c1d1e;
   border-color: #3e4042;
   box-shadow: none;
 }
-.dark .theme-facebook pre code {
+.dark .editor-content.theme-facebook pre code {
   color: #e4e6eb;
   background: none;
 }
-.dark .theme-facebook a {
+.dark .editor-content.theme-facebook a {
   color: #2d88ff;
 }
-.dark .theme-facebook img {
+.dark .editor-content.theme-facebook img {
   box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
-.dark .theme-facebook th {
+.dark .editor-content.theme-facebook th {
   color: #e4e6eb;
   background: rgba(45, 136, 255, 0.08);
 }
-.dark .theme-facebook td {
+.dark .editor-content.theme-facebook td {
   color: #e4e6eb;
   border-color: #3e4042;
 }
-.dark .theme-facebook hr {
+.dark .editor-content.theme-facebook hr {
   border-top-color: #3e4042;
 }
