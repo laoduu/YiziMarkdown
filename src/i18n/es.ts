@@ -111,6 +111,16 @@ export const es = {
     saved: 'Guardado',
     unsaved: 'Sin guardar',
   },
+  update: {
+    title: 'Nueva versión v{v} disponible',
+    body: 'Estás en v{current}. Esta compilación se actualiza manualmente: descarga el nuevo paquete y sustituye la aplicación actual.',
+    download: 'Descargar',
+    later: 'Más tarde',
+    skip: 'Omitir esta versión',
+    close: 'Cerrar',
+    downloadPage: 'Abrir página de descarga',
+    manualHint: 'Las versiones de macOS y portátiles se actualizan manualmente: descarga el nuevo paquete y sustituye la aplicación actual.',
+  },
   sidebar: {
     files: 'Archivos',
     outline: 'Esquema',

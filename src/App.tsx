@@ -29,8 +29,10 @@ import { useI18n, translate, getCurrentLang } from './i18n'
 import { refreshThemeCursorVars } from './lib/themeCursor'
 import { applyThemeStyles } from './lib/themeLoader'
 import { deriveDocumentTitle } from './lib/docTitle'
+import { deriveExportBaseName } from './lib/exportName'
 import CloudSaveDialog from './components/CloudSaveDialog'
 import { ContextMenuHost } from './components/ContextMenu'
+import UpdateNotice from './components/UpdateNotice'
 import { windowOps } from './lib/windowOps'
 import { buildDocxPalette } from './lib/docxPalette'
 import { collectCodeHighlights } from './lib/docxCodeHighlight'
@@ -958,9 +960,8 @@ function App() {
     }
 
     // 有路径沿用文件名；无路径从文档推导（元信息 title → 第一个标题行），推不出用 document
-    let baseName = tab.filePath
-      ? tab.filePath.split('\\').pop()?.replace(/\.[^/.]+$/, '') || 'document'
-      : (deriveDocumentTitle(tab.content) || 'document')
+    // 口径见 lib/exportName.ts —— PPTX 弹窗与这里共用同一个函数
+    const baseName = deriveExportBaseName({ content: tab.content, filePath: tab.filePath })
     let ext = 'txt'
 
     switch (format) {
@@ -1365,6 +1366,9 @@ function App() {
           </div>
         </>
       )}
+      {/* 手动更新提示（macOS / 便携版）：右下角卡片，Windows 安装版不会出现 */}
+      <UpdateNotice />
+
       {toast.visible && (
         <div className="fixed bottom-12 left-1/2 -translate-x-1/2 px-4 py-2 bg-[var(--editor-text)] text-[var(--editor-bg)] text-sm rounded-lg shadow-lg z-[9999] pointer-events-none transition-opacity duration-300">
           {toast.message}
@@ -1400,7 +1404,11 @@ function App() {
           onClose={() => setPptxDialog(null)}
           source={{
             content: tab.content,
-            title: tab.name || '',
+            // 标题走与 DOCX 导出同一套推导（元信息 title → 第一个标题行），
+            // 不再用 tab.name —— 未保存文档的 tab.name 是「未命名新文件」，
+            // 会被当成演示标题，也会成为 PPTX 文档属性里的标题
+            title: deriveDocumentTitle(tab.content) || '',
+            filePath: tab.filePath,
             theme: pptxDialog.theme,
             dark: pptxDialog.dark,
             customCssBase,

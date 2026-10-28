@@ -51,8 +51,32 @@
     "windows": {
       "nsis": {
         "installerHooks": "installer.nsh",
-        "displayLanguageSelector": false,
-        "languages": ["SimpChinese", "English"]
+        "displayLanguageSelector": true,
+        "languages": [
+          "SimpChinese",
+          "TradChinese",
+          "English",
+          "Japanese",
+          "Korean",
+          "German",
+          "French",
+          "Spanish",
+          "Portuguese",
+          "PortugueseBR",
+          "Italian",
+          "Polish",
+          "Dutch",
+          "Turkish",
+          "Swedish",
+          "Ukrainian"
+        ],
+        "customLanguageFiles": {
+          "Polish": "installer-lang/Polish.nsh"
+        },
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico",
+        "headerImage": "installer/header.bmp",
+        "sidebarImage": "installer/sidebar.bmp"
       },
       "wix": {
         "language": "zh-CN"

@@ -110,6 +110,16 @@ export const zh = {
     saved: '已保存',
     unsaved: '未保存',
   },
+  update: {
+    title: '发现新版本 v{v}',
+    body: '当前版本 v{current}。这个版本需要手动下载安装，不会自动替换当前应用。',
+    download: '去下载',
+    later: '稍后',
+    skip: '跳过此版本',
+    close: '关闭',
+    downloadPage: '打开下载页',
+    manualHint: 'macOS / 便携版不自动更新：下载新包后手动替换当前应用即可。',
+  },
   sidebar: {
     files: '文件',
     outline: '大纲',

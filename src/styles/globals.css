@@ -2661,3 +2661,28 @@ a {
   margin-left: auto;
   opacity: 0.7;
 }
+
+/* 手动更新提示卡（macOS / 便携版）：右下角浮层，不抢焦点、不遮正文。
+   位置避开状态栏（约 28px）与右下角「窗口缩放」热区；层级低于 toast(9999)/演示(10000)，
+   高于设置面板之外的一切内容。 */
+.update-notice {
+  position: fixed;
+  right: 16px;
+  bottom: 44px;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  z-index: 9990;
+  padding: 12px 14px 13px;
+  background: var(--editor-surface);
+  border: 1px solid var(--editor-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--menu-shadow);
+  animation: update-notice-in 0.26s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+@keyframes update-notice-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .update-notice { animation: none; }
+}

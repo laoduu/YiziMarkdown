@@ -17,6 +17,7 @@ import { useI18n } from '../i18n'
 import { useSettingsStore } from '../stores/settingsStore'
 import { invokeTauri, invokeTauriOrThrow } from '../lib/tauri'
 import { exportPptx, type PptxExportResult, type PptxOverflowMode } from '../lib/pptxExport'
+import { deriveExportBaseName } from '../lib/exportName'
 import { parseDeck } from '../lib/slideDeck'
 import type { SlideTypography } from '../lib/slideTypography'
 import type { SlideColAlign, SlideColStyle } from '../lib/slideColumns'
@@ -25,6 +26,8 @@ import type { PptxWarning } from '../lib/pptxTypes'
 export interface PptxExportSource {
   content: string
   title: string
+  /** 当前文档的本地路径（已保存时用于沿用原文件名，null = 未保存） */
+  filePath?: string | null
   theme: string
   dark: boolean
   customCssBase?: string
@@ -152,7 +155,10 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
     setOverflowSlides([])
 
     const total = Math.max(1, totalSlides)
-    const defaultName = `${sanitizeFileName(source.title || 'slides')}.pptx`
+    // 默认文件名与其它导出同一口径：已保存文件的文件名 → 文档标题 → slides
+    const defaultName = `${sanitizeFileName(
+      deriveExportBaseName({ content: source.content, filePath: source.filePath, fallback: 'slides' }),
+    )}.pptx`
     let path: string | null = null
     try {
       path = await invokeTauri<string | null>('save_file_dialog', {

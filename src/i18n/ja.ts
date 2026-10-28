@@ -111,6 +111,16 @@ export const ja = {
     saved: '保存済み',
     unsaved: '未保存',
   },
+  update: {
+    title: '新しいバージョン v{v} があります',
+    body: '現在のバージョンは v{current} です。このビルドは手動で更新します：新しいパッケージをダウンロードして置き換えてください。',
+    download: 'ダウンロード',
+    later: '後で',
+    skip: 'このバージョンをスキップ',
+    close: '閉じる',
+    downloadPage: 'ダウンロードページを開く',
+    manualHint: 'macOS / ポータブル版は手動更新です：新しいパッケージをダウンロードし、現在のアプリと置き換えてください。',
+  },
   sidebar: {
     files: 'ファイル',
     outline: 'アウトライン',

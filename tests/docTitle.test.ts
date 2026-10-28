@@ -7,6 +7,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { deriveDocumentTitle } from '../src/lib/docTitle.ts'
+import { baseNameFromPath, deriveExportBaseName } from '../src/lib/exportName.ts'
 
 // ---------- 优先级 ----------
 
@@ -91,4 +92,36 @@ test('清洗后为空 → null', () => {
 test('正文里的 --- 不会被误当元信息，标题正常取', () => {
   const src = '前言\n\n---\n\ntitle: 这是分隔线不是元信息\n\n---\n\n# 真标题'
   assert.equal(deriveDocumentTitle(src), '真标题')
+})
+
+// ---------- 导出文件名统一口径（lib/exportName.ts） ----------
+// 这份用例守的是「PPTX 与 DOCX/HTML/PDF 的默认文件名用同一套推导」这个约定。
+
+test('已保存文件优先沿用路径文件名（Windows / POSIX 两种分隔符）', () => {
+  assert.equal(deriveExportBaseName({ content: '# 文档标题', filePath: 'C:\\notes\\我的笔记.md' }), '我的笔记')
+  assert.equal(deriveExportBaseName({ content: '# 文档标题', filePath: '/home/u/deck.markdown' }), 'deck')
+})
+
+test('路径文件名去掉扩展名，但保留点号开头的其余部分', () => {
+  assert.equal(baseNameFromPath('C:\\a\\v1.2.3.final.md'), 'v1.2.3.final')
+  assert.equal(baseNameFromPath('/a/noext'), 'noext')
+})
+
+test('未保存文档从内容推导标题（PPTX 曾经的 bug：拿 tab.name）', () => {
+  assert.equal(deriveExportBaseName({ content: '# 演示大纲\n\n---\n\n## 第二页', filePath: null }), '演示大纲')
+})
+
+test('front matter title 优先于标题行', () => {
+  assert.equal(deriveExportBaseName({ content: '---\ntitle: 季度汇报\n---\n\n# 封面' }), '季度汇报')
+})
+
+test('推不出标题时用调用方兜底名', () => {
+  assert.equal(deriveExportBaseName({ content: '- 只有列表', fallback: 'slides' }), 'slides')
+  assert.equal(deriveExportBaseName({ content: '', fallback: 'slides' }), 'slides')
+})
+
+test('路径为空串 / 只有分隔符时回到标题推导', () => {
+  assert.equal(baseNameFromPath(''), null)
+  assert.equal(baseNameFromPath('C:\\dir\\'), null)
+  assert.equal(deriveExportBaseName({ content: '# 标题', filePath: '' }), '标题')
 })

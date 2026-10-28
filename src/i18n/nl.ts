@@ -111,6 +111,16 @@ export const nl = {
     saved: 'Opgeslagen',
     unsaved: 'Niet opgeslagen',
   },
+  update: {
+    title: 'Nieuwe versie v{v} beschikbaar',
+    body: 'Je gebruikt v{current}. Deze build wordt handmatig bijgewerkt: download het nieuwe pakket en vervang de huidige app.',
+    download: 'Downloaden',
+    later: 'Later',
+    skip: 'Deze versie overslaan',
+    close: 'Sluiten',
+    downloadPage: 'Downloadpagina openen',
+    manualHint: 'macOS- en draagbare builds worden handmatig bijgewerkt: download het nieuwe pakket en vervang de huidige app.',
+  },
   sidebar: {
     files: 'Bestanden',
     outline: 'Overzicht',

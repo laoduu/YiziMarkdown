@@ -4,6 +4,7 @@ import { X, Loader2, ChevronRight, FolderOpen, Palette, FileText, Keyboard, Sett
 import { useSettingsStore } from '../stores/settingsStore'
 import { useUpdateStore } from '../stores/updateStore'
 import type { UpdateBlocker } from '../lib/updateClient'
+import { isManualUpdateChannel } from '../lib/updateClient'
 import { renderMarkdown } from '../lib/markdownRenderer'
 import { onEditorStorageWarning, getLastEditorStorageWarning } from '../lib/editorStorage'
 import { progressRatio, formatBytes } from '../lib/update'
@@ -1375,16 +1376,14 @@ function UpdateCard() {
   const busy = status === 'checking' || status === 'downloading'
   const ratio = progressRatio(downloaded, total)
   const notesHtml = useMemo(() => (update?.notes ? renderMarkdown(update.notes) : ''), [update?.notes])
+  // macOS / 便携版：查得到、装不了 —— 卡片改成「打开下载页」，不画「立即更新」
+  const manualChannel = isManualUpdateChannel(blocker)
 
   const muted: React.CSSProperties = { fontSize: 11, color: 'var(--sidebar-text)', margin: '6px 0 0', lineHeight: 1.5 }
   const smallBtn: React.CSSProperties = { padding: '4px 10px', fontSize: 12, flexShrink: 0 }
 
   const renderBody = () => {
-    if (blocker) {
-      return <p style={muted}>{t(UPDATE_BLOCKER_KEYS[blocker] ?? 'settings.updateBlockerUnknown')}</p>
-    }
     if (status === 'checking') return <p style={muted}>{t('settings.updateChecking')}</p>
-    if (status === 'latest') return <p style={muted}>{t('settings.updateLatest')}</p>
     if (status === 'installed') return <p style={muted}>{t('settings.updateInstalling')}</p>
     if (status === 'error') {
       // 「检查更新失败」和「更新装不上」不是一个问题：前者查清单就挂了，
@@ -1428,7 +1427,23 @@ function UpdateCard() {
         </>
       )
     }
-    if (!update) return null
+    if (status === 'latest') {
+      return (
+        <>
+          <p style={muted}>{t('settings.updateLatest')}</p>
+          {/* 手动通道没有「一键更新」可点，说明清楚怎么更新，免得用户以为功能坏了 */}
+          {manualChannel && <p style={muted}>{t('update.manualHint')}</p>}
+        </>
+      )
+    }
+    if (!update) {
+      // 没结果时把「为什么不能自动更新」说清楚（dev / MSI / 浏览器）；
+      // 手动通道（macOS / 便携版）此时是 idle，同样需要这句解释
+      return blocker
+        ? <p style={muted}>{t(UPDATE_BLOCKER_KEYS[blocker] ?? 'settings.updateBlockerUnknown')}</p>
+        : null
+    }
+    const manual = update.mode === 'manual'
     return (
       <>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
@@ -1436,19 +1451,29 @@ function UpdateCard() {
           <span style={{ fontSize: 12, color: 'var(--editor-text)', flex: 1 }}>
             {t('settings.updateFound', { v: update.version })}
           </span>
-          <button onClick={() => void useUpdateStore.getState().install()} className="settings-btn-primary" style={smallBtn}>
-            {t('settings.updateInstall')}
-          </button>
+          {manual ? (
+            <button onClick={() => void useUpdateStore.getState().openDownloadPage()} className="settings-btn-primary" style={smallBtn}>
+              {t('update.downloadPage')}
+            </button>
+          ) : (
+            <button onClick={() => void useUpdateStore.getState().install()} className="settings-btn-primary" style={smallBtn}>
+              {t('settings.updateInstall')}
+            </button>
+          )}
           <button onClick={() => void useUpdateStore.getState().skip()} className="settings-btn-secondary" style={smallBtn}>
             {t('settings.updateSkip')}
           </button>
         </div>
         {status === 'skipped' && <p style={muted}>{t('settings.updateSkipped', { v: update.version })}</p>}
-        {/* 两个键都写成 t('字面量') 的直调形式：check-i18n 只认这种形状，
-            写成 t(cond ? 'a' : 'b') 会让两个键都变成「没人用」而漏掉检查 */}
-        <p style={muted}>
-          {storageLost ? t('settings.updateAutoRestoreLost') : t('settings.updateAutoRestore')}
-        </p>
+        {manual ? (
+          <p style={muted}>{t('update.manualHint')}</p>
+        ) : (
+          // 两个键都写成 t('字面量') 的直调形式：check-i18n 只认这种形状，
+          // 写成 t(cond ? 'a' : 'b') 会让两个键都变成「没人用」而漏掉检查
+          <p style={muted}>
+            {storageLost ? t('settings.updateAutoRestoreLost') : t('settings.updateAutoRestore')}
+          </p>
+        )}
         {notesHtml && (
           <>
             <p style={{ ...muted, marginTop: 10, fontWeight: 600 }}>{t('settings.updateNotes')}</p>
@@ -1472,8 +1497,9 @@ function UpdateCard() {
         <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--editor-text)', flex: 1 }}>
           {t('settings.updateTitle')}
         </span>
-        {/* 不能自动更新的环境不给「检查更新」按钮：点了也不会有结果 */}
-        {!blocker && status !== 'downloading' && status !== 'installed' && (
+        {/* 不能自动更新的环境不给「检查更新」按钮：点了也不会有结果。
+            例外是手动通道（macOS / 便携版）——它们查得到版本，只是装不了 */}
+        {(!blocker || manualChannel) && status !== 'downloading' && status !== 'installed' && (
           <button
             onClick={() => void useUpdateStore.getState().check(true)}
             disabled={busy}

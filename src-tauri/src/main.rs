@@ -5,6 +5,7 @@ use tauri::Manager;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::Duration;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -892,6 +893,101 @@ fn get_app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
 
+// ===== 手动更新检查（macOS / 便携版）=====
+//
+// 为什么需要单独一条命令：官方 updater 只能「查 + 下 + 装」，而 macOS 与便携版
+// 恰恰**装不了**（清单里没有 darwin 资源；便携版没有安装目录可覆盖）。但它们仍然
+// 应该知道「有新版本了」——用户自己下载替换就行。
+//
+// 这里只读 latest.json 的 version / notes / pub_date 三个字段，**不碰**平台资源、
+// 不做签名校验、不下载任何东西。请求放 Rust 而不是前端 fetch：
+//   · 抓的是 GitHub Release 资源，跨域头不受我们控制；Rust 侧没有 CORS 问题
+//   · 端点直接读 tauri.conf.json 的 plugins.updater.endpoints，与自动更新同源，
+//     不会出现「自动更新指向 A、手动检查指向 B」
+
+/// 清单端点兜底：配置缺失时也能提示（GitHub Release 的固定入口）
+const UPDATE_MANIFEST_FALLBACK: &str =
+    "https://github.com/laoduu/YiziMarkdown/releases/latest/download/latest.json";
+
+/// 清单里与「手动更新提示」相关的字段。刻意不含 platforms：
+/// 我们不给这些平台装包，拿到资源地址只会诱使界面画一个装不了的按钮。
+#[derive(Debug, Clone, Serialize, PartialEq)]
+struct ManualUpdateInfo {
+    version: String,
+    notes: String,
+    date: Option<String>,
+}
+
+/// 解析 latest.json → 提示所需字段（纯函数，便于单测）
+fn manual_update_from_manifest(value: &serde_json::Value) -> Result<ManualUpdateInfo, String> {
+    let version = value
+        .get("version")
+        .and_then(|v| v.as_str())
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| "manifest: missing version".to_string())?;
+    // 清单允许写 "v1.0.0"，界面统一按不带 v 的形态展示与比较（与 lib/update.ts 一致）
+    let version = version
+        .strip_prefix('v')
+        .or_else(|| version.strip_prefix('V'))
+        .unwrap_or(version)
+        .to_string();
+    Ok(ManualUpdateInfo {
+        version,
+        notes: value
+            .get("notes")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string(),
+        date: value
+            .get("pub_date")
+            .and_then(|v| v.as_str())
+            .map(str::to_string),
+    })
+}
+
+/// 自动更新用的清单地址（plugins.updater.endpoints 的第一项）
+fn updater_endpoint(app: &tauri::AppHandle) -> String {
+    app.config()
+        .plugins
+        .0
+        .get("updater")
+        .and_then(|u| u.get("endpoints"))
+        .and_then(|e| e.as_array())
+        .and_then(|list| list.iter().find_map(|v| v.as_str()))
+        .map(str::to_string)
+        .unwrap_or_else(|| UPDATE_MANIFEST_FALLBACK.to_string())
+}
+
+/// 只查版本、不安装：给 macOS / 便携版启动时的「有新版本，请手动下载」用。
+#[tauri::command]
+async fn check_manual_update(app: tauri::AppHandle) -> Result<ManualUpdateInfo, String> {
+    let url = updater_endpoint(&app);
+    let client = reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(8))
+        .timeout(Duration::from_secs(15))
+        // GitHub 对没有 UA 的匿名请求越来越挑剔，带上产品名与版本便于排查
+        .user_agent(concat!("YiziMarkdown/", env!("CARGO_PKG_VERSION")))
+        .build()
+        .map_err(|e| format!("http client init failed: {e}"))?;
+    let resp = client
+        .get(&url)
+        .header("Accept", "application/json")
+        .send()
+        .await
+        .map_err(|e| format!("request failed: {e}"))?;
+    if !resp.status().is_success() {
+        return Err(format!("HTTP {}", resp.status()));
+    }
+    let text = resp
+        .text()
+        .await
+        .map_err(|e| format!("read response failed: {e}"))?;
+    let value: serde_json::Value =
+        serde_json::from_str(&text).map_err(|e| format!("parse manifest failed: {e}"))?;
+    manual_update_from_manifest(&value)
+}
+
 /// 获取当前运行形态，决定这个 exe 能不能走官方 updater
 ///
 /// - `nsis`：NSIS 安装版 —— updater 唯一支持的目标（安装包会装回同一目录）
@@ -1442,6 +1538,103 @@ fn get_cli_open_file(app: tauri::AppHandle) -> Result<Option<String>, String> {
     Ok(state.open_file.clone())
 }
 
+// ===== 安装向导交接的界面语言 =====
+
+/// 安装向导写入的一次性语言标记（NSIS installer.nsh 里的 YZ_LANG_REGKEY/VALUE 与此一致）。
+/// 放在自己的子键里而不是 `Software\YiziMarkdown`：后者与 Tauri 模板的
+/// `Software\<manufacturer>\<product>`（本产品 = Software\yizimarkdown）大小写不敏感地同名，
+/// 卸载时的 /ifempty 清理会互相干扰。
+#[cfg(target_os = "windows")]
+const INSTALL_LANG_REGKEY: &str = r"Software\YiziMarkdown\Installer";
+#[cfg(target_os = "windows")]
+const INSTALL_LANG_REGVALUE: &str = "Language";
+
+/// 应用支持的界面语言 —— 必须与 src/i18n/index.ts 的 LANGUAGES 逐个对齐。
+/// 白名单不是多余的：注册表/命令行都是外部可写的，写进非法值会让设置面板
+/// 语言下拉框选不中，不如直接忽略。
+const APP_LANGUAGES: [&str; 15] = [
+    "en", "zh", "zh-tw", "ja", "ko", "de", "fr", "es", "pt", "it", "pl", "nl", "tr", "sv", "uk",
+];
+
+/// 归一化到应用语言 id：忽略大小写，接受下划线与地区后缀（zh_CN / pt-BR 这类）
+fn normalize_language(code: &str) -> Option<String> {
+    let lowered = code.trim().to_lowercase().replace('_', "-");
+    let mapped = match lowered.as_str() {
+        "zh" | "zh-cn" | "zh-hans" | "zh-sg" | "cn" => "zh",
+        "zh-tw" | "zh-hk" | "zh-mo" | "zh-hant" => "zh-tw",
+        // 应用只有一种葡萄牙语；巴西/欧洲/无地区后缀都落到 pt
+        "pt" | "pt-br" | "pt-pt" => "pt",
+        // 简体中文是应用默认语言，系统语言给不出更具体信息时用它
+        other => other,
+    };
+    APP_LANGUAGES
+        .contains(&mapped)
+        .then(|| mapped.to_string())
+}
+
+/// 命令行里的语言参数：`--lang ja` / `--lang=ja` / `/LANG=ja`
+///
+/// 支持的场景：安装器带着语言参数启动、脚本/快捷方式指定语言、手动排障。
+/// 与注册表标记相比它的优先级更高（显式参数胜过安装器遗留）。
+fn lang_from_args(args: &[String]) -> Option<String> {
+    let mut i = 0;
+    while i < args.len() {
+        let lower = args[i].to_lowercase();
+        if let Some(v) = lower
+            .strip_prefix("--lang=")
+            .or_else(|| lower.strip_prefix("/lang="))
+        {
+            return normalize_language(v);
+        }
+        if lower == "--lang" || lower == "-l" {
+            if let Some(v) = args.get(i + 1) {
+                return normalize_language(v);
+            }
+        }
+        i += 1;
+    }
+    None
+}
+
+/// 读走 NSIS 写下的安装语言（读后即删：只影响「装完第一次启动」）
+#[cfg(target_os = "windows")]
+fn take_install_language_registry() -> Option<String> {
+    use winreg::enums::{HKEY_CURRENT_USER, KEY_READ, KEY_WRITE};
+    use winreg::RegKey;
+
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let key = hkcu
+        .open_subkey_with_flags(INSTALL_LANG_REGKEY, KEY_READ | KEY_WRITE)
+        .ok()?;
+    let raw: String = key.get_value(INSTALL_LANG_REGVALUE).ok()?;
+    // 无论值是否合法都删掉：残留会让下一次启动再改一遍用户已经改过的语言
+    let _ = key.delete_value(INSTALL_LANG_REGVALUE);
+    normalize_language(&raw)
+}
+
+/// 安装时选定的界面语言（一次性）。
+///
+/// 前端在首帧渲染前调用，据此设置 settingsStore.language —— 装完第一次打开
+/// 就是安装向导里选的语言，不是系统语言、也不是应用默认的简体中文。
+/// 优先级：命令行 `--lang` → NSIS 注册表标记（读后删除）。
+/// 非 Windows（macOS dmg / 便携包）没有安装向导，命令行参数仍然有效。
+#[tauri::command]
+fn take_install_language() -> Option<String> {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if let Some(code) = lang_from_args(&args) {
+        return Some(code);
+    }
+    #[cfg(target_os = "windows")]
+    {
+        take_install_language_registry()
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        None
+    }
+}
+
+
 
 /// 获取文件元信息（大小和修改时间）
 #[tauri::command]
@@ -1719,6 +1912,7 @@ fn main() {
             read_readme,
             read_help,
             get_app_version,
+            check_manual_update,
             get_install_kind,
             toggle_window_size,
             get_platform,
@@ -1736,6 +1930,7 @@ fn main() {
             disassociate_md_files,
             is_md_associated,
             get_cli_open_file, get_file_meta, read_image_base64,
+            take_install_language,
             export_docx, export_pdf,
             set_window_border_color,
             ai_set_key,
@@ -1930,9 +2125,76 @@ mod tests {
         let _ = fs::remove_dir_all(&tmp);
     }
 
+    // ---- 安装向导交接的界面语言（take_install_language 的两条输入路径）----
+
     #[test]
-    fn sniffs_supported_image_headers() {
-        assert_eq!(sniff_image_mime(b"\x89PNG\r\n\x1a\n\x00\x00"), Some("image/png"));
+    fn normalizes_installer_language_codes() {
+        // NSIS 侧写的是应用语言 id，命令行可能带地区后缀/下划线/大小写
+        assert_eq!(normalize_language("zh"), Some("zh".into()));
+        assert_eq!(normalize_language("zh_CN"), Some("zh".into()));
+        assert_eq!(normalize_language("ZH-TW"), Some("zh-tw".into()));
+        assert_eq!(normalize_language("zh-Hant"), Some("zh-tw".into()));
+        assert_eq!(normalize_language("pt-BR"), Some("pt".into()));
+        assert_eq!(normalize_language("ja"), Some("ja".into()));
+        // 白名单之外一律忽略：写进非法值设置面板语言下拉框会选不中
+        assert_eq!(normalize_language("ru"), None);
+        assert_eq!(normalize_language(""), None);
+        assert_eq!(normalize_language("zh-cn-x"), None);
+    }
+
+    #[test]
+    fn reads_language_from_cli_args() {
+        let args = |s: &str| s.split(' ').filter(|a| !a.is_empty()).map(String::from).collect::<Vec<_>>();
+        assert_eq!(lang_from_args(&args("--lang=ja")), Some("ja".into()));
+        assert_eq!(lang_from_args(&args("--lang ja")), Some("ja".into()));
+        assert_eq!(lang_from_args(&args("/LANG=de")), Some("de".into()));
+        // 与文件参数混用时仍能找到语言
+        assert_eq!(
+            lang_from_args(&args(r"C:\notes\a.md --lang=fr")),
+            Some("fr".into())
+        );
+        // 没给值 / 值非法 / 没这个参数 → None（落回注册表标记）
+        assert_eq!(lang_from_args(&args("--lang")), None);
+        assert_eq!(lang_from_args(&args("--lang=xx")), None);
+        assert_eq!(lang_from_args(&args(r"C:\notes\a.md")), None);
+    }
+
+    // ---- 手动更新清单解析（macOS / 便携版启动提示）----
+
+    #[test]
+    fn parses_manual_update_manifest() {
+        let json = serde_json::json!({
+            "version": "v0.5.0",
+            "notes": "## 新功能\n- 导出提速",
+            "pub_date": "2026-11-01T00:00:00Z",
+            "platforms": {}
+        });
+        let info = manual_update_from_manifest(&json).unwrap();
+        // 前导 v 去掉，与 lib/update.ts 的 normalizeVersion 同口径
+        assert_eq!(info.version, "0.5.0");
+        assert_eq!(info.notes, "## 新功能\n- 导出提速");
+        assert_eq!(info.date.as_deref(), Some("2026-11-01T00:00:00Z"));
+    }
+
+    #[test]
+    fn manual_update_manifest_tolerates_missing_optional_fields() {
+        let info = manual_update_from_manifest(&serde_json::json!({"version": "0.4.1"})).unwrap();
+        assert_eq!(info.version, "0.4.1");
+        assert_eq!(info.notes, "");
+        assert_eq!(info.date, None);
+    }
+
+    #[test]
+    fn manual_update_manifest_requires_version() {
+        // 没有 version 既不能当「有新版本」，也不能当「已是最新」：
+        // 报错让界面说「检查更新失败」，不要静默装作查过了
+        assert!(manual_update_from_manifest(&serde_json::json!({})).is_err());
+        assert!(manual_update_from_manifest(&serde_json::json!({"version": "   "})).is_err());
+        assert!(manual_update_from_manifest(&serde_json::json!({"version": 42})).is_err());
+    }
+
+    #[test]
+    fn sniffs_supported_image_headers() {        assert_eq!(sniff_image_mime(b"\x89PNG\r\n\x1a\n\x00\x00"), Some("image/png"));
         assert_eq!(sniff_image_mime(&[0xFFu8, 0xD8, 0xFF, 0xE0]), Some("image/jpeg"));
         assert_eq!(sniff_image_mime(b"GIF89a...."), Some("image/gif"));
         assert_eq!(sniff_image_mime(b"BM\x00\x00"), Some("image/bmp"));

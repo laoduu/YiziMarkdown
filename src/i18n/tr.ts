@@ -111,6 +111,16 @@ export const tr = {
     saved: 'Kaydedildi',
     unsaved: 'Kaydedilmedi',
   },
+  update: {
+    title: 'Yeni sürüm v{v} mevcut',
+    body: 'Şu an v{current} kullanıyorsunuz. Bu sürüm elle güncellenir: yeni paketi indirip mevcut uygulamayı değiştirin.',
+    download: 'İndir',
+    later: 'Daha sonra',
+    skip: 'Bu sürümü atla',
+    close: 'Kapat',
+    downloadPage: 'İndirme sayfasını aç',
+    manualHint: 'macOS ve taşınabilir sürümler elle güncellenir: yeni paketi indirip mevcut uygulamayı değiştirin.',
+  },
   sidebar: {
     files: 'Dosyalar',
     outline: 'Anahat',

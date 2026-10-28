@@ -111,6 +111,16 @@ export const sv = {
     saved: 'Sparad',
     unsaved: 'Inte sparad',
   },
+  update: {
+    title: 'Ny version v{v} tillgänglig',
+    body: 'Du använder v{current}. Den här versionen uppdateras manuellt: ladda ner det nya paketet och ersätt den aktuella appen.',
+    download: 'Ladda ner',
+    later: 'Senare',
+    skip: 'Hoppa över den här versionen',
+    close: 'Stäng',
+    downloadPage: 'Öppna nedladdningssidan',
+    manualHint: 'macOS- och portabla versioner uppdateras manuellt: ladda ner det nya paketet och ersätt den aktuella appen.',
+  },
   sidebar: {
     files: 'Filer',
     outline: 'Översikt',

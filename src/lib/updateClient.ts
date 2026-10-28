@@ -10,7 +10,7 @@
  * 这一层是薄胶水，不测。
  */
 import { check as checkPlugin, type Update } from '@tauri-apps/plugin-updater'
-import { invokeTauri } from './tauri'
+import { invokeTauri, invokeTauriOrThrow } from './tauri'
 
 /** 安装形态。取值与 `src-tauri/src/main.rs` 的 `detect_windows_install_kind` 一一对应 */
 export type InstallKind = 'nsis' | 'msi' | 'portable'
@@ -29,6 +29,18 @@ export type UpdateBlocker =
   | 'portable'
   /** 探测不出安装形态：宁可不更新，也不要装坏别人的环境 */
   | 'unknown'
+
+/**
+ * 这些环境「装不了，但查得到」—— macOS（清单里没有 darwin 资源，dmg 要手动装）
+ * 与 Windows 便携版（没有安装目录可覆盖）。
+ *
+ * 它们的共同处理：仍然去读 latest.json，有新版本就提示用户**手动下载**，
+ * 而不是像 msi / dev 那样直接闭嘴。判定只此一处，界面与状态机都引用它。
+ */
+export type ManualUpdateBlocker = 'not-windows' | 'portable'
+
+export const isManualUpdateChannel = (blocker: UpdateBlocker | null | undefined): boolean =>
+  blocker === 'not-windows' || blocker === 'portable'
 
 export const isTauriRuntime = (): boolean =>
   typeof window !== 'undefined' && !!(window as { __TAURI_INTERNALS__?: { invoke?: unknown } }).__TAURI_INTERNALS__?.invoke
@@ -59,7 +71,34 @@ export interface AvailableUpdate {
   notes: string
   /** 发布日（RFC 3339），清单没给就是 null */
   date: string | null
+  /**
+   * `auto` = 插件能自己下载并装（Windows NSIS 安装版）
+   * `manual` = 只能提示用户去下载页手动换包（macOS / 便携版）
+   */
+  mode: 'auto' | 'manual'
 }
+
+/** `check_manual_update` 的返回：只要提示所需的字段，没有下载地址也没有签名 */
+export interface ManualUpdateInfo {
+  version: string
+  notes: string
+  date: string | null
+}
+
+/** 当前运行版本（安装器交接之外的另一处用途：手动更新提示要显示「你现在是 v几」） */
+export const getCurrentVersion = async (): Promise<string> =>
+  (await invokeTauri<string>('get_app_version')) ?? '0.0.0'
+
+/**
+ * 只查版本、不安装（macOS / 便携版）。
+ *
+ * 后端读的是 `plugins.updater.endpoints` 指向的同一份 latest.json，但只取
+ * version / notes / pub_date —— 不碰平台资源、不下载、不校验签名。
+ * 失败**抛错**（用 OrThrow 版本）：调用方要区分「检查失败」与「已是最新」，
+ * 静默吞掉会让用户以为检查过了。
+ */
+export const checkManualUpdate = async (): Promise<ManualUpdateInfo> =>
+  invokeTauriOrThrow<ManualUpdateInfo>('check_manual_update')
 
 /**
  * 插件返回的 `Update` 在 Rust 侧持有资源，用完必须 `close()`，
@@ -89,6 +128,7 @@ export const checkForUpdate = async (): Promise<AvailableUpdate | null> => {
     currentVersion: update.currentVersion,
     notes: typeof update.body === 'string' ? update.body : '',
     date: update.date ?? null,
+    mode: 'auto',
   }
 }
 

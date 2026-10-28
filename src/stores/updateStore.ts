@@ -10,10 +10,13 @@
  */
 import { create } from 'zustand'
 import {
-  checkForUpdate, getUpdateBlocker, installUpdate,
+  checkForUpdate, checkManualUpdate, getCurrentVersion, getUpdateBlocker, installUpdate,
+  isManualUpdateChannel,
   type AvailableUpdate, type UpdateBlocker,
 } from '../lib/updateClient'
 import { shouldOfferUpdate } from '../lib/update'
+import { releasePageUrl } from '../lib/manualUpdate'
+import { invokeTauri } from '../lib/tauri'
 import { useSettingsStore } from './settingsStore'
 
 export type UpdateStatus =
@@ -52,6 +55,8 @@ interface UpdateStoreState {
   /** 启动后自动检查一次（尊重设置里的开关，且只在环境允许时） */
   checkOnStartup: () => Promise<void>
   install: () => Promise<void>
+  /** 打开下载页（手动更新通道：macOS / 便携版） */
+  openDownloadPage: () => Promise<void>
   /** 跳过这个版本：记进设置，之后不再提示它（别的版本照常提示） */
   skip: () => void
 }
@@ -78,22 +83,35 @@ export const useUpdateStore = create<UpdateStoreState>()((set, get) => ({
 
     set({ status: 'checking', error: null, errorPhase: null })
 
-    // 环境不允许（开发模式 / 非 Windows / MSI / 便携版）：不到网络上问，
+    // 环境不允许（开发模式 / 非 Windows / MSI / 便携版 / 浏览器）：不到网络上问，
     // 也不留任何提示。原因存下来，卡片里会说明白
     const blocker = await getUpdateBlocker()
     set({ blocker })
-    if (blocker) {
+
+    // 能自动装的走插件；**装不了但查得到**的（macOS / 便携版）只查清单，
+    // 有新版本就提示手动下载 —— 这条通道不碰插件、不下载、不校验签名
+    const manualChannel = isManualUpdateChannel(blocker)
+    if (blocker && !manualChannel) {
       set({ status: 'idle', update: null })
       return
     }
 
+    const skipped = useSettingsStore.getState().skippedUpdateVersion
     try {
+      if (manualChannel) {
+        const info = await checkManualUpdate()
+        const currentVersion = await getCurrentVersion()
+        set({
+          update: { ...info, currentVersion, mode: 'manual' },
+          status: shouldOfferUpdate(info.version, currentVersion, skipped) ? 'available' : 'skipped',
+        })
+        return
+      }
       const found = await checkForUpdate()
       if (!found) {
         set({ status: 'latest', update: null })
         return
       }
-      const skipped = useSettingsStore.getState().skippedUpdateVersion
       set({
         update: found,
         status: shouldOfferUpdate(found.version, found.currentVersion, skipped) ? 'available' : 'skipped',
@@ -113,7 +131,9 @@ export const useUpdateStore = create<UpdateStoreState>()((set, get) => ({
   },
 
   install: async () => {
-    if (!get().update) return
+    const update = get().update
+    // 手动通道没有可安装的资源：按钮不该出现，这里再挡一次（防误调）
+    if (!update || update.mode === 'manual') return
     set({ status: 'downloading', downloaded: 0, total: null, error: null, errorPhase: null })
     try {
       await installUpdate((downloaded, total) => set({ downloaded, total }))
@@ -123,6 +143,13 @@ export const useUpdateStore = create<UpdateStoreState>()((set, get) => ({
       // 卡片才会说「更新失败」而不是「检查更新失败」
       set({ status: 'error', error: errorText(e), errorPhase: 'install' })
     }
+  },
+
+  openDownloadPage: async () => {
+    // 指向**清单里那个版本**的 tag 页，而不是「最新的发布页」：用户看到的提示是
+    // 「v0.5.0 可用」，打开的就该是 v0.5.0（见 lib/manualUpdate.ts）
+    const version = get().update?.version
+    await invokeTauri('open_url', { url: releasePageUrl(version) })
   },
 
   skip: () => {

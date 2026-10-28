@@ -110,6 +110,16 @@ export const en = {
     saved: 'Saved',
     unsaved: 'Unsaved',
   },
+  update: {
+    title: 'New version v{v} available',
+    body: 'You are on v{current}. This build updates manually: download the new package and replace the current app.',
+    download: 'Download',
+    later: 'Later',
+    skip: 'Skip this version',
+    close: 'Close',
+    downloadPage: 'Open download page',
+    manualHint: 'macOS / portable builds update manually: download the new package, then replace the current app.',
+  },
   sidebar: {
     files: 'Files',
     outline: 'Outline',

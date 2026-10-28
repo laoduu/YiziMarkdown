@@ -111,6 +111,16 @@ export const fr = {
     saved: 'Enregistré',
     unsaved: 'Non enregistré',
   },
+  update: {
+    title: 'Nouvelle version v{v} disponible',
+    body: 'Vous êtes en v{current}. Cette version se met à jour manuellement : téléchargez le nouveau paquet et remplacez l’application actuelle.',
+    download: 'Télécharger',
+    later: 'Plus tard',
+    skip: 'Ignorer cette version',
+    close: 'Fermer',
+    downloadPage: 'Ouvrir la page de téléchargement',
+    manualHint: 'Les versions macOS / portables se mettent à jour manuellement : téléchargez le nouveau paquet puis remplacez l’application actuelle.',
+  },
   sidebar: {
     files: 'Fichiers',
     outline: 'Plan',

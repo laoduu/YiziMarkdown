@@ -111,6 +111,16 @@ export const de = {
     saved: 'Gespeichert',
     unsaved: 'Nicht gespeichert',
   },
+  update: {
+    title: 'Neue Version v{v} verfügbar',
+    body: 'Sie verwenden v{current}. Diese Variante wird manuell aktualisiert: neues Paket herunterladen und die aktuelle App ersetzen.',
+    download: 'Herunterladen',
+    later: 'Später',
+    skip: 'Diese Version überspringen',
+    close: 'Schließen',
+    downloadPage: 'Downloadseite öffnen',
+    manualHint: 'macOS- und Portable-Versionen werden manuell aktualisiert: neues Paket herunterladen und die aktuelle App ersetzen.',
+  },
   sidebar: {
     files: 'Dateien',
     outline: 'Gliederung',

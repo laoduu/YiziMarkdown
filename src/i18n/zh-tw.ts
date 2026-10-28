@@ -110,6 +110,16 @@ export const zhTW = {
     saved: '已儲存',
     unsaved: '未儲存',
   },
+  update: {
+    title: '發現新版本 v{v}',
+    body: '目前版本 v{current}。此版本需要手動下載安裝，不會自動取代目前應用程式。',
+    download: '前往下載',
+    later: '稍後',
+    skip: '略過此版本',
+    close: '關閉',
+    downloadPage: '開啟下載頁',
+    manualHint: 'macOS / 免安裝版不會自動更新：下載新套件後手動取代目前應用程式即可。',
+  },
   sidebar: {
     files: '檔案',
     outline: '大綱',

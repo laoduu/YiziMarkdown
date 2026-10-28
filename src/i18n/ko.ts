@@ -111,6 +111,16 @@ export const ko = {
     saved: '저장됨',
     unsaved: '저장 안 됨',
   },
+  update: {
+    title: '새 버전 v{v} 사용 가능',
+    body: '현재 버전은 v{current}입니다. 이 빌드는 수동으로 업데이트합니다: 새 패키지를 내려받아 현재 앱을 교체하세요.',
+    download: '다운로드',
+    later: '나중에',
+    skip: '이 버전 건너뛰기',
+    close: '닫기',
+    downloadPage: '다운로드 페이지 열기',
+    manualHint: 'macOS / 포터블 빌드는 수동 업데이트입니다: 새 패키지를 내려받은 뒤 현재 앱을 교체하세요.',
+  },
   sidebar: {
     files: '파일',
     outline: '개요',

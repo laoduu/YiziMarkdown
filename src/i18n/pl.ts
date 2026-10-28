@@ -111,6 +111,16 @@ export const pl = {
     saved: 'Zapisano',
     unsaved: 'Niezapisano',
   },
+  update: {
+    title: 'Dostępna jest nowa wersja v{v}',
+    body: 'Używasz wersji v{current}. Ta kompilacja aktualizuje się ręcznie: pobierz nowy pakiet i zastąp bieżącą aplikację.',
+    download: 'Pobierz',
+    later: 'Później',
+    skip: 'Pomiń tę wersję',
+    close: 'Zamknij',
+    downloadPage: 'Otwórz stronę pobierania',
+    manualHint: 'Wersje macOS i przenośne aktualizuje się ręcznie: pobierz nowy pakiet i zastąp bieżącą aplikację.',
+  },
   sidebar: {
     files: 'Pliki',
     outline: 'Konspekt',
