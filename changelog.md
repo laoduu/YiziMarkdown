@@ -6,6 +6,53 @@
 >
 > 原计划的 `0.3.7` 从未打包、未打 tag、未发过 release，其全部改动（实时模式列表逐行切换、嵌套列表输入法、界面文案多语言与硬编码门禁）已并入本节，不再单独保留 `## v0.3.7` 小节，`docs/changelog/CHANGELOG-V0.3.7.md` 同步并入 `CHANGELOG-V0.4.0.md`。
 
+### 更新：macOS / 便携版新增启动时「有新版本」提示（2026-10-28）
+
+**问题**：官方 updater 只能「查 + 下 + 装」，而 macOS 与 Windows 便携版恰恰**装不了**（`latest.json` 只有 `windows-x86_64*` 两个键，便携版又没有安装目录可覆盖）。于是这两类用户永远不知道有新版本，直到自己想起来去 GitHub 看。
+
+**为什么不上前端 `fetch`**：抓的是 GitHub Release 资源，跨域头不由我们控制；改由 Rust 走 `reqwest`，没有 CORS 问题，也顺带绕开 WebView 的网络限制。
+
+**改法**：
+
+- Rust 新增 `check_manual_update`：端点直接读 `plugins.updater.endpoints[0]`（缺失时兜底 `.../releases/latest/download/latest.json`），与自动更新同源 —— 不会出现「自动更新指向 A、手动检查指向 B」。只取 `version` / `notes` / `pub_date`，**不碰**平台资源、不下载、不校验签名。`version` 缺省或非字符串一律报错，界面才能说「检查更新失败」而不是假装查过了。
+- `src/lib/updateClient.ts` 新增 `ManualUpdateBlocker`（`not-windows` / `portable`）与 `isManualUpdateChannel`，判定只此一处；`AvailableUpdate` 增加 `mode: 'auto' | 'manual'`，`install()` 对手动通道直接 no-op（按钮根本不该出现，二次拦截防误调）。
+- `src/lib/manualUpdate.ts`：`releasePageUrl` 指向**清单里那一版**的 tag（`/releases/tag/v0.5.0`）而不是 `/releases/latest` —— 用户看到「v0.5.0 可用」，晚几天打开也不该跳到 v0.6.0；版本号异常退回 latest。`notesExcerpt` 把 Markdown 更新说明去标记、按码点截断成一句（中文 / emoji 不被劈成半个）。
+- `src/components/UpdateNotice.tsx`：右下角**不抢焦点**的卡片（不遮正文、不需要先处理才能继续工作）。「稍后 / 关闭」只在本进程内闭嘴（`dismissed` 记版本号，换到更新版本会重新出现），「跳过此版本」才持久化到设置（复用 `skippedUpdateVersion`）。Windows NSIS 安装版不会画这张卡。
+- 设置「版本与更新」卡片：手动通道把「立即更新」换成「打开下载页」，并补一句 `update.manualHint` 说明怎么换包；「检查更新」按钮对这两类环境重新开放（此前 `blocker` 非空就整块隐藏，等于把唯一入口也关了）。「已是最新」时同样给出这条说明，免得用户以为功能坏了。
+- 检查失败语义不变：用户主动检查 → 卡片显示失败原因并可重试；启动自动检查 → 静默（`autoCheckUpdate` 关闭时连请求都不发）。
+- 配 `tests/manualUpdate.test.ts` 6 条（tag 链接、脏版本回落、去标记、代码块/图片剔除、空说明、码点截断）+ Rust 3 条（正常解析、可选字段缺失、version 必需）。
+- i18n 新增 `update` 命名空间 8 个键，15 种语言全部补齐（含波兰语 / 乌克兰语）。
+
+### 导出：PPTX 默认文件名与 DOCX 同口径推导（2026-10-28）
+
+用户反馈：文档里明明有标题，导出 PPTX 的默认文件名却是「未命名新文件」；Word / DOCX 导出却能正确取到标题。
+
+**根因**：PPTX 弹窗拿 `tab.name` 当默认文件名与演示标题。未保存文档的 `tab.name` 恒为「未命名新文件」，于是既污染文件名，也污染 PPTX 文档属性里的标题（`source.title` 是 `parseDeck` 的 fallbackTitle）。
+
+**改法**：
+
+- 新增 `src/lib/exportName.ts`（`deriveExportBaseName` / `baseNameFromPath`）：已保存文件沿用原文件名 → 文档标题（front matter `title` → 首个 ATX 标题行，规则见 `docTitle.ts`）→ 调用方兜底名（document / slides）。`App.handleExport` 与 PPTX 弹窗共用同一个函数，以后改口径只改一处。
+- PPTX 弹窗新增 `source.filePath`；`source.title` 改为 `deriveDocumentTitle(content)`，不再用 `tab.name`（它同时是演示章节名与 PPTX 元数据标题）。
+- `tests/docTitle.test.ts` 补 6 条用例：路径优先、去扩展名、未保存走标题、front matter 优先、兜底名、空路径回落。
+
+### 安装包：品牌化安装向导 + 首屏选语言 + 装完即用该语言（2026-10-28）
+
+**安装向导外观**（`tauri.conf.json > bundle.windows.nsis`）：
+
+- `installerIcon` / `uninstallerIcon` 换成产品图标 `icons/icon.ico`（此前用 Tauri 默认图标）
+- 新增 `scripts/make-installer-art.ps1` 一键生成侧栏图（164×314）与页眉图（150×57），产物 `src-tauri/installer/sidebar.bmp`、`header.bmp` 入库；配色取应用图标同一套橙色渐变，改品牌色时重跑脚本即可
+- 安装语言从 2 种扩到 16 种：应用全部 15 种语言 + 巴西葡语，顺序与 `src/i18n/index.ts` 的 `LANGUAGES` 对齐（首项简体中文 = 系统语言不在列表时的回落）
+
+**第一步是选安装语言**：`displayLanguageSelector: true`，Tauri 模板在 `.onInit` 里先弹语言框，选完才进欢迎页。对话框标题/说明默认是英文的 "Installer Language"，`installer.nsh` 里用 `LangString` 覆盖 `MUI_LANGDLL_WINDOWTITLE/INFO` 为 15 种语言。注意钩子文件在 `MUI_LANGUAGE` 之前被 include，此时 `${LANG_*}` 常量还不存在，只能写数字 LCID。波兰语的 Tauri 自带提示（维护页 / WebView2 / 降级保护）上游没有，补 `installer-lang/Polish.nsh`；该文件不能带 BOM，打包器会自己补。
+
+**装完即用安装语言**（一次性交接，不覆盖用户后来的选择）：
+
+- 全新安装判定放在 `NSIS_HOOK_PREINSTALL`：安装目录里已有主程序、或注册表已有卸载项 → 视为升级。升级/自动更新**绝不**重置语言（装完应用突然换语言比不换更糟）。
+- `NSIS_HOOK_POSTINSTALL` 把 `$LANGUAGE`（NSIS 的 LCID）映射成应用语言 id 写进 `HKCU\Software\YiziMarkdown\Installer` 的 `Language` 值；卸载钩子清理该值（装完没启动过就卸载，也不会留下上次的语言）。**刻意放在独立子键**：Tauri 模板用 `Software\<manufacturer>\<product>`（本产品是 `Software\yizimarkdown\YiziMarkdown`）存安装目录与 `Installer Language`，Windows 键名不分大小写，直接写 `Software\YiziMarkdown` 会与它撞键，卸载时的 `/ifempty` 清理互相踩。
+- Rust 新增 `take_install_language`：命令行 `--lang ja` / `--lang=ja` / `/LANG=ja` 优先（显式参数胜过安装器遗留），其次读注册表并**读后即删**。白名单 15 种语言（与 `src/i18n` 逐个对齐），外部写入的非法值直接忽略。
+- `src/main.tsx` 在首帧渲染**前** await 一次 IPC 再挂载 React —— 非中文用户不会先看到一帧简体中文。
+- 归一化逻辑抽到 `src/lib/localeCode.ts`（`zh_CN` / `zh-Hant` / `pt-BR` → 应用语言 id），配 `tests/localeCode.test.ts` 5 条。
+
 ### 设置-外观：主题卡改版为「迷你编辑器窗格」（2026-10-26）
 
 用户反馈：两色渐变条既不像主题、也看不出主题是什么，主题名和诠释被挤在色块下面看不清。

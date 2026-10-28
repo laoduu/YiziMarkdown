@@ -123,6 +123,7 @@
 - **文档模板**：模板存放在用户目录 `~/Documents/yizimarkdown/templates/`，放入 `.md` 文件即可使用（也可在 设置 → 模板 中新建/编辑，新建后菜单即时刷新）；内置模板首次启动自动同步到该目录，升级/重装不会覆盖你的模板
 - **快捷键系统**：可视化快捷键配置面板，支持 30 个 action 的自定义绑定、按键录制、冲突检测和恢复默认
 - **设置面板**：通用、外观、编辑器、实时模式、AI、云端、插件、快捷键、模板、关于等多个标签页，设置即时预览
+- **版本与更新**：Windows 安装版可在应用内一键更新；macOS 与便携版启动时会检查 `latest.json`，发现新版在右下角提示并打开对应版本的下载页（手动替换，不自动安装）
 
 ---
 
@@ -248,6 +249,8 @@ npm run tauri:build
 构建产物：
 - 便携版 exe：`src-tauri/target/release/yizimarkdown.exe`
 - NSIS 安装包：`src-tauri/target/release/bundle/nsis/`
+
+安装向导：首次安装会先选安装语言（16 种，应用全部界面语言 + 巴西葡语），向导文案与装好后首次启动的语言都跟随该选择；升级 / 自动更新不会重置用户已选的语言。图标与侧栏 / 页眉图在 `src-tauri/installer/`，改品牌色后重跑 `powershell -ExecutionPolicy Bypass -File scripts/make-installer-art.ps1` 生成。
 
 构建后手动复制 exe 和资源文件到 `public/YiziMarkdown-vX.X.X/` 目录分发。
 

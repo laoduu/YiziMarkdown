@@ -98,7 +98,7 @@
                         </tbody>
                     </table>
                 </div>
-                <p>Windows 只提供 <strong>NSIS 安装包</strong>（<code>x64-setup.exe</code>），v0.3.4 起不再发布 MSI；安装版支持应用内一键在线更新，便携版与 macOS 仍需手动下载新版本。</p>
+                <p>Windows 只提供 <strong>NSIS 安装包</strong>（<code>x64-setup.exe</code>），v0.3.4 起不再发布 MSI。全新安装的第一步是选安装语言（16 种），装好后应用会直接以该语言打开；升级 / 自动更新不会重置你已选的语言。安装版支持应用内一键在线更新，便携版与 macOS 会在启动时提示新版本并打开对应版本的下载页，下载后手动替换即可。</p>
                 <div class="callout callout-tip">
                     <span class="callout-icon">i</span>
                     <p>macOS 首次打开若提示「无法验证开发者」，在「访达」中按住 Control 点击应用图标 → 选择「打开」即可。详见<a href="#faq">常见问题</a>。</p>
@@ -160,12 +160,13 @@
             </div>
 
             <div class="help-sub" id="files-export">
-                <h3>导出（v0.2.4 新增 Word / PDF）</h3>
-                <p>工具栏右侧导出按钮支持五种格式：</p>
+                <h3>导出（v0.4.0 新增 PPTX）</h3>
+                <p>工具栏右侧导出按钮支持六种格式：</p>
                 <ul>
                     <li><strong>Word 文档（DOCX）</strong>：Word 原生语义（标题 / 列表 / 表格 / 代码块 / 引用 / 任务列表），表格与表头样式对齐预览；图片支持本地路径、网络图片与 HTML <code>&lt;img&gt;</code> 标签，可用 <code>width</code> 属性控制宽度</li>
                     <li><strong>PDF</strong>：与预览还原度一致，长文档自动分页（Windows）</li>
                     <li><strong>HTML</strong>（<kbd>Ctrl</kbd>+<kbd>H</kbd>）：保留主题样式，可直接分享或发布；导出的 HTML 自带<strong>左侧悬浮大纲卡片</strong>，点击条目直达对应章节（PDF 不含侧栏）</li>
+                    <li><strong>PPTX</strong>：把演示模式导出为<strong>原生可编辑</strong>的 PowerPoint（文字 / 表格 / 图片 / 形状 / 原生公式），继承主题、明暗与版式；基准固定 16:9，可含演讲者备注与页脚；超页时可警告并列出页码，或自动压缩字号</li>
                     <li><strong>Markdown</strong>（<kbd>Ctrl</kbd>+<kbd>M</kbd>）：纯 Markdown 文本副本</li>
                     <li><strong>纯文本</strong>：去除所有标记符号</li>
                 </ul>
@@ -841,7 +842,7 @@
                     <div class="theme-shot"><img src="screenshots/sunset.webp" width="1141" height="600" alt="落日熔金" loading="lazy"><span>落日熔金</span></div>
                     <div class="theme-shot"><img src="screenshots/typewriter.webp" width="1141" height="600" alt="复古打字机" loading="lazy"><span>复古打字机</span></div>
                 </div>
-                <p>在「设置 → 外观」中可切换主题、编辑主题名称、查看色板预览。按 <kbd>F2</kbd> 可快速切换深色 / 亮色模式。</p>
+                <p>在「设置 → 外观」中可切换主题、编辑主题名称。每张主题卡都是一块该主题自己的「迷你编辑器窗格」，卡上的日 / 月按钮只预览这张卡的明暗，点卡片其他区域才激活主题。按 <kbd>F2</kbd> 可快速切换深色 / 亮色模式。</p>
             </div>
 
             <div class="help-sub" id="appearance-font">
@@ -862,10 +863,13 @@
             </div>
 
             <div class="help-sub" id="appearance-theme-ext">
-                <h3>主题扩展（themes/ 目录）</h3>
+                <h3>主题扩展（用户 themes/ 目录）</h3>
                 <ul>
-                    <li>在程序目录 <code>themes/</code> 放入 <code>.css</code> 文件，并在 <code>themes/theme.json</code> 中登记主题参数，<strong>重启后自动识别</strong>。CSS 需用 <code>.editor-content</code> 前缀限定范围，避免影响设置面板</li>
-                    <li>想给主题换一套气质，推荐先看 <code>docs/THEME-DESIGN-SPEC.md</code>（v0.3.3 新增，14 章 + 2 附录）：令牌分层总览、每类令牌的设计指引、明暗双模式规范、check-themes 门禁与新增主题检查清单，附录还标出每个令牌是「已接入」还是「已声明待接入」</li>
+                    <li><strong>两层布局</strong>：安装目录下的 <code>themes/</code> 是<strong>内置只读</strong>（随版本升级）；你自己的主题放在用户目录 <code>~/Documents/yizimarkdown/themes/</code>，安装器永远不会碰它</li>
+                    <li><strong>自建主题</strong>：把 <code>.css</code> 放进用户目录的 <code>custom/</code> 子目录（文件名即主题 id），<strong>重启后自动识别</strong>。CSS 需用 <code>.editor-content</code> 前缀限定范围，避免影响设置面板</li>
+                    <li><strong>改内置主题</strong>：在「设置 → 外观」里改主题名或覆盖样式，改动写进用户层的 <code>overrides/&lt;id&gt;.css</code> 与 <code>themes.user.json</code>，升级后仍然保留；内置主题本身更新时，卡片会提示「新版」让你二选一，<strong>不会静默覆盖</strong></li>
+                    <li><strong>从旧版本升级</strong>：首次启动会自动把旧安装目录里改过的主题、<code>user.css</code>、<code>keybindings.json</code> 迁移到用户层（只迁移一次）</li>
+                    <li>想给主题换一套气质，推荐先看 <code>docs/THEME-DESIGN-SPEC.md</code>：令牌分层总览、每类令牌的设计指引、明暗双模式规范、check-themes 门禁与新增主题检查清单</li>
                 </ul>
                 <div class="callout callout-new">
                     <span class="callout-icon">→</span>
@@ -913,12 +917,12 @@
                     <li><strong>更新卡片</strong>：手动检查更新、查看本次更新说明、<strong>跳过此版本</strong>，以及「启动时自动检查更新」开关</li>
                     <li>检查是安静的：<strong>已是最新、或检查失败都不会弹窗打扰</strong>，只有真的有新版时才会出现那行提示</li>
                     <li>更新前<strong>不需要先保存</strong>：编辑内容是边打字边存的，重启后会自动恢复全部标签页（只有本地缓存写满时才会提醒你先按 <kbd>Ctrl</kbd>+<kbd>S</kbd>）</li>
-                    <li>仅支持 <strong>Windows 安装版</strong>（NSIS）；便携版与 macOS 请手动下载新版本（Windows 不再提供 MSI）</li>
+                    <li>仅支持 <strong>Windows 安装版</strong>（NSIS）一键更新。便携版与 macOS <strong>不会自动安装</strong>，但启动时同样会检查版本：发现新版就在右下角弹出一张提示卡，点「去下载」打开该版本的发布页，手动下载替换即可；「稍后」只本次运行不再提示，「跳过此版本」以后都不再提示它（Windows 不再提供 MSI）</li>
                     <li>v0.3.4 及更早版本需要手动安装这一次；从 v0.3.5 起，之后的新版本都能在应用内直接更新</li>
                 </ul>
                 <div class="callout callout-tip">
                     <span class="callout-icon">i</span>
-                    <p>没看到「有新版本」？多半是当前已是最新、关掉了「启动时自动检查更新」，或用的是便携版 / macOS —— 详见<a href="#faq">常见问题</a>。</p>
+                    <p>没看到「有新版本」？多半是当前已是最新、关掉了「启动时自动检查更新」，或这个版本被「跳过此版本」记住了 —— 可在「设置 → 版本与更新」里手动检查。详见<a href="#faq">常见问题</a>。</p>
                 </div>
             </div>
 
@@ -1003,7 +1007,7 @@
 
             <div class="help-sub" id="faq-theme">
                 <h3>放在 themes/ 目录的主题文件没有出现？</h3>
-                <p>确认文件放在程序目录 <code>themes/</code> 下、扩展名为 <code>.css</code>，并在 <code>themes/theme.json</code> 中登记，然后<strong>重启程序</strong>。CSS 内部记得用 <code>.editor-content</code> 前缀限定范围。（走「设置 → 外观 → 自定义 CSS」保存出来的「自定义主题」是另一回事：保存即生效、不需要重启。）</p>
+                <p>确认文件放在<strong>用户目录</strong> <code>~/Documents/yizimarkdown/themes/custom/</code> 下（不是程序安装目录），扩展名为 <code>.css</code>，然后<strong>重启程序</strong>；不再需要登记 <code>theme.json</code>，文件名就是主题 id。CSS 内部记得用 <code>.editor-content</code> 前缀限定范围。（走「设置 → 外观 → 自定义 CSS」保存出来的「自定义主题」是另一回事：保存即生效、不需要重启。）</p>
             </div>
 
             <div class="help-sub" id="faq-custom-theme">
@@ -1029,7 +1033,7 @@
 
             <div class="help-sub" id="faq-update">
                 <h3>为什么我没看到「有新版本」提示？</h3>
-                <p>常见三种原因：① <strong>当前已是最新版本</strong>（「已是最新」与检查失败都不会打扰你）；② 已关闭「启动时自动检查更新」，可在「设置 → 版本与更新」手动检查一次；③ <strong>自动更新仅支持 Windows 安装版</strong>，便携版与 macOS 需手动下载新版本。另注：v0.3.4 及更早版本需手动安装一次；从 v0.3.5 起可在应用内直接更新。</p>
+                <p>常见三种原因：① <strong>当前已是最新版本</strong>（「已是最新」与检查失败都不会打扰你）；② 已关闭「启动时自动检查更新」，可在「设置 → 版本与更新」手动检查一次；③ 这个版本被「跳过此版本」记住了，可在「设置 → 版本与更新」里重新查看。另注：便携版与 macOS 只能手动更新 —— 应用会在启动时提示，并打开对应版本的下载页；v0.3.4 及更早版本需手动安装一次，从 v0.3.5 起 Windows 安装版可在应用内直接更新。</p>
             </div>
 
             <div class="help-sub" id="faq-cache">
