@@ -494,8 +494,16 @@ function buildDecorations(view: EditorView): DecorationSet {
           const lo = view.state.doc.lineAt(nFrom)
           if (!seenHrLines.has(lo.from)) {
             seenHrLines.add(lo.from)
-            ranges.push(hideDeco.range(lo.from, lo.to))
-            ranges.push(hrLine.range(lo.from))
+            // 光标/选区在本行时必须显示源码 `---`，并且**不画预览线**：
+            // 以前两者同时生效（线 + 被 max-width 揭示的源码），点击分割线会看到
+            // 「一条长线压着 `---`」；编辑旁边内容时还会在线/源码之间来回闪。
+            if (!caretOnLine(lo.number)) {
+              // 整行源码用 replace 覆盖成空（而不是 0 宽度 mark）：
+              //  · 不再有任何源码字符与预览线共存；
+              //  · 点击该行时空行仍然存在，光标落点稳定。
+              ranges.push(Decoration.replace({}).range(lo.from, lo.to))
+              ranges.push(hrLine.range(lo.from))
+            }
           }
           return
         }
@@ -699,7 +707,15 @@ const liveRenderPlugin = ViewPlugin.fromClass(
       // 中文/日文输入法合成期间不要重建装饰：重算会让 CodeMirror 重新同步这一行的
       // DOM，正在合成的文本节点被替换后输入法会丢失合成状态（表现为候选词上不了屏）。
       // 合成结束后 compositionend 会带来一次正常 update，届时再刷新。
-      if (u.view.composing) return
+      //
+      // ⚠️ 但**必须自己把旧装饰 map 到新文档**：ViewPlugin 的 decorations 不会被
+      // CodeMirror 自动映射。合成期间文档已经变化而装饰仍停在旧坐标时，行装饰
+      // （task-item / caret-line）与 checkbox widget 会整行错位 —— 表现为
+      // 「后面的任务方块跳到上一行行尾，行首露出 `- [ ] ` 源码」。
+      if (u.view.composing) {
+        if (u.docChanged) this.decorations = this.decorations.map(u.changes)
+        return
+      }
       if (u.docChanged || u.viewportChanged || u.selectionSet) {
         this.decorations = buildDecorations(u.view)
       }
@@ -774,7 +790,13 @@ export const liveEditTheme = EditorView.theme({
     color: 'var(--code-quote-fg)', fontStyle: 'italic', backgroundColor: 'var(--code-quote-bg)',
   },
   '.cm-md-hr-line': {
-    borderTop: '1px solid var(--code-comment)', minHeight: '1px',
+    // 用背景画线而不是 border：线不参与盒尺寸 ⇒ 光标进出该行时行高不变（45px → 44px
+    // 的高度抖动会让 CodeMirror 重新测量整篇），点击也不会因为 1px 边框而偏。
+    backgroundImage: 'linear-gradient(to bottom, var(--code-comment) 0, var(--code-comment) 1px, transparent 1px)',
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: '0 50%',
+    backgroundSize: '100% 1px',
+    minHeight: '1px',
     backgroundColor: 'transparent',
   },
   '.cm-md-fenced-line': {
@@ -853,6 +875,10 @@ export const liveEditTheme = EditorView.theme({
     fontStyle: 'italic',
   },
   // 标记过渡动画：默认隐藏（caret不在行上时）
+  // ⚠️ 只允许**不影响布局**的过渡（opacity）。`max-width` 过渡会让标记宽度在
+  // 180ms 内逐渐变宽：CodeMirror 会在动画中途读取行高/行宽，把中间状态写进
+  // 高度图（标题行的 font-size/padding 过渡同理）⇒ 之后点击的坐标映射整体
+  // 偏移，表现为「点行尾却落到前两个字」「要点好几次」。
   '.cm-md-hiding-span': {
     opacity: '0',
     maxWidth: '0',
@@ -860,21 +886,23 @@ export const liveEditTheme = EditorView.theme({
     display: 'inline-block',
     verticalAlign: 'bottom',
     whiteSpace: 'nowrap',
-    transition: 'opacity 0.18s ease, max-width 0.18s ease',
+    transition: 'opacity 0.18s ease',
   },
-  // caret在行上时：显示标记
+  // caret在行上时：显示标记。`max-width: none` 而不是固定 5em ——
+  // 链接 URL 等长标记以前会被裁掉一半，进入编辑态时看不全源码。
   '.cm-md-caret-line .cm-md-hiding-span': {
     opacity: '1',
-    maxWidth: '5em',
+    maxWidth: 'none',
   },
   // ====== 四种动画方案（聚焦 blur / 闪光 flash / 辉光 glow / 涟漪 ripple） ======
   // keyframes 是唯一事实源，定义在 liveAnimKeyframes.ts；设置面板的动画预览（AnimationDemo）
   // 消费同一份数据，两处不会再漂移。改动画参数请改那边，不要在这里手写拷贝。
   ...liveAnimThemeEntries(),
-  // 标题行过渡：字体大小和内边距平滑变化
-  '.cm-md-heading-line': {
-    transition: 'font-size 0.18s ease, padding-top 0.18s ease, padding-bottom 0.18s ease',
-  },
+  // 标题行过渡：**不再过渡 font-size / padding**。
+  // 这两个属性会改变行高，而 CSS 过渡期间 CodeMirror 读到的行高是中间值，
+  // 动画结束后也不会自动重新测量 ⇒ 高度图整篇偏移，点击落点错到别的行。
+  // 标题的入场动画交给 liveAnimKeyframes（只动颜色/背景等不影响布局的属性）。
+  '.cm-md-heading-line': {},
   '.cm-selectionLayer': { zIndex: '2 !important' },
   '.cm-selectionBackground': { backgroundColor: 'var(--code-selection-bg) !important' },
 })

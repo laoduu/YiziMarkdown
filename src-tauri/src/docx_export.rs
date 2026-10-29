@@ -1698,10 +1698,13 @@ impl DocxBuilder {
                     }
                 }
             }
-            // 分隔线 `---`：空段落 + 下边框（颜色取主题 --editor-border，与预览 hr 一致）
+            // 分隔线 `---`：一条单独的细线，**不再借用一个整行高的空段落**。
+            // 以前只写 before/after 间距、行高继承 Normal（约 1.6em），导出后视觉上
+            // 就是「分割线上下各多一个空行」。改为 exact 1pt 行高 + 2 号字：段落本身
+            // 几乎零高，只留 6pt 的上下间距（与预览 hr 的边距同量级）。
             Event::Rule => {
                 self.body.push_str(&format!(
-                    "<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:spacing w:before=\"120\" w:after=\"120\"/><w:pBdr><w:bottom w:val=\"single\" w:sz=\"6\" w:space=\"1\" w:color=\"{}\"/></w:pBdr></w:pPr></w:p>",
+                    "<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:spacing w:before=\"120\" w:after=\"120\" w:line=\"20\" w:lineRule=\"exact\"/><w:rPr><w:sz w:val=\"2\"/><w:szCs w:val=\"2\"/></w:rPr><w:pBdr><w:bottom w:val=\"single\" w:sz=\"6\" w:space=\"1\" w:color=\"{}\"/></w:pBdr></w:pPr></w:p>",
                     esc(&self.theme.border)
                 ));
             }
@@ -1901,9 +1904,12 @@ impl DocxBuilder {
                     }
                 }
                 self.body.push_str("</w:tbl>");
-                // Word 要求表格后跟一个段落
-                self.p_start("Normal", None);
-                self.p_end();
+                // Word 要求表格后跟一个段落。这个段落是**结构性占位**：
+                // 用 exact 1pt 行高 + 2 号字 + 零间距，既满足 Word 的结构要求，
+                // 又不会在表格下方留下一个可见空行（以前继承 Normal 的整行高 + 1em 段后距）。
+                self.body.push_str(
+                    "<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"20\" w:lineRule=\"exact\"/><w:rPr><w:sz w:val=\"2\"/><w:szCs w:val=\"2\"/></w:rPr></w:pPr></w:p>",
+                );
             }
             Event::Text(t) => {
                 self.p_start(self.para_style(), None);
@@ -3371,8 +3377,25 @@ mod tests {
             doc.contains("<w:pBdr><w:bottom w:val=\"single\" w:sz=\"6\" w:space=\"1\" w:color=\"D5E2FF\"/></w:pBdr>"),
             "分隔线缺失: {}", doc
         );
+        // 回归：分隔线段落必须「零高」，否则导出后线上下各多出一个空行
+        assert!(
+            doc.contains("<w:spacing w:before=\"120\" w:after=\"120\" w:line=\"20\" w:lineRule=\"exact\""),
+            "分隔线段落没有压成细线: {}", doc
+        );
         let text = doc_text(&doc);
         assert!(text.contains("上文") && text.contains("下文"), "{}", doc);
+    }
+
+    #[test]
+    fn table_end_spacer_is_zero_height() {
+        // 回归：表格后必须有段落（Word 结构要求），但不能再是一个可见空行
+        let doc = xml_of("| A | B |\n| --- | --- |\n| 1 | 2 |\n\n后续文字\n");
+        assert!(doc.contains("</w:tbl>"), "表格缺失: {}", doc);
+        let after = &doc[doc.find("</w:tbl>").unwrap() + "</w:tbl>".len()..];
+        assert!(
+            after.starts_with("<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"20\" w:lineRule=\"exact\""),
+            "表格后的占位段落不是零高: {}", &after[..after.len().min(160)]
+        );
     }
 
     /// document.xml 里出现的 numId 序列

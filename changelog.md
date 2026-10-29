@@ -1,5 +1,61 @@
 # YiziMarkdown 开发日志
 
+## v0.4.1
+
+> **未发布**（截至 2026-10-29）：新一轮开发已开始，`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已升到 `0.4.1`，尚未打包、未打 tag。本节随本轮改动累积。
+
+### 实时模式：点击落点整体偏移（2026-10-29）
+
+用户反馈：点任务列表 / 标题 / 列表 / 引用的行尾，光标却落在前几个字，常见要点两三次才准。
+
+**根因不是行内记号本身，而是 CodeMirror 的高度表是错的。** `.cm-md-heading-line` 曾给 `font-size / padding` 加 0.18s 过渡；进入实时模式时标题行从 44px 长到 94px，CM 在动画**中途**读行高，把中间值写进高度图，动画结束后不会自动重测。之后 `posAtCoords` 按 44px/行换算 Y 坐标，整篇行号累计偏移 50px —— 点击直接落到下一行，甚至下一行行尾；每点一次都按错误的表重新换算，于是「点两三次才对」。行内记号的 `max-width` 过渡还会在展开时改变换行/行高，制造同类问题。
+
+**改法**：
+
+- `.cm-md-heading-line` 不再过渡 `font-size / padding`（标题入场动画由 `liveAnimKeyframes` 负责，只动颜色/背景）。
+- `.cm-md-hiding-span` 只保留 `opacity` 过渡，去掉 `max-width` 过渡：源码记号**瞬时**显形，不再在动画中途重排。
+- 光标行展开记号时 `max-width: none`（此前固定 5em，长链接 URL 会被裁掉一半）。
+- 实测（Edge/WebView2）：切换实时模式后标题行 block 高度与 DOM 高度一致（94.34px），点击普通段落 / 任务 / 引用 / 有序列表行尾均落在行尾。
+
+### 实时模式：分割线源码与预览线共存、编辑时来回闪（2026-10-29）
+
+**根因**：`HorizontalRule` 同时加了「整行隐藏 mark」与「行边框」两个装饰；光标进入该行后 CSS 把隐藏 mark 展开成 `---`，边框还在，于是长线压着源码。编辑旁边内容时，每次装饰重建都会让这行重新走一遍「隐藏 → 展开」的样式过渡，看起来在线/源码之间跳。
+
+**改法**：两者改成互斥。
+
+- 光标/选区在该行：显示源码 `---`，**不加**行边框。
+- 不在该行：整行源码用 `Decoration.replace` 覆盖成空（不留 0 宽度字符），只画一条背景渐变线；没有源码可与线共存，点击空行也稳定落到该行。
+- 线改由 `background-image` 画在行盒垂直居中处，而不是 `border-top`：行高不再因 1px 边框在 45/44 之间变化，光标进出不会触发整篇重测。
+
+### 实时模式：输入法合成期间后续任务列表方块/源码错位（2026-10-29）
+
+**根因**：实时装饰是 ViewPlugin 提供的。为了保住输入法合成状态，插件在 `view.composing` 时**直接 return、不重建装饰** —— 但 **CodeMirror 不会自动把 ViewPlugin 的 decorations 映射到新文档**。合成期间文档已经右移，装饰仍停在旧坐标：行装饰（`cm-md-task-item` / `cm-md-caret-line`）与 checkbox widget 全部错位 —— 后续行的方块落到**前一行行尾**，本行行首露出 `- [ ] ` 源码；合成结束后才重建恢复，所以是「临时」错乱。
+
+**改法**：合成期间仍不重建（避免替换正在合成的文本节点、候选词丢失），但必须自己映射：
+
+- `if (u.view.composing) { if (u.docChanged) this.decorations = this.decorations.map(u.changes); return }`
+- 合成结束（`compositionend` 带来正常事务）后再 `buildDecorations` 全量刷新。
+
+**验证**：用 CDP `Input.imeSetComposition` 在 Edge 里真实进入合成态（`view.composing = true`）——修复前方块/行类整体错位，修复后合成期间每一行的 checkbox、隐藏标记、光标行类都保持在正确行上；提交后也无需额外事务即可保持稳定。
+
+### 工具栏：插入分割线不再凭空多出空段（2026-10-29）
+
+**根因**：工具栏/快捷键/斜杠菜单都直接往光标处塞 `'\n---\n'`。光标落在正文行中间时，`---` 紧贴上一行会被 CommonMark 解析成 **setext 标题**（线反而消失）；落空行上则前后各多一行空白。
+
+**改法**：新增 `src/lib/horizontalRule.ts` 的 `planHorizontalRule`（纯函数、按行计算）：
+
+- 当前行有正文：行后补**一个**空行（结构必需），再写 `---`，光标落到下一行行首；
+- 当前行是空行、上方是正文：保留该空行，分割线放到它下面，不加第二个空行；
+- 当前行是空行、上方也是空行 / 文档开头：直接把空行换成 `---`；
+- 只在文档末尾补一个尾行给光标，不改动 `---` 下方已有内容。
+- 工具栏按钮、`Ctrl+L` 快捷键、斜杠菜单统一走这条规则；配 `tests/horizontalRule.test.ts` 6 条。
+
+### DOCX 导出：表格后空段、分割线两侧空行（2026-10-29）
+
+- **表格后**：Word 要求表格后必须跟一个段落，此前用 `Normal` 段落占位 —— 继承整行高 + 1em 段后距，导出后就是一个可见空行。改成 `exact 1pt` 行高 + 2 号字 + 零间距的零高占位段。
+- **分割线**：`Event::Rule` 此前只写 before/after 间距，行高仍继承 `Normal`（≈1.6em），边框画在这个整行高的空段落底部，看起来就是「线上下各多一个空行」。改为 `exact 1pt` 行高 + 2 号字，只保留 6pt 的上下间距。
+- 配 Rust 回归测试：`horizontal_rule_becomes_bordered_paragraph` 增加「零高」断言，新增 `table_end_spacer_is_zero_height`。
+
 ## v0.4.0
 
 > **未发布**（截至 2026-10-26）：`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已升到 `0.4.0`，但**未打包、未打 tag**。用户向说明见 `docs/changelog/CHANGELOG-V0.4.0.md`。

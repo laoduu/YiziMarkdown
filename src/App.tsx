@@ -313,7 +313,7 @@ function App() {
         case 'image': editorRef.current?.insertMarkdown('![', 'link'); break
         case 'codeBlock': editorRef.current?.insertCodeBlock(); break
         case 'table': editorRef.current?.insertMarkdown('| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n|  |  |  |\n'); break
-        case 'horizontalRule': editorRef.current?.insertMarkdown('\n---\n', 'prefix'); break
+        case 'horizontalRule': editorRef.current?.insertHorizontalRule(); break
         // 视图循环切换：源代码 → 并排 → 实时 → 预览 → 源代码
         case 'viewCycle': {
           const order = ['edit', 'split', 'live', 'preview'] as const
@@ -865,6 +865,9 @@ function App() {
     // 代码块特殊处理：光标定位到两个 ``` 之间
     if (markdown === '\n```\n\n```\n') {
       editorRef.current?.insertCodeBlock()
+    } else if (markdown === '\n---\n') {
+      // 分割线特殊处理：按行插入，不能直接塞 '\n---\n'（会多空段 / 把上一行变成标题）
+      editorRef.current?.insertHorizontalRule()
     } else {
       editorRef.current?.insertMarkdown(markdown, mode)
     }

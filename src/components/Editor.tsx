@@ -13,6 +13,7 @@ import { useEditorStore, type ViewMode } from '../stores/editorStore'
 import { findOutlineByLine, computeOutlineItems } from '../lib/headingId'
 import { numberOrderedLines } from '../lib/listFormat'
 import { isTaskLine, toggleTaskAtLine } from '../lib/taskList'
+import { planHorizontalRule } from '../lib/horizontalRule'
 import { liveEditExtension } from '../lib/cm-live-render'
 import { frontMatterField, frontMatterLines } from '../lib/cm-frontmatter'
 import { headingFoldExtension } from '../lib/cm-heading-fold'
@@ -123,6 +124,8 @@ export function insertFootnoteAtView(view: EditorView): void {
 
 export interface EditorRef {
   insertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'ordered' | 'link' | 'tag' | 'block') => void
+  /** 按行插入分割线（见 lib/horizontalRule.ts）：不制造多余空段、不把上一行变成标题 */
+  insertHorizontalRule: () => void
   insertCodeBlock: () => void
   insertFootnote: () => void
   toggleSearch: () => void
@@ -1151,6 +1154,18 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       })
       view.focus()
     },
+    insertHorizontalRule: () => {
+      const view = viewRef.current
+      if (!view) return
+      // 按行计算（而不是往光标处硬塞 '\n---\n'），避免多出空段 / 把上一行变成 setext 标题
+      const edit = planHorizontalRule(view.state.doc.toString(), view.state.selection.main.head)
+      view.dispatch({
+        changes: { from: edit.from, to: edit.to, insert: edit.insert },
+        selection: { anchor: edit.caret },
+        scrollIntoView: true,
+      })
+      view.focus()
+    },
     insertCodeBlock: () => {
       const view = viewRef.current
       if (!view) return
@@ -1680,7 +1695,15 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         }
         break
       }
-      case 'horizontalRule': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '\n---\n' }, selection: { anchor: newFrom + 5, head: newFrom + 5 } }); break
+      case 'horizontalRule': {
+        const edit = planHorizontalRule(view.state.doc.toString(), newFrom)
+        view.dispatch({
+          changes: { from: edit.from, to: edit.to, insert: edit.insert },
+          selection: { anchor: edit.caret },
+          scrollIntoView: true,
+        })
+        break
+      }
       case 'columnBreak': {
         // 插入**分栏区间**（三条 *** = 2 栏的形状），光标落在第一个空档（左栏）。
         // 详见 lib/slides.ts 的 COLUMN_REGION_SNIPPET / COLUMN_REGION_CURSOR。

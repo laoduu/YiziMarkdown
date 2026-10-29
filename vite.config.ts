@@ -49,7 +49,9 @@ export default defineConfig({
   },
   // Tauri 开发时的配置
   server: {
-    port: 1420,
+    // 默认 1420 会落在部分机器的 Hyper-V/WSL2 保留端口段（如 1357-1456）内导致 EACCES，
+    // 改用段外的 1660
+    port: 1660,
     strictPort: true,
     // 忽略 src-tauri 与 target，避免 Vite 监听 cargo 写入中的文件导致 EBUSY 崩溃
     watch: {
