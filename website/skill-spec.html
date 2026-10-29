@@ -9,7 +9,7 @@
     <meta name="author" content="YiziPaper">
     <meta name="robots" content="index, follow">
     <meta name="docs-src" content="src-tauri/skill-guide.md">
-    <meta name="docs-hash" content="6d23da0504704034ed20be5609c69a25d0271599879778d403bf6164c787b934">
+    <meta name="docs-hash" content="062b7185429aa0fef35097c3dd77a7dcf4e494885322b6176a4467b0e984f91e">
     <link rel="canonical" href="https://md.yizigpt.com/skill-spec.html">
 
     <!-- Open Graph -->
@@ -88,7 +88,7 @@
 
     <!-- 正文 -->
     <main class="help-content docs-content">
-<section class="help-section" id="什么是-skill" data-icon="zap" data-kw="什么是 Skill？ Skill（技能）是 YiziMarkdown AI 对话面板中的预设提示词模板。选择一个 Skill 后，AI 会按照该技能的提示词执行特定任务，例如： 演示稿提炼 — 将文档转为幻灯片格式的 Markdown 文档摘要 — 快速总结文档核心内容 润色改写 — 优化文字表达 全文翻译 — 翻译文档内容 每个 Skill 由两部分组成： skills.json — 技能清单（元数据：名称、描述、是否需要文档等） &lt;file&gt;.md — 提示词正文（告诉 AI 具体如何执行）">
+<section class="help-section" id="什么是-skill" data-icon="zap" data-kw="什么是 Skill？ Skill（技能）是 YiziMarkdown AI 对话面板中的预设提示词模板。选择一个 Skill 后，AI 会按照该技能的提示词执行特定任务，例如： 演示稿提炼 — 将文档转为幻灯片格式的 Markdown 文档摘要 — 快速总结文档核心内容 润色改写 — 优化文字表达 全文翻译 — 翻译文档内容 Markdown格式化 — 把任意文本整理成规范的 Markdown 文档（只调格式，不改文字） 每个 Skill 由两部分组成： skills.json — 技能清单（元数据：名称、描述、是">
 <h2><a class="anchor" href="#什么是-skill">#</a>什么是 Skill？</h2>
 <p>Skill（技能）是 YiziMarkdown AI 对话面板中的预设提示词模板。选择一个 Skill 后，AI 会按照该技能的提示词执行特定任务，例如：</p>
 <ul>
@@ -96,6 +96,7 @@
 <li><strong>文档摘要</strong> — 快速总结文档核心内容</li>
 <li><strong>润色改写</strong> — 优化文字表达</li>
 <li><strong>全文翻译</strong> — 翻译文档内容</li>
+<li><strong>Markdown格式化</strong> — 把任意文本整理成规范的 Markdown 文档（只调格式，不改文字）</li>
 </ul>
 <p>每个 Skill 由两部分组成：</p>
 <ol>
@@ -133,7 +134,8 @@
     ├── slides-outline.md     ← 演示稿提炼提示词
     ├── doc-summary.md        ← 文档摘要提示词
     ├── polish-writing.md     ← 润色改写提示词
-    └── translate-fulltext.md ← 全文翻译提示词
+    ├── translate-fulltext.md ← 全文翻译提示词
+    └── markdown-format.md    ← Markdown 格式化提示词
 </code></pre>
 
 </section>

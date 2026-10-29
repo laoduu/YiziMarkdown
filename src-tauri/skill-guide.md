@@ -8,6 +8,7 @@ Skill（技能）是 YiziMarkdown AI 对话面板中的预设提示词模板。�
 - **文档摘要** — 快速总结文档核心内容
 - **润色改写** — 优化文字表达
 - **全文翻译** — 翻译文档内容
+- **Markdown格式化** — 把任意文本整理成规范的 Markdown 文档（只调格式，不改文字）
 
 每个 Skill 由两部分组成：
 1. **`skills.json`** — 技能清单（元数据：名称、描述、是否需要文档等）
@@ -30,7 +31,8 @@ yizimarkdown/
     ├── slides-outline.md     ← 演示稿提炼提示词
     ├── doc-summary.md        ← 文档摘要提示词
     ├── polish-writing.md     ← 润色改写提示词
-    └── translate-fulltext.md ← 全文翻译提示词
+    ├── translate-fulltext.md ← 全文翻译提示词
+    └── markdown-format.md    ← Markdown 格式化提示词
 ```
 
 ## 更新覆盖机制

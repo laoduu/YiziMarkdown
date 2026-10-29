@@ -56,6 +56,38 @@
 - **分割线**：`Event::Rule` 此前只写 before/after 间距，行高仍继承 `Normal`（≈1.6em），边框画在这个整行高的空段落底部，看起来就是「线上下各多一个空行」。改为 `exact 1pt` 行高 + 2 号字，只保留 6pt 的上下间距。
 - 配 Rust 回归测试：`horizontal_rule_becomes_bordered_paragraph` 增加「零高」断言，新增 `table_end_spacer_is_zero_height`。
 
+### AI 技能：新增「Markdown格式化」（2026-10-29）
+
+- 新技能 `markdown-format`（`skills/markdown-format.md`）：把任意纯文本 / 半结构化笔记 / 已带部分 Markdown 的内容整理成语法规范的 Markdown 文档。
+- 只做格式规范化：补标题层级、段落空行、列表与任务列表、引用、表格、代码围栏、硬换行与必要转义；**不增删改任何文字**，不提炼、不总结、不润色、不翻译、不编造标题。
+- `skills.json` 版本 5 → 6，随版本更新把新内置技能同步到用户目录（合并 manifest 时保留用户自定义技能）。
+- 帮助文档、README、技能规范页（官网 `skill-spec.html`）同步补充条目。
+
+### 粘贴：网页 / Word 富文本在内存中转成规范 Markdown（2026-10-29）
+
+**问题**：复制网页内容粘贴后，前半段是纯文本、后半截是 Markdown，交界处没有换行，`# ` 标题被顶进行内不渲染。
+
+**根因**：
+
+- CodeMirror 的 paste 观察器绑在 `view.contentDOM` 上，先执行并原样插入 `text/plain`；旧监听器绑在父节点 `view.dom` 的**冒泡阶段**，之后再 `preventDefault` 已经晚了 —— 转换结果只是被追加了一遍，两段之间没有分隔。
+- 旧转换器是一串正则 `replace`：`div/span` 没有块级边界、`<li>` 直接拼成 `- a- b`、表格缺分隔行、Word 的 `mso-list` / `MsoHeading` / CF_HTML 头完全没处理。
+
+**改法**：
+
+- 粘贴监听改为**捕获阶段**（`view.dom.addEventListener('paste', onPaste, true)`）：命中富文本时 `preventDefault + stopPropagation`，CodeMirror 的观察器不再执行，只插入转换结果（`userEvent: 'input.paste'`，撤销栈正常）。
+- 引入 `turndown@7.2.4` + `@joplin/turndown-plugin-gfm@1.0.68`（MIT，浏览器构建不打包 domino），全部在内存中解析，不写临时文件。
+- 新增 `src/lib/clipboardMarkdown.ts`：
+  - CF_HTML 拆包（`StartFragment/EndFragment`、Word 条件注释）与脚本/样式清理；
+  - Word 专用规则：`MsoHeadingN`/`mso-outline-level` → 标题、`mso-list` 多级列表（含 `• / – / 编号`）、`file://` 图片降级为 alt、`http(s)`/`data:image` 保留；
+  - DOCX 兼容增强（第二轮）：没有 `<thead>` 的 Word 表格不再多出一行空表头（用首行数据当表头）；WPS / 无 `MsoHeading` 的「大字号 + 加粗」短段落识别为标题；负缩进 + 段首 `• / – / 编号` 的普通段落识别为多级列表；Word 剪贴板里的 `file://` 临时图片先写占位 token，粘贴时经 Tauri 读取为 data URL 嵌入，读不到才退回 alt 文本；
+  - 上标/下标：`<sup>` / `<sub>` 与 `vertical-align:super|sub` 保留为 `<sup>…</sup>` / `<sub>…</sub>`；Word 的 `mso-special-character:footnote`、`class=MsoFootnoteReference`、`mso-text-raise` 与 `href="#_ftnN"` 引用转成 `<sup>N</sup>`（`[2]` 不再作为字面量残留）。刻意不生成 `[^N]`：Word 复制通常不带脚注正文，没有定义的脚注引用会渲染成字面量；
+  - 真实 DOCX 选区可能**只有内联标签**（`<span><sup><span>[3]</span></sup></span>`，没有任何 `p/div`）：结构探测补上 `sup/sub/a/b/strong/i/em/code` 等语义内联标签，这类选区不再因为“没有块级标签”而被当成纯文本放行；
+  - 输出规范化：列表统一 `- ` / `1. `、标题前保证空行、连续空行压缩、代码围栏内原样保留；
+  - 纯 Markdown 源判别（行首标题/引用/围栏/链接），避免把 Obsidian / VS Code 复制的内容二次转换；
+  - 块级落点整理：粘到已有文字行中/行尾时自动补空行，`# 标题` 不再变行内。
+- 配 `tests/clipboardMarkdown.test.ts` 9 条（网页、Word、CF_HTML、决策、落点、规范化）。
+- 帮助文档与 README 补充「智能粘贴」说明。
+
 ## v0.4.0
 
 > **未发布**（截至 2026-10-26）：`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已升到 `0.4.0`，但**未打包、未打 tag**。用户向说明见 `docs/changelog/CHANGELOG-V0.4.0.md`。

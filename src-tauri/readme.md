@@ -29,7 +29,7 @@
 ### AI 助手（侧边聊天面板）
 
 - **17 家大模型供应商 + 自定义服务**：OpenAI、Anthropic、Gemini、xAI、Mistral、Groq、DeepSeek、通义千问、智谱 GLM、Moonshot Kimi、火山方舟、硅基流动、MiniMax、OpenRouter、OpenCode Go、Ollama（本地）；「自定义服务」支持 OpenAI 兼容 / Anthropic 兼容两种协议，自填 Base URL、模型 ID 与密钥，可接任意第三方服务
-- **AI 技能（Skill）**：输入框 ⚡ 按钮弹出技能菜单，选中后技能 tag 插入光标处，提示词自动注入上下文；`skills/` 目录放入 `skills.json` + `.md` 提示词即可自定义技能。内置「演示稿提炼」「文档摘要」「润色改写」3 个技能
+- **AI 技能（Skill）**：输入框 ⚡ 按钮弹出技能菜单，选中后技能 tag 插入光标处，提示词自动注入上下文；`skills/` 目录放入 `skills.json` + `.md` 提示词即可自定义技能。内置「演示稿提炼」「文档摘要」「润色改写」「全文翻译」「Markdown格式化」5 个技能
 - **流式对话**：工具栏机器人按钮打开右侧 AI 面板，回复实时流式输出，可随时停止
 - **思考过程展示**：推理模型的思考内容（reasoning/thinking）以可折叠区块展示，默认收起，不影响正文阅读
 - **密钥安全**：API 密钥存系统钥匙串（OS keychain），支持一键保存、清除、验证；本地端点（llama.cpp / LM Studio / vLLM 等）密钥可留空
@@ -100,6 +100,7 @@
 - **另存为**：新建文件保存时自动弹出另存为对话框
 - **导出**：HTML / Markdown / 纯文本 / Word（DOCX）/ PDF / PPTX 六种格式；DOCX 使用 Word 原生语义（列表/表格/代码块/引用/任务列表），表格样式对齐预览，图片支持本地路径、网络图片与 HTML `<img>` 标签（可用 `width` 属性控制宽度）；PDF 与预览还原度一致并自动分页；HTML 附带**左侧悬浮大纲卡片**，点击条目直达对应章节（PDF 不含侧栏）；PPTX 继承演示模式的主题、明暗与版式，输出可编辑的文本、表格、图片、形状与原生公式
 - **.md 文件关联**：设置中一键设为系统默认 Markdown 编辑器，双击 .md 直接打开（Windows 注册表 / macOS LaunchServices）
+- **智能粘贴**：从网页、Word/DOCX、Google Docs、Notion 等来源复制的富文本，粘贴时在内存中转换为规范 Markdown（标题 / 列表 / 表格 / 代码 / 引用 / 链接），已有 Markdown 源与纯文本原样粘贴
 
 ### 云端存储（WebDAV）
 
@@ -197,7 +198,9 @@ YiziMarkdown/
 │   ├── skills.json         # 技能清单
 │   ├── slides-outline.md   # 演示稿提炼
 │   ├── doc-summary.md      # 文档摘要
-│   └── polish-writing.md   # 润色改写
+│   ├── polish-writing.md   # 润色改写
+│   ├── translate-fulltext.md # 全文翻译
+│   └── markdown-format.md  # Markdown格式化
 └── templates/              # 内置文档模板（首次启动同步到用户目录）
     └── default.md          # 默认模板
 ```
