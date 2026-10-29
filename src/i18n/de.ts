@@ -17,6 +17,7 @@ export const de = {
     notSet: 'Nicht festgelegt',
   },
   toolbar: {
+    read: 'Lesemodus',
     brand: 'YiziMarkdown',
     newFile: 'Neu (Ctrl+N)',
     newFromTemplate: 'Neu aus Vorlage',
@@ -429,6 +430,7 @@ export const de = {
     authorHome: 'Autorenseite',
   },
   shortcuts: {
+    readingMode: 'Lesemodus',
     file: 'Datei',
     edit: 'Bearbeiten',
     format: 'Format',
@@ -579,6 +581,22 @@ export const de = {
     colStyleLine: 'Trennlinie',
     colStyleCard: 'Karte',
     helpColumns: 'Spalten: Eine Folie mit <code>***</code> (eigene Zeile) aufteilen — <code>---</code> ist ein Seitenumbruch.',
+  },
+  reader: {
+    loading: 'Wird gesetzt…',
+    empty: 'Nichts zu lesen',
+    toc: 'Inhalt',
+    tocEmpty: 'Keine Überschriften',
+    goto: 'Zu Seite',
+    gotoHint: '1–{total} eingeben',
+    gotoConfirm: 'Los',
+    backRef: 'Zurück zur Quelle',
+    typography: 'Typografie',
+    fontSize: 'Schriftgröße',
+    lineHeight: 'Zeilenabstand',
+    lineCompact: 'Kompakt',
+    lineNormal: 'Normal',
+    lineLoose: 'Locker',
   },
   window: {
     minimize: 'Minimieren',

@@ -17,6 +17,7 @@ export const uk = {
     notSet: 'Не встановлено',
   },
   toolbar: {
+    read: 'Режим читання',
     brand: 'YiziMarkdown',
     newFile: 'Новий (Ctrl+N)',
     newFromTemplate: 'Новий із шаблону',
@@ -429,6 +430,7 @@ export const uk = {
     authorHome: 'Сторінка автора',
   },
   shortcuts: {
+    readingMode: 'Режим читання',
     file: 'Файл',
     edit: 'Редагування',
     format: 'Формат',
@@ -579,6 +581,22 @@ export const uk = {
     colStyleLine: 'Розділювач',
     colStyleCard: 'Картка',
     helpColumns: 'Стовпці: розділіть слайд за допомогою <code>***</code> (окремим рядком) — <code>---</code> це розрив сторінки.',
+  },
+  reader: {
+    loading: 'Верстка…',
+    empty: 'Немає що читати',
+    toc: 'Зміст',
+    tocEmpty: 'Немає заголовків',
+    goto: 'Перейти до сторінки',
+    gotoHint: 'Введіть 1–{total}',
+    gotoConfirm: 'Перейти',
+    backRef: 'Повернутися до посилання',
+    typography: 'Типографіка',
+    fontSize: 'Розмір шрифту',
+    lineHeight: 'Міжрядковий інтервал',
+    lineCompact: 'Щільний',
+    lineNormal: 'Звичайний',
+    lineLoose: 'Просторий',
   },
   window: {
     minimize: 'Згорнути',

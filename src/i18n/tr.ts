@@ -17,6 +17,7 @@ export const tr = {
     notSet: 'Ayarlanmadı',
   },
   toolbar: {
+    read: 'Okuma modu',
     brand: 'YiziMarkdown',
     newFile: 'Yeni (Ctrl+N)',
     newFromTemplate: 'Şablondan yeni',
@@ -429,6 +430,7 @@ export const tr = {
     authorHome: 'Yazarın sayfası',
   },
   shortcuts: {
+    readingMode: 'Okuma modu',
     file: 'Dosya',
     edit: 'Düzen',
     format: 'Biçim',
@@ -579,6 +581,22 @@ export const tr = {
     colStyleLine: 'Ayırıcı',
     colStyleCard: 'Kart',
     helpColumns: 'Sütunlar: bir slaytı <code>***</code> (kendi satırında) ile bölün — <code>---</code> sayfa sonudur.',
+  },
+  reader: {
+    loading: 'Diziliyor…',
+    empty: 'Okunacak içerik yok',
+    toc: 'İçindekiler',
+    tocEmpty: 'Başlık yok',
+    goto: 'Sayfaya git',
+    gotoHint: '1–{total} girin',
+    gotoConfirm: 'Git',
+    backRef: 'Kaynağa dön',
+    typography: 'Tipografi',
+    fontSize: 'Yazı boyutu',
+    lineHeight: 'Satır aralığı',
+    lineCompact: 'Sıkı',
+    lineNormal: 'Normal',
+    lineLoose: 'Geniş',
   },
   window: {
     minimize: 'Simge durumuna küçült',

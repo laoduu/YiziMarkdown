@@ -17,6 +17,7 @@ export const sv = {
     notSet: 'Inte inställd',
   },
   toolbar: {
+    read: 'Läsläge',
     brand: 'YiziMarkdown',
     newFile: 'Ny (Ctrl+N)',
     newFromTemplate: 'Ny från mall',
@@ -429,6 +430,7 @@ export const sv = {
     authorHome: 'Författarens sida',
   },
   shortcuts: {
+    readingMode: 'Läsläge',
     file: 'Fil',
     edit: 'Redigera',
     format: 'Format',
@@ -579,6 +581,22 @@ export const sv = {
     colStyleLine: 'Avdelare',
     colStyleCard: 'Kort',
     helpColumns: 'Kolumner: dela en bild med <code>***</code> (på egen rad) — <code>---</code> är en sidbrytning.',
+  },
+  reader: {
+    loading: 'Layoutar…',
+    empty: 'Inget att läsa',
+    toc: 'Innehåll',
+    tocEmpty: 'Inga rubriker',
+    goto: 'Gå till sida',
+    gotoHint: 'Ange 1–{total}',
+    gotoConfirm: 'Gå',
+    backRef: 'Tillbaka till referens',
+    typography: 'Typografi',
+    fontSize: 'Teckenstorlek',
+    lineHeight: 'Radavstånd',
+    lineCompact: 'Kompakt',
+    lineNormal: 'Normal',
+    lineLoose: 'Luftigt',
   },
   window: {
     minimize: 'Minimera',

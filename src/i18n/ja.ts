@@ -17,6 +17,7 @@ export const ja = {
     notSet: '未設定',
   },
   toolbar: {
+    read: '読書モード',
     brand: 'YiziMarkdown',
     newFile: '新規 (Ctrl+N)',
     newFromTemplate: 'テンプレートから新規作成',
@@ -429,6 +430,7 @@ export const ja = {
     authorHome: '作者のホームページ',
   },
   shortcuts: {
+    readingMode: '読書モード',
     file: 'ファイル',
     edit: '編集',
     format: 'フォーマット',
@@ -579,6 +581,22 @@ export const ja = {
     colStyleLine: '区切り線',
     colStyleCard: 'カード',
     helpColumns: '段組み：1 ページ内を <code>***</code>（単独行）で段組みします（<code>---</code> はページ区切り）。',
+  },
+  reader: {
+    loading: 'レイアウト中…',
+    empty: '読む内容がありません',
+    toc: '目次',
+    tocEmpty: '見出しがありません',
+    goto: 'ページへ移動',
+    gotoHint: '1–{total} を入力',
+    gotoConfirm: '移動',
+    backRef: '引用に戻る',
+    typography: 'タイポグラフィ',
+    fontSize: '文字サイズ',
+    lineHeight: '行間',
+    lineCompact: '詰める',
+    lineNormal: '標準',
+    lineLoose: '広め',
   },
   window: {
     minimize: '最小化',

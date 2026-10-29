@@ -17,6 +17,7 @@ export const nl = {
     notSet: 'Niet ingesteld',
   },
   toolbar: {
+    read: 'Leesmodus',
     brand: 'YiziMarkdown',
     newFile: 'Nieuw (Ctrl+N)',
     newFromTemplate: 'Nieuw uit sjabloon',
@@ -429,6 +430,7 @@ export const nl = {
     authorHome: 'Pagina van de auteur',
   },
   shortcuts: {
+    readingMode: 'Leesmodus',
     file: 'Bestand',
     edit: 'Bewerken',
     format: 'Opmaak',
@@ -579,6 +581,22 @@ export const nl = {
     colStyleLine: 'Scheidingslijn',
     colStyleCard: 'Kaart',
     helpColumns: 'Kolommen: splits een dia met <code>***</code> (op een eigen regel) — <code>---</code> is een pagina-einde.',
+  },
+  reader: {
+    loading: 'Opmaak…',
+    empty: 'Niets te lezen',
+    toc: 'Inhoud',
+    tocEmpty: 'Geen koppen',
+    goto: 'Ga naar pagina',
+    gotoHint: 'Voer 1–{total} in',
+    gotoConfirm: 'Ga',
+    backRef: 'Terug naar verwijzing',
+    typography: 'Typografie',
+    fontSize: 'Lettergrootte',
+    lineHeight: 'Regelafstand',
+    lineCompact: 'Compact',
+    lineNormal: 'Normaal',
+    lineLoose: 'Ruim',
   },
   window: {
     minimize: 'Minimaliseren',

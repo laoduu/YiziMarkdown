@@ -2266,3 +2266,92 @@
 .ys-mac .ys-flip-layer {
   --ys-flip-shadow: rgba(31, 41, 55, 0.3);
 }
+
+/* ====== 目录 / 跳页抽屉（T 打开；与阅读模式共用交互） ====== */
+.ys-drawer {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: min(360px, 82vw);
+  z-index: 180;
+  display: flex;
+  flex-direction: column;
+  background: var(--editor-surface, #fff);
+  border-right: 1px solid var(--editor-border, rgba(128,128,128,.3));
+  box-shadow: 12px 0 40px rgba(0,0,0,.25);
+}
+.ys-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--editor-border, rgba(128,128,128,.25));
+}
+.ys-drawer-list {
+  flex: 1;
+  overflow: auto;
+  padding: 8px;
+}
+.ys-drawer-item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--editor-text, #222);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.ys-drawer-item:hover { background: color-mix(in srgb, var(--editor-text, #222) 7%, transparent); }
+.ys-drawer-item.is-current {
+  background: color-mix(in srgb, var(--editor-accent, #4a9eff) 14%, transparent);
+  color: var(--editor-accent, #4a9eff);
+  font-weight: 600;
+}
+.ys-drawer-num {
+  flex: none;
+  width: 2.2em;
+  text-align: right;
+  font-size: 11px;
+  color: var(--code-comment, color-mix(in srgb, var(--editor-text, #222) 55%, transparent));
+  font-variant-numeric: tabular-nums;
+}
+.ys-drawer-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ys-drawer-foot {
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px 16px;
+  border-top: 1px solid var(--editor-border, rgba(128,128,128,.25));
+}
+.ys-drawer-foot input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--editor-border, rgba(128,128,128,.3));
+  background: var(--editor-bg, #fff);
+  color: var(--editor-text, #222);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+.ys-drawer-foot input:focus { border-color: var(--editor-accent, #4a9eff); }
+.ys-drawer-foot button {
+  flex: none;
+  padding: 7px 12px;
+  border-radius: 7px;
+  border: 0;
+  background: var(--editor-accent, #4a9eff);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}

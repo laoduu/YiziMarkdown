@@ -172,7 +172,12 @@ export function deckChapters(slides: DeckSlide[], docTitle: string): Array<{ cha
  * @param userRaw user.css 原文（仅「自定义主题」时非空）
  * @param theme 目标主题名（改写后写进选择器，保证与根节点 class 一致）
  */
-export function scopeThemeVars(themeCss: string, userRaw: string, theme: string): string {
+export function scopeThemeVars(
+  themeCss: string,
+  userRaw: string,
+  theme: string,
+  rootSelector = '.yizi-slideshow',
+): string {
   const userVars = userRaw
     ? userRaw
         .split('}')
@@ -185,6 +190,6 @@ export function scopeThemeVars(themeCss: string, userRaw: string, theme: string)
     .join('}')
     .replace(
       /:root\.theme-[a-zA-Z0-9_-]+(\.dark)?/g,
-      (_m, darkVariant?: string) => `.yizi-slideshow.theme-${theme}${darkVariant || ''}`
+      (_m, darkVariant?: string) => `${rootSelector}.theme-${theme}${darkVariant || ''}`,
     )
 }

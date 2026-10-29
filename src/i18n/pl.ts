@@ -17,6 +17,7 @@ export const pl = {
     notSet: 'Nie ustawiono',
   },
   toolbar: {
+    read: 'Tryb czytania',
     brand: 'YiziMarkdown',
     newFile: 'Nowy (Ctrl+N)',
     newFromTemplate: 'Nowy z szablonu',
@@ -429,6 +430,7 @@ export const pl = {
     authorHome: 'Strona autora',
   },
   shortcuts: {
+    readingMode: 'Tryb czytania',
     file: 'Plik',
     edit: 'Edycja',
     format: 'Format',
@@ -579,6 +581,22 @@ export const pl = {
     colStyleLine: 'Linia podziału',
     colStyleCard: 'Karta',
     helpColumns: 'Kolumny: podziel slajd znakiem <code>***</code> (w osobnym wierszu) — <code>---</code> to podział strony.',
+  },
+  reader: {
+    loading: 'Układanie…',
+    empty: 'Brak treści',
+    toc: 'Spis treści',
+    tocEmpty: 'Brak nagłówków',
+    goto: 'Przejdź do strony',
+    gotoHint: 'Wpisz 1–{total}',
+    gotoConfirm: 'Przejdź',
+    backRef: 'Wróć do przypisu',
+    typography: 'Typografia',
+    fontSize: 'Rozmiar czcionki',
+    lineHeight: 'Interlinia',
+    lineCompact: 'Zwarta',
+    lineNormal: 'Normalna',
+    lineLoose: 'Luźna',
   },
   window: {
     minimize: 'Minimalizuj',

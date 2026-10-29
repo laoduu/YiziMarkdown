@@ -16,6 +16,7 @@ export const zh = {
     notSet: '未设置',
   },
   toolbar: {
+    read: '阅读模式',
     brand: 'YiziMarkdown',
     newFile: '新建 (Ctrl+N)',
     newFromTemplate: '从模板新建',
@@ -442,6 +443,7 @@ export const zh = {
     authorHome: '作者主页',
   },
   shortcuts: {
+    readingMode: '阅读模式',
     // 分类
     file: '文件',
     edit: '编辑',
@@ -598,6 +600,22 @@ export const zh = {
     colStyleLine: '分隔线',
     colStyleCard: '卡片',
     helpColumns: '分栏：一页内用单独成行的 <code>***</code> 分栏（<code>---</code> 是分页）。',
+  },
+  reader: {
+    loading: '正在排版…',
+    empty: '没有可阅读的内容',
+    toc: '目录',
+    tocEmpty: '没有标题',
+    goto: '跳转页码',
+    gotoHint: '输入 1–{total}',
+    gotoConfirm: '跳转',
+    backRef: '返回引用',
+    typography: '排版',
+    fontSize: '字号',
+    lineHeight: '行距',
+    lineCompact: '紧凑',
+    lineNormal: '标准',
+    lineLoose: '宽松',
   },
   window: {
     minimize: '最小化',

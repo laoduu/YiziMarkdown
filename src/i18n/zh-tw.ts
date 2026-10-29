@@ -16,6 +16,7 @@ export const zhTW = {
     notSet: '未設定',
   },
   toolbar: {
+    read: '閱讀模式',
     brand: 'YiziMarkdown',
     newFile: '新建 (Ctrl+N)',
     newFromTemplate: '從模板新建',
@@ -440,6 +441,7 @@ export const zhTW = {
     authorHome: '作者主頁',
   },
   shortcuts: {
+    readingMode: '閱讀模式',
     // 分類
     file: '檔案',
     edit: '編輯',
@@ -596,6 +598,22 @@ export const zhTW = {
     colStyleLine: '分隔線',
     colStyleCard: '卡片',
     helpColumns: '分欄：一頁內用單獨成行的 <code>***</code> 分欄（<code>---</code> 是分頁）。',
+  },
+  reader: {
+    loading: '正在排版…',
+    empty: '沒有可閱讀的內容',
+    toc: '目錄',
+    tocEmpty: '沒有標題',
+    goto: '跳轉頁碼',
+    gotoHint: '輸入 1–{total}',
+    gotoConfirm: '跳轉',
+    backRef: '返回引用',
+    typography: '排版',
+    fontSize: '字級',
+    lineHeight: '行距',
+    lineCompact: '緊湊',
+    lineNormal: '標準',
+    lineLoose: '寬鬆',
   },
   window: {
     minimize: '最小化',

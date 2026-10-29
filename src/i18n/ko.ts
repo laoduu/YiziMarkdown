@@ -17,6 +17,7 @@ export const ko = {
     notSet: '설정 안 됨',
   },
   toolbar: {
+    read: '읽기 모드',
     brand: 'YiziMarkdown',
     newFile: '새로 만들기 (Ctrl+N)',
     newFromTemplate: '템플릿에서 새로 만들기',
@@ -429,6 +430,7 @@ export const ko = {
     authorHome: '개발자 홈페이지',
   },
   shortcuts: {
+    readingMode: '읽기 모드',
     file: '파일',
     edit: '편집',
     format: '서식',
@@ -579,6 +581,22 @@ export const ko = {
     colStyleLine: '구분선',
     colStyleCard: '카드',
     helpColumns: '단 나누기: 한 페이지 안에서 <code>***</code>(단독 줄)로 단을 나눕니다(<code>---</code>는 페이지 구분).',
+  },
+  reader: {
+    loading: '조판 중…',
+    empty: '읽을 내용이 없습니다',
+    toc: '목차',
+    tocEmpty: '제목 없음',
+    goto: '페이지 이동',
+    gotoHint: '1–{total} 입력',
+    gotoConfirm: '이동',
+    backRef: '인용으로 돌아가기',
+    typography: '타이포그래피',
+    fontSize: '글자 크기',
+    lineHeight: '줄 간격',
+    lineCompact: '좁게',
+    lineNormal: '보통',
+    lineLoose: '넓게',
   },
   window: {
     minimize: '최소화',

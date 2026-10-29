@@ -16,6 +16,7 @@ export const en = {
     notSet: 'Not set',
   },
   toolbar: {
+    read: 'Reading mode',
     brand: 'YiziMarkdown',
     newFile: 'New (Ctrl+N)',
     newFromTemplate: 'New from Template',
@@ -442,6 +443,7 @@ export const en = {
     authorHome: "Author's homepage",
   },
   shortcuts: {
+    readingMode: 'Reading mode',
     // 分类
     file: 'File',
     edit: 'Edit',
@@ -598,6 +600,22 @@ export const en = {
     colStyleLine: 'Divider',
     colStyleCard: 'Card',
     helpColumns: 'Columns: split one slide with <code>***</code> (its own line) — <code>---</code> is a page break.',
+  },
+  reader: {
+    loading: 'Typesetting…',
+    empty: 'Nothing to read',
+    toc: 'Contents',
+    tocEmpty: 'No headings',
+    goto: 'Go to page',
+    gotoHint: 'Enter 1–{total}',
+    gotoConfirm: 'Go',
+    backRef: 'Back to reference',
+    typography: 'Typography',
+    fontSize: 'Font size',
+    lineHeight: 'Line spacing',
+    lineCompact: 'Compact',
+    lineNormal: 'Normal',
+    lineLoose: 'Loose',
   },
   window: {
     minimize: 'Minimize',

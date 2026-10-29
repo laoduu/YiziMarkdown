@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react'
-import { Sun, Moon, Palette, Check, X, ListOrdered, Sparkles, Type, FileDown } from 'lucide-react'
+import { Sun, Moon, Palette, Check, X, ListOrdered, List, Sparkles, Type, FileDown } from 'lucide-react'
 import { extendMarkdownIt, postRender as pluginPostRender } from '../plugins/registry'
 import {
   parseDeck, buildDeckTocHtml, buildSlideHtml, deckChapters,
@@ -145,6 +145,8 @@ export default function Slideshow({
   const anim = useSettingsStore((s) => s.slideAnim)
   const setSlideSetting = useSettingsStore((s) => s.setField)
   const [animMenuOpen, setAnimMenuOpen] = useState(false)
+  const [tocOpen, setTocOpen] = useState(false)
+  const [slideJumpValue, setSlideJumpValue] = useState('')
 
   // 演示排版旋钮（字体 / 字重 / 字号 / 页边距）：与 slideAnim 一样持久化在 settingsStore，
   // 值 → CSS 变量的映射在 lib/slideTypography.ts（纯函数，见 tests/slideTypography.test.ts）。
@@ -443,6 +445,8 @@ export default function Slideshow({
     const el = e.target as HTMLElement | null
     const typing = !!el && (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA')
     if (typing && k !== 'Escape') return
+    if (k === 't' || k === 'T') { e.preventDefault(); setTocOpen((v) => !v); return }
+    if (k === 'g' || k === 'G') { e.preventDefault(); setTocOpen(true); return }
     if (['ArrowRight', ' ', 'PageDown', 'Enter'].includes(k)) {
       e.preventDefault(); next(); return
     }
@@ -477,6 +481,7 @@ export default function Slideshow({
     }
     if (k === '?') { e.preventDefault(); setShowHelp((x) => !x); return }
     if (k === 'Escape') {
+      if (tocOpen) { setTocOpen(false); return }
       if (typeMenuOpen) { setTypeMenuOpen(false); return }
       if (animMenuOpen) { setAnimMenuOpen(false); return }
       if (themeMenuOpen) { setThemeMenuOpen(false); return }
@@ -484,7 +489,7 @@ export default function Slideshow({
       if (notesPinned) { setNotesPinned(false); return }   // 先收起锁定的备注，再退出
       requestExit()
     }
-  }, [next, prev, slides.length, requestExit, showHelp, REVEAL_ALL, goTo, typeMenuOpen, animMenuOpen, themeMenuOpen, cur, notesPinned, interactionSuspended])
+  }, [next, prev, slides.length, requestExit, showHelp, REVEAL_ALL, goTo, typeMenuOpen, animMenuOpen, themeMenuOpen, cur, notesPinned, interactionSuspended, tocOpen])
 
   useEffect(() => {
     window.addEventListener('keydown', onKey)
@@ -814,6 +819,13 @@ export default function Slideshow({
         <div className="ys-hud-ctrl">
           <button
             className="ys-icon-btn"
+            title={t('reader.toc')}
+            onClick={(e) => { e.currentTarget.blur(); setTocOpen((v) => !v); setThemeMenuOpen(false); setAnimMenuOpen(false); setTypeMenuOpen(false) }}
+          >
+            <List size={14} />
+          </button>
+          <button
+            className="ys-icon-btn"
             title={fragmentsOn ? t('slideshow.fragmentsOff') : t('slideshow.fragmentsOn')}
             onClick={(e) => { e.currentTarget.blur(); setFragmentsOn((f) => !f) }}
           >
@@ -865,6 +877,64 @@ export default function Slideshow({
         </div>
         <span className="ys-hint">{t('slideshow.hintBar')}</span>
       </div>
+
+      {/* 目录 / 跳页抽屉（T 打开；点击条目跳转） */}
+      {tocOpen && (
+        <>
+          <div className="ys-dismiss" onClick={() => setTocOpen(false)} />
+          <aside className="ys-drawer">
+            <div className="ys-drawer-head">
+              <span>{t('reader.toc')}</span>
+              <button className="ys-icon-btn" onClick={() => setTocOpen(false)}><X size={14} /></button>
+            </div>
+            <div className="ys-drawer-list">
+              {slides.map((s, i) => (
+                <button
+                  key={i}
+                  className={`ys-drawer-item${i === h ? ' is-current' : ''}`}
+                  onClick={() => { setTocOpen(false); sessionStorage.setItem(REVEAL_ALL, '1'); goTo(i) }}
+                >
+                  <span className="ys-drawer-num">{i + 1}</span>
+                  <span className="ys-drawer-title">{s.title || `— ${i + 1} —`}</span>
+                </button>
+              ))}
+            </div>
+            <div className="ys-drawer-foot">
+              <input
+                type="number"
+                min={1}
+                max={slides.length}
+                placeholder={t('reader.gotoHint', { total: slides.length })}
+                value={slideJumpValue}
+                onChange={(e) => setSlideJumpValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    const n = Number.parseInt(slideJumpValue, 10)
+                    if (Number.isFinite(n)) {
+                      sessionStorage.setItem(REVEAL_ALL, '1')
+                      goTo(Math.max(0, Math.min(slides.length - 1, n - 1)))
+                      setTocOpen(false)
+                    }
+                  }
+                }}
+              />
+              <button
+                onClick={() => {
+                  const n = Number.parseInt(slideJumpValue, 10)
+                  if (Number.isFinite(n)) {
+                    sessionStorage.setItem(REVEAL_ALL, '1')
+                    goTo(Math.max(0, Math.min(slides.length - 1, n - 1)))
+                    setTocOpen(false)
+                  }
+                }}
+              >
+                {t('reader.gotoConfirm')}
+              </button>
+            </div>
+          </aside>
+        </>
+      )}
 
       {/* 切换动画菜单：默认的「卡片推换」放最前，其余按「柔和型 → 强烈型」排列 */}
       {animMenuOpen && (

@@ -7,6 +7,7 @@ import SettingsModal from './components/SettingsModal'
 import TabBar from './components/TabBar'
 import HomePage from './components/HomePage'
 import Slideshow from './components/Slideshow'
+import Reader from './components/Reader'
 import PptxExportDialog from './components/PptxExportDialog'
 import AIChatPanel from './components/AIChatPanel'
 import { PanelLeftClose, PanelLeft, Loader2 } from 'lucide-react'
@@ -125,6 +126,7 @@ function App() {
   const [storageWarning, setStorageWarning] = useState<string | null>(null)
   const [showShortcutsPanel, setShowShortcutsPanel] = useState(false)
   const [isSlideshow, setIsSlideshow] = useState(false)
+  const [isReader, setIsReader] = useState(false)
   /** PPTX 导出弹窗：工具栏与演示 HUD 共用。
    *  theme/dark 由**入口**决定 —— HUD 里可能临时切过主题，导出必须与眼前看到的一致。 */
   const [pptxDialog, setPptxDialog] = useState<{
@@ -298,6 +300,7 @@ function App() {
           break
         }
         case 'presentSlides': startSlideshow(); break
+        case 'readingMode': startReader(); break
         // 格式化 action：通过 insertMarkdown 注入
         case 'bold': editorRef.current?.insertMarkdown('**', 'wrap'); break
         case 'italic': editorRef.current?.insertMarkdown('*', 'wrap'); break
@@ -891,6 +894,13 @@ function App() {
     setIsSlideshow(true)
   }, [])
 
+  // 进入阅读模式（全屏、双页对开、真实分页）
+  const startReader = useCallback(() => {
+    const tab = useEditorStore.getState().currentTab()
+    if (!tab) return
+    setIsReader(true)
+  }, [])
+
   /** 从指定页启动演示（PPTX 弹窗的「先看演示效果」/ 告警页码跳转） */
   const presentFromSlide = useCallback((index: number) => {
     setSlideshowStart(Math.max(0, index))
@@ -1141,6 +1151,7 @@ function App() {
         onSearch={handleSearchToggle}
         onSettings={handleSettings}
         onPresent={startSlideshow}
+        onRead={startReader}
         onAIChat={() => updateSettings({ aiPanelOpen: !aiPanelOpen })}
         isDark={isDark}
         onUndo={() => editorRef.current?.undo()}
@@ -1397,6 +1408,18 @@ function App() {
             setSlideJump(undefined)
             setPptxDialog(null)
           }}
+        />
+      )}
+
+      {/* 阅读模式：全屏、双页对开、分页阅读 */}
+      {isReader && tab && (
+        <Reader
+          content={tab.content}
+          title={tab.name}
+          filePath={tab.filePath}
+          enabledPlugins={enabledPlugins}
+          pluginConfigs={pluginConfigs}
+          onExit={() => setIsReader(false)}
         />
       )}
 

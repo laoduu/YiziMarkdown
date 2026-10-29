@@ -17,6 +17,7 @@ export const es = {
     notSet: 'Sin definir',
   },
   toolbar: {
+    read: 'Modo lectura',
     brand: 'YiziMarkdown',
     newFile: 'Nuevo (Ctrl+N)',
     newFromTemplate: 'Nuevo desde plantilla',
@@ -429,6 +430,7 @@ export const es = {
     authorHome: 'Página del autor',
   },
   shortcuts: {
+    readingMode: 'Modo lectura',
     file: 'Archivo',
     edit: 'Edición',
     format: 'Formato',
@@ -579,6 +581,22 @@ export const es = {
     colStyleLine: 'Divisor',
     colStyleCard: 'Tarjeta',
     helpColumns: 'Columnas: divide una diapositiva con <code>***</code> (en su propia línea); <code>---</code> es un salto de página.',
+  },
+  reader: {
+    loading: 'Maquetando…',
+    empty: 'Nada que leer',
+    toc: 'Índice',
+    tocEmpty: 'Sin títulos',
+    goto: 'Ir a la página',
+    gotoHint: 'Introduce 1–{total}',
+    gotoConfirm: 'Ir',
+    backRef: 'Volver a la referencia',
+    typography: 'Tipografía',
+    fontSize: 'Tamaño de letra',
+    lineHeight: 'Interlineado',
+    lineCompact: 'Compacto',
+    lineNormal: 'Normal',
+    lineLoose: 'Amplio',
   },
   window: {
     minimize: 'Minimizar',

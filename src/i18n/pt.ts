@@ -17,6 +17,7 @@ export const pt = {
     notSet: 'Não definido',
   },
   toolbar: {
+    read: 'Modo leitura',
     brand: 'YiziMarkdown',
     newFile: 'Novo (Ctrl+N)',
     newFromTemplate: 'Novo a partir de modelo',
@@ -429,6 +430,7 @@ export const pt = {
     authorHome: 'Página do autor',
   },
   shortcuts: {
+    readingMode: 'Modo leitura',
     file: 'Arquivo',
     edit: 'Edição',
     format: 'Formato',
@@ -579,6 +581,22 @@ export const pt = {
     colStyleLine: 'Divisor',
     colStyleCard: 'Cartão',
     helpColumns: 'Colunas: divida um slide com <code>***</code> (em linha própria) — <code>---</code> é uma quebra de página.',
+  },
+  reader: {
+    loading: 'A compor…',
+    empty: 'Nada para ler',
+    toc: 'Índice',
+    tocEmpty: 'Sem títulos',
+    goto: 'Ir para a página',
+    gotoHint: 'Introduza 1–{total}',
+    gotoConfirm: 'Ir',
+    backRef: 'Voltar à referência',
+    typography: 'Tipografia',
+    fontSize: 'Tamanho da letra',
+    lineHeight: 'Entrelinha',
+    lineCompact: 'Compacto',
+    lineNormal: 'Normal',
+    lineLoose: 'Amplo',
   },
   window: {
     minimize: 'Minimizar',

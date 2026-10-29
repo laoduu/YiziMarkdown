@@ -38,6 +38,7 @@ import {
   Palette,
   Check,
   Presentation,
+  BookOpen,
   Bot,
   ChevronsLeft,
   ChevronsRight,
@@ -78,6 +79,7 @@ interface ToolbarProps {
   onSearch: () => void
   onSettings: () => void
   onPresent: () => void
+  onRead: () => void
   onAIChat: () => void
   isDark: boolean
   onUndo?: () => void
@@ -93,7 +95,7 @@ const AUTO_COLLAPSE_THRESHOLD = 1320
 
 export default function Toolbar({
   onNew, onNewFromTemplate, onOpen, onSave, onSaveAs, onSaveToCloud, onToggleSidebar, onToggleDark, onUndo, onRedo,
-  onInsertMarkdown, onInsertFootnote, onExport, onSearch, onSettings, onPresent, onAIChat,
+  onInsertMarkdown, onInsertFootnote, onExport, onSearch, onSettings, onPresent, onRead, onAIChat,
   isDark,
 }: ToolbarProps) {
   const { t } = useI18n()
@@ -733,6 +735,7 @@ export default function Toolbar({
           accent
         />
         <ToolbarButton icon={<Presentation size={16} />} tooltip={t('toolbar.present')} onClick={onPresent} accent />
+        <ToolbarButton icon={<BookOpen size={16} />} tooltip={t('toolbar.read')} onClick={onRead} accent />
         <ToolbarButton icon={<Bot size={16} />} tooltip={t('ai.chatTitle')} onClick={onAIChat} accent />
         <ToolbarButton icon={<Settings size={16} />} tooltip={t('toolbar.settings')} onClick={onSettings} accent />
         
