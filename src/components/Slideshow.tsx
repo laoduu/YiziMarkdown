@@ -246,6 +246,14 @@ export default function Slideshow({
     leavingTimerRef.current = setTimeout(() => setLeavingIdx(null), anim === 'dissolve' ? 1000 : 600)
   }, [h, dir, anim])
 
+  // 进入新页时回到顶部。长页在离开后仍保留自己的 scrollTop（再次进入会停在
+  // 上次的中段/底部），而且相邻页常驻窗口时 DOM 不会重建、scrollTop 不会自然清零。
+  // 默认从顶部开始；页内滚动仍由下面的 wheel 处理器接管（先滚内容，触底后再翻页）。
+  useLayoutEffect(() => {
+    const active = deckRef.current?.querySelector<HTMLElement>('.ys-slide.ys-active')
+    if (active) active.scrollTop = 0
+  }, [h])
+
   // slides 变短（文档被替换/清空）时把当前页夹回范围内：h 是索引，越界会让 cur 变 undefined
   useEffect(() => {
     if (h < slides.length) return

@@ -15,13 +15,13 @@
 import type { SlideKind } from './slides.ts'
 import type { PptxFrame } from './pptxFrame.ts'
 import type {
-  CodeLine, MathNode, PptxWarning, SceneNode, SceneParagraph, SceneRun, SceneRunStyle,
+  CodeLine, MathNode, PptxWarning, SceneNode, SceneOverflow, SceneParagraph, SceneRun, SceneRunStyle,
   SceneTableCell, SlideScene, TextNode,
 } from './pptxTypes.ts'
 import {
   borderRadiusPx, cleanText, colorAlpha, contentBoxPx, flattenColor, fontSizePx, hasStrike,
   hasUnderline, isBold, letterSpacingPt, lineHeightPx, num, parseBoxShadow, parseColor, pxToIn,
-  pxToPt, rectOf, resolveFontStack, round2, round3, styleOf, textAlignOf,
+  pxToPt, rectOf, resolveFontStack, round2, round3, styleOf, textAlignOf, PX_PER_IN,
 } from './pptxTheme.ts'
 
 export interface SceneOptions {
@@ -40,6 +40,53 @@ export interface SceneOptions {
 interface Box { x: number; y: number; w: number; h: number }
 
 const EPS = 2
+
+/**
+ * 用场景节点的真实包围盒计算四边溢出（px）。
+ *
+ * 为什么不继续量 `slide.scrollHeight`：
+ *   · 封面/章节/金句等居中版式的内容可以向上溢出到负坐标，scrollHeight 只统计
+ *     向下溢出，顶部会被低估（实际溢出 80px 可能只报 40px）；
+ *   · scrollHeight 不含子元素 margin，也不含横向溢出；
+ *   · 这里按所有最终要落进 PPT 的节点取并集，顶部、底部、左右都能精确报告。
+ *
+ * 节点坐标是 inch，返回值统一换算成 1280×720 基准的 CSS px。
+ */
+export function measureSceneOverflow(
+  nodes: SceneNode[],
+  slideWIn: number,
+  slideHIn: number,
+): SceneOverflow {
+  if (!nodes.length) return { top: 0, right: 0, bottom: 0, left: 0 }
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+
+  for (const n of nodes) {
+    // 装饰元素（金句大引号、章节大序号、agenda 数字）允许贴边或略微出血，
+    // 不应因为它们把整页判定成内容超页。
+    if (n.t === 'text' && n.decorative) continue
+    const x1 = n.t === 'line' ? Math.min(n.x1, n.x2) : n.x
+    const y1 = n.t === 'line' ? Math.min(n.y1, n.y2) : n.y
+    const x2 = n.t === 'line' ? Math.max(n.x1, n.x2) : n.x + n.w
+    const y2 = n.t === 'line' ? Math.max(n.y1, n.y2) : n.y + n.h
+    if (![x1, y1, x2, y2].every(Number.isFinite)) continue
+    minX = Math.min(minX, x1)
+    minY = Math.min(minY, y1)
+    maxX = Math.max(maxX, x2)
+    maxY = Math.max(maxY, y2)
+  }
+  if (!Number.isFinite(minX)) return { top: 0, right: 0, bottom: 0, left: 0 }
+
+  const px = (inch: number) => Math.round(Math.max(0, inch) * PX_PER_IN)
+  return {
+    top: px(-minY),
+    right: px(maxX - slideWIn),
+    bottom: px(maxY - slideHIn),
+    left: px(-minX),
+  }
+}
 
 /** 判断两个 run 样式是否完全一致（用于合并相邻文本片段，减少 XML 体积） */
 function sameStyle(a: SceneRunStyle, b: SceneRunStyle): boolean {
@@ -811,42 +858,42 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
     })
   })
 
-  // 3) 金句页对角大引号
-  const quoteHosts: Element[] = []
-  if (slide.firstElementChild) quoteHosts.push(slide.firstElementChild)
-  if (slide.lastElementChild && slide.lastElementChild !== slide.firstElementChild) quoteHosts.push(slide.lastElementChild)
-  quoteHosts.forEach((host, idx) => {
-    const which = idx === 0 ? '::before' : '::after'
-    const pcs = styleOf(host, win, which)
-    if (!hasVisiblePseudo(pcs)) return
-    const raw = (pcs.content || '').trim().replace(/^["']|["']$/g, '')
-    if (!raw || raw.length > 4) return
-    const fsz = fontSizePx(pcs)
-    if (fsz < 24) return
-    const w = Math.max(1, measure(raw, pcs) + fsz * 0.08)
-    const h = Math.max(fsz, lineHeightPx(pcs))
-    let box: Box
-    if (idx === 0) {
-      // 上引号：right:100%; bottom:calc(100% - .35em) ⇒ 右下角贴着文案左上角
+  // 3) 金句页对角大引号：逐个子块检查 ::before/::after。
+  //    不能默认“第一个子块＝上引号、最后一个子块＝下引号”：金句页允许在引用块之后
+  //    再跟正常文案，此时两个引号都挂在 leading blockquote 上，不能再把下引号
+  //    放到最后一页的普通段落上。
+  Array.from(slide.children).forEach((host) => {
+    (['::before', '::after'] as const).forEach((which) => {
+      const pcs = styleOf(host, win, which)
+      if (!hasVisiblePseudo(pcs)) return
+      const raw = (pcs.content || '').trim().replace(/^["']|["']$/g, '')
+      if (!raw || raw.length > 4) return
+      const fsz = fontSizePx(pcs)
+      if (fsz < 24) return
+      const w = Math.max(1, measure(raw, pcs) + fsz * 0.08)
+      const h = Math.max(fsz, lineHeightPx(pcs))
       const r = rectOf(host)
-      const right = pcs.right !== 'auto' ? num(pcs.right) : r.w
-      const bottom = pcs.bottom !== 'auto' ? num(pcs.bottom) : r.h - fsz * 0.35
-      box = { x: r.x + r.w - right - w, y: r.y + r.h - bottom - h, w, h }
-    } else {
-      const r = rectOf(host)
-      const left = pcs.left !== 'auto' ? num(pcs.left) : r.w
-      const top = pcs.top !== 'auto' ? num(pcs.top) : r.h
-      box = { x: r.x + left, y: r.y + top, w, h }
-    }
-    const font = resolveFontStack(pcs.fontFamily)
-    const style: SceneRunStyle = {
-      color: pseudoColor(pcs, slideBg),
-      sizePt: pxToPt(fsz),
-      latin: font.latin,
-      ea: font.ea,
-    }
-    pushText(box, [{ runs: [{ text: raw, style }] }], pcs, {
-      align: idx === 0 ? 'right' : 'left', decorative: true,
+      let box: Box
+      if (which === '::before') {
+        // 上引号：right:100%; bottom:calc(100% - .35em) ⇒ 右下角贴着文案左上角
+        const right = pcs.right !== 'auto' ? num(pcs.right) : r.w
+        const bottom = pcs.bottom !== 'auto' ? num(pcs.bottom) : r.h - fsz * 0.35
+        box = { x: r.x + r.w - right - w, y: r.y + r.h - bottom - h, w, h }
+      } else {
+        const left = pcs.left !== 'auto' ? num(pcs.left) : r.w
+        const top = pcs.top !== 'auto' ? num(pcs.top) : r.h
+        box = { x: r.x + left, y: r.y + top, w, h }
+      }
+      const font = resolveFontStack(pcs.fontFamily)
+      const style: SceneRunStyle = {
+        color: pseudoColor(pcs, slideBg),
+        sizePt: pxToPt(fsz),
+        latin: font.latin,
+        ea: font.ea,
+      }
+      pushText(box, [{ runs: [{ text: raw, style }] }], pcs, {
+        align: which === '::before' ? 'right' : 'left', decorative: true,
+      })
     })
   })
 
@@ -882,19 +929,20 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
     }
   }
 
-  // ---------- 快速体检 ----------
+  // ---------- 快速体检（按最终场景节点包围盒，四边精确测量） ----------
 
-  const padT = num(slideCS.paddingTop)
-  const padB = num(slideCS.paddingBottom)
-  const viewportH = Math.max(1, slide.clientHeight - padT - padB)
-  const contentH = Math.max(0, slide.scrollHeight - padT - padB)
-  const overflowPx = Math.max(0, contentH - viewportH)
+  const overflow = measureSceneOverflow(
+    nodes,
+    slideRect.w / PX_PER_IN,
+    slideRect.h / PX_PER_IN,
+  )
+  const overflowPx = Math.max(overflow.top, overflow.right, overflow.bottom, overflow.left)
   if (overflowPx > EPS) {
     warnings.push({
       kind: 'overflow',
       slide: opts.index,
       messageKey: 'pptxExport.warnOverflowPx',
-      messageArgs: { px: Math.round(overflowPx) },
+      messageArgs: { px: overflowPx },
     })
   }
 
@@ -906,6 +954,7 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
     notes: opts.notes,
     nodes,
     overflowPx,
+    overflow,
     warnings,
     fontScale: 1,
   }

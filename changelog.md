@@ -4,6 +4,33 @@
 
 > **未发布**（截至 2026-10-29）：新一轮开发已开始，`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已升到 `0.4.1`，尚未打包、未打 tag。本节随本轮改动累积。
 
+### 演示模式长页回顶 / 金句作用域 / PPTX 导出审计修复（2026-10-31）
+
+本轮把演示模式的长页滚动、金句页边界和 PPTX 导出放在一起修：它们都依赖「DOM 测量 → 场景图 → PPTX」这条链路，单改一个模块容易让演示与导出再次漂移。
+
+**长页进入时停在底部**。演示里所有页面常驻 `.ys-deck`，长页滚到中段后离开，DOM 不会重建，`scrollTop` 会保留；再次进入（尤其是相邻页常驻窗口时）直接停在上次位置。`Slideshow.tsx` 现在在 `h` 变化后的 layout 阶段把当前 `.ys-slide.ys-active` 的 `scrollTop` 置 0。滚轮逻辑未动：仍然是「先滚内容，触底后翻页」，向上同理。
+
+**金句页只放大 `>` 引用本身**。旧规则 `.ys-layout-quote > *` 把整页（包括引用块之后的普通文案）都放大到 1.7em，并把上引号挂首块、下引号挂末块，结果普通文案也被金句样式和大引号包住。现在：
+
+- 首块是 blockquote 的金句页，只有引用块保留 1.7em 与一对大引号；引用块之后的普通文案恢复 1em / 400 字重 / 正文行高，并保持左对齐。
+- 金句引用默认 `text-align: center`；引用块之外的普通文案不受影响。
+- 大引号改挂到 leading blockquote 本身，不再依赖「页面第一块 / 最后一块」。
+- 显式 `<!-- layout: quote -->` 且没有 blockquote 的页面保留原来的强制整页金句行为。
+- `pptxScene.ts` 同步改为逐个直接子块检查 `::before` / `::after`，不再硬编码首块上引号、末块下引号，演示与 PPTX 使用同一套引号定位。
+- 版式推导未改：仍然是本页第一个块为 `>` 引用才触发金句页。
+
+**PPTX 自动压缩串页**。旧版 `shrinkToFit` 只给当前页设置 `--ys-font-scale`，下一页没有复位，导致超页页之后的普通页也继承缩小系数，而且不会出现 shrink 警告；如果下一页本身还超页，又会从 0.94 往上试，出现非单调。现在每页首次 render 前用既有的 `setFontScale(1)` 复位，`shrinkToFit` 接收当前页基础字号下的初始场景，压缩循环内补 AbortSignal 检查。这里刻意没有新增 `resetFontScale()` 方法：WebView HMR 可能保留旧版 `PptxFrame` 实例，调用新实例方法会报 `is not a function`。
+
+**标题不参与缩放，正文页字号统一**。标题从 `em` 公式改成固定的 px/vw 规格，不再乘 `--ys-font-scale`：
+
+- 正文页 h2 统一到 `--ys-page-title-size`（1280×720 下 53.76px），content / content-list / table / roadmap / figure 不再各自用 2em / 1.9em。
+- 封面、章节、致谢保留各自的版式与推导逻辑，但字号同样不随字号旋钮/自动压缩变化。
+- 正文页标题统一从内容区左上角起排：首块是标题时横向使用内容填充宽度内边距，纵向使用 `--ys-page-title-top`（默认 72px / 0.75in）；代码/图表/图片/公式/目录原本垂直居中，有标题时改为顶部起排。封面/章节/致谢/金句不在其列。
+
+**PPTX 超页检测改为场景节点包围盒**。旧版用 `slide.scrollHeight`，只统计向下溢出，居中版式的顶部负溢出会被低估；横向溢出也不统计。现在 `measureSceneOverflow` 对最终要落进 PPT 的所有节点取并集，分别给出 top / right / bottom / left，顶部负坐标、底部、左右都能精确计量；金句大引号、章节大序号、agenda 数字等装饰元素不参与判定，避免装饰出血误报。`SlideScene` 新增 `overflow` 四边数据，`overflowPx` 取最大值继续供自动压缩与提示使用。
+
+**验证**。`npx tsc --noEmit`、`npm test`（398 项）、`npm run build` 通过；新增 `tests/pptxOverflow.test.ts` 覆盖四边溢出、空场景与装饰元素排除。另用 headless Edge 实测金句页：blockquote 44.84px、普通段落 26.38px、普通末段 `::after` 为 `none`，标题页所有正文版式 h2 同字号同坐标、`--ys-font-scale` 降到 0.6 时标题不变而正文缩小。
+
 ### 实时模式：点击落点整体偏移（2026-10-29）
 
 用户反馈：点任务列表 / 标题 / 列表 / 引用的行尾，光标却落在前几个字，常见要点两三次才准。

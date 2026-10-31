@@ -11,6 +11,23 @@
   /* 内容字体跟随「预览字体」设置（--font-preview）；主题的 --font-sans 作为回退 */
   font-family: var(--font-preview, var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif));
   overflow: hidden;
+
+  /* ===== 标题规格（不参与 --ys-font-scale 缩放）=====
+     标题使用 px/vw 表达，只随视口大小变化，不随 HUD「字号」和导出自动压缩变化：
+       · 正文页 h2 统一到 --ys-page-title-size；
+       · 封面/章节/致谢保留各自版式的大字号，但同样不乘 --ys-font-scale。
+     这里的 px 下限 / 上限对应原 em 公式在 .ys-slide 基础字号 clamp(18px, 2.1vw, 30px)
+     时的极值（2em = 36~60px、2.4em = 43.2~72px 等），默认 1280×720 下观感不变。 */
+  --ys-page-title-size: clamp(36px, 4.2vw, 60px);
+  --ys-title-h1-size: clamp(43.2px, 5.04vw, 72px);
+  --ys-title-h3-size: clamp(27px, 3.15vw, 45px);
+  --ys-title-h4-size: clamp(20.7px, 2.415vw, 34.5px);
+  --ys-title-cover-size: clamp(50.4px, 6vw, 135px);
+  --ys-title-section-size: clamp(36px, 4.5vw, 90px);
+  --ys-title-thanks-size: clamp(46.8px, 6vw, 120px);
+  --ys-section-number-size: clamp(54px, 10vw, 180px);
+  /* 正文页标题左上角位置：与内容区左右内边距、顶部额外 2vh 对齐 */
+  --ys-page-title-top: calc(50vh * (1 - var(--ys-fill-h, 0.84)) + 2vh);
 }
 
 /* 退出按钮：右上角，半透明 */
@@ -657,7 +674,7 @@
 
 /* ===== 基础排版：标题左对齐，仅字号区分层级，颜色继承主题（居中类版式另行覆盖） ===== */
 .ys-slide h1 {
-  font-size: 2.4em;
+  font-size: var(--ys-title-h1-size);
   font-weight: 700;
   letter-spacing: -0.02em;
   text-align: left;
@@ -665,8 +682,9 @@
   margin: 0 0 0.6em;
 }
 
+/* 正文页标题的唯一字号来源。各版式只负责位置/下划线，不再各自改字号。 */
 .ys-slide h2 {
-  font-size: 1.9em;
+  font-size: var(--ys-page-title-size);
   font-weight: 650;
   letter-spacing: -0.01em;
   text-align: left;
@@ -675,7 +693,7 @@
 }
 
 .ys-slide h3 {
-  font-size: 1.5em;
+  font-size: var(--ys-title-h3-size);
   font-weight: 600;
   text-align: left;
   color: var(--editor-h3, var(--editor-accent, #4f46e5));
@@ -683,7 +701,7 @@
 }
 
 .ys-slide h4 {
-  font-size: 1.15em;
+  font-size: var(--ys-title-h4-size);
   font-weight: 600;
   text-align: left;
   margin: 0.8em 0 0.4em;
@@ -1021,7 +1039,7 @@
 }
 
 .ys-layout-cover > :first-child {
-  font-size: clamp(2.8em, 6vw, 4.5em);
+  font-size: var(--ys-title-cover-size);
   font-weight: 800;
   letter-spacing: -0.035em;
   line-height: 1.12;
@@ -1066,7 +1084,7 @@
 .ys-layout-section::before {
   content: attr(data-num);
   display: block;
-  font-size: clamp(3em, 10vw, 6em);
+  font-size: var(--ys-section-number-size);
   font-weight: 800;
   line-height: 1;
   color: var(--editor-accent, #4f46e5);
@@ -1075,7 +1093,7 @@
 }
 
 .ys-layout-section > :first-child {
-  font-size: clamp(2em, 4.5vw, 3em);
+  font-size: var(--ys-title-section-size);
   font-weight: 700;
   text-align: center;
   margin: 0;
@@ -1098,7 +1116,7 @@
 }
 
 .ys-layout-thanks > :first-child {
-  font-size: clamp(2.6em, 6vw, 4em);
+  font-size: var(--ys-title-thanks-size);
   font-weight: 800;
   text-align: center;
   margin: 0 0 0.4em;
@@ -1169,7 +1187,6 @@
 }
 
 .ys-layout-content h2 {
-  font-size: 2em;
   position: relative;
   padding-bottom: 0.45em;
 }
@@ -1198,7 +1215,6 @@
 }
 
 .ys-layout-content-list h2 {
-  font-size: 1.9em;
   position: relative;
   padding-bottom: 0.45em;
 }
@@ -1228,7 +1244,6 @@
 }
 
 .ys-layout-table h2 {
-  font-size: 1.9em;
   position: relative;
   padding-bottom: 0.45em;
 }
@@ -1261,7 +1276,6 @@
 }
 
 .ys-layout-roadmap h2 {
-  font-size: 1.9em;
   position: relative;
   padding-bottom: 0.45em;
 }
@@ -1286,6 +1300,26 @@
   width: 1.15em;
   height: 1.15em;
   accent-color: var(--editor-accent, #4f46e5);
+}
+
+/* ===== 正文页页标题的统一位置 =====
+   正文页（内容/列表/表格/路线图/代码/图表/图片/公式/目录）只要首块是标题，就统一从
+   内容区的左上角起排：横向使用 .ys-slide 的「内容填充宽度」内边距，纵向统一为
+   --ys-page-title-top（默认 = 填充高度内边距 + 2vh，1280×720 下为 72px / 0.75in）。
+   代码/图表/图片/公式/目录原本把内容垂直居中，标题会随内容高度漂移；首块为标题时
+   改为顶部起排，标题位置固定，正文在其下方正常排列。
+   封面/章节/致谢/金句保持各自的居中版式，不在此列。 */
+.ys-slide:is(.ys-layout-content, .ys-layout-content-list, .ys-layout-table,
+  .ys-layout-roadmap, .ys-layout-code, .ys-layout-chart, .ys-layout-image,
+  .ys-layout-formula, .ys-layout-agenda):has(> :first-child:is(h1, h2, h3, h4, h5, h6)) {
+  justify-content: flex-start;
+  padding-top: var(--ys-page-title-top);
+}
+
+.ys-slide:is(.ys-layout-content, .ys-layout-content-list, .ys-layout-table,
+  .ys-layout-roadmap, .ys-layout-code, .ys-layout-chart, .ys-layout-image,
+  .ys-layout-formula, .ys-layout-agenda) > :first-child:is(h1, h2, h3, h4, h5, h6) {
+  margin-top: 0;
 }
 
 /* ---- 图文页：图左文右双栏 ----
@@ -1332,7 +1366,6 @@
 }
 
 .ys-layout-figure h2 {
-  font-size: 1.9em;
   position: relative;
   padding-bottom: 0.45em;
   margin-bottom: 0.6em;
@@ -1387,10 +1420,13 @@
   padding: 0;
   margin: 0;
   color: var(--editor-text, inherit);
+  /* 金句引用默认居中；引用块之外的普通文案仍按正文左对齐（见下方 leading blockquote 规则）。
+     特异性 (0,1,1) 高于 `.ys-layout-quote > *` 的 (0,1,0)，后者不能再把它拉回左对齐。 */
+  text-align: center;
 }
 
 .ys-layout-quote > * {
-  text-align: left;
+  text-align: center;
   font-size: 1.7em;
   line-height: 1.6;
   font-weight: 500;
@@ -1441,6 +1477,58 @@
 
 .ys-layout-quote > * p {
   margin: 0.4em 0;
+}
+
+/* 真实金句页（首块是 `>` 引用）：金句规格只作用于引用块本身。
+   引用块之后的普通文案恢复正文规格，不参与 1.7em 放大，也不被大引号包住。
+   显式 `<!-- layout: quote -->` 且没有 blockquote 的页面仍沿用上面的强制整页金句。 */
+.ys-layout-quote:has(> blockquote:first-child) > :not(blockquote):not(h1, h2, h3, h4, h5, h6):not(section.footnotes) {
+  font-size: 1em;
+  line-height: 1.7;
+  font-weight: 400;
+  font-style: normal;
+  /* 引用默认居中；引用块之外的普通文案恢复正文左对齐。 */
+  text-align: left;
+  color: var(--editor-text, inherit);
+}
+
+/* 取消旧的“首块上引号 / 末块下引号”：它们是在整页范围上的定位，会把普通文案也包进来。 */
+.ys-layout-quote:has(> blockquote:first-child) > :first-child::before,
+.ys-layout-quote:has(> blockquote:first-child) > :last-child::after {
+  content: none;
+}
+
+/* 把一对大引号挂到首个引用块上（不再依赖它是不是页面最后一块）。 */
+.ys-layout-quote:has(> blockquote:first-child) > blockquote:first-child {
+  position: relative;
+}
+
+.ys-layout-quote:has(> blockquote:first-child) > blockquote:first-child::before {
+  content: '“';
+  position: absolute;
+  right: 100%;
+  bottom: calc(100% - 0.35em);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 6em;
+  line-height: 1;
+  color: var(--editor-accent, #4f46e5);
+  opacity: 0.35;
+  user-select: none;
+  pointer-events: none;
+}
+
+.ys-layout-quote:has(> blockquote:first-child) > blockquote:first-child::after {
+  content: '”';
+  position: absolute;
+  left: 100%;
+  top: 100%;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 6em;
+  line-height: 1;
+  color: var(--editor-accent, #4f46e5);
+  opacity: 0.35;
+  user-select: none;
+  pointer-events: none;
 }
 
 /* ---- 代码页：代码聚焦 ---- */

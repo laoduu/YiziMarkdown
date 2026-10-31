@@ -212,6 +212,14 @@ export interface CardNode {
 
 export type SceneNode = TextNode | RectNode | EllipseNode | LineNode | ImageNode | TableNode | CodeNode | MathNode | CardNode
 
+/** 场景内容超出幻灯片四边的像素量（0 = 该边未溢出）。用于超页提示与自动压缩。 */
+export interface SceneOverflow {
+  top: number
+  right: number
+  bottom: number
+  left: number
+}
+
 export interface SlideScene {
   /** 1 起的页码（与演示页序一致） */
   index: number
@@ -222,8 +230,10 @@ export interface SlideScene {
   notes: string
   /** 按 z 序：装饰 / 卡片在前，内容在后 */
   nodes: SceneNode[]
-  /** 内容超出可视区的高度（px），0 = 不溢出 */
+  /** 内容超出可视区的最大像素量（top/right/bottom/left 取最大），0 = 不溢出 */
   overflowPx: number
+  /** 四边精确溢出量（px）；旧数据可缺省 */
+  overflow?: SceneOverflow
   warnings: PptxWarning[]
   /** 自动压缩模式下该页的字号系数（0.6~1） */
   fontScale: number

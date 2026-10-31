@@ -148,18 +148,28 @@ function attachOmml(scenes: SlideScene[], ommlMap: Map<string, string>): void {
   scenes.forEach((s) => visit(s.nodes))
 }
 
-/** 让浏览器按缩小后的字号重新排版，直到内容装进 1280×720 的可视区。 */
+/**
+ * 让浏览器按缩小后的字号重新排版，直到内容装进 1280×720 的可视区。
+ *
+ * `initial` 必须是**在当前页基础字号下**测出来的场景（调用方已先 setFontScale(1)），
+ * 不能是上一页压缩后的残留状态。每次只从更小的档位继续向下试，避免先放大再缩小的
+ * 非单调过程。
+ */
 async function shrinkToFit(
   frame: PptxFrame,
   render: () => Promise<void>,
   build: () => SlideScene,
+  initial: SlideScene,
+  signal?: AbortSignal,
 ): Promise<{ scene: SlideScene; factor: number }> {
   const factors = [0.94, 0.88, 0.82, 0.76, 0.70, 0.64, 0.6]
-  let last = build()
+  let last = initial
   if (last.overflowPx <= 2) return { scene: last, factor: 1 }
   for (const f of factors) {
+    throwIfAborted(signal)
     frame.setFontScale(f)
     await render()
+    throwIfAborted(signal)
     last = build()
     if (last.overflowPx <= 2) return { scene: last, factor: f }
   }
@@ -240,6 +250,10 @@ export async function exportPptx(opts: PptxExportOptions): Promise<PptxExportRes
         const res = await frame.setSlide(spec)
         res.warnings.forEach((w) => warnings.push({ ...w, slide: w.slide ?? i + 1 }))
       }
+      // 每页都从用户设置的基础字号开始测；自动压缩只作用于当前页，禁止串页。
+      // 用既有的 setFontScale(1) 复位（= baseFontScale × 1），不要新增一次性 API：
+      // WebView 的 HMR 可能保留旧版 PptxFrame 实例，调用新方法会报 “is not a function”。
+      frame.setFontScale(1)
       await render()
 
       const buildScene = () => buildSlideScene(frame, {
@@ -254,7 +268,7 @@ export async function exportPptx(opts: PptxExportOptions): Promise<PptxExportRes
 
       let scene = buildScene()
       if (opts.overflowMode === 'shrink' && scene.overflowPx > 2) {
-        const fitted = await shrinkToFit(frame, render, buildScene)
+        const fitted = await shrinkToFit(frame, render, buildScene, scene, opts.signal)
         scene = fitted.scene
         scene.fontScale = fitted.factor
         if (fitted.factor < 1) {
