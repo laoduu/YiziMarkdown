@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>帮助中心 - YiziMarkdown 使用文档（Markdown 编辑器 / AI 助手 / 演示模式）</title>
-    <meta name="description" content="YiziMarkdown 帮助中心：从下载安装、文档管理、五种视图模式、Markdown 与公式图表写作，到类 PPT 演示模式、AI 大模型助手、技能系统、主题外观、快捷键与常见问题，完整使用说明一站查阅。">
-    <meta name="keywords" content="YiziMarkdown,帮助中心,使用教程,Markdown编辑器,演示模式,AI助手,技能Skill,主题,快捷键,常见问题">
+    <meta name="description" content="YiziMarkdown 帮助中心：从下载安装、文档管理、五种编辑视图、Markdown 与公式图表写作，到阅读模式与 EPUB 阅读、类 PPT 演示模式、AI 大模型助手、技能系统、主题外观、快捷键与常见问题，完整使用说明一站查阅。">
+    <meta name="keywords" content="YiziMarkdown,帮助中心,使用教程,Markdown编辑器,阅读模式,EPUB,演示模式,AI助手,技能Skill,主题,快捷键,常见问题">
     <meta name="author" content="YiziPaper">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://md.yizigpt.com/help.html">
@@ -160,13 +160,14 @@
             </div>
 
             <div class="help-sub" id="files-export">
-                <h3>导出（v0.4.0 新增 PPTX）</h3>
-                <p>工具栏右侧导出按钮支持六种格式：</p>
+                <h3>导出</h3>
+                <p>工具栏右侧导出按钮支持六种内置格式；启用 EPUB 插件后额外提供 EPUB：</p>
                 <ul>
-                    <li><strong>Word 文档（DOCX）</strong>：Word 原生语义（标题 / 列表 / 表格 / 代码块 / 引用 / 任务列表），表格与表头样式对齐预览；图片支持本地路径、网络图片与 HTML <code>&lt;img&gt;</code> 标签，可用 <code>width</code> 属性控制宽度</li>
+                    <li><strong>Word 文档（DOCX）</strong>：Word 原生语义（标题 / 列表 / 表格 / 代码块 / 引用 / 任务列表），表格与表头样式对齐预览；图片支持本地路径、网络图片与 HTML <code>&lt;img&gt;</code> 标签，可用 <code>width</code> 属性控制宽度；<code>[toc]</code> 导出为可更新的 Word 原生目录域</li>
                     <li><strong>PDF</strong>：与预览还原度一致，长文档自动分页（Windows）</li>
                     <li><strong>HTML</strong>（<kbd>Ctrl</kbd>+<kbd>H</kbd>）：保留主题样式，可直接分享或发布；导出的 HTML 自带<strong>左侧悬浮大纲卡片</strong>，点击条目直达对应章节（PDF 不含侧栏）</li>
                     <li><strong>PPTX</strong>：把演示模式导出为<strong>原生可编辑</strong>的 PowerPoint（文字 / 表格 / 图片 / 形状 / 原生公式），继承主题、明暗与版式；基准固定 16:9，可含演讲者备注与页脚；超页时可警告并列出页码，或自动压缩字号</li>
+                    <li><strong>EPUB</strong>：启用「设置 → 插件 → EPUB 导出」后出现，导出 EPUB 3 电子书；控制面板可选章节拆分、封面、可见目录、阅读主题与文档信息</li>
                     <li><strong>Markdown</strong>（<kbd>Ctrl</kbd>+<kbd>M</kbd>）：纯 Markdown 文本副本</li>
                     <li><strong>纯文本</strong>：去除所有标记符号</li>
                 </ul>
@@ -399,7 +400,7 @@
                     <li><strong>行内公式</strong>：用 <code>$...$</code> 包裹，如 <code>$E=mc^2$</code></li>
                     <li><strong>块级公式</strong>：用 <code>$$...$$</code> 独占一行，居中渲染为独立公式块</li>
                     <li>工具栏 <strong>Σ</strong> 按钮可把选中文字包裹为行内公式</li>
-                    <li>在「设置 → 插件」中可开关 KaTeX 插件</li>
+                    <li>公式已内置为核心渲染器，无需到「设置 → 插件」开启；长文档按需加载 KaTeX，不影响启动速度</li>
                 </ul>
             </div>
 
@@ -410,7 +411,7 @@
     A[开始] --&gt; B{判断}
     B --&gt;|是| C[执行]
     B --&gt;|否| D[跳过]</code></pre>
-                <p>支持流程图（graph / flowchart）、时序图（sequenceDiagram）、甘特图（gantt）、类图（classDiagram）、饼图（pie）、状态图（stateDiagram）等。图表主题可在「设置 → 插件 → Mermaid 配置」切换（默认 / 深色 / 森林 / 中性）。</p>
+                <p>支持流程图（graph / flowchart）、时序图（sequenceDiagram）、甘特图（gantt）、类图（classDiagram）、饼图（pie）、状态图（stateDiagram）等。Mermaid 已内置为核心渲染器，配色跟随当前应用主题（亮色、暗色与自定义主题自动同步），不再提供官方 default / dark / forest / neutral 预设。</p>
             </div>
 
             <div class="help-sub" id="writing-html">
@@ -419,7 +420,32 @@
             </div>
         </section>
 
-        <!-- ========== 5. 演示模式 ========== -->
+        <!-- ========== 5. 阅读模式 ========== -->
+        <section class="help-section" id="reader" data-kw="阅读模式 书籍 翻页 目录 页码 脚注 EPUB 电子书 封面 分页 全屏 双页 阅读位置">
+            <h2><a class="anchor" href="#reader">#</a>阅读模式</h2>
+            <p class="help-lead">全屏、双页对开、真实分页阅读；Markdown 与 EPUB 共用同一套阅读体验。</p>
+
+            <div class="help-sub" id="reader-basic">
+                <h3>进入与阅读</h3>
+                <ul>
+                    <li>工具栏书本按钮或 <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>R</kbd> 进入，<kbd>Esc</kbd> 退出并恢复原视图</li>
+                    <li>宽窗口双页对开、窄窗口自动单页；段落可跨页、标题不孤行、表格续页重复表头、代码按行续排、整块图片等比缩放</li>
+                    <li>按 <kbd>T</kbd> 打开目录抽屉，按 <kbd>G</kbd> 输入页码跳转；脚注可跳转并返回引用；阅读位置按文件记忆</li>
+                    <li>右下角 HUD 可切换明暗、主题、字体、字号与行距，这些修改只作用于本次阅读</li>
+                </ul>
+            </div>
+
+            <div class="help-sub" id="reader-epub">
+                <h3>阅读 EPUB</h3>
+                <ul>
+                    <li><kbd>Ctrl</kbd>+<kbd>O</kbd> 或最近文件打开 <code>.epub</code> 后直接进入阅读模式，先最大化窗口，不经过源码 / 实时 / 预览</li>
+                    <li>解析 EPUB 3 nav / EPUB 2 NCX 目录，读取内嵌封面图、图片、公式、Mermaid SVG、脚注和跨章节链接</li>
+                    <li>统一使用应用阅读主题（忽略出版社 CSS）；DRM 加密与固定版式（漫画、画册）EPUB 暂不支持</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- ========== 6. 演示模式 ========== -->
         <section class="help-section" id="slideshow" data-kw="演示 幻灯片 PPT 全屏 分页 分栏 分栏区间 栏内对齐 分栏样式 栏 字体 字号 字重 排版 内容填充 填充 宽度 高度 页边距 版式 layout align 备注 提词 演讲者 滚轮 模板 切换动画 过渡 棋盘格子 百变立方 六角蜂巢 爆裂卡片 纵深穿梭 卡片推换 百叶窗格 高斯溶解 片段 逐步 分步">
             <h2><a class="anchor" href="#slideshow">#</a>演示模式（类 PPT）</h2>
             <p class="help-lead">笔记一键变全屏幻灯片。<strong>不需要任何额外格式</strong>——按平时写 Markdown 的习惯写，版式自动推断，配色继承当前主题。</p>
@@ -890,11 +916,11 @@
                         <tbody>
                             <tr><td>通用</td><td>界面语言（15 种）、自动保存间隔、文件关联、默认模板</td></tr>
                             <tr><td>外观</td><td>主题选择与管理、深色模式、自定义 CSS（保存即生成「自定义主题」）</td></tr>
-                            <tr><td>编辑器</td><td>源码 / 预览字体字号行高、实时模式动画、拼写检查</td></tr>
+                            <tr><td>编辑器</td><td>源码 / 预览字体字号行高、实时模式动画、拼写检查、鼠标光标样式（原生 / 加粗）</td></tr>
                             <tr><td>AI</td><td>供应商与模型、API 密钥、上下文轮数、引用上限</td></tr>
                             <tr><td>云端存储</td><td>WebDAV 服务器地址、凭据（存系统凭据库）、起始目录、测试连接</td></tr>
                             <tr><td>快捷键</td><td>可视化配置、按键录制、冲突检测、恢复默认</td></tr>
-                            <tr><td>插件</td><td>KaTeX 公式开关、Mermaid 图表主题与其他渲染插件</td></tr>
+                            <tr><td>插件</td><td>EPUB 导出开关；KaTeX 公式与 Mermaid 已内置为核心渲染器，无需在插件页开启</td></tr>
                             <tr><td>模板</td><td>新建 / 编辑 / 删除文档模板，指定默认模板</td></tr>
                             <tr><td>版本与更新</td><td>版本号、更新卡片（手动检查 / 查看更新说明 / 跳过此版本 / 启动时自动检查）、开源许可、相关链接</td></tr>
                             <tr><td>其他产品</td><td>作者其他工具与作者主页的入口，附图标与官网地址，点击用系统浏览器打开</td></tr>
@@ -1122,7 +1148,7 @@
 <div id="site-footer"></div>
 
 <script src="assets/js/site-chrome.js?v=3"></script>
-<script src="assets/js/icons.js"></script>
+<script src="assets/js/icons.js?v=2"></script>
 <script src="assets/js/help.js?v=2"></script>
 
 </body>

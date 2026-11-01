@@ -2318,6 +2318,8 @@ mod tests {
                 font_size_px: Some(16.0),
                 line_height: Some(1.8),
                 code_highlights: docx_export::CodeHighlights::default(),
+                toc_title: "目录".into(),
+                toc_hint: "右键目录 → 更新域，或按 F9".into(),
             },
         )
         .await

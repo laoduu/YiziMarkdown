@@ -42,32 +42,27 @@ function injectFenceSourceLine(md: MarkdownIt): void {
   }
 }
 
-// ---- 自定义渲染规则：标题加唯一 ID ----
-function injectHeadingIds(md: MarkdownIt): void {
-  const defaultHeadingOpen = md.renderer.rules.heading_open || function(tokens, idx, options, _env, self) {
-    return self.renderToken(tokens, idx, options)
-  }
-
-  md.renderer.rules.heading_open = function(tokens, idx, options, env, self) {
-    const token = tokens[idx]
-    const inlineToken = tokens[idx + 1]
-
-    let text = ''
-    if (inlineToken && inlineToken.children) {
-      text = inlineToken.children
-        .filter(t => t.type === 'text' || t.type === 'code_inline')
-        .map(t => t.content)
-        .join('')
+// ---- 标题 ID：在 core 阶段统一注入，目录 / 渲染器 / 大纲都读同一份 token attrs ----
+function assignHeadingIds(md: MarkdownIt): void {
+  md.core.ruler.after('inline', 'assign_heading_ids', (state) => {
+    const counter: Record<string, number> = {}
+    for (let i = 0; i < state.tokens.length; i++) {
+      const token = state.tokens[i]
+      if (token.type !== 'heading_open') continue
+      const inline = state.tokens[i + 1]
+      if (!inline || inline.type !== 'inline') continue
+      const text = inline.children
+        ? inline.children
+          .filter((t) => t.type === 'text' || t.type === 'code_inline')
+          .map((t) => t.content)
+          .join('')
+        : String(inline.content ?? '')
+      token.attrSet('id', generateHeadingId(text, counter))
     }
-
-    const id = generateHeadingId(text, headingCountRef)
-    token.attrSet('id', id)
-    return defaultHeadingOpen(tokens, idx, options, env, self)
-  }
+  })
 }
 
-// ---- 标题计数器引用，供外部重置 ----
-let headingCountRef: Record<string, number> = {}
+// ---- 标题计数器已移入 core 规则内部，按每次解析独立维护 ----
 
 /**
  * 创建 markdown-it 实例
@@ -120,7 +115,7 @@ export function createMarkdownIt(
   md.use(footnote)
   injectSourceLineMap(md)
   injectFenceSourceLine(md)
-  injectHeadingIds(md)
+  assignHeadingIds(md)
   // [toc] / [[toc]]：必须在 inline 规则之后、渲染之前替换成目录 HTML
   tocPlugin(md)
 
@@ -165,8 +160,6 @@ export function renderMarkdown(
   content: string,
   pluginExtenders?: Array<(md: MarkdownIt) => void>
 ): string {
-  // 重置标题计数
-  Object.keys(headingCountRef).forEach(k => delete headingCountRef[k])
   // 元信息块不参与预览渲染。解析统一在 lib/frontMatter.ts
   // （此前这里有一份与 slides.ts 规则不一致的内联正则）。
   return getMarkdownIt(pluginExtenders).render(splitFrontMatter(content).body)

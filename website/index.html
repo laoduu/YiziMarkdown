@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YiziMarkdown - 免费开源 Markdown 编辑器（Windows / macOS） | 免安装、多主题、实时预览</title>
-    <meta name="description" content="YiziMarkdown 是一款免费开源、跨平台的 Markdown 编辑器（Windows 便携 / macOS 原生），基于 Tauri + React + CodeMirror 6 构建。内置 AI 大模型助手（17 家供应商 + 自定义接入 + 技能 Skill 系统）、类 PPT 演示模式（纯 Markdown 自动版式）、实时预览、15 套精美主题、KaTeX 公式、Mermaid 图表。免安装，解压即用。">
-    <meta name="keywords" content="Markdown编辑器,AI写作,AI编辑器,大模型,演示模式,幻灯片,PPT,Skill,技能,Windows编辑器,macOS编辑器,跨平台编辑器,便携编辑器,免安装编辑器,Markdown,实时预览,Tauri,开源编辑器,免费编辑器,KaTeX,Mermaid,主题编辑器">
+    <meta name="description" content="YiziMarkdown 是一款免费开源、跨平台的 Markdown 编辑器（Windows 便携 / macOS 原生），基于 Tauri + React + CodeMirror 6 构建。内置 AI 大模型助手（19 家供应商 + 自定义接入 + 技能 Skill 系统）、类 PPT 演示模式（纯 Markdown 自动版式）、实时预览、15 套精美主题、KaTeX 公式、Mermaid 图表、EPUB 导出与阅读。免安装，解压即用。">
+    <meta name="keywords" content="Markdown编辑器,AI写作,AI编辑器,大模型,演示模式,幻灯片,PPT,Skill,技能,Windows编辑器,macOS编辑器,跨平台编辑器,便携编辑器,免安装编辑器,Markdown,实时预览,Tauri,开源编辑器,免费编辑器,KaTeX,Mermaid,EPUB,电子书,主题编辑器">
     <meta name="author" content="YiziPaper">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://md.yizigpt.com/">
@@ -13,7 +13,7 @@
     <!-- Open Graph -->
     <meta property="og:type" content="website">
     <meta property="og:title" content="YiziMarkdown - AI 加持的 Markdown 编辑器（Windows / macOS）">
-    <meta property="og:description" content="内置 AI 大模型助手与技能系统，笔记一键变演示。15 套主题、实时预览、便携免安装，开源免费。">
+    <meta property="og:description" content="内置 AI 大模型助手、技能系统与 EPUB 导出/阅读，笔记一键变演示。15 套主题、实时预览、便携免安装，开源免费。">
     <meta property="og:url" content="https://md.yizigpt.com/">
     <meta property="og:site_name" content="YiziMarkdown">
     <meta property="og:locale" content="zh_CN">
@@ -22,7 +22,7 @@
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="YiziMarkdown - AI 加持的 Markdown 编辑器（Windows / macOS）">
-    <meta name="twitter:description" content="内置 AI 大模型助手与技能系统，笔记一键变演示。15 套主题、实时预览、便携免安装，开源免费。">
+    <meta name="twitter:description" content="内置 AI 大模型助手、技能系统与 EPUB 导出/阅读，笔记一键变演示。15 套主题、实时预览、便携免安装，开源免费。">
 
     <link rel="icon" type="image/png" href="assets/icon.png">
     <link rel="shortcut icon" href="assets/favicon.ico">
@@ -34,7 +34,7 @@
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
         "name": "YiziMarkdown",
-        "description": "一款免费开源、跨平台的 Markdown 编辑器（Windows 便携 / macOS 原生），内置 AI 大模型助手与技能系统、类 PPT 演示模式，支持实时预览、15 套精美主题、KaTeX 公式、Mermaid 图表。免安装，解压即用。",
+        "description": "一款免费开源、跨平台的 Markdown 编辑器（Windows 便携 / macOS 原生），内置 AI 大模型助手与技能系统、类 PPT 演示模式、EPUB 导出与阅读，支持实时预览、15 套精美主题、KaTeX 公式、Mermaid 图表。免安装，解压即用。",
         "url": "https://md.yizigpt.com/",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Windows, macOS",
@@ -46,7 +46,7 @@
         "license": "https://github.com/laoduu/YiziMarkdown/blob/main/LICENSE",
         "programmingLanguage": ["TypeScript", "Rust"],
         "screenshot": "https://md.yizigpt.com/assets/index.webp",
-        "version": "0.4.0",
+        "version": "0.4.1",
         "author": {
             "@type": "Organization",
             "name": "YiziPaper",
@@ -74,19 +74,19 @@
 <!-- Hero -->
 <section class="hero">
     <div class="hero-content">
-        <div class="hero-badge"><span class="dot"></span> V0.4.0 · 演示一键导出 PPTX · 安装向导选语言 · 启动提示新版</div>
+        <div class="hero-badge"><span class="dot"></span> V0.4.1 · EPUB 导出与阅读 · Word 原生目录 · 原生光标</div>
         <h1>既<span style="color: var(--orange);">好看</span>，又<span class="highlight">彪悍</span></h1>
-        <p class="hero-sub">一款 AI 加持的跨平台 Markdown 编辑器<br><span class="nowrap">内置大模型助手与类 PPT 演示模式，写作、提炼、汇报一站搞定</span></p>
+        <p class="hero-sub">一款 AI 加持的跨平台 Markdown 编辑器<br><span class="nowrap">内置大模型助手、类 PPT 演示与 EPUB 阅读，写作、提炼、汇报一站搞定</span></p>
         <div class="hero-actions">
-            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.0/YiziMarkdown_0.4.0_x64-setup.exe" target="_blank" class="btn-primary">
+            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.1/YiziMarkdown_0.4.1_x64-setup.exe" target="_blank" class="btn-primary">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.55 10.5 4.5v6.8H3V5.55zm0 12.9 7.5-1.05v-6.3H3v7.35zM11.5 4.3 21 3v8.3h-9.5V4.3zm0 15.4 9.5-1.3V12.7h-9.5v7z"/></svg>
                 Windows 版下载
             </a>
-            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.0/YiziMarkdown_0.4.0_universal.dmg" target="_blank" class="btn-secondary">
+            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.1/YiziMarkdown_0.4.1_universal.dmg" target="_blank" class="btn-secondary">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 12.54c-.03-3.04 2.48-4.5 2.6-4.57-1.42-2.07-3.62-2.36-4.4-2.39-1.88-.19-3.66 1.1-4.62 1.1-.95 0-2.43-1.08-4-1.05-2.05.03-3.95 1.2-5 3.04-2.14 3.7-.55 9.17 1.53 12.18 1.02 1.46 2.23 3.1 3.83 3.04 1.53-.06 2.11-.99 3.96-.99 1.85 0 2.37.99 4 .96 1.65-.03 2.7-1.49 3.71-2.95 1.17-1.71 1.65-3.37 1.68-3.45-.04-.02-3.22-1.24-3.29-4.92zM14.4 4.2c.85-1.03 1.42-2.46 1.26-3.89-1.22.05-2.7.81-3.58 1.84-.79.91-1.47 2.36-1.29 3.76 1.36.1 2.76-.69 3.61-1.71z"/></svg>
                 macOS 版下载
             </a>
-            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.0/YiziMarkdown_0.4.0_x64-portable.zip" target="_blank" class="btn-secondary">
+            <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.1/YiziMarkdown_0.4.1_x64-portable.zip" target="_blank" class="btn-secondary">
                 <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 7l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                 便携版（解压即用）
             </a>
@@ -133,6 +133,11 @@
             <p>演示模式一键导出<strong>原生可编辑</strong>的 PowerPoint：主题、明暗、版式与分栏一并继承，文字、表格、图片、形状与公式都是独立对象，可带演讲者备注与页脚。</p>
         </div>
         <div class="feature-card">
+            <div class="feature-icon orange"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+            <h3>EPUB 导出与阅读</h3>
+            <p>一键导出 EPUB 3 电子书，支持多章拆分、封面、可见目录与阅读主题；也能直接打开 EPUB 进入阅读模式，保留封面、目录、图片、公式、Mermaid、脚注和跨章节链接。</p>
+        </div>
+        <div class="feature-card">
             <div class="feature-icon blue"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M12 8V4M8 4h8"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/><path d="M9 17h6"/></svg></div>
             <h3>AI 大模型助手</h3>
             <p>侧边聊天面板接入 19 家大模型，支持自定义服务、流式回复、思考过程展示，还能引用当前文档对话。</p>
@@ -175,12 +180,12 @@
         <div class="feature-card">
             <div class="feature-icon blue"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
             <h3>数学公式支持</h3>
-            <p>内置KaTeX插件，支持LaTeX行内公式与块级公式，满足学术写作需求。</p>
+            <p>内置 KaTeX 核心渲染，支持 LaTeX 行内与块级公式，长文档按需加载，满足学术写作需求。</p>
         </div>
         <div class="feature-card">
             <div class="feature-icon orange"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h16"/><path d="M6 18l4-4 4 4 6-6"/></svg></div>
-            <h3>Mermaid图表</h3>
-            <p>内置Mermaid插件，支持流程图、时序图、甘特图等可视化图表渲染。</p>
+            <h3>Mermaid 图表</h3>
+            <p>内置 Mermaid 核心渲染，支持流程图、时序图、甘特图等；图表配色跟随当前应用主题，亮色、暗色和自定义主题自动同步。</p>
         </div>
         <div class="feature-card">
             <div class="feature-icon blue"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg></div>
@@ -349,7 +354,8 @@
     </div>
     <div class="changelog-container">
         <div class="changelog-tabs" id="changelogTabs">
-            <button class="changelog-tab active" data-version="0.4.0">v0.4.0</button>
+            <button class="changelog-tab active" data-version="0.4.1">v0.4.1</button>
+            <button class="changelog-tab" data-version="0.4.0">v0.4.0</button>
             <button class="changelog-tab" data-version="0.3.6">v0.3.6</button>
             <button class="changelog-tab" data-version="0.3.5">v0.3.5</button>
             <button class="changelog-tab" data-version="0.3.4">v0.3.4</button>
@@ -370,12 +376,37 @@
             <button class="changelog-tab" data-version="0.1.3">v0.1.3</button>
         </div>
         <div class="changelog-content" id="changelogContent">
-            <div class="changelog-panel active" data-version="0.4.0">
+            <div class="changelog-panel active" data-version="0.4.1">
+                <div class="changelog-card">
+                    <div class="changelog-card-head">
+                        <div class="changelog-head-left">
+                            <span class="changelog-version">v0.4.1</span>
+                            <span class="changelog-badge">最新</span>
+                        </div>
+                        <span class="changelog-date">2026.11.02</span>
+                    </div>
+                    <div class="changelog-divider"></div>
+                    <ul class="changelog-list">
+                        <li><span class="changelog-tag new">新增</span><strong>EPUB 导出与阅读</strong>：导出 EPUB 3 电子书，支持自动 / H1 / H2 / 单章拆分、封面、可见目录和阅读主题；也能直接打开 <code>.epub</code> 进入阅读模式，保留内嵌封面、目录、图片、公式、Mermaid、脚注与跨章节链接</li>
+                        <li><span class="changelog-tag new">新增</span><strong>Word 原生目录域</strong>：DOCX 导出的 <code>[toc]</code> 改为真正的 Word TOC 域与 TOC1–TOC6 样式，右键更新域或按 F9 即可生成带页码、可点击的目录</li>
+                        <li><span class="changelog-tag new">新增</span><strong>插件系统 v2</strong>：插件 manifest、版本/API 检查、激活时机、权限与导出能力；首个内置导出插件为 EPUB</li>
+                        <li><span class="changelog-tag improve">优化</span><strong>Mermaid 跟随应用主题</strong>：从当前主题的 bg / text / accent / surface / border / font 取色，亮色、暗色和自定义主题自动同步，不再使用官方默认预设</li>
+                        <li><span class="changelog-tag improve">优化</span><strong>TOC 独立区块</strong>：预览与实时模式使用嵌套列表、细边框和统一链接样式，不再借用引用块粗竖线；标题 id 在 core 阶段统一生成</li>
+                        <li><span class="changelog-tag improve">优化</span><strong>原生光标成为默认</strong>：普通箭头、编辑器 I-beam、插入光标默认原生；只有选择「加粗（高可见度）」才启用主题自绘光标和 0.45ch 块状插入光标</li>
+                        <li><span class="changelog-tag improve">优化</span><strong>阅读窗口体验</strong>：EPUB 打开前先最大化窗口，最大化/还原/全屏切换即时同步并冻结中间重排；右上角 X 只退出阅读，不关闭应用</li>
+                        <li><span class="changelog-tag fix">修复</span><strong>DOCX 打开报错</strong>：修正 <code>rPr</code> / <code>pPr</code> 顺序、嵌套引用单元格结尾、重复脚注引用和表格/引用块间距，降低 Word 365 报「发现无法读取的内容」的概率</li>
+                        <li><span class="changelog-tag fix">修复</span><strong>EPUB 整页图片分页</strong>：图片块换页时不再提前移除节点，修复真实书籍显示「没有可阅读的内容」</li>
+                        <li><span class="changelog-tag fix">修复</span><strong>Mermaid 翻页变黑</strong>：翻页复制页面时保留 SVG 内部 id，避免 ID 作用域样式失效；阅读模式改用 SVG <code>&lt;text&gt;</code> 标签</li>
+                        <li><span class="changelog-tag fix">修复</span><strong>行号与正文对齐</strong>：行号 gutter 补上与正文相同的 2px 上内边距和行高</li>
+                        <li><span class="changelog-tag platform">其他</span><strong>能力边界</strong>：暂不支持 DRM / 固定版式 EPUB；Word 目录首次打开需更新域；PPTX 溢出审计与 Word 独立版式规范后续单独排期</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="changelog-panel" data-version="0.4.0">
                 <div class="changelog-card">
                     <div class="changelog-card-head">
                         <div class="changelog-head-left">
                             <span class="changelog-version">v0.4.0</span>
-                            <span class="changelog-badge">最新</span>
                         </div>
                         <span class="changelog-date">2026.10.28</span>
                     </div>
@@ -831,7 +862,7 @@
         <p>免费、开源、便携。下载解压，即刻开始你的 Markdown 写作之旅。</p>
         <a href="https://github.com/laoduu/YiziMarkdown/releases" target="_blank" class="btn-cta">
             <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 7l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            立即下载 v0.4.0
+            立即下载 v0.4.1
         </a>
     </div>
 </section>

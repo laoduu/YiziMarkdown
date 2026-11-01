@@ -359,7 +359,7 @@ pluginEpubDesc: 'Експортувати поточний документ як
     cursor: 'Курсор',
     cursorStyle: 'Стиль курсора миші',
     cursorStyleBold: 'Жирний (висока видимість)',
-    cursorStyleText: 'Тонкий (рідний стиль)',
+    cursorStyleText: 'Рідний (за замовчуванням)',
     mouseSpotlight: 'Хвиля при кліку',
     mouseSpotlightHint: 'Показувати хвилю, що розходиться, у місці кліку в редакторі',
     preview: 'Перегляд',
@@ -830,5 +830,8 @@ pluginEpubDesc: 'Експортувати поточний документ як
     stripTitleHint: 'When the cover uses the document title, remove the same leading H1 from the body.',
     warnRemoteImages: '{n} remote image(s) were not embedded (only data URL images are packaged).',
     warnNoHeadingSplit: 'No suitable heading was found; exported as a single chapter.'
+  },
+  docx: {
+    tocHint: 'Клацніть правою кнопкою на змісті → Оновити поле (F9)',
   }
 }

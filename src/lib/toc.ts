@@ -48,7 +48,7 @@ function headingDisplayText(inline: any): string {
 
 /**
  * 从 markdown-it token 流收集标题。
- * 只遍历真正的 heading token，代码块里的 `#` 不会混进来。
+ * core 阶段已经给 heading_open 写入 id；裸 MarkdownIt 调用保留兜底。
  */
 export function collectTocItems(tokens: any[]): TocItem[] {
   const counter: Record<string, number> = {}
@@ -59,19 +59,42 @@ export function collectTocItems(tokens: any[]): TocItem[] {
     if (!inline) continue
     const level = Number(tokens[i].tag?.slice(1) || 1)
     const text = headingDisplayText(inline) || String(inline.content ?? '').trim()
-    const id = generateHeadingId(headingIdText(inline), counter)
+    const id = tokens[i].attrGet?.('id') || generateHeadingId(headingIdText(inline), counter)
     if (!id) continue
     items.push({ level, text, id })
   }
   return items
 }
 
+interface TocNode extends TocItem {
+  children: TocNode[]
+}
+
+function buildTocTree(items: TocItem[]): TocNode[] {
+  const root: TocNode[] = []
+  const stack: TocNode[] = []
+  for (const item of items) {
+    const node: TocNode = { ...item, children: [] }
+    while (stack.length && stack[stack.length - 1].level >= item.level) stack.pop()
+    if (stack.length) stack[stack.length - 1].children.push(node)
+    else root.push(node)
+    stack.push(node)
+  }
+  return root
+}
+
+function renderTocList(nodes: TocNode[]): string {
+  if (!nodes.length) return ''
+  const lis = nodes.map((node) => {
+    const link = `<a class="markdown-toc__link" href="#${escapeHtml(node.id)}">${escapeHtml(node.text)}</a>`
+    return `<li class="markdown-toc__entry">${link}${renderTocList(node.children)}</li>`
+  }).join('')
+  return `<ul>${lis}</ul>`
+}
+
 export function renderTocHtml(items: TocItem[]): string {
   if (items.length === 0) return ''
-  const lis = items
-    .map((it) => `<li class="markdown-toc-level-${it.level}"><a href="#${escapeHtml(it.id)}">${escapeHtml(it.text)}</a></li>`)
-    .join('')
-  return `<nav class="markdown-toc"><ul>${lis}</ul></nav>`
+  return `<nav class="markdown-toc">${renderTocList(buildTocTree(items))}</nav>`
 }
 
 export interface DeckTocEntry {
@@ -142,11 +165,11 @@ export function replaceTocPlaceholders(markdown: string, replacement: string): s
     .join('\n')
 }
 
-/** markdown-it 插件：在 inline 解析之后把目录段落替换成 HTML 区块 */
+/** markdown-it 插件：在标题 id 分配之后把目录段落替换成 HTML 区块 */
 export function tocPlugin(md: any): void {
-  md.core.ruler.after('inline', 'toc_placeholder', (state: any) => {
+  md.core.ruler.after('assign_heading_ids', 'toc_placeholder', (state: any) => {
     const items = collectTocItems(state.tokens)
-    if (items.length === 0) return
+    // 空目录也要吞掉占位符，不能把 [toc] 原文漏到正文里
     const html = renderTocHtml(items)
     for (let i = 0; i < state.tokens.length; i++) {
       const open = state.tokens[i]
@@ -158,6 +181,7 @@ export function tocPlugin(md: any): void {
       token.content = html
       token.block = true
       state.tokens.splice(i, 3, token)
+      i -= 1
     }
   })
 }

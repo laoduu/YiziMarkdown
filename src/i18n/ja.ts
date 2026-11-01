@@ -359,7 +359,7 @@ pluginEpubDesc: '現在のドキュメントを EPUB 3 電子書籍として書�
     cursor: 'カーソル',
     cursorStyle: 'マウスカーソルスタイル',
     cursorStyleBold: '太字（高視認性）',
-    cursorStyleText: '細字（ネイティブスタイル）',
+    cursorStyleText: 'ネイティブ（デフォルト）',
     mouseSpotlight: 'クリック波紋',
     mouseSpotlightHint: 'エディター内をクリックした位置に広がる波紋を表示',
     preview: 'プレビュー',
@@ -830,5 +830,8 @@ pluginEpubDesc: '現在のドキュメントを EPUB 3 電子書籍として書�
     stripTitleHint: 'When the cover uses the document title, remove the same leading H1 from the body.',
     warnRemoteImages: '{n} remote image(s) were not embedded (only data URL images are packaged).',
     warnNoHeadingSplit: 'No suitable heading was found; exported as a single chapter.'
+  },
+  docx: {
+    tocHint: '目次を右クリック → フィールド更新（F9）',
   }
 }

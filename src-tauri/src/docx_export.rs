@@ -10,6 +10,9 @@ use std::path::Path;
 
 type EventIter<'a> = std::iter::Peekable<Parser<'a>>;
 
+/// 前端把 `[toc]` 替换成这一行，Rust 侧精确匹配后输出 Word TOC 域
+const TOC_FIELD_MARK: &str = "@@YIZI_TOC_FIELD@@";
+
 /// 导出主题参数（由前端从当前主题/设置传入，JSON 字段为 camelCase）
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -37,7 +40,16 @@ pub struct DocxTheme {
     /// 代码块语法高亮（前端从预览 DOM 读出；缺省则单色输出）
     #[serde(default)]
     pub code_highlights: CodeHighlights,
+    /// Word 目录标题（前端按界面语言传入，缺省「目录」）
+    #[serde(default = "default_toc_title")]
+    pub toc_title: String,
+    /// Word 目录域占位提示（缺省中文）
+    #[serde(default = "default_toc_hint")]
+    pub toc_hint: String,
 }
+
+fn default_toc_title() -> String { "目录".to_string() }
+fn default_toc_hint() -> String { "右键目录 → 更新域，或按 F9 生成目录".to_string() }
 
 /// 代码块里某个「类路径」的样式（由前端按当前主题读 computed style 得到）。
 #[derive(Debug, Clone, Default, serde::Deserialize)]
@@ -903,6 +915,8 @@ pub struct DocxBuilder {
     next_footnote_id: u32,
     /// 文档中**确有定义**的脚注 label（预扫描）：未定义的引用按原文输出，避免生成空引用
     footnote_defined: std::collections::HashSet<String>,
+    /// 已经生成过 `footnoteReference` 的 label；第二次引用降级成上标文字
+    footnote_referenced: std::collections::HashSet<String>,
     /// 脚注内部产生的超链接/图片关系（须写在 footnotes.xml.rels 里）
     footnote_rels: String,
     /// 代码块语法高亮（前端用预览同一份 highlight.js 结果算出，见 `CodeHighlights`）
@@ -934,6 +948,7 @@ impl DocxBuilder {
             footnote_ids: std::collections::HashMap::new(),
             next_footnote_id: 0,
             footnote_defined: std::collections::HashSet::new(),
+            footnote_referenced: std::collections::HashSet::new(),
             footnote_rels: String::new(),
             code_highlights,
         }
@@ -950,24 +965,26 @@ impl DocxBuilder {
     /// 基础字号下的 run 上属性（`w:rPr` 内容），供文本 run 与字形 run 复用
     fn run_with(&self, text: &str, st: InlineState, mono: bool, color: Option<&str>, font: Option<&str>) -> String {
         let mut rpr = String::new();
-        if st.bold { rpr.push_str("<w:b/><w:bCs/>"); }
-        if st.italic { rpr.push_str("<w:i/><w:iCs/>"); }
-        if st.strike { rpr.push_str("<w:strike/>"); }
-        if st.underline { rpr.push_str("<w:u w:val=\"single\"/>"); }
-        if st.highlight { rpr.push_str("<w:highlight w:val=\"yellow\"/>"); }
-        // 上/下标互斥（同时出现时上标优先，与浏览器一致的表现）
-        if st.sup {
-            rpr.push_str("<w:vertAlign w:val=\"superscript\"/>");
-        } else if st.sub {
-            rpr.push_str("<w:vertAlign w:val=\"subscript\"/>");
-        }
-        if st.link {
-            rpr.push_str(&format!("<w:color w:val=\"{}\"/><w:u w:val=\"single\"/>", esc(&self.theme.accent)));
-        }
+        // OOXML `CT_RPr` 有严格子元素顺序；rFonts 必须最先，vertAlign 必须最后。
+        // 之前把 rFonts 写在 b/color 后面、vertAlign 写在最前，Word 可能直接判文档损坏。
         if mono {
             let f = esc(&self.theme.mono_font);
             rpr.push_str(&format!("<w:rFonts w:ascii=\"{}\" w:hAnsi=\"{}\" w:eastAsia=\"{}\" w:cs=\"{}\"/>", f, f, f, f));
-            // 预览 `.editor-content code { font-size: 0.9em }`；基准字号在脚注里是脚注字号
+        } else if let Some(f) = font {
+            // 显式字体（如任务列表勾选字形）只作用于 ascii/hAnsi/cs —— eastAsia 留给正文字体
+            let f = esc(f);
+            rpr.push_str(&format!("<w:rFonts w:ascii=\"{}\" w:hAnsi=\"{}\" w:cs=\"{}\"/>", f, f, f));
+        }
+        if st.bold { rpr.push_str("<w:b/><w:bCs/>"); }
+        if st.italic { rpr.push_str("<w:i/><w:iCs/>"); }
+        if st.strike { rpr.push_str("<w:strike/>"); }
+
+        let link_color = if st.link { Some(self.theme.accent.as_str()) } else { None };
+        if let Some(c) = color.or(link_color) {
+            rpr.push_str(&format!("<w:color w:val=\"{}\"/>", esc(c)));
+        }
+
+        if mono {
             let sz = Metrics::sz_scale_from(self.base_sz(), 0.9);
             rpr.push_str(&format!("<w:sz w:val=\"{0}\"/><w:szCs w:val=\"{0}\"/>", sz));
         } else if self.in_footnote {
@@ -976,15 +993,16 @@ impl DocxBuilder {
             let sz = self.base_sz();
             rpr.push_str(&format!("<w:sz w:val=\"{0}\"/><w:szCs w:val=\"{0}\"/>", sz));
         }
-        if let Some(f) = font {
-            // 显式字体（如任务列表勾选字形）只作用于 ascii/hAnsi/cs —— eastAsia 留给正文字体，
-            // 该字形本身是 BMP 符号、不含 CJK 上下文
-            let f = esc(f);
-            rpr.push_str(&format!("<w:rFonts w:ascii=\"{}\" w:hAnsi=\"{}\" w:cs=\"{}\"/>", f, f, f));
+
+        if st.highlight { rpr.push_str("<w:highlight w:val=\"yellow\"/>"); }
+        if st.underline || st.link { rpr.push_str("<w:u w:val=\"single\"/>"); }
+        // 上/下标互斥（同时出现时上标优先，与浏览器一致的表现）
+        if st.sup {
+            rpr.push_str("<w:vertAlign w:val=\"superscript\"/>");
+        } else if st.sub {
+            rpr.push_str("<w:vertAlign w:val=\"subscript\"/>");
         }
-        if let Some(c) = color {
-            rpr.push_str(&format!("<w:color w:val=\"{}\"/>", esc(c)));
-        }
+
         format!(
             "<w:r>{}{}</w:r>",
             if rpr.is_empty() { String::new() } else { format!("<w:rPr>{}</w:rPr>", rpr) },
@@ -1298,6 +1316,45 @@ impl DocxBuilder {
         self.body.push_str("</w:p>");
     }
 
+    /// 无障碍的结构间隔段落：高度 1em，用于表格/引用块之后。
+    /// Word 的表格没有段前/段后距；没有这个空段落，表格后内容会紧贴底边，
+    /// 相邻两个表格甚至会被 Word 合并。
+    fn gap_paragraph_xml(&self) -> String {
+        let h = self.metrics.em_twips(1.0);
+        format!(
+            "<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"{}\" w:lineRule=\"exact\"/><w:rPr><w:sz w:val=\"2\"/><w:szCs w:val=\"2\"/></w:rPr></w:pPr></w:p>",
+            h
+        )
+    }
+
+    fn gap_paragraph(&mut self) {
+        let xml = self.gap_paragraph_xml();
+        self.body.push_str(&xml);
+    }
+
+    /// `[toc]` 的 Word 原生目录域。层级、页码、跳转由 Word 在更新域时计算。
+    fn toc_field_paragraph(&mut self) {
+        let title = esc(&self.theme.toc_title);
+        let hint = esc(&self.theme.toc_hint);
+        let title_sz = Metrics::sz_scale_from(self.metrics.body_sz, 1.25);
+        self.body.push_str(&format!(
+            "<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:spacing w:before=\"0\" w:after=\"240\"/><w:jc w:val=\"center\"/></w:pPr>\
+             <w:r><w:rPr><w:b/><w:sz w:val=\"{title_sz}\"/><w:szCs w:val=\"{title_sz}\"/></w:rPr><w:t>{title}</w:t></w:r></w:p>"
+        ));
+        self.body.push_str(
+            "<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:spacing w:before=\"0\" w:after=\"120\"/></w:pPr>\
+             <w:r><w:fldChar w:fldCharType=\"begin\"/></w:r>\
+             <w:r><w:instrText xml:space=\"preserve\"> TOC \\o \"1-6\" \\h \\z \\u </w:instrText></w:r>\
+             <w:r><w:fldChar w:fldCharType=\"separate\"/></w:r>\
+             <w:r><w:t>",
+        );
+        self.body.push_str(&hint);
+        self.body.push_str(
+            "</w:t></w:r>\
+             <w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>",
+        );
+    }
+
     /// 引用块 → 单元格表格（`quote_table` 的内层实现）。
     ///
     /// 预览里的 `blockquote` 是**一个**容器：左边框与底色是连续的，内部多段落、嵌套引用、
@@ -1315,6 +1372,9 @@ impl DocxBuilder {
         // 空引用（`>` 单独一行）也要有合法单元格内容（`w:tc` 至少一个块级元素）
         let inner = if inner.trim().is_empty() {
             "<w:p><w:pPr><w:pStyle w:val=\"Quote\"/></w:pPr></w:p>".to_string()
+        } else if inner.trim_end().ends_with("</w:tbl>") {
+            // 单元格必须以段落结尾；如果引用内部最后一块是表格（例如嵌套引用），补一个间隔段落
+            format!("{}{}", inner, self.gap_paragraph_xml())
         } else {
             inner.to_string()
         };
@@ -1498,10 +1558,17 @@ impl DocxBuilder {
                         out.push_str(&self.run(&format!("[^{}]", label), st, mono, None));
                     } else {
                         let id = self.footnote_id(&label);
-                        out.push_str(&format!(
-                            "<w:r><w:rPr><w:rStyle w:val=\"FootnoteReference\"/></w:rPr><w:footnoteReference w:id=\"{}\"/></w:r>",
-                            id
-                        ));
+                        // Word 不允许两条 footnoteReference 共用同一个 w:id（文件会损坏）。
+                        // 第二次及以后降级为不可点击的上标文字，脚注区仍只有一条定义。
+                        if self.footnote_referenced.insert(label.to_string()) {
+                            out.push_str(&format!(
+                                "<w:r><w:rPr><w:rStyle w:val=\"FootnoteReference\"/></w:rPr><w:footnoteReference w:id=\"{}\"/></w:r>",
+                                id
+                            ));
+                        } else {
+                            let sup = InlineState { sup: true, ..InlineState::default() };
+                            out.push_str(&self.run(&format!("[{}]", id), sup, mono, None));
+                        }
                     }
                 }
                 // 数学公式：转为 Word 原生可编辑公式（OMML）。
@@ -1625,9 +1692,17 @@ impl DocxBuilder {
                 self.p_end();
             }
             Event::Start(Tag::Paragraph) => {
+                // `[toc]` 被前端替换成独占一行的标记：输出 Word 原生目录域，而不是静态列表。
+                if matches!(iter.peek(), Some(Event::Text(t)) if t.trim() == TOC_FIELD_MARK) {
+                    while let Some(ev2) = iter.next() {
+                        if matches!(ev2, Event::End(TagEnd::Paragraph)) {
+                            break;
+                        }
+                    }
+                    self.toc_field_paragraph();
                 // `$$…$$` 总是被解析器包在 Paragraph 里 → 块级公式按居中段落输出
                 // （若不在此拦截，DisplayMath 会落进行内渲染，公式左对齐且 `$$` 前后换行丢失）
-                if matches!(iter.peek(), Some(Event::DisplayMath(_))) {
+                } else if matches!(iter.peek(), Some(Event::DisplayMath(_))) {
                     if let Some(Event::DisplayMath(tex)) = iter.next() {
                         self.display_math_paragraph(&tex);
                     }
@@ -1659,12 +1734,8 @@ impl DocxBuilder {
                 self.quote_depth -= 1;
                 let inner = std::mem::replace(&mut self.body, saved);
                 self.body.push_str(&self.quote_block_xml(&inner));
-                // 表格不能是 body 的最后一个元素（Word 要求其后至少有一个段落）
-                if iter.peek().is_none() {
-                    self.body.push_str(
-                        "<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:spacing w:after=\"0\" w:line=\"240\" w:lineRule=\"auto\"/></w:pPr></w:p>",
-                    );
-                }
+                // 引用块是表格；后面补 1em 间距，避免与后续段落/表格紧贴或被合并。
+                self.gap_paragraph();
             }
             Event::Start(Tag::CodeBlock(kind)) => {
                 // 语言标记（围栏块的 info 串第一个词）：前端按「(语言, 代码)」查高亮片段表
@@ -1704,7 +1775,7 @@ impl DocxBuilder {
             // 几乎零高，只留 6pt 的上下间距（与预览 hr 的边距同量级）。
             Event::Rule => {
                 self.body.push_str(&format!(
-                    "<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:spacing w:before=\"120\" w:after=\"120\" w:line=\"20\" w:lineRule=\"exact\"/><w:rPr><w:sz w:val=\"2\"/><w:szCs w:val=\"2\"/></w:rPr><w:pBdr><w:bottom w:val=\"single\" w:sz=\"6\" w:space=\"1\" w:color=\"{}\"/></w:pBdr></w:pPr></w:p>",
+                    "<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:pBdr><w:bottom w:val=\"single\" w:sz=\"6\" w:space=\"1\" w:color=\"{}\"/></w:pBdr><w:spacing w:before=\"120\" w:after=\"120\" w:line=\"20\" w:lineRule=\"exact\"/><w:rPr><w:sz w:val=\"2\"/><w:szCs w:val=\"2\"/></w:rPr></w:pPr></w:p>",
                     esc(&self.theme.border)
                 ));
             }
@@ -1904,12 +1975,9 @@ impl DocxBuilder {
                     }
                 }
                 self.body.push_str("</w:tbl>");
-                // Word 要求表格后跟一个段落。这个段落是**结构性占位**：
-                // 用 exact 1pt 行高 + 2 号字 + 零间距，既满足 Word 的结构要求，
-                // 又不会在表格下方留下一个可见空行（以前继承 Normal 的整行高 + 1em 段后距）。
-                self.body.push_str(
-                    "<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"20\" w:lineRule=\"exact\"/><w:rPr><w:sz w:val=\"2\"/><w:szCs w:val=\"2\"/></w:rPr></w:pPr></w:p>",
-                );
+                // Word 要求表格后跟一个段落；这里用 1em 高的空段落同时解决
+                // “表格后无间距”和“两个表格直接相接被 Word 合并”的问题。
+                self.gap_paragraph();
             }
             Event::Text(t) => {
                 self.p_start(self.para_style(), None);
@@ -2014,7 +2082,14 @@ fn styles_xml(theme: &DocxTheme, m: &Metrics) -> String {
         let lv = i + 1;
         let hsz = m.sz_scale(*em);
         s.push_str(&format!(
-            "<w:style w:type=\"paragraph\" w:styleId=\"Heading{lv}\"><w:name w:val=\"heading {lv}\"/><w:basedOn w:val=\"Normal\"/><w:next w:val=\"Normal\"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before=\"{h_before}\" w:after=\"{h_after}\" w:line=\"{h_line}\" w:lineRule=\"auto\"/><w:outlineLvl w:val=\"{i}\"/></w:pPr><w:rPr><w:b/><w:rFonts w:ascii=\"{font}\" w:hAnsi=\"{font}\" w:eastAsia=\"{font}\" w:cs=\"{font}\"/><w:sz w:val=\"{hsz}\"/><w:szCs w:val=\"{hsz}\"/><w:color w:val=\"{accent}\"/></w:rPr></w:style>"
+            "<w:style w:type=\"paragraph\" w:styleId=\"Heading{lv}\"><w:name w:val=\"heading {lv}\"/><w:basedOn w:val=\"Normal\"/><w:next w:val=\"Normal\"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before=\"{h_before}\" w:after=\"{h_after}\" w:line=\"{h_line}\" w:lineRule=\"auto\"/><w:outlineLvl w:val=\"{i}\"/></w:pPr><w:rPr><w:rFonts w:ascii=\"{font}\" w:hAnsi=\"{font}\" w:eastAsia=\"{font}\" w:cs=\"{font}\"/><w:b/><w:sz w:val=\"{hsz}\"/><w:szCs w:val=\"{hsz}\"/><w:color w:val=\"{accent}\"/></w:rPr></w:style>"
+        ));
+    }
+    // Word TOC 域结果使用的 TOC1–TOC6：沿用正文字体、按层级缩进，带点线右对齐制表位
+    for lv in 1..=6u32 {
+        let indent = (lv - 1) * 240;
+        s.push_str(&format!(
+            "<w:style w:type=\"paragraph\" w:styleId=\"TOC{lv}\"><w:name w:val=\"toc {lv}\"/><w:basedOn w:val=\"Normal\"/><w:next w:val=\"Normal\"/><w:qFormat/><w:pPr><w:tabs><w:tab w:val=\"right\" w:leader=\"dot\" w:pos=\"9026\"/></w:tabs><w:spacing w:after=\"60\" w:line=\"{line}\" w:lineRule=\"auto\"/><w:ind w:left=\"{indent}\"/></w:pPr><w:rPr><w:rFonts w:ascii=\"{font}\" w:hAnsi=\"{font}\" w:eastAsia=\"{font}\" w:cs=\"{font}\"/><w:sz w:val=\"{sz}\"/><w:szCs w:val=\"{sz}\"/></w:rPr></w:style>"
         ));
     }
     // 列表段落（预览 `li { margin: 0.3em 0 }`）
@@ -2164,6 +2239,8 @@ pub fn markdown_to_docx(md: &str, theme: DocxTheme, base_dir: Option<std::path::
         font_size_px: theme.font_size_px,
         line_height: theme.line_height,
         code_highlights: theme.code_highlights,
+        toc_title: theme.toc_title,
+        toc_hint: theme.toc_hint,
     };
 
     let mut builder = DocxBuilder::new(theme, base_dir, remote_images);
@@ -2764,6 +2841,8 @@ mod tests {
             font_size_px: Some(16.0),
             line_height: Some(1.8),
             code_highlights: CodeHighlights::default(),
+            toc_title: "目录".into(),
+            toc_hint: "右键目录 → 更新域，或按 F9".into(),
         }
     }
 
@@ -3387,14 +3466,14 @@ mod tests {
     }
 
     #[test]
-    fn table_end_spacer_is_zero_height() {
-        // 回归：表格后必须有段落（Word 结构要求），但不能再是一个可见空行
+    fn table_end_spacer_is_one_em() {
+        // 表格后必须有段落（Word 结构要求），同时补出与预览 `table { margin: 1em 0 }` 一致的间距
         let doc = xml_of("| A | B |\n| --- | --- |\n| 1 | 2 |\n\n后续文字\n");
         assert!(doc.contains("</w:tbl>"), "表格缺失: {}", doc);
         let after = &doc[doc.find("</w:tbl>").unwrap() + "</w:tbl>".len()..];
         assert!(
-            after.starts_with("<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"20\" w:lineRule=\"exact\""),
-            "表格后的占位段落不是零高: {}", &after[..after.len().min(160)]
+            after.starts_with("<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"240\" w:lineRule=\"exact\""),
+            "表格后的间隔段落不是 1em: {}", &after[..after.len().min(160)]
         );
     }
 
@@ -3973,5 +4052,46 @@ mod tests {
             "仍有 webp 部件: {:?}", names
         );
     }
+    #[test]
+    fn toc_marker_becomes_word_toc_field() {
+        let doc = docx_part(TOC_FIELD_MARK, test_theme(), "word/document.xml");
+        assert!(doc.contains("w:fldCharType=\"begin\""), "缺少 TOC 域开始: {}", doc);
+        assert!(doc.contains("TOC \\o \"1-6\" \\h \\z \\u"), "缺少 TOC 域指令: {}", doc);
+        assert!(doc.contains("w:fldCharType=\"separate\""), "缺少 TOC 域分隔: {}", doc);
+        assert!(!doc.contains(TOC_FIELD_MARK), "TOC 标记泄漏到正文: {}", doc);
+    }
+
+    #[test]
+    fn toc_styles_exist_with_dot_leaders() {
+        let styles = docx_part("", test_theme(), "word/styles.xml");
+        for lv in 1..=6 {
+            assert!(styles.contains(&format!("w:styleId=\"TOC{lv}\"")), "缺少 TOC{lv} 样式");
+        }
+        assert!(styles.contains("w:leader=\"dot\""), "TOC 样式缺少点线制表位");
+    }
+
+    #[test]
+    fn duplicate_footnote_reference_is_degraded_to_superscript_text() {
+        let doc = xml_of("A[^1] B[^1]\n\n[^1]: note\n");
+        assert_eq!(doc.matches("<w:footnoteReference").count(), 1, "重复脚注引用: {}", doc);
+        assert!(doc.contains("<w:vertAlign w:val=\"superscript\"/>"), "第二处脚注引用未降级: {}", doc);
+    }
+
+    #[test]
+    fn nested_quote_cell_never_ends_with_table() {
+        let doc = xml_of("> > | A |\n> > | --- |\n> > | 1 |\n");
+        assert!(!doc.contains("</w:tbl></w:tc>"), "单元格以表格结尾: {}", doc);
+    }
+
+    #[test]
+    fn heading_style_rpr_keeps_rfonts_first() {
+        let styles = docx_part("", test_theme(), "word/styles.xml");
+        assert!(
+            styles.contains("<w:rPr><w:rFonts w:ascii=\"MiSans\" w:hAnsi=\"MiSans\" w:eastAsia=\"MiSans\" w:cs=\"MiSans\"/><w:b/>"),
+            "Heading 样式 rPr 顺序错误: {}", styles
+        );
+    }
+
+
 }
 

@@ -380,7 +380,7 @@ pluginEpubDesc: 'Exporteer het huidige document als EPUB 3 e-book',
     cursor: 'Cursor',
     cursorStyle: 'Stijl van de muiscursor',
     cursorStyleBold: 'Vet (hoge zichtbaarheid)',
-    cursorStyleText: 'Dun (native stijl)',
+    cursorStyleText: 'Native (standaard)',
     mouseSpotlight: 'Rimpel bij klik',
     mouseSpotlightHint: 'Toon een zich uitbreidende rimpel op de klikpositie in de editor',
     preview: 'Voorbeeld',
@@ -830,5 +830,8 @@ pluginEpubDesc: 'Exporteer het huidige document als EPUB 3 e-book',
     stripTitleHint: 'When the cover uses the document title, remove the same leading H1 from the body.',
     warnRemoteImages: '{n} remote image(s) were not embedded (only data URL images are packaged).',
     warnNoHeadingSplit: 'No suitable heading was found; exported as a single chapter.'
+  },
+  docx: {
+    tocHint: 'Rechtsklik op de inhoudsopgave → Veld bijwerken (F9)',
   }
 }

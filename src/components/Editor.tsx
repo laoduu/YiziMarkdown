@@ -592,17 +592,27 @@ function buildEditorTheme(fontFamily: string, fontSize: string, lineHeight: stri
       color: 'var(--editor-text)',
       fontFamily: contentFont,
     },
-    // 加粗模式：插入光标改为块状（主题色半透明，文字透出）
-    ...(cursorStyle === 'bold' ? {
-      '.cm-cursor': {
+    // 原生档：CodeMirror 默认细线光标（1.2px，跟随主题正文色，暗色主题也可见）；
+    // 加粗档：块状主题色光标，宽度从 0.6ch 收窄到 0.45ch。
+    '.cm-cursor': cursorStyle === 'bold'
+      ? {
         borderLeft: 'none',
-        width: '0.6ch',
+        width: '0.45ch',
         background: 'color-mix(in srgb, var(--editor-cursor) 45%, transparent)',
         marginLeft: '0',
+      }
+      : {
+        borderLeft: '1.2px solid var(--editor-text)',
+        marginLeft: '-0.6px',
       },
-    } : {}),
     '.cm-line': {
       padding: '2px 0',
+      lineHeight: 'var(--line-height, 1.8)',
+    },
+    // 行号 gutter 的高度由 CodeMirror 按行块同步，但文字默认从顶部起排；
+    // `.cm-line` 有 2px 上内边距，行号不补同样的 padding 就会整体高 2px。
+    '.cm-lineNumbers .cm-gutterElement': {
+      paddingTop: '2px',
       lineHeight: 'var(--line-height, 1.8)',
     },
     '&.cm-focused': {

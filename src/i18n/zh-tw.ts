@@ -299,7 +299,7 @@ exportEpub: '匯出為 EPUB 電子書',
     cursor: '游標',
     cursorStyle: '滑鼠游標樣式',
     cursorStyleBold: '加粗（高可見度）',
-    cursorStyleText: '纖細（原生樣式）',
+    cursorStyleText: '原生（預設）',
     mouseSpotlight: '點擊漣漪回饋',
     mouseSpotlightHint: '點擊編輯區時，在點擊處顯示擴散的漣漪',
     preview: '預覽',
@@ -847,5 +847,8 @@ pluginEpubDesc: '將目前文件匯出為 EPUB 3 電子書（實驗性）',
     stripTitleHint: 'When the cover uses the document title, remove the same leading H1 from the body.',
     warnRemoteImages: '{n} remote image(s) were not embedded (only data URL images are packaged).',
     warnNoHeadingSplit: 'No suitable heading was found; exported as a single chapter.'
+  },
+  docx: {
+    tocHint: '右鍵目錄 → 更新功能變數（或按 F9）',
   }
 }

@@ -359,7 +359,7 @@ pluginEpubDesc: 'Eksportuj bieżący dokument jako e-book EPUB 3',
     cursor: 'Kursor',
     cursorStyle: 'Styl kursora myszy',
     cursorStyleBold: 'Pogrubiony (wysoka widoczność)',
-    cursorStyleText: 'Cienki (styl natywny)',
+    cursorStyleText: 'Natywny (domyślny)',
     mouseSpotlight: 'Fala po kliknięciu',
     mouseSpotlightHint: 'Pokaż rozchodzącą się falę w miejscu kliknięcia w edytorze',
     preview: 'Podgląd',
@@ -830,5 +830,8 @@ pluginEpubDesc: 'Eksportuj bieżący dokument jako e-book EPUB 3',
     stripTitleHint: 'When the cover uses the document title, remove the same leading H1 from the body.',
     warnRemoteImages: '{n} remote image(s) were not embedded (only data URL images are packaged).',
     warnNoHeadingSplit: 'No suitable heading was found; exported as a single chapter.'
+  },
+  docx: {
+    tocHint: 'Kliknij prawym przyciskiem myszy spis treści → Aktualizuj pole (F9)',
   }
 }

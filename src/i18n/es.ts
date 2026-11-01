@@ -359,7 +359,7 @@ pluginEpubDesc: 'Exportar el documento actual como libro electrónico EPUB 3',
     cursor: 'Cursor',
     cursorStyle: 'Estilo del cursor del ratón',
     cursorStyleBold: 'Negrita (alta visibilidad)',
-    cursorStyleText: 'Fino (estilo nativo)',
+    cursorStyleText: 'Nativo (predeterminado)',
     mouseSpotlight: 'Onda al hacer clic',
     mouseSpotlightHint: 'Mostrar una onda que se expande en la posición del clic en el editor',
     preview: 'Vista previa',
@@ -830,5 +830,8 @@ pluginEpubDesc: 'Exportar el documento actual como libro electrónico EPUB 3',
     stripTitleHint: 'When the cover uses the document title, remove the same leading H1 from the body.',
     warnRemoteImages: '{n} remote image(s) were not embedded (only data URL images are packaged).',
     warnNoHeadingSplit: 'No suitable heading was found; exported as a single chapter.'
+  },
+  docx: {
+    tocHint: 'Haz clic derecho en el índice → Actualizar campo (F9)',
   }
 }

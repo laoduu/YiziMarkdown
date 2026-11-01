@@ -10,7 +10,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { replaceMermaidFences, prepareMarkdownForDocx, svgToDataUrl } from '../src/lib/docxPrepare.ts'
+import { replaceMermaidFences, prepareMarkdownForDocx, svgToDataUrl, TOC_FIELD_MARK } from '../src/lib/docxPrepare.ts'
 
 const MERMAID = '```mermaid\ngraph LR\nA-->B\n```\n'
 
@@ -55,7 +55,7 @@ test('SVG data URL 使用 UTF-8 base64（中文标签不损坏）', () => {
 test('完整预处理：目录与 Mermaid 同时生效', async () => {
   const src = '# 标题\n\n[toc]\n\n```mermaid\ngraph LR\nA-->B\n```\n'
   const out = await prepareMarkdownForDocx(src, async () => '<svg></svg>')
-  assert.ok(out.includes('- 标题'), out)
+  assert.ok(out.includes(TOC_FIELD_MARK), out)
   assert.ok(!out.includes('[toc]'), out)
   assert.ok(!out.includes('```mermaid'), out)
   assert.match(out, /!\[Mermaid diagram\]/, out)

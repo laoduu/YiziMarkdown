@@ -380,7 +380,7 @@ pluginEpubDesc: 'Exportera det aktuella dokumentet som en EPUB 3 e-bok',
     cursor: 'Markör',
     cursorStyle: 'Musmarkörstil',
     cursorStyleBold: 'Fet (hög synlighet)',
-    cursorStyleText: 'Tunn (inbyggd stil)',
+    cursorStyleText: 'Inbyggd (standard)',
     mouseSpotlight: 'Ring vid klick',
     mouseSpotlightHint: 'Visa en expanderande ring vid klickpositionen i redigeraren',
     preview: 'Förhandsvisning',
@@ -830,5 +830,8 @@ pluginEpubDesc: 'Exportera det aktuella dokumentet som en EPUB 3 e-bok',
     stripTitleHint: 'When the cover uses the document title, remove the same leading H1 from the body.',
     warnRemoteImages: '{n} remote image(s) were not embedded (only data URL images are packaged).',
     warnNoHeadingSplit: 'No suitable heading was found; exported as a single chapter.'
+  },
+  docx: {
+    tocHint: 'Högerklicka på innehållsförteckningen → Uppdatera fält (F9)',
   }
 }

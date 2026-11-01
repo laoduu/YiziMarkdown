@@ -13,6 +13,9 @@ import MarkdownIt from 'markdown-it'
 import { splitFrontMatter } from './frontMatter.ts'
 import { collectTocItems, tocToMarkdownList, replaceTocPlaceholders } from './toc.ts'
 
+/** 独占一行的标记，Rust 侧精确匹配后输出 Word TOC 域 */
+export const TOC_FIELD_MARK = '@@YIZI_TOC_FIELD@@'
+
 /** UTF-8 字符串 → base64（浏览器与 Node 都有 TextEncoder / btoa） */
 export function utf8ToBase64(text: string): string {
   const bytes = new TextEncoder().encode(text)
@@ -69,12 +72,14 @@ export async function replaceMermaidFences(
   return lines.join('\n')
 }
 
-/** 导出 DOCX 前的完整预处理：目录 → Mermaid 图片 */
+/** 导出 DOCX 前的完整预处理：目录域标记 → Mermaid 图片 */
 export async function prepareMarkdownForDocx(
   markdown: string,
   renderMermaid?: (code: string) => Promise<string | null>,
 ): Promise<string> {
-  let out = replaceTocPlaceholders(markdown, buildTocMarkdown(markdown))
+  // `[toc]` 不展开静态列表，改成一行标记，由 Rust 输出真正的 Word TOC 域；
+  // 页码/层级/跳转交给 Word，更新域即可。
+  let out = replaceTocPlaceholders(markdown, TOC_FIELD_MARK)
   if (renderMermaid) out = await replaceMermaidFences(out, renderMermaid)
   return out
 }

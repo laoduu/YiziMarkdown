@@ -2,7 +2,56 @@
 
 ## v0.4.1
 
-> **未发布**（截至 2026-10-29）：新一轮开发已开始，`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已升到 `0.4.1`，尚未打包、未打 tag。本节随本轮改动累积。
+> **已发布**（2026-11-02）：`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 均已同步到 `0.4.1`，tag 与 GitHub Release 随本轮发布。本节记录本轮改动。
+
+### DOCX 结构与 TOC 域 / 预览目录改造（2026-11-02）
+
+**来源**：Issue #6 后续建议中的 P0（Word 打开报错与结构问题）和 P1（TOC 预览 + Word 目录）。
+
+**DOCX 结构修复**：
+- 按 OOXML `CT_RPr` 顺序重排 run 属性：`rFonts` 必须在前，`b/i/strike/color/sz/highlight/u/vertAlign` 依次排布；Heading 样式同样修正。此前 `rFonts`/`vertAlign` 的位置不符合规范，Word 365 可能报「发现无法读取的内容」。
+- 修复水平分隔线的 `pPr` 顺序：`pBdr` 不再排在 `rPr` 之后。
+- 同一脚注被引用两次时，第二处及以后降级为不可点击的上标文字，避免复用同一个 `footnoteReference w:id` 导致 Word 判文档损坏；脚注区仍只有一条定义。
+- 表格/引用块之后统一补 1em 结构间隔段落：解决 Word 表格无段前/段后距、表格紧贴后续内容、相邻表格被合并的问题；引用块内部若以表格结尾，也会补段落满足 `w:tc` 必须以段落收尾。
+- 去掉预览标题 H1–H3 的 `padding/margin-left` hack，修复主题覆盖后标题比 H4–H6 右移 6px 的问题。
+
+**预览 TOC**：
+- 标题 id 改为 core 阶段 `assign_heading_ids` 统一写入 token，目录直接读 token attrs，不再在渲染器和目录插件里各算一遍。
+- 目录输出真正嵌套的 `<ul>`，按标题级别建树；CSS 层级交给 `ul ul`。
+- 去掉引用块式的左侧粗竖线，保留 Typora 式细边框独立区块；目录链接加专属 class 提高选择器权重，避免主题 hover 双下划线。
+- 空目录也会吞掉 `[toc]` 占位符，不再把原文漏到正文里。
+- 实时模式的 TOC widget 同步改为嵌套结构、同一套边框/缩进/链接样式；条目的点击滚动逻辑不变。
+
+**DOCX TOC 域**：
+- `prepareMarkdownForDocx` 把 `[toc]` 替换成独占一行标记 `@@YIZI_TOC_FIELD@@`；Rust 侧识别后输出 `TOC \o "1-6" \h \z \u` 域，并补 `TOC1–TOC6` 样式（点线右对齐制表位、按层级缩进）。
+- 目录标题与更新提示按界面语言传入（`tocTitle` / `tocHint`），默认「目录」；首次打开需右键目录 → 更新域（或按 F9）生成页码。
+- 域代码和样式写入后，Word 自己维护标题、页码和跳转；不再导出静态项目符号列表。
+
+**验证**：`npx tsc --noEmit`、`npm test`（410 通过）、`cargo test docx_export`（70 通过）、`npm run build`、i18n/docs 检查。
+
+### 鼠标光标默认原生 / 加粗可选（2026-11-01）
+
+**需求**：默认不要自绘光标，普通箭头、编辑器鼠标 I-beam、编辑位置闪动光标都使用原生样式；只有选择「加粗（高可见度）」时才启用主题色自绘箭头/I-beam 与块状插入光标。
+
+**实现**：
+- `cursorStyle` 默认从 `bold` 改为 `text`（语义为“原生”）；设置面板选项改为「原生（默认）」「加粗（高可见度）」。
+- settings 版本升到 v16：旧存档里作为旧默认的 `bold` 统一迁移为原生，避免升级后仍显示自绘光标；用户之后仍可手动切回加粗。
+- `body` 默认 `cursor: default`；只有 `body[data-cursor-style='bold']` 才使用 `--cursor-arrow`。App 监听 `cursorStyle` 并同步 body 属性。
+- 编辑器：原生档 `.cm-content` 用 `cursor: text`， `.cm-scroller` 用原生箭头；加粗档才使用自绘 `--cursor-bold` 与主题箭头。
+- 删除不再使用的 `--cursor-standard` 标准 I-beam；themeCursor 只生成加粗 I-beam 与自绘箭头。
+- CodeMirror 插入光标：原生档显式使用 1.2px 细线（颜色跟随 `--editor-text`，暗色主题也可见）；加粗档保留块状光标，宽度从 `0.6ch` 收窄到 `0.45ch`。
+- 设置面板预览同步：原生档预览使用系统 text 光标，加粗档才显示自绘 I-beam。
+- 15 种语言的「原生」选项文案已更新。
+
+**验证**：`npx tsc --noEmit`、`npm test`（410 通过）、`npm run build`、`check:i18n:strict`、`check:docs` 通过。
+
+### 行号与正文垂直对齐修复（2026-11-01）
+
+**问题**：正文 `.cm-line` 有上下各 2px 的呼吸内边距，行号 gutter 高度虽然由 CodeMirror 同步，但数字本身从顶部开始排，导致每行行号比正文基线高 2px。
+
+**修复**：给 `.cm-lineNumbers .cm-gutterElement` 补同样的 2px 上内边距，并显式使用正文相同的 `--line-height`；行号与正文首行基线现在一致，换行后的多行行块也保持对齐。
+
+**验证**：`npx tsc --noEmit`、`npm test`（410 通过）、`npm run build` 通过。
 
 ### EPUB 直接阅读 / 阅读模式接入（2026-11-01）
 

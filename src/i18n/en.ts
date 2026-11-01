@@ -299,7 +299,7 @@ exportEpub: 'Export EPUB',
     cursor: 'Cursor',
     cursorStyle: 'Mouse cursor style',
     cursorStyleBold: 'Bold (high visibility)',
-    cursorStyleText: 'Slim (native style)',
+    cursorStyleText: 'Native (default)',
     mouseSpotlight: 'Click ripple',
     mouseSpotlightHint: 'Show an expanding ripple at the click position in the editor',
     preview: 'Preview',
@@ -849,5 +849,8 @@ pluginEpubDesc: 'Export the current document as an EPUB 3 eBook',
     stripTitleHint: 'When the cover uses the document title, remove the same leading H1 from the body.',
     warnRemoteImages: '{n} remote image(s) were not embedded (only data URL images are packaged).',
     warnNoHeadingSplit: 'No suitable heading was found; exported as a single chapter.'
+  },
+  docx: {
+    tocHint: 'Right-click the table of contents → Update Field (F9)',
   }
 }

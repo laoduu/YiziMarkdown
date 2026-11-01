@@ -552,27 +552,49 @@ class TocWidget extends WidgetType {
       nav.textContent = tLive('tocEmpty')
       return nav
     }
-    const ul = document.createElement('ul')
-    for (const h of this.headings) {
-      const li = document.createElement('li')
-      li.className = `markdown-toc-level-${h.level}`
+
+    interface LiveTocNode { heading: TocHeading; children: LiveTocNode[] }
+    const root: LiveTocNode[] = []
+    const stack: LiveTocNode[] = []
+    for (const heading of this.headings) {
+      const node: LiveTocNode = { heading, children: [] }
+      while (stack.length && stack[stack.length - 1].heading.level >= heading.level) stack.pop()
+      if (stack.length) stack[stack.length - 1].children.push(node)
+      else root.push(node)
+      stack.push(node)
+    }
+
+    const linkFor = (heading: TocHeading): HTMLAnchorElement => {
       const a = document.createElement('a')
+      a.className = 'markdown-toc__link'
       a.href = '#'
-      a.textContent = h.text
-      a.dataset.line = String(h.line)
+      a.textContent = heading.text
+      a.dataset.line = String(heading.line)
       a.addEventListener('click', (e) => {
         e.preventDefault()
         e.stopPropagation()
         const total = view.state.doc.lines
-        const lineNo = Math.max(1, Math.min(total, h.line))
+        const lineNo = Math.max(1, Math.min(total, heading.line))
         const pos = view.state.doc.line(lineNo).from
         // 只滚动，不改选区：光标移动会让该行进入 caret-reveal（源码态），目录反而闪一下
         view.dispatch({ effects: EditorView.scrollIntoView(pos, { y: 'start', yMargin: 16 }) })
       })
-      li.appendChild(a)
-      ul.appendChild(li)
+      return a
     }
-    nav.appendChild(ul)
+
+    const renderNodes = (nodes: LiveTocNode[], parent: HTMLElement): void => {
+      const ul = document.createElement('ul')
+      for (const node of nodes) {
+        const li = document.createElement('li')
+        li.className = 'markdown-toc__entry'
+        li.appendChild(linkFor(node.heading))
+        if (node.children.length) renderNodes(node.children, li)
+        ul.appendChild(li)
+      }
+      parent.appendChild(ul)
+    }
+
+    renderNodes(root, nav)
     return nav
   }
   ignoreEvent(): boolean { return true }
@@ -2284,19 +2306,22 @@ const liveBlocksTheme = EditorView.theme({
     overflow: 'hidden',
     textOverflow: 'ellipsis',
   },
-  // [toc] widget：实时模式里也复刻预览目录的观感
+  // [toc] widget：实时模式里也复刻预览目录的独立边框区块
   '.cm-live-block--toc': {
     margin: '0',
-    padding: '0.7em 1em',
-    borderLeft: '3px solid var(--editor-accent)',
+    padding: '0.65em 1em',
+    border: '1px solid var(--editor-border)',
     borderRadius: '6px',
-    background: 'var(--editor-surface)',
+    background: 'color-mix(in srgb, var(--editor-surface) 55%, transparent)',
     lineHeight: '1.6',
   },
   '.cm-live-block--toc ul': {
     margin: '0',
     paddingLeft: '0',
     listStyle: 'none',
+  },
+  '.cm-live-block--toc ul ul': {
+    paddingLeft: '1.25em',
   },
   '.cm-live-block--toc li': {
     margin: '0.22em 0',
@@ -2308,13 +2333,7 @@ const liveBlocksTheme = EditorView.theme({
   },
   '.cm-live-block--toc a:hover': {
     color: 'var(--editor-accent)',
-    textDecoration: 'underline',
   },
-  '.cm-live-block--toc .markdown-toc-level-2': { paddingLeft: '1em' },
-  '.cm-live-block--toc .markdown-toc-level-3': { paddingLeft: '2em' },
-  '.cm-live-block--toc .markdown-toc-level-4': { paddingLeft: '3em' },
-  '.cm-live-block--toc .markdown-toc-level-5': { paddingLeft: '4em' },
-  '.cm-live-block--toc .markdown-toc-level-6': { paddingLeft: '5em' },
   // Active cell highlight while editing
   '.cm-live-cell-editing': {
     outline: '2px solid var(--editor-accent)',

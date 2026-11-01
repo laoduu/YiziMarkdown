@@ -783,13 +783,13 @@
   accent-color: var(--editor-accent, #4f46e5);
 }
 
-/* [toc] in a slide: keep the same look as preview, but without the slide bullet markers. */
+/* [toc] in a slide: keep the same border block as preview, but without the slide bullet markers. */
 .ys-slide .markdown-toc {
   margin: 0.8em 0;
   padding: 0.6em 0.9em;
-  border-left: 3px solid var(--editor-accent, #4f46e5);
+  border: 1px solid var(--editor-border, rgba(127, 127, 127, 0.35));
   border-radius: 6px;
-  background: color-mix(in srgb, var(--editor-accent, #4f46e5) 8%, transparent);
+  background: color-mix(in srgb, var(--editor-surface, var(--editor-accent, #4f46e5)) 18%, transparent);
   text-align: left;
 }
 
@@ -797,6 +797,10 @@
   list-style: none;
   padding-left: 0;
   margin: 0;
+}
+
+.ys-slide .markdown-toc ul ul {
+  padding-left: 1em;
 }
 
 .ys-slide .markdown-toc li {

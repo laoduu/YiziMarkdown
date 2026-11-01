@@ -289,9 +289,13 @@ body {
   font-family: var(--font-ui);
   background-color: var(--editor-bg);
   color: var(--editor-text);
-  cursor: var(--cursor-arrow, default);
+  cursor: default;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+/* 加粗（高可见度）档才启用主题色自绘箭头 */
+body[data-cursor-style='bold'] {
+  cursor: var(--cursor-arrow, default);
 }
 
 /* 主题箭头只作用于基础/默认光标；文本输入区保持 I-beam、链接保持手型 */
@@ -792,21 +796,24 @@ a {
 /* ===== 编辑器核心 ===== */
 
 /* ===== 鼠标光标可见性 ===== */
-/* 主题色 I-beam：--cursor-standard（标准档 16×24）/ --cursor-bold（加粗档 16×30，加高）由 JS
-   读取当前主题 --editor-cursor 动态生成（明暗适配描边色），两档都应用主题色 */
+/* 默认原生：系统 default / text。只有「加粗（高可见度）」档才启用主题色
+   I-beam（--cursor-bold）与自绘箭头（--cursor-arrow）；两者由 JS 读取当前主题
+   --editor-cursor 动态生成（明暗适配描边色），跟随主题变化刷新。 */
 .cm-editor-container[data-cursor='bold'],
 .cm-editor-container[data-cursor='bold'] .cm-content {
   cursor: var(--cursor-bold, text);
 }
 .cm-editor-container[data-cursor='text'],
 .cm-editor-container[data-cursor='text'] .cm-content {
-  cursor: var(--cursor-standard, var(--cursor-bold, text));
+  cursor: text;
 }
 /* 源码/实时的滚动条（以及行号 gutter、正文下方的空白区）不是输入区：
-   .cm-scroller 是滚动条的命中元素，若任由它继承上面容器级的 I-beam，
-   hover 滚动条时光标就不会回到正常形状。这里显式回归 body 的主题箭头；
+   native 档回系统箭头，bold 档才用主题自绘箭头；
    .cm-content 有自己的光标规则（更具体），正文区域仍是 I-beam。 */
-.cm-editor-container[data-cursor] .cm-scroller {
+.cm-editor-container[data-cursor='text'] .cm-scroller {
+  cursor: default;
+}
+.cm-editor-container[data-cursor='bold'] .cm-scroller {
   cursor: var(--cursor-arrow, default);
 }
 
@@ -1226,8 +1233,6 @@ a {
 .editor-content h6 {
   transition: background-color 0.3s ease, box-shadow 0.3s ease;
   border-radius: var(--radius-xs);
-  padding: 2px 6px;
-  margin-left: -6px;
 }
 
 .editor-content .heading-highlight {
@@ -2476,13 +2481,14 @@ a {
 }
 
 /* ===== [toc] 目录 ===== */
-/* 与导出 HTML 的侧栏目录区分：这是正文里的目录块，跟随当前主题与预览行高。 */
+/* 与导出 HTML 的侧栏目录区分：这是正文里的独立目录区块。
+   保留 Typora 式细边框，但去掉引用块式的左侧强调竖线；层级交给嵌套 ul。 */
 .editor-content .markdown-toc {
-  margin: 1em 0 1.4em;
-  padding: 0.7em 1em;
-  border-left: 3px solid var(--editor-accent);
+  margin: 1em 0 1.6em;
+  padding: 0.65em 1em;
+  border: 1px solid var(--editor-border);
   border-radius: 6px;
-  background: var(--editor-surface);
+  background: color-mix(in srgb, var(--editor-surface) 55%, transparent);
   line-height: var(--preview-line-height, var(--line-height));
 }
 
@@ -2490,6 +2496,10 @@ a {
   margin: 0;
   padding-left: 0;
   list-style: none;
+}
+
+.editor-content .markdown-toc ul ul {
+  padding-left: 1.25em;
 }
 
 .editor-content .markdown-toc li {
@@ -2501,21 +2511,16 @@ a {
   content: none;
 }
 
-.editor-content .markdown-toc a {
+/* 权重压过主题的 `.editor-content.theme-xxx a:hover`，避免目录 hover 时出现双下划线 */
+.editor-content .markdown-toc .markdown-toc__entry a.markdown-toc__link {
   color: var(--editor-text);
   text-decoration: none;
+  border-bottom: none;
 }
 
-.editor-content .markdown-toc a:hover {
+.editor-content .markdown-toc .markdown-toc__entry a.markdown-toc__link:hover {
   color: var(--editor-accent);
-  text-decoration: underline;
 }
-
-.editor-content .markdown-toc-level-2 { padding-left: 1em; }
-.editor-content .markdown-toc-level-3 { padding-left: 2em; }
-.editor-content .markdown-toc-level-4 { padding-left: 3em; }
-.editor-content .markdown-toc-level-5 { padding-left: 4em; }
-.editor-content .markdown-toc-level-6 { padding-left: 5em; }
 
 /* ===== 划词助手浮动工具栏 ===== */
 .selection-toolbar {

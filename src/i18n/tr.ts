@@ -359,7 +359,7 @@ pluginEpubDesc: 'Geçerli belgeyi EPUB 3 e-kitap olarak dışa aktar',
     cursor: 'İmleç',
     cursorStyle: 'Fare imleç stili',
     cursorStyleBold: 'Kalın (yüksek görünürlük)',
-    cursorStyleText: 'İnce (yerel stil)',
+    cursorStyleText: 'Yerel (varsayılan)',
     mouseSpotlight: 'Tıklama dalgası',
     mouseSpotlightHint: 'Editörde tıklama noktasında yayılan dalga göster',
     preview: 'Önizleme',
@@ -830,5 +830,8 @@ pluginEpubDesc: 'Geçerli belgeyi EPUB 3 e-kitap olarak dışa aktar',
     stripTitleHint: 'When the cover uses the document title, remove the same leading H1 from the body.',
     warnRemoteImages: '{n} remote image(s) were not embedded (only data URL images are packaged).',
     warnNoHeadingSplit: 'No suitable heading was found; exported as a single chapter.'
+  },
+  docx: {
+    tocHint: 'İçindekiler tablosuna sağ tıklayın → Alanı güncelle (F9)',
   }
 }

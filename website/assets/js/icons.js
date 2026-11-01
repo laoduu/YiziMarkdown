@@ -38,6 +38,7 @@ window.LUCIDE_META = {
     "files": "folder-open",
     "edit": "pencil-line",
     "writing": "file-text",
+    "reader": "book-open",
     "slideshow": "presentation",
     "ai": "bot",
     "skills": "zap",

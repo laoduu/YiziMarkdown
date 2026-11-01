@@ -153,7 +153,7 @@ interface EpubSession {
 
 function App() {
   const { t } = useI18n()
-  const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, contentMaxWidth, enabledPlugins, pluginConfigs, setField, aiPanelOpen, updateSettings, userThemeEnabled, userThemeName, customCssBase, slideColStyle, slideColAlign } = useSettingsStore()
+  const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, contentMaxWidth, enabledPlugins, pluginConfigs, setField, aiPanelOpen, updateSettings, userThemeEnabled, userThemeName, customCssBase, slideColStyle, slideColAlign, cursorStyle } = useSettingsStore()
   const {
     activeTabId, currentTab,
     openFile, openRemoteFile, openNewFile, closeTab, switchTab,
@@ -558,7 +558,13 @@ function App() {
     }
   }, [currentTheme, isDark])
 
-  // 主题色光标：主题 CSS 为异步注入，注入完成（或主题/明暗变化）后重算 arrow/standard/bold 三档；
+  // 光标样式：默认原生；选择「加粗」时才启用主题自绘箭头/I-beam。
+  // 放在 body 上，让全站（编辑器、阅读、演示）都能按同一档切换。
+  useEffect(() => {
+    document.body.dataset.cursorStyle = cursorStyle
+  }, [cursorStyle])
+
+  // 主题色光标：主题 CSS 为异步注入，注入完成（或主题/明暗变化）后重算 arrow/bold 两档；
   // 顺带把窗口 1px 系统边框（Windows 11 DWMWA_BORDER_COLOR）同步为主题背景色
   useEffect(() => {
     let raf = 0
@@ -1273,6 +1279,8 @@ function App() {
               isDark,
               baseColor: palette.text,
             }),
+            tocTitle: t('reader.toc'),
+            tocHint: t('docx.tocHint'),
           },
         })
       } else if (format === 'pdf') {

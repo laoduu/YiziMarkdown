@@ -299,7 +299,7 @@ exportEpub: '导出为 EPUB 电子书',
     cursor: '光标',
     cursorStyle: '鼠标光标样式',
     cursorStyleBold: '加粗（高可见度）',
-    cursorStyleText: '纤细（原生样式）',
+    cursorStyleText: '原生（默认）',
     mouseSpotlight: '点击涟漪反馈',
     mouseSpotlightHint: '点击编辑区时，在点击处显示扩散的涟漪',
     preview: '预览',
@@ -849,5 +849,8 @@ pluginEpubDesc: '将当前文档导出为 EPUB 3 电子书（实验性）',
     stripTitleHint: '封面使用文档标题时，移除正文开头同名的 H1。',
     warnRemoteImages: '有 {n} 张远程图片未能嵌入（EPUB 只打包 data URL 图片）。',
     warnNoHeadingSplit: '没有找到可拆分的标题，已按单章导出。'
+  },
+  docx: {
+    tocHint: '右键目录 → 更新域（或按 F9）',
   }
 }

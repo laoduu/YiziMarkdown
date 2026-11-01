@@ -55,7 +55,7 @@ const DEFAULTS_EDITOR = {
   previewFontFamily: "'MiSans', 'Mi Sans', system-ui, -apple-system, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif",
   fontSize: 20, lineHeight: 2.0, previewFontSize: 20, previewLineHeight: 2.0,
   showLineNumbers: true, wordWrap: true,
-  cursorStyle: 'bold' as const, mouseSpotlight: true,
+  cursorStyle: 'text' as const, mouseSpotlight: true,
 }
 
 interface SettingsModalProps {
@@ -804,8 +804,8 @@ function EditorSettings() {
             <Row label={t('settings.cursorStyle')}>
               <select className="settings-select" value={store.cursorStyle}
                 onChange={(e) => store.setField('cursorStyle', e.target.value as 'text' | 'bold')}>
-                <option value="bold">{t('settings.cursorStyleBold')}</option>
                 <option value="text">{t('settings.cursorStyleText')}</option>
+                <option value="bold">{t('settings.cursorStyleBold')}</option>
               </select>
             </Row>
             <Row label={t('settings.mouseSpotlight')} hint={t('settings.mouseSpotlightHint')}>
@@ -921,10 +921,10 @@ function EditorSettings() {
                     lineHeight: store.lineHeight,
                     background: 'var(--editor-bg)',
                     color: 'var(--editor-text)',
-                    // 鼠标指针与真实编辑器同源（themeCursor 注入的两档主题色 I-beam），移上来即可看到所选样式
+                    // 鼠标指针与真实编辑器同源：原生档用系统 I-beam，加粗档才用主题自绘 I-beam
                     cursor: store.cursorStyle === 'bold'
                       ? 'var(--cursor-bold, text)'
-                      : 'var(--cursor-standard, var(--cursor-bold, text))',
+                      : 'text',
                   }}
                 >
                   <div className="flex">

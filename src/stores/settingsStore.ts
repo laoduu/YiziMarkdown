@@ -175,7 +175,7 @@ export const useSettingsStore = create<SettingsState>()(
       contentMaxWidth: CONTENT_WIDTH_DEFAULT,
 
       // 光标
-      cursorStyle: 'bold',
+      cursorStyle: 'text',
       mouseSpotlight: true,
 
       // 外观
@@ -265,13 +265,16 @@ export const useSettingsStore = create<SettingsState>()(
       // v13: 内容区可拖拽调宽 —— 新增 contentMaxWidth（默认 900，与改动前一致）
       // v14: PPTX 导出 —— 新增首次提示标记 / 备注 / 页脚 / 超页策略
       // v15: 数学公式 / Mermaid 提升为核心渲染器 —— 从插件列表与插件配置移除
-      version: 15,
+      // v16: 鼠标光标默认改为原生；旧存档的 bold 是旧默认，统一重置一次
+      version: 16,
       migrate: (persisted: unknown) => {
         // 自动迁移旧字体栈到 MiSans 方案
         const oldFont = "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
         const newFont = "'MiSans', 'Mi Sans', system-ui, -apple-system, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif"
         const state = persisted as Record<string, unknown>
         if (state) {
+          // v16：光标默认改为原生；旧版本的 bold 是旧默认，统一迁移一次。
+          state.cursorStyle = 'text'
           if (state.fontFamily === oldFont) state.fontFamily = newFont
           if (state.previewFontFamily === oldFont) state.previewFontFamily = newFont
           // 自动保存间隔迁移：旧范围 1s~10s，新范围 5s~180s，越界值重置为默认 60s

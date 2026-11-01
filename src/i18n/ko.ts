@@ -359,7 +359,7 @@ pluginEpubDesc: '현재 문서를 EPUB 3 전자책으로 내보내기',
     cursor: '커서',
     cursorStyle: '마우스 커서 스타일',
     cursorStyleBold: '굵게 (높은 가시성)',
-    cursorStyleText: '가는 (네이티브 스타일)',
+    cursorStyleText: '네이티브 (기본)',
     mouseSpotlight: '클릭 잔물결',
     mouseSpotlightHint: '편집기를 클릭한 위치에 퍼지는 잔물결 표시',
     preview: '미리보기',
@@ -830,5 +830,8 @@ pluginEpubDesc: '현재 문서를 EPUB 3 전자책으로 내보내기',
     stripTitleHint: 'When the cover uses the document title, remove the same leading H1 from the body.',
     warnRemoteImages: '{n} remote image(s) were not embedded (only data URL images are packaged).',
     warnNoHeadingSplit: 'No suitable heading was found; exported as a single chapter.'
+  },
+  docx: {
+    tocHint: '목차를 마우스 오른쪽 버튼으로 클릭 → 필드 업데이트(F9)',
   }
 }
