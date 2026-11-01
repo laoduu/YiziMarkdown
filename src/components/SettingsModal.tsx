@@ -11,7 +11,7 @@ import { progressRatio, formatBytes } from '../lib/update'
 import { SHORTCUT_ACTIONS, getKeybindingsMap, saveKeybindings, getDefaultMap, formatKey, findConflict, getActionLabel } from '../lib/keybindings'
 import { RotateCcw } from 'lucide-react'
 import { OtherProductsSettings } from './OtherProducts'
-import { getAllPlugins, loadPlugin, unloadPlugin } from '../plugins/registry'
+import { getAllPlugins, getStartupPluginIds, loadPlugin, unloadPlugin } from '../plugins/registry'
 import { useI18n, LANGUAGES } from '../i18n'
 import { PROVIDERS, providerById } from '../lib/ai-providers'
 import {
@@ -1187,7 +1187,8 @@ function PluginsSettings() {
   useEffect(() => {
     if (!initialized.current) {
       initialized.current = true
-      for (const id of store.enabledPlugins) {
+      // 只有 startup 插件在设置页打开时预加载；onCommand 插件等导出时再激活。
+      for (const id of getStartupPluginIds(store.enabledPlugins)) {
         loadPlugin(id)
       }
     }
@@ -1195,9 +1196,10 @@ function PluginsSettings() {
 
   const handleToggle = async (pluginId: string, enable: boolean) => {
     if (enable) {
-      setLoadingIds(prev => new Set(prev).add(pluginId))
-      const ok = await loadPlugin(pluginId)
-      setLoadingIds(prev => { const s = new Set(prev); s.delete(pluginId); return s })
+      const needsStartupLoad = getStartupPluginIds([pluginId]).length > 0
+      if (needsStartupLoad) setLoadingIds(prev => new Set(prev).add(pluginId))
+      const ok = needsStartupLoad ? await loadPlugin(pluginId) : true
+      if (needsStartupLoad) setLoadingIds(prev => { const s = new Set(prev); s.delete(pluginId); return s })
       if (ok) {
         store.updateSettings({
           enabledPlugins: [...new Set([...store.enabledPlugins, pluginId])],

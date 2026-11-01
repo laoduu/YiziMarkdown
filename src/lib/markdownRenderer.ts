@@ -5,6 +5,7 @@ import hljs from 'highlight.js'
 import { generateHeadingId } from './headingId.ts'
 import { splitFrontMatter } from './frontMatter.ts'
 import { tocPlugin } from './toc.ts'
+import { extendCoreMarkdownIt } from '../renderers/index.ts'
 
 // ---- Core ruler：给块级元素注入 data-source-line 属性 ----
 const BLOCK_OPEN_TYPES = new Set([
@@ -123,6 +124,9 @@ export function createMarkdownIt(
   // [toc] / [[toc]]：必须在 inline 规则之后、渲染之前替换成目录 HTML
   tocPlugin(md)
 
+  // 核心渲染器（数学公式 / Mermaid）默认安装；Mermaid 的 SVG 模块仍是懒加载
+  extendCoreMarkdownIt(md)
+
   // 注入插件扩展
   if (pluginExtenders) {
     for (const ext of pluginExtenders) {
@@ -135,7 +139,6 @@ export function createMarkdownIt(
 
 // 默认实例（无插件）
 let defaultMd: MarkdownIt | null = null
-let lastPluginKey: string | null = null
 
 /**
  * 获取 markdown-it 实例
@@ -144,11 +147,12 @@ let lastPluginKey: string | null = null
 export function getMarkdownIt(
   pluginExtenders?: Array<(md: MarkdownIt) => void>
 ): MarkdownIt {
-  const key = pluginExtenders ? pluginExtenders.map(() => '1').join('') : ''
-  if (defaultMd && lastPluginKey === key) return defaultMd
+  // 有插件时每次都重建：插件 ID/配置变化不能靠“扩展数量”判断（旧实现同数量切换插件
+  // 会复用旧实例，插件配置也永远不更新）。无插件（绝大多数文档）仍走全局缓存。
+  if (pluginExtenders && pluginExtenders.length > 0) return createMarkdownIt(pluginExtenders)
+  if (defaultMd) return defaultMd
 
-  defaultMd = createMarkdownIt(pluginExtenders)
-  lastPluginKey = key
+  defaultMd = createMarkdownIt()
   return defaultMd
 }
 

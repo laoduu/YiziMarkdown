@@ -188,8 +188,8 @@ export const useSettingsStore = create<SettingsState>()(
       // 实时模式动画
       liveAnimationMode: 'blur',
 
-      // 插件
-      enabledPlugins: [],
+      // 插件：EPUB 导出作为首个内置插件，默认启用；公式/Mermaid 已是核心能力
+      enabledPlugins: ['epub'],
       pluginConfigs: {},
 
       // AI（v0.2.0 侧边聊天面板）
@@ -264,7 +264,8 @@ export const useSettingsStore = create<SettingsState>()(
       // v12: 在线更新 —— 新增 autoCheckUpdate（默认开）/ skippedUpdateVersion（默认空）
       // v13: 内容区可拖拽调宽 —— 新增 contentMaxWidth（默认 900，与改动前一致）
       // v14: PPTX 导出 —— 新增首次提示标记 / 备注 / 页脚 / 超页策略
-      version: 14,
+      // v15: 数学公式 / Mermaid 提升为核心渲染器 —— 从插件列表与插件配置移除
+      version: 15,
       migrate: (persisted: unknown) => {
         // 自动迁移旧字体栈到 MiSans 方案
         const oldFont = "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
@@ -330,6 +331,19 @@ export const useSettingsStore = create<SettingsState>()(
           if (typeof state.pptxIncludeFooter !== 'boolean') state.pptxIncludeFooter = true
           if (state.pptxOverflowMode !== 'warn' && state.pptxOverflowMode !== 'shrink') {
             state.pptxOverflowMode = 'warn'
+          }
+          // v15：数学公式 / Mermaid 不再是插件；清掉旧存档里的开关与配置。
+          // 不影响未来真正的插件（如 epub）；只删除这两个已内置化的 id。
+          const enabledPlugins = Array.isArray(state.enabledPlugins)
+            ? (state.enabledPlugins as unknown[]).filter((id): id is string => typeof id === 'string' && id !== 'katex' && id !== 'mermaid')
+            : []
+          // EPUB 是首个真正的内置插件，默认随升级启用；用户仍可在插件页关闭。
+          if (!enabledPlugins.includes('epub')) enabledPlugins.push('epub')
+          state.enabledPlugins = enabledPlugins
+          if (state.pluginConfigs && typeof state.pluginConfigs === 'object') {
+            const configs = state.pluginConfigs as Record<string, unknown>
+            delete configs.katex
+            delete configs.mermaid
           }
         }
         return state

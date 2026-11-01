@@ -10,7 +10,9 @@
  * 图片/图表落成 data URL、等字体与图片就绪。DOM → 场景图在 pptxScene.ts。
  */
 import { postRender as pluginPostRender } from '../plugins/registry'
-import { renderMermaidSvgForExport } from '../plugins/built-in/mermaid'
+import { postRenderKatex } from '../renderers/katex'
+import { postRenderMermaid, renderMermaidSvgForExport } from '../renderers/mermaid'
+import { readThemePalette } from './themePalette'
 import { resolveLocalImageSrc } from './localImages'
 import { invokeTauri, invokeTauriOrThrow } from './tauri'
 import { colStyleClass, type SlideColAlign, type SlideColStyle } from './slideColumns'
@@ -193,7 +195,6 @@ export class PptxFrame {
   private destroyed = false
   private enabledPlugins: string[]
   private pluginConfigs: Record<string, Record<string, unknown>>
-  private mermaidTheme: string
   private docBaseDir: string | null
   private rootEl: HTMLElement
   private baseFontScale: number
@@ -203,7 +204,6 @@ export class PptxFrame {
     opts: FrameCreateOptions & {
       enabledPlugins: string[]
       pluginConfigs: Record<string, Record<string, unknown>>
-      mermaidTheme: string
       docBaseDir: string | null
     },
   ) {
@@ -217,7 +217,6 @@ export class PptxFrame {
     this.baseFontScale = opts.baseFontScale && opts.baseFontScale > 0 ? opts.baseFontScale : 1
     this.enabledPlugins = opts.enabledPlugins
     this.pluginConfigs = opts.pluginConfigs
-    this.mermaidTheme = opts.mermaidTheme
     this.docBaseDir = opts.docBaseDir
   }
 
@@ -225,7 +224,6 @@ export class PptxFrame {
     opts: FrameCreateOptions & {
       enabledPlugins: string[]
       pluginConfigs: Record<string, Record<string, unknown>>
-      mermaidTheme: string
       docBaseDir: string | null
     },
   ): Promise<PptxFrame> {
@@ -300,7 +298,12 @@ export class PptxFrame {
 
     await nextFrame(this.win)
 
-    // 插件后处理：KaTeX 兜底 / Mermaid 渲染（与演示同一套插件实现）
+    // 核心后处理：数学公式 / Mermaid 默认可用；Mermaid 导出用 htmlLabels=false，
+    // 随后交给 resvg 栅格化（resvg 不认 foreignObject）。
+    const palette = readThemePalette(this.slideEl)
+    await postRenderKatex(this.slideEl)
+    await postRenderMermaid(this.slideEl, palette, false)
+    // 可选插件后处理（当前只有扩展导出插件，不参与页面 DOM）
     if (this.enabledPlugins.length > 0) {
       try {
         await pluginPostRender(this.slideEl, this.enabledPlugins, this.pluginConfigs)
@@ -327,21 +330,32 @@ export class PptxFrame {
   /** `.mermaid` 里的 SVG → Rust resvg 栅格化 → `<img>`（与 DOCX 同源） */
   private async mermaidToImages(warnings: PptxWarning[]): Promise<void> {
     const els = Array.from(this.slideEl.querySelectorAll<HTMLElement>('.mermaid'))
+    const palette = readThemePalette(this.slideEl)
     for (const el of els) {
       const code = el.getAttribute('data-source') || el.textContent || ''
       if (!code.trim()) continue
       const svgEl = el.querySelector('svg')
       const rect = svgEl ? rectOf(svgEl) : null
       let svg = ''
-      try {
-        svg = (await renderMermaidSvgForExport(code, this.mermaidTheme)) || ''
-      } catch (e) {
-        warnings.push({
-          kind: 'mermaid',
-          messageKey: 'pptxExport.warnMermaidRender',
-          messageArgs: { error: (e as Error).message?.slice(0, 120) },
-        })
-        continue
+      // core postRender 已经用 htmlLabels=false 渲染过；优先直接取这份 SVG，
+      // 避免每页 Mermaid 再 render 一次。只有渲染失败时才回退到重新渲染。
+      if (svgEl) {
+        try {
+          const Serializer = (this.win as any).XMLSerializer || XMLSerializer
+          svg = new Serializer().serializeToString(svgEl)
+        } catch { svg = '' }
+      }
+      if (!svg) {
+        try {
+          svg = (await renderMermaidSvgForExport(code, palette, false)) || ''
+        } catch (e) {
+          warnings.push({
+            kind: 'mermaid',
+            messageKey: 'pptxExport.warnMermaidRender',
+            messageArgs: { error: (e as Error).message?.slice(0, 120) },
+          })
+          continue
+        }
       }
       if (!svg) {
         warnings.push({ kind: 'mermaid', messageKey: 'pptxExport.warnMermaidEmpty' })

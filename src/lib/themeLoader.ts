@@ -44,8 +44,12 @@ export async function applyThemeStyles(theme: string, base: string, userCss?: st
   setStyle(THEME_CSS_STYLE_ID, themeCss ? retargetThemeCss(themeCss, theme) : '')
 
   // 非自定义主题不叠加 user.css —— 否则「选中态 ≠ 观感」，用户会分不清自己选了什么
-  if (!isCustom) { setStyle(USER_CSS_STYLE_ID, ''); return }
-
-  const raw = userCss ?? (await readUserCss())
-  setStyle(USER_CSS_STYLE_ID, raw.trim() ? normalizeUserCss(raw, CUSTOM_THEME) : '')
+  if (!isCustom) {
+    setStyle(USER_CSS_STYLE_ID, '')
+  } else {
+    const raw = userCss ?? (await readUserCss())
+    setStyle(USER_CSS_STYLE_ID, raw.trim() ? normalizeUserCss(raw, CUSTOM_THEME) : '')
+  }
+  // 主题/用户 CSS 落位完成：通知依赖 computed 主题色的渲染器（Mermaid 等）重新取色。
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('yizi-theme-css-ready'))
 }

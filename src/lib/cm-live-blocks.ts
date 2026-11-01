@@ -10,12 +10,15 @@
 import { syntaxTree } from '@codemirror/language'
 // 带 .ts 扩展名：本模块要能被 `node --test` 直接加载（tests/liveBlocks.test.ts），
 // 而 Node 的 ESM 解析器不做扩展名补全（见 lib/remotePath.ts 的同类说明）。
-import { useSettingsStore } from '../stores/settingsStore.ts'
 import { useEditorStore } from '../stores/editorStore.ts'
 import { getCurrentLang, translate } from '../i18n/index.ts'
 import { resolveLocalImageSrc } from './localImages.ts'
 import { invokeTauri } from './tauri.ts'
 import { getMarkdownIt } from './markdownRenderer.ts'
+import { useSettingsStore } from '../stores/settingsStore.ts'
+import { renderMermaidInto } from '../renderers/mermaid.ts'
+import { renderKatexToString } from '../renderers/katex.ts'
+import { readThemePalette } from './themePalette.ts'
 import {
   addTableColumn,
   addTableRow,
@@ -39,7 +42,7 @@ import {
   type TocHeading,
 } from './liveSyntax.ts'
 import hljs from 'highlight.js'
-import { StateField } from '@codemirror/state'
+import { StateField, StateEffect } from '@codemirror/state'
 import type { EditorState } from '@codemirror/state'
 import type { Range } from '@codemirror/state'
 import {
@@ -106,11 +109,18 @@ function revealSourceOnClick(el: HTMLElement, view: EditorView, pos: number): vo
 
 class MermaidWidget extends WidgetType {
   private _code: string
-  constructor(code: string, private readonly pos: number) {
+  constructor(
+    code: string,
+    private readonly pos: number,
+    /** 主题/明暗版本：变化时让 widget 不等价，重建并重新读取主题色 */
+    private readonly themeKey: string,
+  ) {
     super()
     this._code = code
   }
-  eq(other: MermaidWidget): boolean { return other._code === this._code && other.pos === this.pos }
+  eq(other: MermaidWidget): boolean {
+    return other._code === this._code && other.pos === this.pos && other.themeKey === this.themeKey
+  }
   private _timer: ReturnType<typeof setTimeout> | null = null
   toDOM(view: EditorView): HTMLElement {
     const wrap = document.createElement('div')
@@ -124,15 +134,9 @@ class MermaidWidget extends WidgetType {
   }
   private async renderMermaid(el: HTMLElement): Promise<void> {
     try {
-      const mod = await import('mermaid')
-      const mermaid = mod.default || mod
-      const configs = useSettingsStore.getState().pluginConfigs.mermaid || {}
-      const theme = ((configs.theme as string) || 'default') as any
-      mermaid.initialize({ startOnLoad: false, theme, securityLevel: 'loose' })
-      const id = 'cm-mmd-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
-      const { svg } = await mermaid.render(id, this._code)
-      el.innerHTML = svg
-    } catch (e) {
+      // 主题从编辑器当前容器读取；renderMermaidInto 内部串行 initialize + render。
+      await renderMermaidInto(el, this._code, readThemePalette(el))
+    } catch {
       el.textContent = this._code
       el.className += ' cm-live-block--mermaid-error'
     }
@@ -161,10 +165,8 @@ class KatexBlockWidget extends WidgetType {
   }
   private async renderKatex(el: HTMLElement): Promise<void> {
     try {
-      const katex = await import('katex')
-      const kt = katex.default || katex
-      el.innerHTML = kt.renderToString(this._tex, { displayMode: true, throwOnError: false })
-    } catch (e) {
+      el.innerHTML = await renderKatexToString(this._tex, true)
+    } catch {
       el.textContent = this._tex
       el.className += ' cm-live-block--katex-error'
     }
@@ -187,9 +189,7 @@ class KatexPreviewWidget extends WidgetType {
   }
   private async renderKatex(el: HTMLElement): Promise<void> {
     try {
-      const katex = await import('katex')
-      const kt = katex.default || katex
-      el.innerHTML = kt.renderToString(this.tex, { displayMode: true, throwOnError: false })
+      el.innerHTML = await renderKatexToString(this.tex, true)
     } catch {
       el.textContent = this.tex
       el.className += ' cm-live-block--katex-error'
@@ -665,7 +665,8 @@ class EditableTableWidget extends WidgetType {
     // 看不到 shadow root 内部的事件，避免 CM6 抢占输入
     const shadow = host.attachShadow({ mode: 'open' })
 
-    const katexEnabled = useSettingsStore.getState().enabledPlugins.includes('katex')
+    // 公式是核心能力，不再按插件开关判断
+    const katexEnabled = true
 
     const style = document.createElement('style')
     style.textContent = `
@@ -1705,9 +1706,11 @@ function buildBlockDecorations(state: EditorState): DecorationSet {
   const tree = syntaxTree(state)
   const ranges: Range<Decoration>[] = []
 
-  const enabledPlugins = useSettingsStore.getState().enabledPlugins
-  const mermaidEnabled = enabledPlugins.includes('mermaid')
-  const katexEnabled = enabledPlugins.includes('katex')
+  // 数学公式 / Mermaid 是核心能力，永远可用；Mermaid 模块本身仍按需加载。
+  const mermaidEnabled = true
+  const katexEnabled = true
+  const settings = useSettingsStore.getState()
+  const themeKey = `${settings.currentTheme}:${settings.isDark ? 'dark' : 'light'}:${liveThemeEpoch}`
 
   // 脚注全文分析：续行在 lezer 里是 CodeBlock，但不能当代码块渲染（也不该跳过行内扫描）
   const allLines = doc.toString().split('\n')
@@ -1796,7 +1799,7 @@ function buildBlockDecorations(state: EditorState): DecorationSet {
       if (!block.fenced || block.lang.toLowerCase() !== 'mermaid') continue
       if (isCaretInside(block.start, block.end)) continue
       ranges.push(Decoration.replace({
-        widget: new MermaidWidget(block.code, doc.line(block.start).from),
+        widget: new MermaidWidget(block.code, doc.line(block.start).from, themeKey),
         block: true,
       }).range(doc.line(block.start).from, doc.line(block.end).to))
     }
@@ -2051,10 +2054,18 @@ function buildBlockDecorations(state: EditorState): DecorationSet {
 /*  StateField                                                         */
 /* ------------------------------------------------------------------ */
 
+/** 主题/明暗/CSS 版本变化时由 Editor dispatch，强制重建 Mermaid widget。 */
+export const liveThemeChanged = StateEffect.define<number>()
+let liveThemeEpoch = 0
+
 const blockDecorField = StateField.define<DecorationSet>({
   create(state) { return buildBlockDecorations(state) },
   update(deco, tr) {
-    if (tr.docChanged || tr.selection) return buildBlockDecorations(tr.state)
+    const themeEffect = tr.effects.find((e) => e.is(liveThemeChanged))
+    if (themeEffect) liveThemeEpoch = themeEffect.value
+    if (tr.docChanged || tr.selection || themeEffect) {
+      return buildBlockDecorations(tr.state)
+    }
     return deco.map(tr.changes)
   },
   provide: (f) => [

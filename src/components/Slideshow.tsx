@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react'
 import { Sun, Moon, Palette, Check, X, ListOrdered, List, Sparkles, Type, FileDown } from 'lucide-react'
-import { extendMarkdownIt, postRender as pluginPostRender } from '../plugins/registry'
+import { extendMarkdownIt, getMarkdownPluginIds, postRender as pluginPostRender } from '../plugins/registry'
+import { postRenderCore } from '../renderers/index'
 import {
   parseDeck, buildDeckTocHtml, buildSlideHtml, deckChapters,
   scopeThemeVars, type DeckSlide,
@@ -101,6 +102,8 @@ export default function Slideshow({
   const [themes, setThemes] = useState<string[]>([])
   const [themeMeta, setThemeMeta] = useState<Record<string, { name: string }>>({})
   const [themeMenuOpen, setThemeMenuOpen] = useState(false)
+  // 主题 CSS 实际注入完成的版本号：Mermaid 等按 computed 主题变量渲染的内容要等它变化后再重渲染
+  const [themeRevision, setThemeRevision] = useState(0)
   // 「自定义主题」= 基底主题 + user.css（见 lib/themeLoader.ts）；user.css 非空时菜单里才有它
   const customCssBase = useSettingsStore((s) => s.customCssBase)
   const [hasUserCss, setHasUserCss] = useState(false)
@@ -116,11 +119,9 @@ export default function Slideshow({
   const mouseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const pluginExtenders = useMemo(() => {
-    const exts: Array<(md: any) => void> = []
-    for (const _id of enabledPlugins) {
-      exts.push((md: any) => extendMarkdownIt(md, enabledPlugins, pluginConfigs || {}))
-    }
-    return exts
+    const ids = getMarkdownPluginIds(enabledPlugins)
+    if (ids.length === 0) return []
+    return [(md: any) => extendMarkdownIt(md, ids, pluginConfigs || {})]
   }, [enabledPlugins, pluginConfigs])
 
   // 纯 markdown → 幻灯片：`---` 分页 + 整页结构自动版式推断。
@@ -651,6 +652,7 @@ export default function Slideshow({
       let el = document.getElementById('yizimarkdown-slideshow-theme-css')
       if (!el) { el = document.createElement('style'); el.id = 'yizimarkdown-slideshow-theme-css'; document.head.appendChild(el) }
       el.textContent = vars
+      setThemeRevision((v) => v + 1)
     }).catch(() => {})
   }, [theme, customCssBase])
 
@@ -718,7 +720,8 @@ export default function Slideshow({
       })
     }
 
-    // 2. 插件后处理（katex/mermaid 等，作用域限定本 section）
+    // 2. 核心后处理（数学公式 / Mermaid 默认可用） + 可选插件
+    postRenderCore(section).catch(() => {})
     if (enabledPlugins.length > 0) {
       pluginPostRender(section, enabledPlugins, pluginConfigs)
     }
@@ -736,6 +739,18 @@ export default function Slideshow({
       }).catch(() => {})
     })
   }, [slides, enabledPlugins, pluginConfigs, docBaseDir, fragmentsOn])
+
+  // 主题切换后重跑窗口内 section 的核心后处理：Mermaid SVG 的颜色是渲染时写死的，
+  // 只换外层 CSS 变量不会让旧 SVG 变色。去掉 data-processed 后重新走 processSection。
+  useEffect(() => {
+    const deck = deckRef.current
+    if (!deck) return
+    deck.querySelectorAll<HTMLElement>('.ys-slide[data-index]').forEach((section) => {
+      if (!section.innerHTML.trim()) return
+      delete section.dataset.processed
+      processSection(section)
+    })
+  }, [themeRevision, processSection])
 
   // HUD 片段开关切换时的即时生效：
   //   开 → 当前页补打 data-fragment 标记并全隐（从头逐条）

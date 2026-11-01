@@ -14,7 +14,7 @@
  *                 逐档回缩到内容装进可视区为止，并记录实际系数。
  */
 import { parseDeck, buildDeckTocHtml, buildSlideHtml, deckChapters } from './slideDeck.ts'
-import { extendMarkdownIt } from '../plugins/registry.ts'
+import { extendMarkdownIt, getMarkdownPluginIds } from '../plugins/registry.ts'
 import { PptxFrame } from './pptxFrame.ts'
 import { buildSlideScene } from './pptxScene.ts'
 import { buildPptx } from './pptxBuild.ts'
@@ -44,8 +44,7 @@ export interface PptxExportOptions {
   colAlign?: SlideColAlign
   enabledPlugins?: string[]
   pluginConfigs?: Record<string, Record<string, unknown>>
-  /** Mermaid 配色主题（与插件配置一致） */
-  mermaidTheme?: string
+
   docBaseDir?: string | null
   includeNotes: boolean
   includeFooter: boolean
@@ -200,8 +199,9 @@ export async function exportPptx(opts: PptxExportOptions): Promise<PptxExportRes
   const typography = opts.typography || {}
   const enabledPlugins = opts.enabledPlugins || []
   const pluginConfigs = opts.pluginConfigs || {}
-  const pluginExtenders = enabledPlugins.length
-    ? enabledPlugins.map(() => (md: any) => extendMarkdownIt(md, enabledPlugins, pluginConfigs))
+  const markdownPluginIds = getMarkdownPluginIds(enabledPlugins)
+  const pluginExtenders = markdownPluginIds.length
+    ? [(md: any) => extendMarkdownIt(md, markdownPluginIds, pluginConfigs)]
     : []
   const deckTocHtml = buildDeckTocHtml(allSlides)
   const themeCss = await loadSlideshowThemeCss(opts.theme, opts.customCssBase)
@@ -217,7 +217,6 @@ export async function exportPptx(opts: PptxExportOptions): Promise<PptxExportRes
     baseFontScale: typography.fontScale ?? DEFAULT_SLIDE_TYPOGRAPHY.fontScale,
     enabledPlugins,
     pluginConfigs,
-    mermaidTheme: opts.mermaidTheme || 'default',
     docBaseDir: opts.docBaseDir ?? null,
   })
 

@@ -9,6 +9,7 @@ import HomePage from './components/HomePage'
 import Slideshow from './components/Slideshow'
 import Reader from './components/Reader'
 import PptxExportDialog from './components/PptxExportDialog'
+import PluginExportDialog, { type PluginExportSource } from './components/PluginExportDialog'
 import AIChatPanel from './components/AIChatPanel'
 import { PanelLeftClose, PanelLeft, Loader2 } from 'lucide-react'
 import { invokeTauri, invokeTauriOrThrow } from './lib/tauri'
@@ -25,36 +26,51 @@ import {
   WEBVIEW2_QUOTA_CHARS,
   type EditorStorageWarning, type EditorStorageUsage, type CleanupResult,
 } from './lib/editorStorage'
-import { loadPlugin, unloadPlugin } from './plugins/registry'
+import { loadPlugin, unloadPlugin, getEnabledExporters, getStartupPluginIds } from './plugins/registry'
+import { ensureCoreRenderers } from './renderers/index'
 import { useI18n, translate, getCurrentLang } from './i18n'
 import { refreshThemeCursorVars } from './lib/themeCursor'
 import { applyThemeStyles } from './lib/themeLoader'
 import { deriveDocumentTitle } from './lib/docTitle'
+import { splitFrontMatter } from './lib/frontMatter'
 import { deriveExportBaseName } from './lib/exportName'
 import CloudSaveDialog from './components/CloudSaveDialog'
 import { ContextMenuHost } from './components/ContextMenu'
 import UpdateNotice from './components/UpdateNotice'
 import { windowOps } from './lib/windowOps'
+import { useWindowStateStore } from './stores/windowStateStore'
 import { buildDocxPalette } from './lib/docxPalette'
 import { collectCodeHighlights } from './lib/docxCodeHighlight'
 import { prepareMarkdownForDocx } from './lib/docxPrepare'
-import { renderMermaidSvgForExport } from './plugins/built-in/mermaid'
+import { renderMermaidSvgForExport } from './renderers/mermaid'
+import { readThemePalette, type ThemePalette } from './lib/themePalette'
 import { buildExportHtml as buildExportDocumentHtml } from './lib/exportHtml'
+import { parseEpub, EpubOpenError, type EpubBookSource } from './lib/epubReader'
+import { isEpubPath } from './lib/epubPath'
 // 导出 PDF 用的内联样式（globals.css 已包含 Tailwind prose / 编辑器排版；KaTeX 样式保证公式还原）
 import globalsCss from './styles/globals.css?inline'
 import exportTocCss from './styles/export-toc.css?inline'
 import katexCss from 'katex/dist/katex.min.css?inline'
 
+type OpenDialogResult = {
+  name: string
+  content: string
+  filePath?: string
+  /** 浏览器开发模式无法拿到真实路径，直接把 EPUB 字节带回来 */
+  epubBytes?: Uint8Array
+}
+
 // 打开文件对话框 - Tauri 环境用 Rust 命令，浏览器降级用 HTML input
-const openFileDialog = async (): Promise<{ name: string; content: string; filePath?: string } | null> => {
+const openFileDialog = async (): Promise<OpenDialogResult | null> => {
   const tauri = (window as any).__TAURI_INTERNALS__
   if (tauri && typeof tauri.invoke === 'function') {
     try {
       const result = await tauri.invoke('pick_and_read_file')
-      if (result && result.content) {
+      if (result && result.path) {
         const filePath = result.path
         const name = filePath.split('\\').pop() || filePath
-        return { name, content: result.content, filePath }
+        if (isEpubPath(filePath)) return { name, content: '', filePath }
+        return { name, content: result.content || '', filePath }
       }
     } catch (e) {
       console.warn('Tauri file dialog failed, falling back:', e)
@@ -64,34 +80,52 @@ const openFileDialog = async (): Promise<{ name: string; content: string; filePa
   return new Promise((resolve) => {
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = '.md,.markdown,.txt'
+    input.accept = '.md,.markdown,.txt,.epub'
     input.style.display = 'none'
-    
+
     input.onchange = (e) => {
       const target = e.target as HTMLInputElement
       if (target.files && target.files.length > 0) {
         const file = target.files[0]
         const reader = new FileReader()
         reader.onload = (event) => {
+          if (isEpubPath(file.name)) {
+            const buffer = event.target?.result as ArrayBuffer | null
+            resolve({
+              name: file.name,
+              content: '',
+              epubBytes: buffer ? new Uint8Array(buffer) : undefined,
+            })
+            return
+          }
           const content = event.target?.result as string
           resolve({ name: file.name, content: content || '' })
         }
         reader.onerror = () => resolve(null)
-        reader.readAsText(file)
+        if (isEpubPath(file.name)) reader.readAsArrayBuffer(file)
+        else reader.readAsText(file)
       } else {
         resolve(null)
       }
       document.body.removeChild(input)
     }
-    
+
     input.oncancel = () => {
       resolve(null)
       document.body.removeChild(input)
     }
-    
+
     document.body.appendChild(input)
     input.click()
   })
+}
+
+/** Rust 侧 read_binary_file 返回 base64；这里解成 JSZip 需要的字节 */
+function base64ToBytes(base64: string): Uint8Array {
+  const binary = atob(base64.replace(/\s+/g, ''))
+  const out = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i)
+  return out
 }
 
 /** 从磁盘恢复正文的超时上限：网络盘 / 已拔出的移动盘可能长时间不返回，不能让它一直卡住界面 */
@@ -107,6 +141,15 @@ const withTimeout = <T,>(p: Promise<T | null>, ms: number): Promise<T | null> =>
 
 /** 启动后多久去问一次更新：错开启动流程（恢复标签页、加载主题、插件），别抢 WebView 的启动时间 */
 const STARTUP_UPDATE_DELAY_MS = 3000
+
+/** EPUB 阅读会话：不进编辑器标签页，退出即释放图片 blob URL */
+interface EpubSession {
+  filePath: string | null
+  title: string
+  book: EpubBookSource
+  /** 阅读前是普通窗口；退出时还原为普通窗口 */
+  restoreUnmaximize: boolean
+}
 
 function App() {
   const { t } = useI18n()
@@ -127,6 +170,11 @@ function App() {
   const [showShortcutsPanel, setShowShortcutsPanel] = useState(false)
   const [isSlideshow, setIsSlideshow] = useState(false)
   const [isReader, setIsReader] = useState(false)
+  /** EPUB 阅读会话（独立于标签页；打开 EPUB 时直接全屏阅读） */
+  const [epubSession, setEpubSession] = useState<EpubSession | null>(null)
+  const epubSessionRef = useRef<EpubSession | null>(null)
+  /** 主题 CSS 异步注入完成版本：预览/实时要等它之后再渲染 Mermaid */
+  const [themeCssRevision, setThemeCssRevision] = useState(0)
   /** PPTX 导出弹窗：工具栏与演示 HUD 共用。
    *  theme/dark 由**入口**决定 —— HUD 里可能临时切过主题，导出必须与眼前看到的一致。 */
   const [pptxDialog, setPptxDialog] = useState<{
@@ -135,6 +183,8 @@ function App() {
     /** HUD 入口才有：0-based 当前页，用于「只导当前页」 */
     currentSlide?: number
   } | null>(null)
+  /** 插件导出面板（EPUB 等）：由已启用插件的能力菜单触发 */
+  const [pluginExportDialog, setPluginExportDialog] = useState<{ pluginId: string; format: string } | null>(null)
   /** 从工具栏「先看演示效果 / 告警跳页」启动演示时的首屏页码（0-based） */
   const [slideshowStart, setSlideshowStart] = useState<number | undefined>(undefined)
   /** 演示已打开时外部请求翻页：token 递增，保证同一页连续点两次也各跳一次 */
@@ -168,8 +218,19 @@ function App() {
   // 注入逻辑统一在 lib/themeLoader.ts —— 保存自定义 CSS 的路径复用同一函数；
   // 历史上两条路径各写一份，保存那条漏了提权 ⇒ 改了 CSS 保存后毫无反应、必须重启。
   useEffect(() => {
-    applyThemeStyles(currentTheme, customCssBase)
+    // 事件是主信号；promise 完成再 bump 一次，保证首次挂载时即使监听器时序偏晚也能重渲染。
+    applyThemeStyles(currentTheme, customCssBase).then(
+      () => setThemeCssRevision((v) => v + 1),
+      () => setThemeCssRevision((v) => v + 1),
+    )
   }, [currentTheme, customCssBase])
+
+  // themeLoader 在主题/用户 CSS 落位后会派发事件：预览/实时等按 computed 取色的模块据此重渲染。
+  useEffect(() => {
+    const onThemeReady = () => setThemeCssRevision((v) => v + 1)
+    window.addEventListener('yizi-theme-css-ready', onThemeReady)
+    return () => window.removeEventListener('yizi-theme-css-ready', onThemeReady)
+  }, [])
 
   // 应用字体/排版设置到 CSS 变量
   useEffect(() => {
@@ -341,8 +402,8 @@ function App() {
     const { enabledPlugins } = useSettingsStore.getState()
     prevPluginsRef.current = [...enabledPlugins]
 
-    // 启动时等待所有插件加载完成
-    Promise.all(enabledPlugins.map(id => loadPlugin(id))).then(() => {
+    // 启动时等待核心公式渲染器 + startup 插件完成；Mermaid / onCommand 插件保持按需加载。
+    Promise.all([ensureCoreRenderers(), ...getStartupPluginIds(enabledPlugins).map(id => loadPlugin(id))]).then(() => {
       pluginsReadyRef.current = true
       useEditorStore.setState({ _pluginsReady: true })
     })
@@ -353,7 +414,7 @@ function App() {
       const prev = prevPluginsRef.current
       const newIds = cur.filter(id => !prev.includes(id))
       if (newIds.length > 0) {
-        Promise.all(newIds.map(id => loadPlugin(id))).then(() => {
+        Promise.all(getStartupPluginIds(newIds).map(id => loadPlugin(id))).then(() => {
           useEditorStore.setState({ _pluginsReady: false })
           requestAnimationFrame(() => useEditorStore.setState({ _pluginsReady: true }))
         })
@@ -388,6 +449,10 @@ function App() {
 
       if (cliFile) {
         // 场景3：双击 .md 文件打开 → 直接打开文件Tab，预览模式
+        if (isEpubPath(cliFile)) {
+          await openEpubPath(cliFile)
+          return
+        }
         const result = await invokeTauri<{ content: string; path: string }>('read_file', { path: cliFile })
         if (result && result.content) {
           const tabId = openFile(cliFile, result.content)
@@ -428,6 +493,12 @@ function App() {
     ;(window as any).__singleInstanceOpenFile = async (filePath: string) => {
       if (!filePath) return
 
+      // EPUB 不进标签页，直接开阅读会话
+      if (isEpubPath(filePath)) {
+        await openEpubPath(filePath)
+        return
+      }
+
       // 路径归一化：统一反斜杠为正斜杠，再做比较
       const normalized = filePath.replace(/\\/g, '/').toLowerCase()
 
@@ -460,7 +531,7 @@ function App() {
     return () => {
       delete (window as any).__singleInstanceOpenFile
     }
-  }, []) // eslint-disable-line
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 切换activeTab时更新currentFolder
   // 云端文档的 filePath 是本地缓存镜像，不能让它把本地文件树带进缓存目录
@@ -527,18 +598,108 @@ function App() {
     openNewFile(content || '')
   }, [openNewFile])
 
-  const handleOpenFile = useCallback(async () => {
-    const result = await openFileDialog()
-    if (result) {
-      const fullPath = result.filePath || result.name
-      openFile(fullPath, result.content)
-    }
-  }, [openFile])
+
 
   const showToast = useCallback((message: string) => {
     setToast({ message, visible: true })
     setTimeout(() => setToast({ message: '', visible: false }), 2000)
   }, [])
+
+  /** 打开 EPUB 字节：解析后直接进入全屏阅读模式，不创建编辑器标签页。 */
+  const openEpubData = useCallback(async (
+    bytes: Uint8Array,
+    filePath: string | null,
+    fallbackTitle?: string,
+  ) => {
+    showToast(t('reader.epubOpening'))
+    try {
+      const book = await parseEpub(bytes, { fallbackTitle })
+      if (/class="[^"]*katex/i.test(book.html)) {
+        await import('katex/dist/katex.min.css').catch(() => { /* ignore */ })
+      }
+
+      // EPUB 阅读不走 HTML5 全屏（文件对话框后已丢失手势，容易变成“普通窗口 + 全屏阅读层”）。
+      // 在挂载 Reader 之前先把窗口最大化，阅读层第一帧就按最大化尺寸排版，避免
+      // “窗口已经最大化、内容还是旧尺寸”的过渡态。
+      const wasMaximized = await windowOps.isMaximized()
+      const wasFullscreen = await windowOps.isFullscreen()
+      let restoreUnmaximize = false
+      if (!wasMaximized && !wasFullscreen) {
+        await windowOps.maximize()
+        await useWindowStateStore.getState().refresh()
+        restoreUnmaximize = await windowOps.isMaximized()
+      }
+
+      const session: EpubSession = {
+        filePath,
+        title: book.title || fallbackTitle || 'Untitled',
+        book,
+        restoreUnmaximize,
+      }
+      epubSessionRef.current?.book.dispose()
+      epubSessionRef.current = session
+      setEpubSession(session)
+      setIsReader(true)
+      if (filePath) useEditorStore.getState().addRecentFile(filePath)
+    } catch (e) {
+      console.warn('[epub] open failed:', e)
+      if (e instanceof EpubOpenError) {
+        if (e.code === 'drm') showToast(t('reader.epubErrorDrm'))
+        else if (e.code === 'fixed-layout') showToast(t('reader.epubErrorFixedLayout'))
+        else if (e.code === 'empty') showToast(t('reader.epubErrorEmpty'))
+        else showToast(t('reader.epubErrorInvalid'))
+      } else {
+        showToast(t('reader.epubErrorInvalid'))
+      }
+    }
+  }, [showToast, t])
+
+  /** 从本地路径读取 EPUB 并进入阅读模式（对话框 / 最近文件 / 命令行 / 单实例共用）。 */
+  const openEpubPath = useCallback(async (filePath: string) => {
+    const name = filePath.split(/[\\/]/).pop() || filePath
+    try {
+      const base64 = await invokeTauriOrThrow<string>('read_binary_file', { path: filePath })
+      await openEpubData(base64ToBytes(base64), filePath, name.replace(/\.epub$/i, ''))
+    } catch (e) {
+      console.warn('[epub] read failed:', e)
+      showToast(t('reader.epubErrorInvalid'))
+    }
+  }, [openEpubData, showToast, t])
+
+  /** 退出阅读模式：EPUB 会话退出时释放资源，Markdown 阅读不受影响。 */
+  const handleReaderExit = useCallback(() => {
+    setIsReader(false)
+    const session = epubSessionRef.current
+    if (session) {
+      session.book.dispose()
+      epubSessionRef.current = null
+      setEpubSession(null)
+      if (session.restoreUnmaximize) {
+        // 等 Reader 卸载、并让 exitFullscreen 的“全屏→非全屏”快照还原先完成，
+        // 再还原窗口大小，避免两者同时操作窗口导致又弹回最大化。
+        window.setTimeout(() => {
+          void windowOps.unmaximize().then(() => useWindowStateStore.getState().refresh())
+        }, 360)
+      }
+    }
+  }, [])
+
+  useEffect(() => () => { epubSessionRef.current?.book.dispose() }, [])
+
+  const handleOpenFile = useCallback(async () => {
+    const result = await openFileDialog()
+    if (!result) return
+    if (result.epubBytes) {
+      await openEpubData(result.epubBytes, result.filePath ?? null, result.name.replace(/\.epub$/i, ''))
+      return
+    }
+    const fullPath = result.filePath || result.name
+    if (isEpubPath(fullPath)) {
+      await openEpubPath(fullPath)
+      return
+    }
+    openFile(fullPath, result.content)
+  }, [openFile, openEpubData, openEpubPath])
 
   // ===== 本地缓存降级 / 写入失败：必须让用户看见 =====
   // 配额满时 localStorage 会静默拒写（zustand 默认实现不捕获），用户继续打字、重启后才发现
@@ -697,11 +858,15 @@ function App() {
 
   // 从首页打开最近文件
   const handleOpenRecent = useCallback(async (filePath: string) => {
+    if (isEpubPath(filePath)) {
+      await openEpubPath(filePath)
+      return
+    }
     const result = await invokeTauri<{ content: string; path: string }>('read_file', { path: filePath })
     if (result && result.content) {
       openFile(filePath, result.content)
     }
-  }, [openFile])
+  }, [openFile, openEpubPath])
 
   /**
    * 打开云端文档：正文与相对引用的图片都镜像到本地缓存，再按普通 tab 打开。
@@ -858,11 +1023,15 @@ function App() {
   }, [cloudSave, showToast, t])
 
   const handleFileSelect = useCallback(async (path: string) => {
+    if (isEpubPath(path)) {
+      await openEpubPath(path)
+      return
+    }
     const result = await invokeTauri<{ content: string; path: string }>('read_file', { path })
     if (result && result.content) {
       openFile(path, result.content)
     }
-  }, [openFile])
+  }, [openFile, openEpubPath])
 
   const handleInsertMarkdown = useCallback((markdown: string, mode?: 'wrap' | 'prefix' | 'ordered' | 'link' | 'tag' | 'block') => {
     // 代码块特殊处理：光标定位到两个 ``` 之间
@@ -934,7 +1103,7 @@ function App() {
   //   · 正文 innerHTML（图片在预览里已转 data URL）
   //   · 正文元素的**内联样式**（预览字体 / 字号 / 行高 / 正文列宽 —— innerHTML 带不走）
   //   · `<html>` 的内联样式（设置面板写入的 CSS 变量，漏搬就会退回主题默认字体字号）
-  const buildExportHtml = useCallback((opts?: { print?: boolean }): string => {
+  const buildExportHtml = useCallback((opts?: { print?: boolean; bodyHtml?: string }): string => {
     const themeCss = document.getElementById('yizimarkdown-theme-css')?.textContent || ''
     const userCss = document.getElementById('yizimarkdown-user-css')?.textContent || ''
     const contentEl = document.querySelector<HTMLElement>('.editor-content')
@@ -950,7 +1119,7 @@ function App() {
 
     return buildExportDocumentHtml({
       css: { base: globalsCss, math: katexCss, theme: themeCss, user: userCss, outline: exportTocCss },
-      bodyHtml: contentEl?.innerHTML || '',
+      bodyHtml: (opts?.bodyHtml ?? contentEl?.innerHTML) || '',
       bodyClass: contentEl?.className || `editor-content prose prose-lg max-w-none theme-${currentTheme}`,
       bodyStyle: contentEl?.getAttribute('style') || '',
       rootStyle: document.documentElement.getAttribute('style') || '',
@@ -961,7 +1130,33 @@ function App() {
     })
   }, [currentTheme, isDark, t])
 
-  const handleExport = useCallback(async (format: 'html' | 'md' | 'txt' | 'docx' | 'pdf' | 'pptx') => {
+  /** 构建插件导出上下文：预览现场 + 主题 CSS + 文档元信息。 */
+  const buildPluginExportSource = useCallback((tab: ReturnType<typeof currentTab>): PluginExportSource | null => {
+    if (!tab) return null
+    const contentEl = document.querySelector<HTMLElement>('.editor-content')
+    const themeCss = document.getElementById('yizimarkdown-theme-css')?.textContent || ''
+    const userCss = document.getElementById('yizimarkdown-user-css')?.textContent || ''
+    const fm = splitFrontMatter(tab.content).meta
+    const sep = tab.filePath ? Math.max(tab.filePath.lastIndexOf('\\'), tab.filePath.lastIndexOf('/')) : -1
+    return {
+      content: tab.content,
+      title: deriveDocumentTitle(tab.content) || tab.name || 'Untitled',
+      author: fm.author,
+      date: fm.date,
+      filePath: tab.filePath,
+      docBaseDir: tab.filePath && sep >= 0 ? tab.filePath.substring(0, sep) : null,
+      bodyHtml: contentEl?.innerHTML || '',
+      bodyClass: contentEl?.className || `editor-content prose prose-lg max-w-none theme-${currentTheme}`,
+      bodyStyle: contentEl?.getAttribute('style') || '',
+      rootStyle: document.documentElement.getAttribute('style') || '',
+      css: { base: globalsCss, math: katexCss, theme: themeCss, user: userCss, outline: exportTocCss },
+      theme: currentTheme,
+      isDark,
+      locale: getCurrentLang(),
+    }
+  }, [currentTheme, isDark])
+
+  const handleExport = useCallback(async (format: string) => {
     const tab = currentTab()
     if (!tab) return
 
@@ -969,6 +1164,12 @@ function App() {
     // 这里只把「入口主题/明暗」传进去（工具栏入口 = 应用当前设置）。
     if (format === 'pptx') {
       setPptxDialog({ theme: currentTheme, dark: isDark })
+      return
+    }
+    // 插件导出（EPUB 等）先开控制面板，不直接写盘
+    const pluginMatch = getEnabledExporters(enabledPlugins).find((e) => e.format === format)
+    if (pluginMatch) {
+      setPluginExportDialog({ pluginId: pluginMatch.pluginId, format })
       return
     }
 
@@ -983,6 +1184,7 @@ function App() {
       case 'txt': ext = 'txt'; break
       case 'docx': ext = 'docx'; break
       case 'pdf': ext = 'pdf'; break
+      case 'epub': ext = 'epub'; break
     }
 
     // 弹出保存文件对话框
@@ -1033,12 +1235,21 @@ function App() {
         })
         // DOCX 只能读 Markdown：先把预览里已经「不是 Markdown」的内容落回可解析形式
         //   · [toc] → 层级项目符号列表
-        //   · ```mermaid → SVG data URL（Rust 转 PNG/SVG 嵌入）
+        //   · ```mermaid → SVG data URL（白底 palette，Rust 转 PNG/SVG 嵌入）
+        const docxMermaidPalette: ThemePalette = {
+          bg: '#ffffff',
+          text: palette.text,
+          accent: palette.accent,
+          surface: palette.surface,
+          border: palette.border,
+          secondaryText: palette.text,
+          fontFamily: previewFontFamily,
+          fontMono: mono,
+          isDark: false,
+        }
         const docxMd = await prepareMarkdownForDocx(
           tab.content,
-          enabledPlugins.includes('mermaid')
-            ? (code) => renderMermaidSvgForExport(code, (pluginConfigs.mermaid?.theme as string) || 'default')
-            : undefined,
+          (code) => renderMermaidSvgForExport(code, docxMermaidPalette, false),
         )
         // 用 invokeTauriOrThrow：导出失败必须抛错显示，不能吞错假装成功
         await invokeTauriOrThrow('export_docx', {
@@ -1065,7 +1276,46 @@ function App() {
           },
         })
       } else if (format === 'pdf') {
-        await invokeTauriOrThrow('export_pdf', { path: savedPath, html: buildExportHtml({ print: true }) })
+        // 纸面不带 dark：Mermaid SVG 的颜色是渲染时写死的，必须在导出前用
+        // 白底/亮色 palette 重新渲染，否则暗色主题会得到「白纸上的暗色图表」。
+        const contentEl = document.querySelector<HTMLElement>('.editor-content')
+        let bodyHtml: string | undefined
+        if (contentEl) {
+          const current = readThemePalette(contentEl)
+          const paper = buildDocxPalette({
+            isDark,
+            accent: current.accent,
+            text: current.text,
+            surface: current.surface,
+            border: current.border,
+          })
+          const paperPalette: ThemePalette = {
+            bg: '#ffffff',
+            text: paper.text,
+            accent: paper.accent,
+            surface: paper.surface,
+            border: paper.border,
+            secondaryText: paper.text,
+            fontFamily: current.fontFamily,
+            fontMono: current.fontMono,
+            isDark: false,
+          }
+          const clone = contentEl.cloneNode(true) as HTMLElement
+          const mermaidEls = Array.from(clone.querySelectorAll<HTMLElement>('.mermaid'))
+          for (const el of mermaidEls) {
+            const code = el.getAttribute('data-source') || el.textContent || ''
+            if (!code.trim()) continue
+            try {
+              const svg = await renderMermaidSvgForExport(code, paperPalette, false)
+              if (svg) el.innerHTML = svg
+            } catch { /* 保持预览 SVG/代码，不阻塞 PDF */ }
+          }
+          bodyHtml = clone.innerHTML
+        }
+        await invokeTauriOrThrow('export_pdf', {
+          path: savedPath,
+          html: buildExportHtml({ print: true, bodyHtml }),
+        })
       } else {
         let output = ''
         if (format === 'html') {
@@ -1123,6 +1373,8 @@ function App() {
 
   const wordCount = content.length
   const readingTime = Math.max(1, Math.ceil(wordCount / 300))
+  // 启用插件声明的导出能力（如 EPUB）；未启用时菜单里不出现
+  const pluginExports = getEnabledExporters(enabledPlugins)
 
   // Esc 关闭快捷键大全面板
   useEffect(() => {
@@ -1148,6 +1400,7 @@ function App() {
         onSaveAs={handleSaveAs}
         onSaveToCloud={handleSaveToCloud}
         onExport={(format) => { handleExport(format) }}
+        pluginExports={pluginExports.map(({ format, labelKey }) => ({ format, labelKey }))}
         onSearch={handleSearchToggle}
         onSettings={handleSettings}
         onPresent={startSlideshow}
@@ -1221,6 +1474,7 @@ function App() {
               viewMode={viewMode}
               onCursorChange={(pos) => setCursorPosition({ line: pos.line, column: pos.column })}
               onToast={showToast}
+              themeRevision={themeCssRevision}
             />
           )}
         </div>
@@ -1411,15 +1665,18 @@ function App() {
         />
       )}
 
-      {/* 阅读模式：全屏、双页对开、分页阅读 */}
-      {isReader && tab && (
+      {/* 阅读模式：全屏、双页对开、分页阅读（Markdown 或 EPUB） */}
+      {isReader && (epubSession || tab) && (
         <Reader
-          content={tab.content}
-          title={tab.name}
-          filePath={tab.filePath}
+          key={epubSession ? `epub:${epubSession.filePath || epubSession.title}` : tab?.id}
+          content={tab?.content || ''}
+          title={epubSession?.title || tab?.name || ''}
+          filePath={epubSession?.filePath ?? tab?.filePath}
+          book={epubSession?.book}
+          windowMode={epubSession ? 'maximized' : 'fullscreen'}
           enabledPlugins={enabledPlugins}
           pluginConfigs={pluginConfigs}
-          onExit={() => setIsReader(false)}
+          onExit={handleReaderExit}
         />
       )}
 
@@ -1456,6 +1713,22 @@ function App() {
           }}
         />
       )}
+
+      {/* 插件导出（EPUB 等）：控制面板 → 保存路径 → 插件打包 */}
+      {pluginExportDialog && tab && (() => {
+        const pluginSource = buildPluginExportSource(tab)
+        if (!pluginSource) return null
+        return (
+          <PluginExportDialog
+            open
+            pluginId={pluginExportDialog.pluginId}
+            format={pluginExportDialog.format}
+            source={pluginSource}
+            defaultFileName={`${deriveExportBaseName({ content: tab.content, filePath: tab.filePath, fallback: 'document' })}.${pluginExportDialog.format}`}
+            onClose={() => setPluginExportDialog(null)}
+          />
+        )
+      })()}
 
       {/* 全应用共享右键菜单宿主（各功能区 openContextMenu 弹出） */}
       <ContextMenuHost />

@@ -47,7 +47,7 @@ interface FileNode {
   loaded?: boolean
 }
 
-const MARKDOWN_EXTS = ['.md', '.markdown', '.txt']
+const MARKDOWN_EXTS = ['.md', '.markdown', '.txt', '.epub']
 
 function isMarkdownFile(name: string): boolean {
   const lower = name.toLowerCase()

@@ -38,36 +38,77 @@ export async function enterFullscreen(): Promise<boolean> {
   // 必须在取消最大化之前拍快照（store 内部幂等，叠加进入时保留最早的快照）
   await useWindowStateStore.getState().snapshotForFullscreen()
 
-  // 关键：如果窗口已最大化，必须先取消最大化。
-  // HTML5 fullscreen 从最大化窗口触发时，只能覆盖 WebView 区域（小窗全屏），
-  // 而非整个屏幕。取消最大化后 HTML5 fullscreen 才能正确覆盖全屏。
+  // 最大化窗口优先走原生全屏：直接从最大化进入，不会先缩回普通窗口。
+  // HTML5 fullscreen 从最大化触发只能覆盖 WebView 区域（假全屏），所以只有
+  // 原生全屏失败时才取消最大化再走 HTML5。
+  let maximized = false
   if (internals?.invoke) {
     try {
-      const maximized = await internals.invoke('plugin:window|is_maximized', { label })
-      if (maximized) {
-        await internals.invoke('plugin:window|unmaximize', { label })
-        await sleep(150)
+      maximized = !!(await internals.invoke('plugin:window|is_maximized', { label }))
+    } catch {}
+  }
+  if (maximized && internals?.invoke) {
+    try {
+      await internals.invoke('plugin:window|set_fullscreen', { label, fullscreen: true })
+      await sleep(180)
+      if (await internals.invoke('plugin:window|is_fullscreen', { label })) {
+        await useWindowStateStore.getState().refresh()
+        return true
       }
+    } catch {}
+    // 原生全屏没成功：再按旧方案取消最大化，给 HTML5 全屏让路。
+    try {
+      await internals.invoke('plugin:window|unmaximize', { label })
+      await sleep(150)
     } catch {}
   }
 
   // HTML5 Fullscreen（从用户手势触发，WebView2 支持）
+  let domFullscreen = false
   try {
     if (!document.fullscreenElement) {
       await document.documentElement.requestFullscreen()
       await sleep(100)
-      return !!document.fullscreenElement
+      domFullscreen = !!document.fullscreenElement
+    } else {
+      domFullscreen = true
     }
+  } catch {
+    domFullscreen = false
+  }
+  if (domFullscreen) {
+    await useWindowStateStore.getState().refresh()
     return true
-  } catch {}
+  }
 
-  // Tauri window API 降级
+  // Tauri window API 降级。注意：HTML5 fullscreen 可能“成功返回但没有真正进入全屏”
+  // （例如打开 EPUB 这种经过原生文件对话框/异步解析、已丢失手势上下文的路径），
+  // 不能直接 return false，否则会留下一个“已取消最大化、但没全屏”的普通窗口。
   if (internals?.invoke) {
     try {
       await internals.invoke('plugin:window|set_fullscreen', { label, fullscreen: true })
       await sleep(150)
-      return await internals.invoke('plugin:window|is_fullscreen', { label }) as boolean
+      if (await internals.invoke('plugin:window|is_fullscreen', { label })) {
+        await useWindowStateStore.getState().refresh()
+        return true
+      }
     } catch {}
+  }
+
+  // 两种全屏都没成功：把进入前取消掉的最大化还原，别让窗口卡在普通尺寸。
+  const snap = useWindowStateStore.getState().preFullscreen
+  if (snap) {
+    useWindowStateStore.setState({ preFullscreen: null })
+    if (internals?.invoke) {
+      try {
+        if (snap.fullscreen) {
+          await internals.invoke('plugin:window|set_fullscreen', { label, fullscreen: true })
+        } else if (snap.maximized) {
+          await internals.invoke('plugin:window|maximize', { label })
+        }
+      } catch {}
+    }
+    await useWindowStateStore.getState().refresh()
   }
   return false
 }
@@ -79,7 +120,10 @@ export async function exitFullscreen(): Promise<boolean> {
     if (document.fullscreenElement) {
       await document.exitFullscreen()
       await sleep(100)
-      return !document.fullscreenElement
+      if (!document.fullscreenElement) {
+        await useWindowStateStore.getState().refresh()
+        return true
+      }
     }
   } catch {}
 
@@ -90,7 +134,10 @@ export async function exitFullscreen(): Promise<boolean> {
       const label = internals.metadata?.currentWindow?.label || 'main'
       await internals.invoke('plugin:window|set_fullscreen', { label, fullscreen: false })
       await sleep(150)
-      return !(await internals.invoke('plugin:window|is_fullscreen', { label }))
+      if (!(await internals.invoke('plugin:window|is_fullscreen', { label }))) {
+        await useWindowStateStore.getState().refresh()
+        return true
+      }
     }
   } catch {}
   return false

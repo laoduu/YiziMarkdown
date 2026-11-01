@@ -143,10 +143,6 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
     fillHeight: slideFillHeight,
   }
 
-  const mermaidTheme = String(
-    (source.pluginConfigs?.mermaid as Record<string, unknown> | undefined)?.theme ?? 'default',
-  )
-
   const startExport = useCallback(async () => {
     if (busy) return
     setError(null)
@@ -198,7 +194,6 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
         colAlign: source.colAlign,
         enabledPlugins: source.enabledPlugins,
         pluginConfigs: source.pluginConfigs,
-        mermaidTheme,
         docBaseDir: source.docBaseDir ?? null,
         includeNotes,
         includeFooter,
@@ -241,7 +236,7 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
   }, [
     busy, source, rangeMode, customStart, customEnd, t,
     includeNotes, includeFooter, overflowMode,
-    slideFontFamily, slideFontWeight, slideFontScale, slideFillWidth, slideFillHeight, mermaidTheme,
+    slideFontFamily, slideFontWeight, slideFontScale, slideFillWidth, slideFillHeight,
   ])
 
   if (!open) return null

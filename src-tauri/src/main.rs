@@ -61,6 +61,13 @@ fn read_file(path: String) -> Result<FileReadResult, String> {
 }
 
 #[tauri::command]
+fn read_binary_file(path: String) -> Result<String, String> {
+    use base64::Engine as _;
+    let data = fs::read(&path).map_err(|e| format!("Failed to read file: {}", e))?;
+    Ok(base64::engine::general_purpose::STANDARD.encode(data))
+}
+
+#[tauri::command]
 fn save_file(path: String, content: String) -> Result<(), String> {
     match fs::write(&path, &content) {
         Ok(_) => Ok(()),
@@ -336,7 +343,7 @@ async fn pick_and_read_file(app: tauri::AppHandle) -> Result<FileReadResult, Str
     tauri::async_runtime::spawn_blocking(move || {
         let result = app.dialog()
             .file()
-            .add_filter("Markdown", &["md", "markdown", "txt"])
+            .add_filter("Markdown / EPUB", &["md", "markdown", "txt", "epub"])
             .blocking_pick_file()
             .ok_or_else(|| "User cancelled".to_string())?;
 
@@ -344,8 +351,13 @@ async fn pick_and_read_file(app: tauri::AppHandle) -> Result<FileReadResult, Str
             .map_err(|e| format!("Invalid file path: {}", e))?
             .to_string_lossy()
             .to_string();
-        let content = fs::read_to_string(&file_path)
-            .map_err(|e| format!("Failed to read file: {}", e))?;
+        // EPUB 是二进制容器，不在 Rust 侧解成字符串；前端走 read_binary_file。
+        let content = if file_path.to_lowercase().ends_with(".epub") {
+            String::new()
+        } else {
+            fs::read_to_string(&file_path)
+                .map_err(|e| format!("Failed to read file: {}", e))?
+        };
 
         Ok(FileReadResult { content, path: file_path })
     })
@@ -1524,7 +1536,7 @@ fn parse_cli_args() -> Option<String> {
     // args[0] 是 exe 路径，args[1] 是第一个参数（文件路径）
     for arg in args.iter().skip(1) {
         let lower = arg.to_lowercase();
-        if lower.ends_with(".md") || lower.ends_with(".markdown") || lower.ends_with(".txt") {
+        if lower.ends_with(".md") || lower.ends_with(".markdown") || lower.ends_with(".txt") || lower.ends_with(".epub") {
             return Some(arg.clone());
         }
     }
@@ -1886,6 +1898,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             read_file,
+            read_binary_file,
             save_file,
             save_binary_file,
             latex_to_omml,
@@ -1956,7 +1969,7 @@ fn main() {
             // 从命令行参数中提取文件路径，通过 eval 直接调用前端全局函数
             let file_path = args.iter().skip(1).find(|a| {
                 let lower = a.to_lowercase();
-                lower.ends_with(".md") || lower.ends_with(".markdown") || lower.ends_with(".txt")
+                lower.ends_with(".md") || lower.ends_with(".markdown") || lower.ends_with(".txt") || lower.ends_with(".epub")
             }).cloned();
 
             if let Some(path) = file_path {

@@ -4,6 +4,118 @@
 
 > **未发布**（截至 2026-10-29）：新一轮开发已开始，`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已升到 `0.4.1`，尚未打包、未打 tag。本节随本轮改动累积。
 
+### EPUB 直接阅读 / 阅读模式接入（2026-11-01）
+
+**需求**：既然能导出 EPUB，也应该能打开 EPUB；EPUB 不是 Markdown，打开后应直接进入阅读模式，而不是源码 / 实时 / 预览。
+
+**新增 `src/lib/epubReader.ts`**：用 JSZip 解析 EPUB 容器与 OPF，按 spine 读取章节，输出阅读模式可直接分页的 HTML：
+
+- 支持 EPUB 3 `nav.xhtml` 目录，回退 EPUB 2 NCX，再回退到标题推导；
+- 跳过出版社的封面页、扉页与可见目录页，由阅读模式统一生成封面 / 扉页 / 目录；
+- 读取 OPF `cover-image` / `meta name="cover"` / 封面文档首图，作为内嵌封面图；
+- 章节 ID 加 `cN-` 前缀，跨章节锚点与脚注链接统一改写；
+- 图片从 ZIP 提取为 blob URL，退出阅读时统一释放；
+- 清洗 XHTML：移除脚本、表单、iframe、事件属性、危险 URL；忽略出版社 CSS 与内联排版样式，统一使用应用阅读主题；
+- 保留内联 SVG（含 Mermaid 的 `<style>`）与 KaTeX 公式 HTML；阅读模式按需加载 KaTeX CSS；
+- 明确拒绝 DRM / 加密 EPUB 与固定版式 EPUB（漫画、画册），并给出提示。
+
+**阅读模式改造**：`Reader` 新增 `book` 来源。存在时跳过 Markdown 渲染、插件后处理与本地图片解析，直接把解析后的 HTML 交给现有分页引擎；封面、扉页、目录、主题、HUD、字号、阅读位置记忆全部复用。脚注识别扩展现有 `fn*` 规则，兼容带章节前缀的 ID。
+
+**打开流程**：
+
+- 文件对话框、最近文件、命令行启动、单实例二次打开、文件树点击均识别 `.epub`；
+- 浏览器开发模式用 `File.arrayBuffer()` 读取；
+- Tauri 新增 `read_binary_file`（base64），文件选择器增加 EPUB 过滤；
+- EPUB 使用独立全屏阅读会话，不创建编辑器标签页，避免保存 / 脏标记 / 持久化语义冲突；退出后回到原文档，路径写入最近文件可再次打开。
+
+**EPUB 导出同步调整**：可见目录页增加 `epub:type="toc"`，重新打开自己导出的 EPUB 时不会与应用生成的目录页重复。
+
+**验证**：`npx tsc --noEmit`、`npm test`（410 通过）、`npm run build`、`check:i18n:strict`、`check:docs` 通过；headless Edge 用合成 EPUB 验证封面图、nav 目录、跨章节链接、脚注、图片、KaTeX、SVG `style`、脚本清洗，并渲染阅读模式确认分页与封面正常；再用 EPUB 导出器生成 EPUB 后回读，确认封面/目录页被跳过、章节与目录正确。
+
+**修复**：真实书籍（含整页图片）实测时发现分页器 `fitImageBlock` 在图片换页判断里提前把节点从当前页移除，调用方随后再按“溢出”流程移除同一节点，触发 `removeChild NotFoundError`；异常被阅读模式捕获后表现为“没有可阅读的内容”。已移除这次提前移除，图片块统一交给调用方的溢出/换页流程处理。实测 5MB 中文 EPUB 从 0 页恢复为正常分页（含封面图与 83 条目录）。
+
+**窗口状态修复**：从文件对话框打开 EPUB 时，原点击手势已经过去，HTML5 `requestFullscreen()` 可能失败；旧逻辑又在尝试前取消了最大化，并且失败后没有走 Tauri 原生全屏降级，结果留下一个“常规大小、无标题栏可拖动”的窗口。现在 HTML5 全屏未真正生效时会继续尝试原生 `set_fullscreen`，两种都失败则还原进入前的最大化状态；阅读层在非全屏时额外提供顶部拖动条和最小化/最大化/全屏/退出阅读按钮，避免用户被困在没有窗口控制的覆盖层里。
+
+**阅读窗口体验优化**：阅读层右上角改为自己的窗口按钮——最小化、最大化/还原、进入全屏、退出阅读；关闭按钮只退出阅读回编辑器，不再直接关闭整个应用。窗口操作后立即刷新 `windowStateStore`，最大化/还原图标不再等 500ms 轮询。窗口从普通尺寸切到最大化/还原时，`ResizeObserver` 先做 140ms 防抖，避免最大化动画期间每一帧都触发整本重排；尺寸稳定后只重排一次，并立即显示“正在排版”，不再出现窗口已变化但书页停在旧尺寸的卡顿。全屏 effect 用 epoch 规避 StrictMode 双挂载导致的“刚进全屏又被退出”。
+
+**EPUB 打开窗口策略**：EPUB 从原生文件对话框打开时无法可靠获得 HTML5 全屏手势，因此不再强行进入全屏；解析成功、挂载阅读层之前先把窗口最大化，阅读层第一帧就按最大化尺寸分页。退出阅读时若窗口是本次打开才最大化的，会还原到打开前的普通窗口尺寸；用户仍可在阅读中手动进入全屏。
+
+**最大化 → 全屏中间态修复**：旧逻辑从最大化进入全屏时先取消最大化，再发 HTML5 fullscreen，导致窗口先缩回普通尺寸并触发一轮小尺寸重排（截图中的“正在排版…99%”）。现在最大化窗口优先走原生 `set_fullscreen`，全程不缩窗；只有原生全屏失败时才回退到“取消最大化 + HTML5 全屏”。阅读层的最大化/全屏按钮切换期间会冻结 ResizeObserver 重排，窗口状态落定后只按最终尺寸重排一次。
+
+**文件对话框默认筛选**：打开文件对话框的默认筛选原来只有 `.md/.markdown/.txt`，EPUB 需要切到单独的过滤器才能看到。现在默认过滤器改为 `Markdown / EPUB`，直接包含 `.epub`。
+
+**Mermaid 翻页变黑修复**：真正原因是翻页书叶复制页面 HTML 时用正则删除了**所有 `id`**，包括 Mermaid SVG 根节点。Mermaid 的配色写在 `<style>#mermaid-id .node …</style>` 里，ID 被删后选择器失效，翻动页里的图形退回 SVG 默认黑色。现在复制书叶时只移除 HTML 锚点 id，保留 `<svg>` 内部 id；同时阅读模式的 Mermaid 改用 `htmlLabels=false`（SVG `<text>` 标签），避免 `foreignObject` 在 3D 合成层里的额外兼容风险。预览/实时模式仍保持原样，EPUB 里已有的 Mermaid 会在打开时按当前主题重渲染。
+
+### EPUB 导出控制面板 / 多章 / 封面 / 可见目录（2026-11-01）
+
+**问题**：EPUB 直接从工具栏写盘，章节拆分完全自动推断，用户无法确认；生成的包只有 `nav.xhtml`（导航文档，不在 spine），没有封面页，也没有阅读顺序里的可见目录页。
+
+**新增导出控制面板**：新增通用 `PluginExportDialog`，插件通过 `exportOptions` 声明字段，App 只负责打开面板、保存和进度。EPUB 面板提供：
+
+- 书名 / 作者 / 语言
+- 章节拆分：自动（优先 H2，其次 H1）/ 按 H1 / 按 H2 / 单章
+- 生成封面页
+- 生成可见目录页（EPUB nav 始终保留）
+- 阅读主题：跟随应用 / 浅色 / 深色
+- 移除正文中与封面重复的首行标题
+
+**EPUB 结构改造**：`OEBPS/` 现在可包含：
+
+```text
+cover.xhtml
+toc.xhtml
+nav.xhtml
+chapter-01.xhtml
+chapter-02.xhtml
+...
+styles.css
+images/...
+content.opf
+```
+
+- 封面页与可见目录页进入 `spine`；`nav.xhtml` 始终作为 EPUB 导航文档保留；
+- 章节按 DOM 顶层标题边界拆分，不切表格/列表/代码块内部；
+- 跨章节 `#锚点` 链接会改写为目标章节文件；
+- 图片、Mermaid SVG、公式仍随预览效果保留；
+- 没有可拆标题时自动回退单章并给出告警。
+
+**插件 API 扩展**：`PluginConfigField` 增加 `text`；`PluginExportContext` 增加 `options` 和 `onProgress`；`PluginExportResult` 增加 `warnings`；插件可实现 `exportOptions` / `getExportDefaults`，后续导出插件可复用同一面板。
+
+**验证**：headless Edge 实测 EPUB ZIP 包含 `mimetype`、`cover.xhtml`、`toc.xhtml`、`nav.xhtml`、多个 `chapter-*.xhtml`，`content.opf` 的 spine/manifest 正确；`npm test`、`npm run build` 通过。
+
+### Mermaid 预览 / 并排预览 / 实时模式主题同步修复（2026-10-31）
+
+**现象**：演示模式的 Mermaid 已经按主题取色，但预览、并排预览仍是默认 Mermaid 配色；实时模式首次也不匹配，点击图表进入源码再移出后才变成主题色。
+
+**根因**：主题 CSS 是由 `applyThemeStyles()` **异步读取并注入**的，而预览/实时的 Mermaid 在首次渲染时可能早于主题样式落位，`readThemePalette()` 读到的是兜底色；之后主题 class / CSS 变量已更新，但没有新的信号让 Mermaid 重新渲染。实时模式还多一层：widget 只有在代码或位置变化时才重建，单纯换主题不会触发 `toDOM`。
+
+**修复**：
+
+- `themeLoader.applyThemeStyles()` 在主题/用户 CSS 落位后派发 `yizi-theme-css-ready` 事件。
+- App 监听事件并递增 `themeCssRevision`，通过 Editor → PreviewPane 的 effect 依赖触发预览与并排预览重新 postRender。
+- `Editor` 的主题 effect 把 revision 传给 `liveThemeChanged` StateEffect；实时模式的 Mermaid widget 增加 themeKey（含 CSS revision），主题变化时强制重建并重新取色。
+- Mermaid 本身不缓存旧 SVG；重渲染仍走串行队列，避免预览/导出并发改全局 initialize。
+
+**验证**：`npm test`（404 项）、`npm run build`、`npx tsc --noEmit` 通过；手动检查预览 / 并排预览在主题 CSS 注入后 Mermaid 会重新取色。
+
+### 核心渲染器 / Mermaid 跟随主题 / 插件 v2 + EPUB 导出（2026-10-31）
+
+**数学公式与 Mermaid 从插件提升为核心渲染器。** 新建 `src/renderers/`：`katex.ts` 负责 KaTeX 动态加载、markdown-it 扩展与 postRender 兜底；`mermaid.ts` 负责 fence 占位、按需加载、串行渲染队列和导出 SVG；`index.ts` 提供 `ensureCoreRenderers / extendCoreMarkdownIt / postRenderCore`。`createMarkdownIt` 现在始终安装核心扩展，预览 / 实时 / 阅读 / 演示 / HTML / PDF / DOCX / PPTX 全部改走同一套实现，删除了 `enabledPlugins.includes('katex'|'mermaid')` 这类硬编码分支。
+
+**Mermaid 跟随 YiziMarkdown 主题。** 新增 `src/lib/themePalette.ts`：从当前容器的 computed CSS 变量解析 bg/text/accent/surface/border/font，并把半透明色合成到背景。新增 `src/renderers/mermaidTheme.ts`，把 palette 映射为 Mermaid `theme: 'base'` 的 `themeVariables`（节点/连线/容器/时序/甘特/状态等），不再使用官方 default/dark/forest/neutral 预设。
+
+- 预览：Theme / 明暗变化时重新 postRender，旧 SVG 会按新 palette 重渲染。
+- 实时：`MermaidWidget` 带 themeKey，主题变化时通过 `liveThemeChanged` StateEffect 重建 widget。
+- 演示：主题 CSS 注入完成后递增 `themeRevision`，清掉 `data-processed` 并重新处理窗口内页面。
+- 导出：DOCX 用白底 `buildDocxPalette`；PDF 打印前用纸面 palette 重新渲染 SVG；PPTX 从幻灯片 iframe 读取 palette 后交给 resvg 栅格化。
+- Mermaid 的 `initialize` 是全局状态，所有渲染进入同一个串行队列，避免预览/导出互相改主题。
+
+**插件模块重新定位。** 删除内置 katex/mermaid 插件注册，插件列表只保留真正的可选插件。新增 manifest 字段（version / apiVersion / minAppVersion / activation / permissions / capabilities）、`activate/deactivate`、Markdown 能力过滤、导出能力注册、错误隔离与兼容性检查。设置迁移 v15 会把旧存档中的 `katex`/`mermaid` 开关和 `pluginConfigs` 清掉；插件页不再显示公式/图表开关。
+
+**首个真正的内置插件：EPUB 导出。** `src/plugins/builtin/epub.ts` 声明 `capabilities.exportFormats: ['epub']`，导出 EPUB 3 包（mimetype 置首且不压缩、container.xml、content.opf、nav.xhtml、chapter.xhtml、styles.css），把预览中的 data URL 图片拆成 OEBPS 图片资源。工具栏导出菜单由 `getEnabledExporters(enabledPlugins)` 动态生成；EPUB 默认启用，可在插件页关闭。当前为单章 EPUB，公式/图表随预览效果保留。
+
+**验证。** `npx tsc --noEmit`、`npm test`（404 项）、`npm run build` 通过；新增 `tests/mermaidTheme.test.ts`（主题到 Mermaid 变量、亮/暗色）、`tests/pluginRegistry.test.ts`（核心插件移除、EPUB manifest/导出能力）。另用 headless Edge 实测：Mermaid `base` + palette 能生成带主题色的 SVG；EPUB 插件导出 ZIP 包含 mimetype/container/opf/nav/chapter 与拆分后的图片资源。
+
 ### 演示模式长页回顶 / 金句作用域 / PPTX 导出审计修复（2026-10-31）
 
 本轮把演示模式的长页滚动、金句页边界和 PPTX 导出放在一起修：它们都依赖「DOM 测量 → 场景图 → PPTX」这条链路，单改一个模块容易让演示与导出再次漂移。

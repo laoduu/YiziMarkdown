@@ -274,6 +274,54 @@
 
 /* ---------------------------- 顶部 / 底部 ---------------------------- */
 
+/* 未进入全屏时的窗口拖动条/窗口按钮：普通窗口下不能把用户困在没有标题栏的阅读层里 */
+.reader-window-drag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  z-index: 26;
+}
+.reader-window-controls {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  z-index: 31;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--reader-bg) 78%, transparent);
+}
+.reader-window-btn,
+.reader-exit-btn {
+  width: 32px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--reader-text);
+  opacity: 0.8;
+  cursor: pointer;
+}
+.reader-window-btn:hover,
+.reader-exit-btn:hover {
+  background: color-mix(in srgb, var(--reader-text) 12%, transparent);
+  opacity: 1;
+}
+.reader-exit-btn {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  z-index: 31;
+  background: color-mix(in srgb, var(--reader-bg) 78%, transparent);
+}
+
 .reader-topbar {
   position: absolute;
   top: 14px;
@@ -644,6 +692,21 @@
   justify-content: center;
   text-align: center;
   padding: 0 4%;
+}
+.reader-cover-art {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.4em;
+}
+.reader-cover-art img {
+  max-width: min(72%, 340px);
+  max-height: 42vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 12px 32px color-mix(in srgb, #000 22%, transparent);
 }
 .reader-cover-subtitle {
   font-size: 0.82em;

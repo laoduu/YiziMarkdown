@@ -75,7 +75,9 @@ interface ToolbarProps {
   onInsertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'ordered' | 'link' | 'tag' | 'block') => void
   /** 插入脚注（正文 [^n] + 文末定义行），逻辑在编辑器内（EditorRef.insertFootnote） */
   onInsertFootnote: () => void
-  onExport: (format: 'html' | 'md' | 'txt' | 'docx' | 'pdf' | 'pptx') => void
+  onExport: (format: string) => void
+  /** 由已启用插件声明的额外导出格式（当前为 EPUB）。 */
+  pluginExports?: Array<{ format: string; labelKey: string }>
   onSearch: () => void
   onSettings: () => void
   onPresent: () => void
@@ -95,7 +97,7 @@ const AUTO_COLLAPSE_THRESHOLD = 1320
 
 export default function Toolbar({
   onNew, onNewFromTemplate, onOpen, onSave, onSaveAs, onSaveToCloud, onToggleSidebar, onToggleDark, onUndo, onRedo,
-  onInsertMarkdown, onInsertFootnote, onExport, onSearch, onSettings, onPresent, onRead, onAIChat,
+  onInsertMarkdown, onInsertFootnote, onExport, pluginExports = [], onSearch, onSettings, onPresent, onRead, onAIChat,
   isDark,
 }: ToolbarProps) {
   const { t } = useI18n()
@@ -429,6 +431,14 @@ export default function Toolbar({
                 label={t('toolbar.exportPptx')} 
                 onClick={() => { onExport('pptx'); setShowExportMenu(false); }} 
               />
+              {pluginExports.map((item) => (
+                <ExportMenuItem
+                  key={item.format}
+                  icon={<FormatBadge letter={item.format.slice(0, 1).toUpperCase()} />}
+                  label={t(item.labelKey)}
+                  onClick={() => { onExport(item.format); setShowExportMenu(false); }}
+                />
+              ))}
             </div>
           )}
         </div>

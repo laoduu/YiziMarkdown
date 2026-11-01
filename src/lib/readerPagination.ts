@@ -255,7 +255,6 @@ export async function paginateReader(html: string, opts: ReaderPaginationOptions
     if (node.nodeName !== 'P') return false
     const img = node.querySelector('img')
     if (!img || node.textContent?.trim()) return false
-    const pageTop = current.inner.getBoundingClientRect().top
     const maxH = Math.max(40, height - 24)
     if (img.getBoundingClientRect().height > maxH) {
       img.style.maxHeight = `${maxH}px`
@@ -263,15 +262,9 @@ export async function paginateReader(html: string, opts: ReaderPaginationOptions
       img.style.height = 'auto'
       return pageFits()
     }
-    // 本页剩余空间不足但下一页能放下：交给调用方换页
-    const remaining = limitBottom() - node.getBoundingClientRect().top
-    if (remaining < img.getBoundingClientRect().height && img.getBoundingClientRect().height <= maxH) {
-      if (current.inner.childElementCount > 1) {
-        current.inner.removeChild(node)
-        return false
-      }
-    }
-    void pageTop
+    // 本页剩余空间不足但下一页能放下：交给调用方换页。
+    // 注意不要在这里自己 removeChild —— 调用方随后还会按“溢出”流程移除同一节点，
+    // 提前摘掉会导致 removeChild 抛 NotFoundError，整本书排版失败。
     return pageFits()
   }
 

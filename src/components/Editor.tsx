@@ -16,6 +16,7 @@ import { isTaskLine, toggleTaskAtLine } from '../lib/taskList'
 import { decideClipboardPaste, materializeLocalImages, planPasteInsert } from '../lib/clipboardMarkdown'
 import { planHorizontalRule } from '../lib/horizontalRule'
 import { liveEditExtension } from '../lib/cm-live-render'
+import { liveThemeChanged } from '../lib/cm-live-blocks'
 import { frontMatterField, frontMatterLines } from '../lib/cm-frontmatter'
 import { headingFoldExtension } from '../lib/cm-heading-fold'
 import { slashMenuExtension, slashMenuState, showSlashMenu, hideSlashMenu, slashMenuAction } from '../lib/cm-slash-menu'
@@ -25,7 +26,8 @@ import SlashMenu from './SlashMenu'
 import SelectionToolbar from './SelectionToolbar'
 import ContentWidthHandles from './ContentWidthHandles'
 import { renderMarkdown } from '../lib/markdownRenderer'
-import { extendMarkdownIt, postRender as pluginPostRender } from '../plugins/registry'
+import { extendMarkdownIt, getMarkdownPluginIds, postRender as pluginPostRender } from '../plugins/registry'
+import { postRenderCore } from '../renderers/index'
 import { invokeTauri } from '../lib/tauri'
 import { resolveLocalImageSrc } from '../lib/localImages'
 import { getCurrentLang, translate, useI18n } from '../i18n'
@@ -144,6 +146,8 @@ interface EditorProps {
   viewMode?: ViewMode
   onCursorChange?: (pos: { line: number; column: number }) => void
   onToast?: (message: string) => void
+  /** App 主题 CSS 异步注入完成的版本号；用于重渲染 Mermaid 等取主题色的内容 */
+  themeRevision?: number
 }
 
 interface PreviewPaneProps {
@@ -153,6 +157,7 @@ interface PreviewPaneProps {
   enabledPlugins?: string[]
   pluginConfigs?: Record<string, Record<string, unknown>>
   onToast?: (message: string) => void
+  themeRevision?: number
 }
 
 /**
@@ -192,9 +197,10 @@ function setFenceLanguage(
   return lines.join('\n')
 }
 
-function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = [], pluginConfigs = {}, onToast }: PreviewPaneProps) {
+function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = [], pluginConfigs = {}, onToast, themeRevision = 0 }: PreviewPaneProps) {
   const { t } = useI18n()
-  // 插件就绪状态：变化时触发 markdown 重新渲染
+  const isDark = useSettingsStore((s) => s.isDark)
+  // 核心渲染器 + 插件就绪状态：变化时触发 markdown 重新渲染
   const pluginsReady = useEditorStore((s: any) => s._pluginsReady)
 
   // 当前文档所在目录：相对路径图片按它解析（云端文档解析到本地镜像里已下载的图片）。
@@ -221,26 +227,29 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
     isFirstRender.current = false
     if (debouncedContent !== content) setDebouncedContent(content)
   }
+  // 所有插件只注入一次：旧实现每个插件 push 一个同样的“全部插件”扩展，
+  // N 个插件会把扩展重复注入 N 次。
   const pluginExtenders = useMemo(() => {
-    const exts: Array<(md: any) => void> = []
-    for (const _id of enabledPlugins) {
-      exts.push((md: any) => extendMarkdownIt(md, enabledPlugins, pluginConfigs || {}))
-    }
-    return exts
+    const ids = getMarkdownPluginIds(enabledPlugins)
+    if (ids.length === 0) return []
+    return [(md: any) => extendMarkdownIt(md, ids, pluginConfigs || {})]
   }, [enabledPlugins, pluginConfigs])
-  // 插件未就绪时跳过渲染（避免用空 loadedPlugins 生成无公式/图表的 HTML）
+  // 核心渲染器（数学公式）未就绪时跳过渲染，避免把公式先渲染成源码。
   const renderedHtml = useMemo(() => {
-    if (enabledPlugins.length > 0 && !pluginsReady) return ''
+    if (!pluginsReady) return ''
     return renderMarkdown(debouncedContent, pluginExtenders)
-  }, [debouncedContent, pluginExtenders, pluginsReady, enabledPlugins.length])
+  }, [debouncedContent, pluginExtenders, pluginsReady])
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // 插件后处理：公式渲染、图表渲染等
+  // 核心后处理始终执行（公式 / Mermaid）；主题或明暗变化时重渲染 Mermaid。
   useEffect(() => {
     const container = containerRef.current
-    if (!container || enabledPlugins.length === 0) return
-    pluginPostRender(container, enabledPlugins, pluginConfigs || {})
-  }, [renderedHtml, enabledPlugins, pluginConfigs, pluginsReady])
+    if (!container || !pluginsReady) return
+    postRenderCore(container).catch(() => {})
+    if (enabledPlugins.length > 0) {
+      pluginPostRender(container, enabledPlugins, pluginConfigs || {}).catch(() => {})
+    }
+  }, [renderedHtml, currentTheme, isDark, themeRevision, enabledPlugins, pluginConfigs, pluginsReady])
 
   // 监听任务列表 checkbox 点击，同步回源码
   useEffect(() => {
@@ -678,7 +687,7 @@ function replaceBrokenImage(img: HTMLImageElement): void {
   img.replaceWith(span)
 }
 
-const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearchToggle, isSearchOpen: externalSearchOpen, viewMode: externalViewMode, onCursorChange, onToast }, ref) => {
+const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearchToggle, isSearchOpen: externalSearchOpen, viewMode: externalViewMode, onCursorChange, onToast, themeRevision = 0 }, ref) => {
   const { t } = useI18n()
 
   const editorRef = useRef<HTMLDivElement>(null)
@@ -691,7 +700,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [searchMatches, setSearchMatches] = useState<number>(0)
   const [searchIndex, setSearchIndex] = useState<number>(-1)
-  const { fontFamily, fontSize, lineHeight, currentTheme, showLineNumbers, wordWrap, spellCheck, liveAnimationMode, cursorStyle, mouseSpotlight, enabledPlugins, pluginConfigs } = useSettingsStore()
+  const { fontFamily, fontSize, lineHeight, currentTheme, isDark, showLineNumbers, wordWrap, spellCheck, liveAnimationMode, cursorStyle, mouseSpotlight, enabledPlugins, pluginConfigs } = useSettingsStore()
   const viewMode = externalViewMode ?? 'preview'
   const [slashMenuVisible, setSlashMenuVisible] = useState(false)
   const [slashMenuCoords, setSlashMenuCoords] = useState({ left: 0, bottom: 0 })
@@ -1407,6 +1416,13 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     })
   }, [fontFamily, fontSize, lineHeight, cursorStyle, viewMode, themeCompartment])
 
+  // 主题/明暗变化：Mermaid widget 的 SVG 颜色是渲染时写死的，必须强制重建。
+  useEffect(() => {
+    const view = viewRef.current
+    if (!view) return
+    view.dispatch({ effects: liveThemeChanged.of(themeRevision) })
+  }, [currentTheme, isDark, themeRevision])
+
   // spellCheck 设置变更时动态 reconfigure
   useEffect(() => {
     const view = viewRef.current
@@ -1736,7 +1752,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
 
         {/* 预览面板：永远挂载 */}
         <div ref={previewScrollRef} style={{ flex: viewMode === 'split' ? '1 1 0%' : viewMode === 'preview' ? '1 1 100%' : '0 0 0%', minHeight: 0, overflow: 'auto', pointerEvents: (viewMode === 'edit' || viewMode === 'live') ? 'none' : 'auto' }}>
-          <PreviewPane content={content} currentTheme={currentTheme} onContentChange={onChange} enabledPlugins={enabledPlugins} pluginConfigs={pluginConfigs} onToast={onToast} />
+          <PreviewPane content={content} currentTheme={currentTheme} onContentChange={onChange} enabledPlugins={enabledPlugins} pluginConfigs={pluginConfigs} onToast={onToast} themeRevision={themeRevision} />
         </div>
 
         {/* 正文列宽度拖拽手柄：默认隐藏，鼠标移到正文列边缘才渐显（见组件内注释）。

@@ -11,11 +11,12 @@
  */
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
-  BookOpen, Check, List, Minus, Moon, Palette, Plus,
-  Sun, Type, X,
+  BookOpen, Check, Copy, List, Maximize, Minus, Moon, Palette,
+  Plus, Square, Sun, Type, X,
 } from 'lucide-react'
 import { renderMarkdown } from '../lib/markdownRenderer'
-import { extendMarkdownIt, postRender as pluginPostRender } from '../plugins/registry'
+import { extendMarkdownIt, getMarkdownPluginIds, postRender as pluginPostRender } from '../plugins/registry'
+import { postRenderCore } from '../renderers/index'
 import { computeOutlineItems } from '../lib/headingId'
 import { splitFrontMatter } from '../lib/frontMatter'
 import { stripInlineMarkers } from '../lib/liveSyntax'
@@ -28,6 +29,9 @@ import { scopeThemeVars } from '../lib/slideDeck'
 import { enterFullscreen, exitFullscreen, toggleFullscreen } from '../lib/fullscreen'
 import { invokeTauri } from '../lib/tauri'
 import { resolveLocalImageSrc } from '../lib/localImages'
+import type { EpubBookSource } from '../lib/epubReader'
+import { windowOps } from '../lib/windowOps'
+import { useWindowStateStore } from '../stores/windowStateStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useI18n } from '../i18n'
 import '../styles/reader.css'
@@ -36,6 +40,15 @@ interface ReaderProps {
   content: string
   title: string
   filePath?: string | null
+  /** EPUB 等预渲染文档：存在时跳过 Markdown 渲染，直接分页 */
+  book?: EpubBookSource | null
+  /**
+   * 打开时的窗口目标：
+   *   fullscreen —— Markdown 阅读模式（原行为）
+   *   maximized  —— EPUB 从文件对话框打开；全屏手势不可靠，先用最大化窗口，
+   *                 避免“窗口已最大化、内容还是旧尺寸”的中间态
+   */
+  windowMode?: 'fullscreen' | 'maximized'
   enabledPlugins: string[]
   pluginConfigs: Record<string, Record<string, unknown>>
   onExit: () => void
@@ -118,7 +131,7 @@ function BookPage({ html, index, side, front }: FlipPage & { front?: string }) {
 }
 
 export default function Reader({
-  content, title, filePath, enabledPlugins, pluginConfigs, onExit,
+  content, title, filePath, book, windowMode = 'fullscreen', enabledPlugins, pluginConfigs, onExit,
 }: ReaderProps) {
   const { t } = useI18n()
   const rootRef = useRef<HTMLDivElement>(null)
@@ -127,6 +140,8 @@ export default function Reader({
   const bookRef = useRef<HTMLDivElement>(null)
 
   const settings = useSettingsStore.getState()
+  const readerFullscreen = useWindowStateStore((s) => s.fullscreen)
+  const readerMaximized = useWindowStateStore((s) => s.maximized)
   const [theme, setTheme] = useState(settings.currentTheme || 'liquidglass-prism')
   const [dark, setDark] = useState(!!settings.isDark)
   const [fontChoice, setFontChoice] = useState<FontChoice>('theme')
@@ -138,11 +153,17 @@ export default function Reader({
   const [themeMeta, setThemeMeta] = useState<Record<string, string>>({})
   const [themeMenu, setThemeMenu] = useState(false)
   const [fontMenu, setFontMenu] = useState(false)
+  const [readerChromeReady, setReaderChromeReady] = useState(false)
 
   const [layout, setLayout] = useState<Layout>({ pageW: 0, pageH: 0, spread: false, gap: 0, margin: 44, padX: 46 })
+  const layoutRef = useRef(layout)
+  layoutRef.current = layout
+  /** 窗口最大化/全屏切换期间先不重排，等窗口状态落定后只排一次 */
+  const windowTransitionRef = useRef(false)
+  const computeLayoutRef = useRef<(() => void) | null>(null)
   const [pages, setPages] = useState<string[]>([])
   const [frontKinds, setFrontKinds] = useState<string[]>([])
-  const [bookTitle, setBookTitle] = useState(title)
+  const [bookTitle, setBookTitle] = useState(book?.title || title)
   const [toc, setToc] = useState<Array<ReaderOutlineEntry & { page: number }>>([])
   const anchorsRef = useRef<Record<string, number>>({})
   const [anchorTick, setAnchorTick] = useState(0)
@@ -163,6 +184,13 @@ export default function Reader({
   const flipRef = useRef<HTMLDivElement>(null)
   const currentPageRef = useRef(0)
   currentPageRef.current = currentPage
+
+  /** EPUB 里的 KaTeX 公式是已经渲染好的 HTML，需要把 KaTeX CSS 带进阅读层。 */
+  useEffect(() => {
+    if (!book || !/class="[^"]*katex/i.test(book.html)) return
+    // App 在打开 EPUB 前已加载 KaTeX 全局 CSS；这里只作为兜底，避免其他入口漏掉。
+    import('katex/dist/katex.min.css').catch(() => { /* ignore */ })
+  }, [book])
 
   const storageKey = useMemo(() => `yizi-reader-position:${filePath || title || 'untitled'}`, [filePath, title])
   const savedRef = useRef<StoredPosition | null>(readStored(storageKey))
@@ -216,10 +244,64 @@ export default function Reader({
 
   /* ---------------- 全屏 ---------------- */
 
+  // StrictMode 会把 effect 挂载两次：第一次清理时若立刻 exitFullscreen，
+  // 会把第二次刚进入的全屏又关掉。用 token + 延迟清理，只有真正卸载才退出全屏。
+  const fullscreenEpochRef = useRef(0)
   useEffect(() => {
-    void enterFullscreen()
-    return () => { void exitFullscreen() }
+    // EPUB 由 App 在挂载前最大化窗口；这里不再抢全屏，
+    // 避免全屏失败后把已经最大化的窗口又退回普通尺寸。
+    if (windowMode === 'maximized') {
+      setReaderChromeReady(true)
+      // 用户可能在阅读中手动点过全屏；退出阅读时必须把全屏也一起退出。
+      return () => { void exitFullscreen() }
+    }
+    const epoch = ++fullscreenEpochRef.current
+    const enterTimer = window.setTimeout(() => {
+      if (fullscreenEpochRef.current === epoch) void enterFullscreen()
+    }, 0)
+    // 自动全屏通常几十毫秒内完成；稍等再显示窗口按钮，避免普通窗口按钮闪一下。
+    const chromeTimer = window.setTimeout(() => setReaderChromeReady(true), 280)
+    return () => {
+      window.clearTimeout(enterTimer)
+      window.clearTimeout(chromeTimer)
+      window.setTimeout(() => {
+        if (fullscreenEpochRef.current === epoch) void exitFullscreen()
+      }, 0)
+    }
+  }, [windowMode])
+
+  /** 窗口按钮操作后立刻刷新状态，避免 500ms 轮询让最大化/还原图标滞后。 */
+  const syncWindowState = useCallback(async () => {
+    await useWindowStateStore.getState().refresh()
   }, [])
+
+  /**
+   * 最大化/全屏切换统一走这里：
+   *   · 切换期间冻结分页（全屏前会先取消最大化，中间尺寸不能触发重排）；
+   *   · 切换完成后只按最终尺寸排一次；
+   *   · 结束后再刷新窗口状态，图标同步。
+   */
+  const runWindowTransition = useCallback(async (action: () => Promise<unknown>) => {
+    if (windowTransitionRef.current) return
+    windowTransitionRef.current = true
+    try {
+      await action()
+      await syncWindowState()
+    } finally {
+      window.setTimeout(() => {
+        windowTransitionRef.current = false
+        computeLayoutRef.current?.()
+      }, 240)
+    }
+  }, [syncWindowState])
+
+  const toggleReaderMaximize = useCallback(async () => {
+    await runWindowTransition(() => windowOps.toggleMaximize())
+  }, [runWindowTransition])
+
+  const toggleReaderFullscreen = useCallback(async () => {
+    await runWindowTransition(() => windowOps.toggleFullscreen())
+  }, [runWindowTransition])
 
   /* ---------------- 尺寸 ---------------- */
 
@@ -227,6 +309,7 @@ export default function Reader({
     const stage = stageRef.current
     if (!stage) return
     let raf = 0
+    let debounce = 0
     const compute = () => {
       const rect = stage.getBoundingClientRect()
       if (!rect.width || !rect.height) return
@@ -242,17 +325,30 @@ export default function Reader({
       // 文字栏宽上限 820px：超宽屏幕上用更大的页内边距，避免一行过长
       const padX = Math.max(PAGE_PAD_X, Math.floor((pageW - 820) / 2))
       const next: Layout = { pageW, pageH, spread, gap: 0, margin, padX }
-      setLayout((prev) =>
+      const prev = layoutRef.current
+      if (
         prev.pageW === next.pageW && prev.pageH === next.pageH && prev.spread === next.spread &&
         prev.gap === next.gap && prev.margin === next.margin && prev.padX === next.padX
-          ? prev
-          : next,
-      )
+      ) return
+      layoutRef.current = next
+      // 窗口从普通→最大化会连续触发多帧尺寸变化。旧逻辑每帧都 setLayout，
+      // 每帧都触发整本重排（长书能卡好几秒）。先防抖，只在尺寸稳定后再排一次；
+      // 同时立刻显示“正在排版”，避免用户看到窗口已经变大、书页却停在旧尺寸。
+      setLoading(true)
+      setLayout(next)
     }
     const schedule = () => {
-      if (raf) return
-      raf = requestAnimationFrame(() => { raf = 0; compute() })
+      if (debounce) window.clearTimeout(debounce)
+      debounce = window.setTimeout(() => {
+        debounce = 0
+        // 窗口正在最大化/全屏切换：中间尺寸（例如全屏前先取消最大化的那一帧）
+        // 不触发整本重排，等切换结束后统一 compute 一次。
+        if (windowTransitionRef.current) return
+        if (raf) cancelAnimationFrame(raf)
+        raf = requestAnimationFrame(() => { raf = 0; compute() })
+      }, 140)
     }
+    computeLayoutRef.current = compute
     compute()
     const ro = new ResizeObserver(schedule)
     ro.observe(stage)
@@ -261,6 +357,8 @@ export default function Reader({
       ro.disconnect()
       window.removeEventListener('resize', schedule)
       if (raf) cancelAnimationFrame(raf)
+      if (debounce) window.clearTimeout(debounce)
+      computeLayoutRef.current = null
     }
   }, [])
 
@@ -284,28 +382,44 @@ export default function Reader({
 
       // 书名提取：front matter title → 首个 H1 → 文件名。首个 H1 与书名一致时从正文移除，
       // 由封面/扉页承担（传统书籍不会在正文第一页重复书名）。
-      const split = splitFrontMatter(content)
-      const meta = split.meta
-      let body = split.body
-      const first = firstAtxHeading(body)
-      const docTitle = (meta.title || '').trim() || (first ? stripInlineMarkers(first.text) : '') || title || 'Untitled'
-      let renderBody = body
-      if (first && stripInlineMarkers(first.text) === docTitle) {
-        renderBody = (body.slice(0, first.index) + body.slice(first.index + first.length)).replace(/^\s*\n+/, '')
+      const split = book ? null : splitFrontMatter(content)
+      const meta = book?.meta ?? split?.meta ?? {}
+      const first = split ? firstAtxHeading(split.body) : null
+      const docTitle = book?.title || (meta.title || '').trim() || (first ? stripInlineMarkers(first.text) : '') || title || 'Untitled'
+      let renderBody = split?.body ?? ''
+      if (split && first && stripInlineMarkers(first.text) === docTitle) {
+        renderBody = (split.body.slice(0, first.index) + split.body.slice(first.index + first.length)).replace(/^\s*\n+/, '')
       }
 
       host.style.width = `${contentW}px`
-      const pluginExtenders = enabledPlugins.map(() => (md: any) => extendMarkdownIt(md, enabledPlugins, pluginConfigs))
-      host.innerHTML = renderMarkdown(renderBody, pluginExtenders)
-      await pluginPostRender(host, enabledPlugins, pluginConfigs).catch(() => {})
-      await resolveLocalImages(host, filePath)
-      try { await document.fonts.ready } catch { /* ignore */ }
+      if (book) {
+        // EPUB 已在解析阶段完成清洗、图片注入和链接改写，直接分页。
+        host.innerHTML = book.html
+      } else {
+        const markdownPluginIds = getMarkdownPluginIds(enabledPlugins)
+        const pluginExtenders = markdownPluginIds.length
+          ? [(md: any) => extendMarkdownIt(md, markdownPluginIds, pluginConfigs)]
+          : []
+        host.innerHTML = renderMarkdown(renderBody, pluginExtenders)
+        await postRenderCore(host, undefined, { htmlLabels: false }).catch(() => {})
+        await pluginPostRender(host, enabledPlugins, pluginConfigs).catch(() => {})
+        await resolveLocalImages(host, filePath)
+      }
+      try {
+        await Promise.race([
+          document.fonts.ready,
+          new Promise<void>((resolve) => { window.setTimeout(resolve, 300) }),
+        ])
+      } catch { /* ignore */ }
       await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())))
       if (cancelled) return
 
-      const outline = computeOutlineItems(renderBody).map((item) => ({
-        id: item.id, title: item.text, level: item.level,
-      }))
+      const outline = book
+        ? book.outline
+        : computeOutlineItems(renderBody).map((item) => ({
+          id: item.id, title: item.text, level: item.level,
+        }))
+      const hasContent = book ? book.html.trim().length > 0 : renderBody.trim().length > 0
       // 直接把 host 里已渲染好的节点交给分页器：既不序列化也不重新解析整篇 HTML
       setLoadProgress(0)
       const result = await paginateReader('', {
@@ -331,12 +445,12 @@ export default function Reader({
         left -= take
       }
       const tocPageCount = tocCaps.length
-      const frontCount = renderBody.trim() ? 2 + tocPageCount : 0
+      const frontCount = hasContent ? 2 + tocPageCount : 0
       const shiftedToc = result.toc.map((item) => ({ ...item, page: item.page + frontCount }))
       const frontPages: string[] = []
       const kinds: string[] = []
       if (frontCount > 0) {
-        frontPages.push(buildCoverPage(docTitle, meta))
+        frontPages.push(buildCoverPage(docTitle, meta, book?.coverImage))
         kinds.push('cover')
         frontPages.push(buildTitlePage(docTitle, meta))
         kinds.push('title')
@@ -377,7 +491,7 @@ export default function Reader({
     })
 
     return () => { cancelled = true }
-  }, [content, contentW, contentH, layout.pageW, layout.pageH, layout.spread, themeReady, fontChoice, fontSize, lineHeight, enabledPlugins, pluginConfigs, filePath])
+  }, [content, book, contentW, contentH, layout.pageW, layout.pageH, layout.spread, themeReady, fontChoice, fontSize, lineHeight, enabledPlugins, pluginConfigs, filePath])
 
   /* ---------------- 当前章节 / 页码保存 ---------------- */
 
@@ -448,10 +562,20 @@ export default function Reader({
     }
   }, [flip, pages, spreadMode])
 
-  // 书叶条带的 HTML：同一页要复制到每条带上，复制前先去掉 id，避免和真实页面的锚点 id 冲突
+  // 书叶条带的 HTML：同一页要复制到每条带上，复制前先去掉 HTML 锚点 id，
+  // 避免和真实页面的锚点 id 冲突。但不能动 SVG 内部 id —— Mermaid 的配色
+  // 是 `<style>#mermaid-id ...</style>` 这种 ID 选择器，去掉后会退回 SVG 默认黑色，
+  // 这正是翻页时图表变黑的原因。
   const leafHtml = useMemo(() => {
     if (!flipFaces) return null
-    const strip = (html: string) => html.replace(/\sid="[^"]*"/g, '')
+    const strip = (html: string) => {
+      const holder = document.createElement('div')
+      holder.innerHTML = html
+      for (const el of Array.from(holder.querySelectorAll<HTMLElement>('[id]'))) {
+        if (!el.closest('svg')) el.removeAttribute('id')
+      }
+      return holder.innerHTML
+    }
     return {
       front: strip(flipFaces.front.html),
       back: strip(flipFaces.back.html),
@@ -663,7 +787,10 @@ export default function Reader({
     if (page == null) return
     e.preventDefault()
     e.stopPropagation()
-    const isFootnote = /^fnref|^fn/.test(id) || a.closest('.footnotes') != null
+    const isFootnote = /(?:^|-)(?:fn|fnref|noteref|note)\d*$/.test(id)
+      || a.closest('.footnotes') != null
+      || a.getAttribute('role') === 'doc-noteref'
+      || /\bfootnote/i.test(a.className)
     if (isFootnote) setBackJump({ page: currentPageRef.current, id: a.id || undefined })
     else setBackJump(null)
     setTocOpen(false)
@@ -831,6 +958,63 @@ export default function Reader({
           )}
         </div>
       </div>
+
+      {/* 没进入全屏时（例如文件对话框/异步解析丢掉了全屏手势），
+          阅读层自己提供窗口拖动与最大化入口。关闭按钮只退出阅读，不关闭整个应用。 */}
+      {!readerFullscreen && readerChromeReady && (
+        <>
+          <div
+            className="reader-window-drag"
+            onMouseDown={(e) => {
+              if (e.button !== 0) return
+              e.preventDefault()
+              void windowOps.startDragging()
+            }}
+            onDoubleClick={() => { void toggleReaderMaximize() }}
+          />
+          <div className="reader-window-controls">
+            <button
+              className="reader-window-btn"
+              title={t('window.minimize')}
+              onClick={() => { void windowOps.minimize() }}
+            >
+              <Minus size={15} />
+            </button>
+            <button
+              className="reader-window-btn"
+              title={readerMaximized ? t('window.restore') : t('window.maximize')}
+              onClick={() => { void toggleReaderMaximize() }}
+            >
+              {readerMaximized ? <Copy size={13} /> : <Square size={12} />}
+            </button>
+            <button
+              className="reader-window-btn"
+              title={t('window.enterFullscreen')}
+              onClick={() => { void toggleReaderFullscreen() }}
+            >
+              <Maximize size={13} />
+            </button>
+            <button
+              className="reader-window-btn"
+              title={t('reader.exit')}
+              onClick={onExit}
+            >
+              <X size={15} />
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* 全屏阅读时窗口按钮隐藏，但保留一个明确的退出阅读入口 */}
+      {readerFullscreen && (
+        <button
+          className="reader-exit-btn"
+          title={t('reader.exit')}
+          onClick={onExit}
+        >
+          <X size={15} />
+        </button>
+      )}
 
       {/* 书名：左上角（与演示模式一致） */}
       <div className="reader-topbar">
@@ -1045,12 +1229,13 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-function buildCoverPage(title: string, meta: Record<string, string>): string {
+function buildCoverPage(title: string, meta: Record<string, string>, coverImage?: string): string {
   const subtitle = (meta.subtitle || meta.description || '').trim()
   const author = (meta.author || '').trim()
   const date = (meta.date || '').trim()
   const metaLine = [author, date].filter(Boolean).map(escapeHtml).join(' · ')
   return `<div class="reader-cover-page">
+    ${coverImage ? `<div class="reader-cover-art"><img src="${escapeHtml(coverImage)}" alt=""/></div>` : ''}
     ${subtitle ? `<div class="reader-cover-subtitle">${escapeHtml(subtitle)}</div>` : ''}
     <div class="reader-cover-title">${escapeHtml(title)}</div>
     <div class="reader-cover-rule"></div>
