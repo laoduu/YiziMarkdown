@@ -61,7 +61,45 @@ const codeMark = Decoration.mark({ class: 'cm-md-code' })
 const linkMark = Decoration.mark({ class: 'cm-md-link' })
 
 const lineClass = (cls: string) => Decoration.line({ class: cls })
-const quoteLine = lineClass('cm-md-quote-line')
+
+// 预览里的 GitHub 风格提示块：实时模式把 `> [!NOTE]` 这一行换成图标 + 类型名，
+// 正文行继续沿用引用行样式；光标进入该行时仍显示源码，保持可编辑。
+const ALERT_RE = /^\s*>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*$/i
+const ALERT_LABEL: Record<string, string> = {
+  note: 'Note',
+  tip: 'Tip',
+  important: 'Important',
+  warning: 'Warning',
+  caution: 'Caution',
+}
+function alertTypeOf(text: string): string | null {
+  const m = ALERT_RE.exec(text)
+  return m ? m[1].toLowerCase() : null
+}
+class AlertTitleWidget extends WidgetType {
+  constructor(
+    readonly type: string,
+    readonly view: EditorView,
+    readonly pos: number,
+  ) { super() }
+  eq(other: AlertTitleWidget): boolean {
+    return other.type === this.type && other.pos === this.pos
+  }
+  // 默认 WidgetType 会吞掉鼠标事件；显式把点击映射到标记行行首，
+  // 这样点标题就能直接进入编辑，不需要点到行尾。
+  ignoreEvent(): boolean { return false }
+  toDOM(): HTMLElement {
+    const span = document.createElement('span')
+    span.className = `cm-md-alert-title cm-md-alert-title-${this.type}`
+    span.textContent = ALERT_LABEL[this.type] || this.type
+    span.addEventListener('mousedown', (e) => {
+      e.preventDefault()
+      this.view.dispatch({ selection: { anchor: this.pos } })
+      this.view.focus()
+    })
+    return span
+  }
+}
 const bulletItemLine = lineClass('cm-md-bullet-item')
 const orderedItemLine = lineClass('cm-md-ordered-item')
 const taskItemLine = lineClass('cm-md-task-item')
@@ -555,9 +593,21 @@ function buildDecorations(view: EditorView): DecorationSet {
         if (name === 'Blockquote') {
           const sL = view.state.doc.lineAt(nFrom).number
           const eL = view.state.doc.lineAt(Math.min(nTo, view.state.doc.length)).number
+          const first = view.state.doc.line(sL)
+          const alertType = alertTypeOf(first.text)
+          const quoteCls = alertType
+            ? `cm-md-quote-line cm-md-alert-line cm-md-alert-${alertType}`
+            : 'cm-md-quote-line'
           for (let ln = sL; ln <= eL; ln++) {
             const lo = view.state.doc.line(ln)
-            if (!seenQuoteLines.has(lo.from)) { seenQuoteLines.add(lo.from); ranges.push(quoteLine.range(lo.from)) }
+            if (!seenQuoteLines.has(lo.from)) {
+              seenQuoteLines.add(lo.from)
+              ranges.push(lineClass(quoteCls).range(lo.from))
+            }
+            // 标记行本身换成「图标 + 类型名」；光标在该行时保留源码，便于编辑。
+            if (alertType && ln === sL && !caretOnLine(ln)) {
+              ranges.push(Decoration.replace({ widget: new AlertTitleWidget(alertType, view, lo.from) }).range(lo.from, lo.to))
+            }
           }
           return
         }
@@ -865,6 +915,18 @@ export const liveEditTheme = EditorView.theme({
   '.cm-md-quote-line': {
     borderLeft: '3px solid var(--code-quote-bar)', paddingLeft: '12px',
     color: 'var(--code-quote-fg)', fontStyle: 'italic', backgroundColor: 'var(--code-quote-bg)',
+  },
+  // 提示块标题：与预览一致，图标由 CSS mask 绘制，类型名由 widget 写入
+  '.cm-md-alert-title': {
+    display: 'inline-flex', alignItems: 'center', gap: '0.4em',
+    fontStyle: 'normal', fontWeight: '600', fontSize: '0.92em', lineHeight: '1.4',
+    color: 'var(--alert-accent)',
+  },
+  '.cm-md-alert-title::before': {
+    content: '""', flex: '0 0 auto', width: '1em', height: '1em',
+    backgroundColor: 'currentColor',
+    WebkitMask: 'var(--alert-icon) no-repeat center / contain',
+    mask: 'var(--alert-icon) no-repeat center / contain',
   },
   '.cm-md-hr-line': {
     // 用背景画线而不是 border：线不参与盒尺寸 ⇒ 光标进出该行时行高不变（45px → 44px
