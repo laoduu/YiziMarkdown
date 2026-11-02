@@ -10,8 +10,748 @@ use std::path::Path;
 
 type EventIter<'a> = std::iter::Peekable<Parser<'a>>;
 
-/// 前端把 `[toc]` 替换成这一行，Rust 侧精确匹配后输出 Word TOC 域
-const TOC_FIELD_MARK: &str = "@@YIZI_TOC_FIELD@@";
+/// `[toc]` 的占位标记：与前端 `docxPrepare.ts` 的 `DOCX_TOC_MARKER` 必须是同一个字符串。
+///
+/// 前端把独立的 `[toc]` / `[[toc]]` 行替换成这行 HTML 注释，这里解析到它就输出一个 TOC 域。
+/// 不用可见文本，是为了占位符本身不在 Word 里留下任何痕迹；同时兼容直接传进来的裸 `[toc]`
+/// （例如测试或别的调用方没走前端预处理）。
+const TOC_MARKER: &str = "<!--yizi:toc-->";
+
+/// 目录占位判定：HTML 注释标记，或直接传进来的裸 `[toc]` / `[[toc]]`
+fn is_toc_placeholder(text: &str) -> bool {
+    let t = text.trim();
+    t.eq_ignore_ascii_case(TOC_MARKER)
+        || t.eq_ignore_ascii_case("[toc]")
+        || t.eq_ignore_ascii_case("[[toc]]")
+}
+
+/// 目录书签名：`_Toc000000001`。Word 更新域时也生成同名书签，顺序一致所以不冲突。
+fn toc_bookmark(seq: usize) -> String {
+    format!("_Toc{:09}", seq)
+}
+
+/// A4（11906×16838 twips）扣掉上下各 1 英寸页边距后的正文区高度，估算分页用。
+const PAGE_CONTENT_H: f64 = 13958.0;
+/// 正文区宽度（11906 - 2×1440），也正好是 TOC 条目右对齐制表位的位置（9026）。
+const PAGE_CONTENT_W: f64 = 9026.0;
+
+/// 目录条目：级别、纯文字、**估算**页码。
+#[derive(Clone)]
+struct TocEntry {
+    level: u32,
+    text: String,
+    page: u32,
+}
+
+/// 估算用的翻页光标：按 twips 累加，越过正文区高度就进位到下一页。
+struct PageCursor {
+    used: f64,
+    page: u32,
+}
+
+impl PageCursor {
+    fn new() -> Self {
+        Self { used: 0.0, page: 1 }
+    }
+
+    /// 累加一个块的高度；`used` 只保留「当前页里的余量」，跨页由循环逐页扣减。
+    fn advance(&mut self, h: f64) {
+        self.used += h;
+        while self.used >= PAGE_CONTENT_H {
+            self.used -= PAGE_CONTENT_H;
+            self.page += 1;
+        }
+    }
+}
+
+/// 粗略字宽（em）：ASCII 记 0.55，汉字/全角记 1.0。只服务于折行估算，不求精确。
+fn text_em(s: &str) -> f64 {
+    s.chars().map(|c| if c.is_ascii() { 0.55 } else { 1.0 }).sum()
+}
+
+/// 按每行 `em_per_line` 个 em 折行后的行数（`\n` 处强制换行，空串也算 1 行）。
+fn line_count(s: &str, em_per_line: f64) -> f64 {
+    s.split('\n')
+        .map(|l| (text_em(l) / em_per_line).ceil().max(1.0))
+        .sum::<f64>()
+        .max(1.0)
+}
+
+/// 预扫描全文：按文档顺序收集标题，并**估算**每个标题落在第几页。
+///
+/// 一次遍历干两件事，因为两者都要走同一条事件流：
+///   1. 标题文字 —— 让 `toc_field()` 能预先写出域结果（标题 + 指向 `_Toc` 书签的超链接），
+///      否则不生成 `settings.xml` 时目录位置一片空白，必须手动 F9；
+///   2. 估算页码 —— 每个块折算成 twips 高度（行数 × 行高 + 段间距），从第 1 页累加，
+///      越过正文区高度就翻页。思路与 notemark 的 `collectToc()` 一致。
+///
+/// 估算的精度只够给一个「初值」：真实分页还取决于字体度量、表格跨页、图片实际高度、
+/// 分页符等。数字写进 `PAGEREF` 域的**结果**里，用户按 F9 后 Word 会用真实排版覆盖它。
+///
+/// 计数口径必须与渲染阶段一致：只收 `level <= DocxLayout.toc.maxLevel` 的标题，
+/// 两处都用同一个条件，书签序号才对得上。
+fn heading_level(level: HeadingLevel) -> u32 {
+    match level {
+        HeadingLevel::H1 => 1,
+        HeadingLevel::H2 => 2,
+        HeadingLevel::H3 => 3,
+        HeadingLevel::H4 => 4,
+        HeadingLevel::H5 => 5,
+        HeadingLevel::H6 => 6,
+    }
+}
+
+/// 把 `==高亮==` / `^上标^` / `~下标~` 预处理成 `<mark>` / `<sup>` / `<sub>`。
+///
+/// pulldown-cmark 0.13 没有高亮位，且它的上下标规则要求标记前是空白/标点
+/// （`E=mc^2^` 这种紧贴写法识别不了）。统一在这里转成行内 HTML，走
+/// `apply_html_inline_tag` 映射，预览与 Word 的语义就完全一致。
+/// 围栏代码块、行内代码、`$…$` 数学公式原样跳过。
+fn inline_markers_to_html(md: &str) -> String {
+    let mut out = String::with_capacity(md.len() + 16);
+    let mut fence: Option<char> = None;
+    let mut math_block = false;
+    for line in md.split_inclusive('\n') {
+        let trimmed = line.trim();
+        // `$$` 块公式：内部 `^`/`~`/`==` 都是 LaTeX，不能改写
+        if math_block {
+            out.push_str(line);
+            if trimmed.ends_with("$$") {
+                math_block = false;
+            }
+            continue;
+        }
+        if trimmed.starts_with("$$") {
+            out.push_str(line);
+            math_block = !trimmed[2..].ends_with("$$");
+            continue;
+        }
+        let trimmed_start = line.trim_start();
+        let marker = trimmed_start.chars().next().and_then(|c| {
+            if c != '`' && c != '~' {
+                return None;
+            }
+            let n = trimmed_start.chars().take_while(|x| *x == c).count();
+            (n >= 3).then_some(c)
+        });
+        if let Some(open) = fence {
+            out.push_str(line);
+            if trimmed_start.chars().take_while(|c| *c == open).count() >= 3 {
+                fence = None;
+            }
+            continue;
+        }
+        if let Some(c) = marker {
+            fence = Some(c);
+            out.push_str(line);
+            continue;
+        }
+        out.push_str(&convert_inline_markers_line(line));
+    }
+    out
+}
+
+fn convert_inline_markers_line(line: &str) -> String {
+    let mut out = String::with_capacity(line.len());
+    let mut i = 0usize;
+    while i < line.len() {
+        let rest = &line[i..];
+        let c = rest.chars().next().unwrap();
+        if c == '`' {
+            let run = rest.chars().take_while(|x| *x == '`').count();
+            let marker = "`".repeat(run);
+            if let Some(rel) = rest[run..].find(&marker) {
+                let end = i + run + rel + run;
+                out.push_str(&line[i..end]);
+                i = end;
+            } else {
+                out.push_str(&line[i..i + run]);
+                i += run;
+            }
+            continue;
+        }
+        // `$…$` / `$$…$$`：数学公式里的 `^`、`~`、`==` 不能改写
+        if c == '$' {
+            let dollar_run = if rest.starts_with("$$") { 2 } else { 1 };
+            let marker = "$".repeat(dollar_run);
+            if let Some(rel) = rest[dollar_run..].find(&marker) {
+                let end = i + dollar_run + rel + dollar_run;
+                out.push_str(&line[i..end]);
+                i = end;
+                continue;
+            }
+            out.push(c);
+            i += 1;
+            continue;
+        }
+        if c == '\\' {
+            out.push(c);
+            i += 1;
+            if let Some(n) = line[i..].chars().next() {
+                out.push(n);
+                i += n.len_utf8();
+            }
+            continue;
+        }
+        // HTML 标签 / 裸 URL / Markdown 链接目标里的 `==`、`^`、`~` 不能改写
+        if c == '<' {
+            if let Some(rel) = rest.find('>') {
+                out.push_str(&rest[..=rel]);
+                i += rel + 1;
+                continue;
+            }
+        }
+        if rest.starts_with("http://") || rest.starts_with("https://") {
+            let end = rest
+                .find(|c: char| c.is_whitespace() || matches!(c, ')' | ']' | '>' | '"' | '\''))
+                .unwrap_or(rest.len());
+            out.push_str(&rest[..end]);
+            i += end;
+            continue;
+        }
+        if rest.starts_with("](") {
+            if let Some(rel) = rest.find(')') {
+                out.push_str(&rest[..=rel]);
+                i += rel + 1;
+                continue;
+            }
+        }
+        // `~~删除线~~` 不当下标处理
+        if rest.starts_with("~~") {
+            out.push_str("~~");
+            i += 2;
+            continue;
+        }
+        // `1~5`、`0~20` 这类数字区间不当下标
+        let prev_digit = line[..i].chars().next_back().is_some_and(|c| c.is_ascii_digit());
+        let (marker, open, close) = if rest.starts_with("==") {
+            ("==", "<mark>", "</mark>")
+        } else if rest.starts_with('^') {
+            ("^", "<sup>", "</sup>")
+        } else if rest.starts_with('~') && !prev_digit {
+            ("~", "<sub>", "</sub>")
+        } else {
+            out.push(c);
+            i += c.len_utf8();
+            continue;
+        };
+        if let Some(rel) = rest[marker.len()..].find(marker) {
+            let content = &rest[marker.len()..marker.len() + rel];
+            if valid_inline_marker_content(content, marker) {
+                out.push_str(open);
+                out.push_str(content);
+                out.push_str(close);
+                i += marker.len() + rel + marker.len();
+                continue;
+            }
+        }
+        out.push(c);
+        i += c.len_utf8();
+    }
+    out
+}
+
+/// 上下标内容约束：只接受短 ASCII（`2`、`i`、`n-1`、`max` 等）。
+///
+/// 单波浪线在中文文档里常被当区间号用（`64K~512K`、`0~20轮`），若不加约束会把
+/// 整段区间误当 `<sub>`；长度/字符集过滤后即可与真正的 `H~2~O` 区分。
+fn valid_inline_marker_content(content: &str, marker: &str) -> bool {
+    if content.trim().is_empty() || content != content.trim() {
+        return false;
+    }
+    match marker {
+        // 高亮内容不限（中文/空格都允许）
+        "==" => true,
+        // 上标没有「区间号」歧义，中文也允许；只限制长度，避免吞掉整段
+        "^" => content.chars().count() <= 32,
+        // 下标：拒绝 `64K~512K` 这类「数字+单位」区间；`2`、`n-1`、`下标` 都保留
+        "~" => {
+            if content.chars().count() > 8 || content.chars().any(|c| c.is_whitespace()) {
+                return false;
+            }
+            let mut chars = content.chars();
+            let starts_digit = chars.next().is_some_and(|c| c.is_ascii_digit());
+            let rest: String = chars.collect();
+            !(starts_digit && !rest.is_empty() && rest.chars().all(|c| c.is_ascii_alphabetic()))
+        }
+        _ => false,
+    }
+}
+
+/// 预扫描标题（仅用于计算目录条目数与书签顺序）。
+fn collect_toc_headings(md: &str, opts: &Options, m: &Metrics) -> Vec<(u32, String)> {
+    let max = m.layout.toc_max_level();
+    let mut out: Vec<(u32, String)> = Vec::new();
+    let mut heading: Option<(u32, String)> = None;
+    for ev in Parser::new_ext(md, opts.clone()) {
+        match ev {
+            Event::Start(Tag::Heading { level, .. }) => {
+                heading = Some((heading_level(level), String::new()));
+            }
+            Event::End(TagEnd::Heading(_)) => {
+                if let Some((lv, text)) = heading.take() {
+                    if lv <= max {
+                        out.push((lv, html_plain_text(&text)));
+                    }
+                }
+            }
+            Event::Text(t)
+            | Event::Code(t)
+            | Event::InlineHtml(t)
+            | Event::InlineMath(t)
+            | Event::DisplayMath(t) => {
+                if let Some((_, s)) = heading.as_mut() {
+                    s.push_str(&t);
+                }
+            }
+            Event::SoftBreak | Event::HardBreak => {
+                if let Some((_, s)) = heading.as_mut() {
+                    s.push(' ');
+                }
+            }
+            _ => {}
+        }
+    }
+    out
+}
+
+/// 目录块自身的高度（twips）：标题行 + 标题后距 + 条目行 + 条目间距。
+/// 它必须计入页码估算，否则 `[toc]` 放在开头时，第一个正文标题会被算成第 1 页。
+fn toc_block_height(m: &Metrics, entries: usize) -> f64 {
+    let toc = &m.layout.toc;
+    let heading_line = m.body_pt * toc.heading_scale * 1.3 * 20.0;
+    let entry_line = m.body_pt * toc.line_height * 20.0;
+    let heading_after = m.em_twips(toc.heading_after_em) as f64;
+    let entry_gap = m.em_twips(toc.entry_gap_em) as f64;
+    heading_line
+        + heading_after
+        + entries as f64 * entry_line
+        + entries.saturating_sub(1) as f64 * entry_gap
+}
+
+/// 预扫描全文：收集标题并**估算**每个标题落在第几页。
+///
+/// 两遍扫描：第一遍只数标题，得到目录块自身高度；第二遍按块高累加页码。
+/// 页码只是「打开即可见」的初值，用户按 F9 后 Word 会用真实排版覆盖。
+fn collect_toc(md: &str, opts: &Options, m: &Metrics) -> Vec<TocEntry> {
+    let headings = collect_toc_headings(md, opts, m);
+    let toc_height = toc_block_height(m, headings.len());
+    let max = m.layout.toc_max_level();
+    let em = m.body_pt * 20.0; // 1em = 正文字号（twips）
+    let body_line = em * m.line_em(m.line); // CSS 行高（w:line/200，不是 /240）
+    let em_per_line = (PAGE_CONTENT_W / em).max(1.0);
+    let code_line = em * m.layout.code.scale * m.line_em(m.line);
+    let paragraph_before = m.em_twips(m.layout.paragraph.before_em) as f64;
+
+    let mut cur = PageCursor::new();
+    let mut out: Vec<TocEntry> = Vec::new();
+    let mut heading: Option<(u32, String)> = None;
+    let mut para: Option<String> = None;
+    let mut code: Option<String> = None;
+    let mut in_table = false;
+    let mut table_rows = 0usize;
+    let mut seen_block = false;
+    // 表格后的 gap 已经承担间距，下一个块不再叠加段前（与渲染阶段一致）
+    let mut suppress_next = false;
+
+    for ev in Parser::new_ext(md, opts.clone()) {
+        match ev {
+            Event::Start(Tag::Heading { level, .. }) => {
+                heading = Some((heading_level(level), String::new()));
+            }
+            Event::End(TagEnd::Heading(_)) => {
+                if let Some((lv, text)) = heading.take() {
+                    let before = if seen_block && !suppress_next {
+                        m.em_twips(m.layout.heading_before_em(lv)) as f64
+                    } else {
+                        0.0
+                    };
+                    suppress_next = false;
+                    cur.advance(before);
+                    seen_block = true;
+                    // 页码取标题**起始**位置：标题被挤到下一页时，目录也该指下一页
+                    let page = cur.page;
+                    if lv <= max {
+                        out.push(TocEntry { level: lv, text: html_plain_text(&text), page });
+                    }
+                    let pt = m.body_pt * m.layout.heading_scale(lv);
+                    let per_line = (PAGE_CONTENT_W / (pt * 20.0)).max(1.0);
+                    cur.advance(line_count(&text, per_line) * pt * 1.3 * 20.0);
+                }
+            }
+            Event::Start(Tag::Paragraph) => {
+                if !in_table {
+                    para = Some(String::new());
+                }
+            }
+            Event::End(TagEnd::Paragraph) => {
+                if let Some(t) = para.take() {
+                    if is_toc_placeholder(&t) {
+                        // 目录块自身也要占页：两遍扫描已经算出它的高度；再补它相对前文的段前。
+                        if seen_block && !suppress_next {
+                            cur.advance(paragraph_before);
+                        }
+                        cur.advance(toc_height);
+                        seen_block = true;
+                        suppress_next = false;
+                    } else {
+                        if seen_block && !suppress_next {
+                            cur.advance(paragraph_before);
+                        }
+                        suppress_next = false;
+                        seen_block = true;
+                        cur.advance(line_count(&t, em_per_line) * body_line);
+                    }
+                }
+            }
+            Event::Start(Tag::CodeBlock(_)) => {
+                code = Some(String::new());
+            }
+            Event::End(TagEnd::CodeBlock) => {
+                if let Some(t) = code.take() {
+                    if seen_block && !suppress_next {
+                        cur.advance(m.em_twips(m.layout.code.before_em) as f64);
+                    }
+                    suppress_next = false;
+                    seen_block = true;
+                    let rows = t.split('\n').count().max(1) as f64;
+                    cur.advance(rows * code_line);
+                }
+            }
+            Event::Start(Tag::Table(_)) => {
+                in_table = true;
+                table_rows = 0;
+            }
+            Event::End(TagEnd::TableRow) => table_rows += 1,
+            Event::End(TagEnd::Table) => {
+                in_table = false;
+                seen_block = true;
+                // 每行按两行正文估（表头/窄列常折行）+ 表格后的间隔
+                cur.advance(
+                    table_rows.max(1) as f64 * 2.0 * body_line
+                        + m.em_twips(m.layout.table.gap_em) as f64,
+                );
+                suppress_next = true;
+            }
+            Event::Html(h) => {
+                if is_toc_placeholder(&h) {
+                    if seen_block && !suppress_next {
+                        cur.advance(paragraph_before);
+                    }
+                    cur.advance(toc_height);
+                    seen_block = true;
+                    suppress_next = false;
+                } else if let Some((_, s)) = heading.as_mut() {
+                    s.push_str(&h);
+                } else if let Some(s) = para.as_mut() {
+                    s.push_str(&h);
+                }
+            }
+            Event::Text(t)
+            | Event::Code(t)
+            | Event::InlineHtml(t)
+            | Event::InlineMath(t)
+            | Event::DisplayMath(t) => {
+                if let Some((_, s)) = heading.as_mut() {
+                    s.push_str(&t);
+                } else if let Some(s) = para.as_mut() {
+                    s.push_str(&t);
+                } else if let Some(s) = code.as_mut() {
+                    s.push_str(&t);
+                }
+            }
+            Event::SoftBreak | Event::HardBreak => {
+                if let Some((_, s)) = heading.as_mut() {
+                    s.push(' ');
+                } else if let Some(s) = para.as_mut() {
+                    s.push('\n');
+                }
+            }
+            // 图片按三分之一页估（导出时宽度统一贴正文区，高度随比例浮动）
+            Event::Start(Tag::Image { .. }) => cur.advance(PAGE_CONTENT_H / 3.0),
+            Event::Rule => {
+                if seen_block {
+                    cur.advance(m.em_twips(m.layout.rule.before_em) as f64);
+                }
+                seen_block = true;
+                cur.advance(20.0 + m.em_twips(m.layout.rule.after_em) as f64);
+            }
+            _ => {}
+        }
+    }
+    out
+}
+
+// ===================== Word 版式规范（DOCX layout） =====================
+//
+// 与前端 `src/lib/docxLayout.ts` 的 `DocxLayout` 一一对应。原则：
+//   · 主题只传颜色/字体/代码高亮，**版式值不跟主题走**；
+//   · 段距统一走「段前」，段后为 0，避免 Word 像 CSS 那样把段前段后相加；
+//   · Rust 侧不再另有 `HEADING_EM`、固定 1em/0.5em、写死引用色。
+//
+// 所有 `em` 都是相对正文字号；`pt` 用于边框宽度。
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct DocxFonts {
+    pub latin: String,
+    pub east_asia: String,
+    pub mono: String,
+}
+
+impl Default for DocxFonts {
+    fn default() -> Self {
+        Self { latin: String::new(), east_asia: String::new(), mono: String::new() }
+    }
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct DocxBodyLayout {
+    /// 正文字号（pt）；规范基准 11pt
+    pub size_pt: f64,
+    /// 行高倍数；规范基准 1.5
+    pub line_height: f64,
+    /// true = 正文字号跟随设置里的「预览字号」；false = 固定用 size_pt
+    pub follow_preview_size: bool,
+    /// `both` = 两端对齐，其他值按左对齐处理
+    pub align: String,
+    pub first_line_indent_em: f64,
+}
+
+impl Default for DocxBodyLayout {
+    fn default() -> Self {
+        Self {
+            size_pt: 11.0,
+            line_height: 1.5,
+            follow_preview_size: false,
+            align: "both".to_string(),
+            first_line_indent_em: 0.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct DocxHeadingsLayout {
+    pub scales: Vec<f64>,
+    pub before_em: Vec<f64>,
+    pub after_em: Vec<f64>,
+    pub bold: bool,
+}
+
+impl Default for DocxHeadingsLayout {
+    fn default() -> Self {
+        Self {
+            // 规范 18/15/13/12/11/11pt ÷ 11pt
+            scales: vec![18.0 / 11.0, 15.0 / 11.0, 13.0 / 11.0, 12.0 / 11.0, 1.0, 1.0],
+            // 规范段前 18/12/10/8/6/6pt ÷ 11pt
+            before_em: vec![18.0 / 11.0, 12.0 / 11.0, 10.0 / 11.0, 8.0 / 11.0, 6.0 / 11.0, 6.0 / 11.0],
+            after_em: vec![0.0; 6],
+            bold: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct DocxParagraphLayout {
+    pub before_em: f64,
+}
+
+impl Default for DocxParagraphLayout {
+    fn default() -> Self {
+        // 规范段前 0、段后 6pt；只走段前，所以取 6pt/11pt
+        Self { before_em: 6.0 / 11.0 }
+    }
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct DocxListLayout {
+    pub before_em: f64,
+    pub item_gap_em: f64,
+    pub indent_em: f64,
+    pub hanging_em: f64,
+}
+
+impl Default for DocxListLayout {
+    fn default() -> Self {
+        Self {
+            before_em: 6.0 / 11.0,
+            item_gap_em: 3.0 / 11.0,
+            // 规范 0.74cm 缩进 / 0.37cm 悬挂（cm → pt → em，基准 11pt）
+            indent_em: 20.976 / 11.0,
+            hanging_em: 10.488 / 11.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct DocxQuoteLayout {
+    /// 引用字号相对正文的倍数；规范 10.5pt
+    pub scale: f64,
+    /// 引用行距（Word 口径：1.0 = 单倍，240 = 单倍）；规范用单倍行距
+    pub line_height: f64,
+    pub padding_x_em: f64,
+    pub padding_y_em: f64,
+    pub paragraph_gap_em: f64,
+    pub border_pt: f64,
+    /// 空串 = 跟随正文文字色
+    pub text_color: String,
+}
+
+impl Default for DocxQuoteLayout {
+    fn default() -> Self {
+        Self {
+            scale: 10.5 / 11.0,
+            line_height: 1.0,
+            // 四向 0.4cm → em（基准 11pt）
+            padding_x_em: 11.339 / 11.0,
+            padding_y_em: 11.339 / 11.0,
+            paragraph_gap_em: 6.0 / 11.0,
+            border_pt: 3.0,
+            text_color: String::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct DocxCodeLayout {
+    pub scale: f64,
+    pub before_em: f64,
+    pub padding_x_em: f64,
+    pub padding_y_em: f64,
+}
+
+impl Default for DocxCodeLayout {
+    fn default() -> Self {
+        Self {
+            // 规范 9pt / 11pt；0.2cm 内边距 → em
+            scale: 10.0 / 11.0,
+            before_em: 6.0 / 11.0,
+            padding_x_em: 5.669 / 11.0,
+            padding_y_em: 5.669 / 11.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct DocxTableLayout {
+    /// 表格字号相对正文的倍数；规范 10pt
+    pub scale: f64,
+    pub gap_em: f64,
+    pub cell_margin_x_em: f64,
+    pub cell_margin_y_em: f64,
+    pub border_pt: f64,
+}
+
+impl Default for DocxTableLayout {
+    fn default() -> Self {
+        Self {
+            scale: 10.0 / 11.0,
+            gap_em: 6.0 / 11.0,
+            // 左右 0.2cm、上下 0.1cm → em
+            cell_margin_x_em: 5.669 / 11.0,
+            cell_margin_y_em: 2.835 / 11.0,
+            border_pt: 0.5,
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct DocxRuleLayout {
+    pub before_em: f64,
+    pub after_em: f64,
+}
+
+impl Default for DocxRuleLayout {
+    fn default() -> Self {
+        Self { before_em: 0.5, after_em: 0.5 }
+    }
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct DocxTocLayout {
+    pub max_level: u32,
+    pub line_height: f64,
+    pub entry_gap_em: f64,
+    pub heading_scale: f64,
+    pub heading_after_em: f64,
+}
+
+impl Default for DocxTocLayout {
+    fn default() -> Self {
+        Self {
+            max_level: 6,
+            line_height: 1.15,
+            entry_gap_em: 3.0 / 11.0,
+            heading_scale: 13.0 / 11.0,
+            heading_after_em: 6.0 / 11.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct DocxLayout {
+    pub fonts: DocxFonts,
+    pub body: DocxBodyLayout,
+    pub headings: DocxHeadingsLayout,
+    pub paragraph: DocxParagraphLayout,
+    pub list: DocxListLayout,
+    pub quote: DocxQuoteLayout,
+    pub code: DocxCodeLayout,
+    pub table: DocxTableLayout,
+    pub rule: DocxRuleLayout,
+    pub toc: DocxTocLayout,
+}
+
+impl Default for DocxLayout {
+    fn default() -> Self {
+        Self {
+            fonts: DocxFonts::default(),
+            body: DocxBodyLayout::default(),
+            headings: DocxHeadingsLayout::default(),
+            paragraph: DocxParagraphLayout::default(),
+            list: DocxListLayout::default(),
+            quote: DocxQuoteLayout::default(),
+            code: DocxCodeLayout::default(),
+            table: DocxTableLayout::default(),
+            rule: DocxRuleLayout::default(),
+            toc: DocxTocLayout::default(),
+        }
+    }
+}
+
+impl DocxLayout {
+    fn toc_max_level(&self) -> u32 {
+        self.toc.max_level.clamp(1, 6)
+    }
+
+    fn heading_scale(&self, level: u32) -> f64 {
+        self.headings
+            .scales
+            .get((level.saturating_sub(1)) as usize)
+            .copied()
+            .unwrap_or(1.0)
+            .clamp(0.5, 4.0)
+    }
+
+    fn heading_before_em(&self, level: u32) -> f64 {
+        self.headings
+            .before_em
+            .get((level.saturating_sub(1)) as usize)
+            .copied()
+            .unwrap_or(0.6)
+            .max(0.0)
+    }
+}
 
 /// 导出主题参数（由前端从当前主题/设置传入，JSON 字段为 camelCase）
 #[derive(Debug, serde::Deserialize)]
@@ -40,16 +780,14 @@ pub struct DocxTheme {
     /// 代码块语法高亮（前端从预览 DOM 读出；缺省则单色输出）
     #[serde(default)]
     pub code_highlights: CodeHighlights,
-    /// Word 目录标题（前端按界面语言传入，缺省「目录」）
-    #[serde(default = "default_toc_title")]
-    pub toc_title: String,
-    /// Word 目录域占位提示（缺省中文）
-    #[serde(default = "default_toc_hint")]
-    pub toc_hint: String,
+    /// 目录标题文案（TOC 域上方那行字），跟随界面语言，如「目录」/「Contents」/「目次」。
+    /// 前端用 `reader.toc` 词条传入；缺省回退「目录」，兼容旧的调用方。
+    #[serde(default)]
+    pub toc_title: Option<String>,
+    /// Word 版式规范；缺省使用内置默认值（见 `DocxLayout`），兼容旧调用方。
+    #[serde(default)]
+    pub layout: Option<DocxLayout>,
 }
-
-fn default_toc_title() -> String { "目录".to_string() }
-fn default_toc_hint() -> String { "右键目录 → 更新域，或按 F9 生成目录".to_string() }
 
 /// 代码块里某个「类路径」的样式（由前端按当前主题读 computed style 得到）。
 #[derive(Debug, Clone, Default, serde::Deserialize)]
@@ -84,7 +822,7 @@ pub struct CodeHighlights {
 /// 导出排版的度量值：全部由「正文字号 + 行高」推导，保证 docx 与预览同比例。
 ///
 /// 换算依据：CSS px → 磅 `pt = px × 0.75`；OOXML 字号 `w:sz` 是半磅；OOXML 长度是 twips（1pt = 20）。
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 struct Metrics {
     /// 正文字号（磅）
     body_pt: f64,
@@ -92,6 +830,12 @@ struct Metrics {
     body_sz: u32,
     /// 正文行距（`w:line`，lineRule=auto；240 = 单倍）
     line: u32,
+    /// Word 版式规范（唯一事实源）
+    layout: DocxLayout,
+    /// 解析后的拉丁 / 东亚 / 等宽字体名（主题只给 CSS 栈，这里拆成 Word 可用的具体字体）
+    font_latin: String,
+    font_east_asia: String,
+    font_mono: String,
 }
 
 impl Metrics {
@@ -104,14 +848,63 @@ impl Metrics {
     /// 显式字号都由它推导，否则脚注里的列表项会继承 `Normal` 的正文字号（比脚注正文大一圈）。
     const FOOTNOTE_RATIO: f64 = 0.83;
 
-    fn new(font_size_px: Option<f64>, line_height: Option<f64>) -> Self {
-        // 缺省值取应用自身的 CSS 缺省：`--font-size-base: 16px` / `--line-height: 1.8`
-        let px = font_size_px.unwrap_or(16.0).clamp(4.0, 200.0);
-        let body_pt = px * 0.75;
-        let body_sz = (px * 1.5).round().max(2.0) as u32;
-        let mut m = Metrics { body_pt, body_sz, line: 240 };
-        m.line = m.line_of(line_height.unwrap_or(1.8).clamp(1.0, 5.0));
+    fn new(font_size_px: Option<f64>, line_height: Option<f64>, layout: DocxLayout, theme: &DocxTheme) -> Self {
+        // 字号：规范默认固定 11pt；`followPreviewSize = true` 时才跟随「预览字号」。
+        let layout_pt = layout.body.size_pt;
+        let body_pt = if layout.body.follow_preview_size || layout_pt <= 0.0 {
+            font_size_px.unwrap_or(16.0).clamp(4.0, 200.0) * 0.75
+        } else {
+            layout_pt.clamp(4.0, 200.0)
+        };
+        let body_sz = (body_pt * 2.0).round().max(2.0) as u32;
+        // 行距：规范里的「1.5 倍」按 Word 口径（240=单倍 → 1.5 倍=360），不是 CSS line-height。
+        // layout 没给时退回设置里的「预览行高」（CSS 口径，走 line_of 换算）。
+        let word_line = if layout.body.line_height >= 1.0 {
+            Some((240.0 * layout.body.line_height).round())
+        } else {
+            None
+        };
+        let fallback_latin = first_family(&theme.font);
+        let font_latin = if layout.fonts.latin.trim().is_empty() {
+            fallback_latin.clone()
+        } else {
+            layout.fonts.latin.trim().to_string()
+        };
+        let font_east_asia = if layout.fonts.east_asia.trim().is_empty() {
+            font_latin.clone()
+        } else {
+            layout.fonts.east_asia.trim().to_string()
+        };
+        let font_mono = if layout.fonts.mono.trim().is_empty() {
+            first_family(&theme.mono_font)
+        } else {
+            layout.fonts.mono.trim().to_string()
+        };
+        let mut m = Metrics {
+            body_pt,
+            body_sz,
+            line: 240,
+            layout,
+            font_latin,
+            font_east_asia,
+            font_mono,
+        };
+        m.line = match word_line {
+            Some(v) => v.clamp(240.0, 240.0 * 6.0) as u32,
+            None => m.line_of(line_height.unwrap_or(1.8).clamp(1.0, 5.0)),
+        };
         m
+    }
+
+    /// 以 Word 的 auto 行距值反推 CSS 行高：`w:line` 的 240 = 单倍 ≈ 1.2×字号，
+    /// 所以实际行高 = 字号 × `w:line / 200`（不是 `/240`）。
+    fn line_em(&self, line: u32) -> f64 {
+        line as f64 / 200.0
+    }
+
+    /// A4 减去左右各 2.54cm 页边距后的正文宽度（twips），也是目录点线制表位。
+    fn text_width_twips(&self) -> u32 {
+        PAGE_CONTENT_W as u32
     }
 
     /// CSS 行高倍数 → `w:line`（`lineRule="auto"`，240 = 单倍）
@@ -310,30 +1103,42 @@ fn is_cjk_family(name: &str) -> bool {
 ///
 /// 依据 ISO/IEC 29500-1：主名称找不到时，应用**应依次尝试 `altName` 列表（逗号分隔）并取第一个命中的**，
 /// 且优先于「按字体度量自动替换」。**装有该字体时本部件完全不被读取 → 输出与改动前一致。**
-fn font_table_xml(theme: &DocxTheme) -> String {
+fn font_table_xml(m: &Metrics) -> String {
     let mut s = String::from(
         "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:fonts xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">",
     );
     let charset = |f: &str| if is_cjk_family(f) { "86" } else { "00" };
-    // 正文字体：一条链同时覆盖 Windows / macOS / Linux 与拉丁兜底
+    let latin = &m.font_latin;
+    let east_asia = &m.font_east_asia;
+    let mono = &m.font_mono;
+    // 拉丁正文：一条链同时覆盖 Windows / macOS / Linux 与拉丁兜底
     s.push_str(&format!(
         "<w:font w:name=\"{}\"><w:altName w:val=\"Microsoft YaHei, PingFang SC, Noto Sans SC, Segoe UI, Arial\"/><w:charset w:val=\"{}\"/><w:family w:val=\"swiss\"/><w:pitch w:val=\"variable\"/></w:font>",
-        esc(&theme.font),
-        charset(&theme.font)
+        esc(latin),
+        charset(latin)
     ));
+    // 东亚正文：与拉丁分开声明；中文文档必须有一个明确的 CJK 回退
+    if !east_asia.eq_ignore_ascii_case(latin) {
+        s.push_str(&format!(
+            "<w:font w:name=\"{}\"><w:altName w:val=\"Microsoft YaHei, PingFang SC, Noto Sans SC, SimSun\"/><w:charset w:val=\"{}\"/><w:family w:val=\"swiss\"/><w:pitch w:val=\"variable\"/></w:font>",
+            esc(east_asia),
+            charset(east_asia)
+        ));
+    }
     // 等宽字体（与正文同名则跳过——fontTable 以 name 为键，不可重复）
-    if !theme.mono_font.eq_ignore_ascii_case(&theme.font) {
+    if !mono.eq_ignore_ascii_case(latin) && !mono.eq_ignore_ascii_case(east_asia) {
         s.push_str(&format!(
             "<w:font w:name=\"{}\"><w:altName w:val=\"Cascadia Mono, Consolas, Courier New, DejaVu Sans Mono\"/><w:charset w:val=\"{}\"/><w:family w:val=\"modern\"/><w:pitch w:val=\"fixed\"/></w:font>",
-            esc(&theme.mono_font),
-            charset(&theme.mono_font)
+            esc(mono),
+            charset(mono)
         ));
     }
     // 任务列表勾选字形（☐ U+2610 / ☑ U+2611）在常见中日韩与拉丁字体里**没有字形**
     // （cmap 实测：MiSans / 微软雅黑 / 宋体 / Segoe UI 均无），只有符号字体才有，
     // 因此必须显式指定字体，并用替代名链覆盖 macOS / Linux（找不到主名称时才读取）
-    if !theme.font.eq_ignore_ascii_case(TASK_GLYPH_FONT)
-        && !theme.mono_font.eq_ignore_ascii_case(TASK_GLYPH_FONT)
+    if !latin.eq_ignore_ascii_case(TASK_GLYPH_FONT)
+        && !east_asia.eq_ignore_ascii_case(TASK_GLYPH_FONT)
+        && !mono.eq_ignore_ascii_case(TASK_GLYPH_FONT)
     {
         s.push_str(&format!(
             "<w:font w:name=\"{}\"><w:altName w:val=\"MS Gothic, Apple Symbols, Arial Unicode MS, Noto Sans Symbols 2, DejaVu Sans\"/><w:charset w:val=\"00\"/><w:family w:val=\"auto\"/><w:pitch w:val=\"variable\"/></w:font>",
@@ -343,8 +1148,9 @@ fn font_table_xml(theme: &DocxTheme) -> String {
     // 项目符号二/三级的 `◦ U+25E6` / `▪ U+25AA`（见 `BULLET_LEVELS`）：MiSans / 宋体等
     // 正文字体没有这两个字形，所以显式指定了微软雅黑；不装雅黑的机器（如英文版 Windows、
     // macOS）靠下面的替代名链落到自带这两个字形的符号字体上
-    if !theme.font.eq_ignore_ascii_case(BULLET_GLYPH_FONT)
-        && !theme.mono_font.eq_ignore_ascii_case(BULLET_GLYPH_FONT)
+    if !latin.eq_ignore_ascii_case(BULLET_GLYPH_FONT)
+        && !east_asia.eq_ignore_ascii_case(BULLET_GLYPH_FONT)
+        && !mono.eq_ignore_ascii_case(BULLET_GLYPH_FONT)
     {
         s.push_str(&format!(
             "<w:font w:name=\"{}\"><w:altName w:val=\"Segoe UI Symbol, PingFang SC, Apple Symbols, Arial Unicode MS, DejaVu Sans\"/><w:charset w:val=\"{}\"/><w:family w:val=\"auto\"/><w:pitch w:val=\"variable\"/></w:font>",
@@ -422,6 +1228,17 @@ fn html_plain_text(html: &str) -> String {
         }
     }
     out
+}
+
+/// `<center>…</center>` 块 → 居中文字；不是 center 块时返回 `None`。
+/// 预览里浏览器原生居中；Word 需要落成 `w:jc=center` 的段落，不能把标签当文本输出。
+fn center_block_text(html: &str) -> Option<String> {
+    let trimmed = html.trim();
+    let lower = trimmed.to_ascii_lowercase();
+    if !lower.starts_with("<center") || !lower.contains("</center>") {
+        return None;
+    }
+    Some(html_plain_text(trimmed))
 }
 
 /// 一段 HTML 里的 `<img>` 引用
@@ -888,6 +1705,8 @@ struct ListInstance {
     bullet_depth: u32,
     /// 列表嵌套总深度（决定 `w:ind` 缩进，1 起）
     depth: u32,
+    /// 已渲染的列表项数量：第一项用列表段前，后续项用项间距
+    items: usize,
 }
 
 pub struct DocxBuilder {
@@ -915,17 +1734,35 @@ pub struct DocxBuilder {
     next_footnote_id: u32,
     /// 文档中**确有定义**的脚注 label（预扫描）：未定义的引用按原文输出，避免生成空引用
     footnote_defined: std::collections::HashSet<String>,
-    /// 已经生成过 `footnoteReference` 的 label；第二次引用降级成上标文字
-    footnote_referenced: std::collections::HashSet<String>,
+    /// 正文里**已经出现过引用**的脚注 label。
+    ///
+    /// Word 要求 `w:footnoteReference` 的 id 与 `footnotes.xml` 里的定义一对一：同一个 id
+    /// 被引用两次时，`document.xml` 出现重复 id，Word 打开即报「文件可能已经损坏」（实测）。
+    /// 而 Markdown 允许同一个 `[^x]` 被引用多次（复制粘贴带脚注的段落就会遇到），
+    /// `markdown-it-footnote` 在预览里也是照常支持。所以第二次及以后**不再生成脚注引用**，
+    /// 降级为上标文字，保住「文件能打开」这条底线。
+    footnote_ref_seen: std::collections::HashSet<String>,
     /// 脚注内部产生的超链接/图片关系（须写在 footnotes.xml.rels 里）
     footnote_rels: String,
     /// 代码块语法高亮（前端用预览同一份 highlight.js 结果算出，见 `CodeHighlights`）
     code_highlights: CodeHighlights,
+    /// 目录条目：导出前预扫描全文得到的「级别 + 纯文字 + 估算页码」。
+    /// TOC 域是惰性的（`settings.xml` 的 `updateFields` 会触发「域可能引用了其他文件」弹窗，
+    /// 所以不生成 settings 部件），因此域结果必须在这里**预先写好**，打开即可见。
+    toc_items: Vec<TocEntry>,
+    /// 渲染阶段遇到的第几个标题（与 `toc_items` 下标一一对应，用于 `_Toc%09d` 书签名）
+    heading_seq: usize,
+    /// 是否已经输出过正文块：第一块的段前距必须为 0，不能凭空多出 1em。
+    saw_block: bool,
+    /// 表格/引用块后的 gap 段落已经提供的间距；下一个块不再叠加段前距。
+    suppress_before: bool,
 }
 
 impl DocxBuilder {
     fn new(mut theme: DocxTheme, base_dir: Option<std::path::PathBuf>, remote_images: RemoteImages) -> Self {
-        let metrics = Metrics::new(theme.font_size_px, theme.line_height);
+        // 版式从主题里取出后由 Metrics 持有；Rust 侧不再自己维护标题比例/段距表。
+        let layout = theme.layout.take().unwrap_or_default();
+        let metrics = Metrics::new(theme.font_size_px, theme.line_height, layout, &theme);
         // 高亮数据与主题一起传入，但渲染时按字段独立使用（主题结构里带着纯粹是为了少改一处调用约定）
         let code_highlights = std::mem::take(&mut theme.code_highlights);
         DocxBuilder {
@@ -948,10 +1785,126 @@ impl DocxBuilder {
             footnote_ids: std::collections::HashMap::new(),
             next_footnote_id: 0,
             footnote_defined: std::collections::HashSet::new(),
-            footnote_referenced: std::collections::HashSet::new(),
+            footnote_ref_seen: std::collections::HashSet::new(),
             footnote_rels: String::new(),
             code_highlights,
+            toc_items: Vec::new(),
+            heading_seq: 0,
+            saw_block: false,
+            suppress_before: false,
         }
+    }
+
+    // ---------- 段距折叠 ----------
+    //
+    // Word 的段前/段后是**相加**的，不像 CSS 会折叠。若沿用 `Normal after=1em` +
+    // `Heading before=1.5em`，段间距会变成 2.5em，而预览只有 1.5em。
+    // 因此正文所有段落的段后统一为 0，只由「下一个块的段前」决定间距；
+    // 表格/引用块（它们本身不是段落）后面用 gap 段落承担间距，并抑制下一个块的段前，
+    // gap 高度取「规范间距」与「下一个块段前」的较大值。
+
+    fn block_before(&mut self, wanted: u32) -> u32 {
+        let before = if !self.saw_block || self.suppress_before {
+            0
+        } else {
+            wanted
+        };
+        self.saw_block = true;
+        self.suppress_before = false;
+        before
+    }
+
+    fn note_block(&mut self) {
+        self.saw_block = true;
+        self.suppress_before = false;
+    }
+
+    /// 表格/引用块本身没有段前距：在它们前面补一个 gap 段落。
+    /// 如果上一个块也是表格/引用块，它后面的 gap 已经承担了间距，不再叠加。
+    fn gap_before_table_like(&mut self) {
+        if self.saw_block && !self.suppress_before {
+            let gap = self.metrics.em_twips(self.metrics.layout.table.gap_em);
+            self.body.push_str(&self.gap_paragraph_twips(gap));
+        }
+        self.note_block();
+    }
+
+    fn paragraph_before(&mut self) -> u32 {
+        if self.in_footnote {
+            return 0;
+        }
+        let em = if self.quote_depth > 0 {
+            self.metrics.layout.quote.paragraph_gap_em
+        } else {
+            self.metrics.layout.paragraph.before_em
+        };
+        let wanted = self.metrics.em_twips(em);
+        self.block_before(wanted)
+    }
+
+    fn heading_before(&mut self, level: u32) -> u32 {
+        if self.in_footnote {
+            return 0;
+        }
+        let wanted = self.metrics.em_twips(self.metrics.layout.heading_before_em(level));
+        self.block_before(wanted)
+    }
+
+    fn code_before(&mut self) -> u32 {
+        if self.in_footnote {
+            return 0;
+        }
+        let wanted = self.metrics.em_twips(self.metrics.layout.code.before_em);
+        self.block_before(wanted)
+    }
+
+    fn list_before(&mut self, first_item: bool) -> u32 {
+        if self.in_footnote {
+            return 0;
+        }
+        let em = if first_item {
+            self.metrics.layout.list.before_em
+        } else {
+            self.metrics.layout.list.item_gap_em
+        };
+        let wanted = self.metrics.em_twips(em);
+        self.block_before(wanted)
+    }
+
+    /// 表格/引用块后 gap 的高度：取规范间距与下一个块段前的较大值；
+    /// 文档结束时为 0，只保留一个 1pt 的结构段落。
+    fn gap_after_table(&mut self, iter: &mut EventIter) -> u32 {
+        let next = Self::next_block_before(iter, &self.metrics);
+        if next == 0 {
+            0
+        } else {
+            self.metrics.em_twips(self.metrics.layout.table.gap_em).max(next)
+        }
+    }
+
+    fn next_block_before(iter: &mut EventIter, m: &Metrics) -> u32 {
+        let em = match iter.peek() {
+            Some(Event::Start(Tag::Heading { level, .. })) => {
+                let lv = match level {
+                    HeadingLevel::H1 => 1,
+                    HeadingLevel::H2 => 2,
+                    HeadingLevel::H3 => 3,
+                    HeadingLevel::H4 => 4,
+                    HeadingLevel::H5 => 5,
+                    HeadingLevel::H6 => 6,
+                };
+                m.layout.heading_before_em(lv)
+            }
+            Some(Event::Start(Tag::Paragraph)) => m.layout.paragraph.before_em,
+            Some(Event::Start(Tag::CodeBlock(_))) => m.layout.code.before_em,
+            Some(Event::Start(Tag::List(_))) => m.layout.list.before_em,
+            Some(Event::Start(Tag::Table(_))) | Some(Event::Start(Tag::BlockQuote(_))) => {
+                m.layout.table.gap_em
+            }
+            Some(Event::Html(h)) if is_toc_placeholder(h) => m.layout.paragraph.before_em,
+            _ => 0.0,
+        };
+        m.em_twips(em)
     }
 
     // ---------- 文本/段落辅助 ----------
@@ -963,46 +1916,59 @@ impl DocxBuilder {
     }
 
     /// 基础字号下的 run 上属性（`w:rPr` 内容），供文本 run 与字形 run 复用
+    ///
+    /// **子元素必须按 ECMA-376 的 CT_RPr 顺序落地**：
+    /// `rFonts → b → bCs → i → iCs → strike → color → sz → szCs → highlight → u → vertAlign`。
+    /// 顺序写错（例如 `<w:sz/>` 排在 `<w:color/>` 前面）Word 会报「发现无法读取的内容」
+    /// 并走一遍修复，内容其实没坏 —— 所以这里先分段拼，最后按顺序合并，不做「边判断边 push」。
     fn run_with(&self, text: &str, st: InlineState, mono: bool, color: Option<&str>, font: Option<&str>) -> String {
-        let mut rpr = String::new();
-        // OOXML `CT_RPr` 有严格子元素顺序；rFonts 必须最先，vertAlign 必须最后。
-        // 之前把 rFonts 写在 b/color 后面、vertAlign 写在最前，Word 可能直接判文档损坏。
-        if mono {
-            let f = esc(&self.theme.mono_font);
-            rpr.push_str(&format!("<w:rFonts w:ascii=\"{}\" w:hAnsi=\"{}\" w:eastAsia=\"{}\" w:cs=\"{}\"/>", f, f, f, f));
-        } else if let Some(f) = font {
-            // 显式字体（如任务列表勾选字形）只作用于 ascii/hAnsi/cs —— eastAsia 留给正文字体
-            let f = esc(f);
-            rpr.push_str(&format!("<w:rFonts w:ascii=\"{}\" w:hAnsi=\"{}\" w:cs=\"{}\"/>", f, f, f));
-        }
-        if st.bold { rpr.push_str("<w:b/><w:bCs/>"); }
-        if st.italic { rpr.push_str("<w:i/><w:iCs/>"); }
-        if st.strike { rpr.push_str("<w:strike/>"); }
-
-        let link_color = if st.link { Some(self.theme.accent.as_str()) } else { None };
-        if let Some(c) = color.or(link_color) {
-            rpr.push_str(&format!("<w:color w:val=\"{}\"/>", esc(c)));
-        }
+        let mut fonts = String::new();
+        let mut weight = String::new();
+        let mut color_xml = String::new();
+        let mut size = String::new();
+        let mut deco = String::new();
 
         if mono {
-            let sz = Metrics::sz_scale_from(self.base_sz(), 0.9);
-            rpr.push_str(&format!("<w:sz w:val=\"{0}\"/><w:szCs w:val=\"{0}\"/>", sz));
+            let f = esc(&self.metrics.font_mono);
+            fonts.push_str(&format!("<w:rFonts w:ascii=\"{}\" w:hAnsi=\"{}\" w:eastAsia=\"{}\" w:cs=\"{}\"/>", f, f, f, f));
+            // 代码字号比例来自版式规范；基准字号在脚注里是脚注字号
+            let sz = Metrics::sz_scale_from(self.base_sz(), self.metrics.layout.code.scale);
+            size.push_str(&format!("<w:sz w:val=\"{0}\"/><w:szCs w:val=\"{0}\"/>", sz));
         } else if self.in_footnote {
             // 脚注正文里的普通 run 显式写小字号：脚注段落可能带 `ListParagraph` 等继承
             // `Normal`（正文字号）的样式，只靠 `FootnoteText` 样式继承会被它们盖掉
             let sz = self.base_sz();
-            rpr.push_str(&format!("<w:sz w:val=\"{0}\"/><w:szCs w:val=\"{0}\"/>", sz));
+            size.push_str(&format!("<w:sz w:val=\"{0}\"/><w:szCs w:val=\"{0}\"/>", sz));
+        }
+        if let Some(f) = font {
+            // 显式字体（如任务列表勾选字形）只作用于 ascii/hAnsi/cs —— eastAsia 留给东亚字体，
+            // 该字形本身是 BMP 符号、不含 CJK 上下文。
+            let f = esc(f);
+            let ea = esc(&self.metrics.font_east_asia);
+            fonts.push_str(&format!("<w:rFonts w:ascii=\"{}\" w:hAnsi=\"{}\" w:eastAsia=\"{}\" w:cs=\"{}\"/>", f, f, ea, f));
         }
 
-        if st.highlight { rpr.push_str("<w:highlight w:val=\"yellow\"/>"); }
-        if st.underline || st.link { rpr.push_str("<w:u w:val=\"single\"/>"); }
+        if st.bold { weight.push_str("<w:b/><w:bCs/>"); }
+        if st.italic { weight.push_str("<w:i/><w:iCs/>"); }
+        if st.strike { weight.push_str("<w:strike/>"); }
+
+        if st.link {
+            color_xml.push_str(&format!("<w:color w:val=\"{}\"/>", esc(&self.theme.accent)));
+        } else if let Some(c) = color {
+            color_xml.push_str(&format!("<w:color w:val=\"{}\"/>", esc(c)));
+        }
+
+        if st.highlight { deco.push_str("<w:highlight w:val=\"yellow\"/>"); }
+        // 链接既有主题色也有下划线；`st.underline` 单独标记的也走同一条
+        if st.link || st.underline { deco.push_str("<w:u w:val=\"single\"/>"); }
         // 上/下标互斥（同时出现时上标优先，与浏览器一致的表现）
         if st.sup {
-            rpr.push_str("<w:vertAlign w:val=\"superscript\"/>");
+            deco.push_str("<w:vertAlign w:val=\"superscript\"/>");
         } else if st.sub {
-            rpr.push_str("<w:vertAlign w:val=\"subscript\"/>");
+            deco.push_str("<w:vertAlign w:val=\"subscript\"/>");
         }
 
+        let rpr = format!("{fonts}{weight}{color_xml}{size}{deco}");
         format!(
             "<w:r>{}{}</w:r>",
             if rpr.is_empty() { String::new() } else { format!("<w:rPr>{}</w:rPr>", rpr) },
@@ -1016,9 +1982,9 @@ impl DocxBuilder {
 
     /// 行内代码：等宽 + 主题 `--editor-surface` 底色（与预览 `.editor-content code` 一致）
     fn code_run(&self, text: &str) -> String {
-        let f = esc(&self.theme.mono_font);
+        let f = esc(&self.metrics.font_mono);
         let fill = esc(&self.theme.surface);
-        let sz = Metrics::sz_scale_from(self.base_sz(), 0.9);
+        let sz = Metrics::sz_scale_from(self.base_sz(), self.metrics.layout.code.scale);
         format!(
             "<w:r><w:rPr><w:rFonts w:ascii=\"{}\" w:hAnsi=\"{}\" w:eastAsia=\"{}\" w:cs=\"{}\"/><w:sz w:val=\"{}\"/><w:szCs w:val=\"{}\"/><w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"{}\"/></w:rPr><w:t xml:space=\"preserve\">{}</w:t></w:r>",
             f, f, f, f, sz, sz, fill, esc(text)
@@ -1073,9 +2039,10 @@ impl DocxBuilder {
         let omml = omml_of(tex);
         // 原生公式用 m:jc 居中；退回的 TeX 源码用段落 w:jc 居中
         let jc = if omml.is_none() { "<w:jc w:val=\"center\"/>" } else { "" };
+        let before = self.paragraph_before();
         self.body.push_str(&format!(
-            "<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:spacing w:before=\"120\" w:after=\"120\"/>{}</w:pPr>",
-            jc
+            "<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:spacing w:before=\"{}\" w:after=\"0\"/>{}</w:pPr>",
+            before, jc
         ));
         match omml {
             Some(omml) => self.body.push_str(&math_para_xml(&omml)),
@@ -1281,12 +2248,19 @@ impl DocxBuilder {
         )
     }
 
-    fn p_start(&mut self, style: &str, num: Option<(u32, u32)>) {
-        self.p_start_ind(style, num, None);
+    fn p_start(&mut self, style: &str, num: Option<(u32, u32)>, before: u32) {
+        self.p_start_ind(style, num, None, before);
     }
 
-    /// `indent` = (left, hanging) twips
-    fn p_start_ind(&mut self, style: &str, num: Option<(u32, u32)>, indent: Option<(u32, Option<u32>)>) {
+    /// `indent` = (left, hanging) twips；`before` = 段前 twips（段后恒为 0）
+    fn p_start_ind(
+        &mut self,
+        style: &str,
+        num: Option<(u32, u32)>,
+        indent: Option<(u32, Option<u32>)>,
+        before: u32,
+    ) {
+        let before = if self.in_footnote { 0 } else { before };
         let mut ppr = String::new();
         if !style.is_empty() {
             ppr.push_str(&format!("<w:pStyle w:val=\"{}\"/>", style));
@@ -1294,6 +2268,8 @@ impl DocxBuilder {
         if let Some((num_id, ilvl)) = num {
             ppr.push_str(&format!("<w:numPr><w:ilvl w:val=\"{}\"/><w:numId w:val=\"{}\"/></w:numPr>", ilvl, num_id));
         }
+        // 段后恒为 0：间距只由「下一个块的段前」表达，避免 Word 把 before+after 相加。
+        ppr.push_str(&format!("<w:spacing w:before=\"{}\" w:after=\"0\"/>", before));
         // 引用块的内缩进由**单元格表格**表达（见 `quote_block_xml`）：表格自身带左边框与底色，
         // 嵌套层级靠单元格外边距自然递进，段落不再叠加 `w:ind`，也就不会再画出多条断开的边框。
         if let Some((left, hanging)) = indent {
@@ -1306,7 +2282,11 @@ impl DocxBuilder {
         // 列表项用的是 `ListParagraph`（基于 `Normal` = 正文字号），只靠 `FootnoteText` 样式
         // 继承不到这一段，脚注里的列表/多段脚注的第二段就会比脚注正文大一圈。
         if self.in_footnote {
-            let sz = if style == "CodeBlock" { Metrics::sz_scale_from(self.metrics.footnote_sz(), 0.9) } else { self.metrics.footnote_sz() };
+            let sz = if style == "CodeBlock" {
+                Metrics::sz_scale_from(self.metrics.footnote_sz(), self.metrics.layout.code.scale)
+            } else {
+                self.metrics.footnote_sz()
+            };
             ppr.push_str(&format!("<w:rPr><w:sz w:val=\"{0}\"/><w:szCs w:val=\"{0}\"/></w:rPr>", sz));
         }
         self.body.push_str(&format!("<w:p><w:pPr>{}</w:pPr>", ppr));
@@ -1316,84 +2296,66 @@ impl DocxBuilder {
         self.body.push_str("</w:p>");
     }
 
-    /// 无障碍的结构间隔段落：高度 1em，用于表格/引用块之后。
-    /// Word 的表格没有段前/段后距；没有这个空段落，表格后内容会紧贴底边，
-    /// 相邻两个表格甚至会被 Word 合并。
-    fn gap_paragraph_xml(&self) -> String {
-        let h = self.metrics.em_twips(1.0);
-        format!(
-            "<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"{}\" w:lineRule=\"exact\"/><w:rPr><w:sz w:val=\"2\"/><w:szCs w:val=\"2\"/></w:rPr></w:pPr></w:p>",
-            h
-        )
-    }
-
-    fn gap_paragraph(&mut self) {
-        let xml = self.gap_paragraph_xml();
-        self.body.push_str(&xml);
-    }
-
-    /// `[toc]` 的 Word 原生目录域。层级、页码、跳转由 Word 在更新域时计算。
-    fn toc_field_paragraph(&mut self) {
-        let title = esc(&self.theme.toc_title);
-        let hint = esc(&self.theme.toc_hint);
-        let title_sz = Metrics::sz_scale_from(self.metrics.body_sz, 1.25);
-        self.body.push_str(&format!(
-            "<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:spacing w:before=\"0\" w:after=\"240\"/><w:jc w:val=\"center\"/></w:pPr>\
-             <w:r><w:rPr><w:b/><w:sz w:val=\"{title_sz}\"/><w:szCs w:val=\"{title_sz}\"/></w:rPr><w:t>{title}</w:t></w:r></w:p>"
-        ));
-        self.body.push_str(
-            "<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:spacing w:before=\"0\" w:after=\"120\"/></w:pPr>\
-             <w:r><w:fldChar w:fldCharType=\"begin\"/></w:r>\
-             <w:r><w:instrText xml:space=\"preserve\"> TOC \\o \"1-6\" \\h \\z \\u </w:instrText></w:r>\
-             <w:r><w:fldChar w:fldCharType=\"separate\"/></w:r>\
-             <w:r><w:t>",
-        );
-        self.body.push_str(&hint);
-        self.body.push_str(
-            "</w:t></w:r>\
-             <w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>",
-        );
-    }
-
     /// 引用块 → 单元格表格（`quote_table` 的内层实现）。
     ///
     /// 预览里的 `blockquote` 是**一个**容器：左边框与底色是连续的，内部多段落、嵌套引用、
     /// 列表都在这一个容器里。逐段落写 `w:pBdr`/`w:shd` 时，每个段落各画一条边框，
     /// 段间距处露出缺口（WPS 不会把相邻段落的边框合并成一条），看起来「被打断成多个引用」。
     ///
-    /// 改用单元格表格后：边框与底色由**表格**连续绘制；嵌套层级由单元格外边距自然递进
-    /// （每层的内层表格都从父单元格内容区开始，等价于预览里嵌套 blockquote 的 `padding: 1em`），
-    /// 因此不需要 `w:tblInd`，也不需要任何段落级边框/底纹。
+    /// 改用单元格表格后：边框与底色由**表格**连续绘制；嵌套层级由 `w:tblInd` + 收窄宽度
+    /// 递进（每层左右各让出 `quote.padding_x_em`，等价于预览嵌套 blockquote 的左右 padding），
+    /// 因此不需要任何段落级边框/底纹。
     fn quote_block_xml(&self, inner: &str) -> String {
         let accent = esc(&self.theme.accent);
         let surface = esc(&self.theme.surface);
-        let pad = self.metrics.em_twips(1.0); // 预览 `blockquote { padding: 0 1em }`
-        let vpad = self.metrics.em_twips(0.5); // 预览 `blockquote { padding: 0.5em 1em }`
+        let pad = self.metrics.em_twips(self.metrics.layout.quote.padding_x_em);
+        let vpad = self.metrics.em_twips(self.metrics.layout.quote.padding_y_em);
+        let border_sz = (self.metrics.layout.quote.border_pt * 8.0).round().clamp(1.0, 96.0) as u32;
+        // 第 1 层占满正文宽度；嵌套一层就左右各缩进一个 padding，避免内层竖条贴住外层。
+        let depth = self.quote_depth + 1;
+        let tbl_w = self
+            .metrics
+            .text_width_twips()
+            .saturating_sub(pad.saturating_mul(2 * (depth - 1)))
+            .max(200);
+        let indent = if depth > 1 {
+            format!("<w:tblInd w:w=\"{}\" w:type=\"dxa\"/>", pad)
+        } else {
+            String::new()
+        };
         // 空引用（`>` 单独一行）也要有合法单元格内容（`w:tc` 至少一个块级元素）
         let inner = if inner.trim().is_empty() {
             "<w:p><w:pPr><w:pStyle w:val=\"Quote\"/></w:pPr></w:p>".to_string()
         } else if inner.trim_end().ends_with("</w:tbl>") {
-            // 单元格必须以段落结尾；如果引用内部最后一块是表格（例如嵌套引用），补一个间隔段落
-            format!("{}{}", inner, self.gap_paragraph_xml())
+            // `w:tc` 必须以**段落**收尾。嵌套引用（`> >`）会渲染成内层 `<w:tbl>`，单元格里
+            // 直接以表格结尾时 Word 判定文件损坏，打开报「发现无法读取的内容」。
+            // 补一个 1pt 空段落兜底（高度可忽略），与 body 末尾 `tbl` 后补段落同理。
+            format!(
+                "{}<w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"240\" w:lineRule=\"auto\"/>\
+                 <w:rPr><w:sz w:val=\"2\"/><w:szCs w:val=\"2\"/></w:rPr></w:pPr></w:p>",
+                inner
+            )
         } else {
             inner.to_string()
         };
         let none = "w:val=\"none\" w:sz=\"0\" w:space=\"0\" w:color=\"auto\"";
         format!(
-            "<w:tbl><w:tblPr><w:tblW w:w=\"5000\" w:type=\"pct\"/><w:tblBorders><w:top {none}/>\
-             <w:left w:val=\"single\" w:sz=\"24\" w:space=\"0\" w:color=\"{accent}\"/><w:bottom {none}/>\
+            "<w:tbl><w:tblPr><w:tblW w:w=\"{tbl_w}\" w:type=\"dxa\"/>{indent}<w:tblBorders><w:top {none}/>\
+             <w:left w:val=\"single\" w:sz=\"{border_sz}\" w:space=\"0\" w:color=\"{accent}\"/><w:bottom {none}/>\
              <w:right {none}/><w:insideH {none}/><w:insideV {none}/></w:tblBorders>\
              <w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"{surface}\"/><w:tblLayout w:type=\"autofit\"/>\
-             <w:tblCellMar><w:top w:w=\"{vpad}\" w:type=\"dxa\"/><w:left w:w=\"{pad}\" w:type=\"dxa\"/>\
-             <w:bottom w:w=\"{vpad}\" w:type=\"dxa\"/><w:right w:w=\"{pad}\" w:type=\"dxa\"/></w:tblCellMar></w:tblPr>\
-             <w:tblGrid><w:gridCol w:w=\"9026\"/></w:tblGrid>\
-             <w:tr><w:tc><w:tcPr><w:tcW w:w=\"5000\" w:type=\"pct\"/>\
+             <w:tblCellMar><w:top w:w=\"{vpad}\" w:type=\"dxa\"/><w:left w:w=\"0\" w:type=\"dxa\"/>\
+             <w:bottom w:w=\"{vpad}\" w:type=\"dxa\"/><w:right w:w=\"0\" w:type=\"dxa\"/></w:tblCellMar></w:tblPr>\
+             <w:tblGrid><w:gridCol w:w=\"{tbl_w}\"/></w:tblGrid>\
+             <w:tr><w:tc><w:tcPr><w:tcW w:w=\"{tbl_w}\" w:type=\"dxa\"/>\
              <w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"{surface}\"/></w:tcPr>{inner}</w:tc></w:tr></w:tbl>",
             none = none,
             accent = accent,
             surface = surface,
             vpad = vpad,
-            pad = pad,
+            border_sz = border_sz,
+            tbl_w = tbl_w,
+            indent = indent,
             inner = inner,
         )
     }
@@ -1401,6 +2363,24 @@ impl DocxBuilder {
 
     fn para_style(&self) -> &'static str {
         if self.quote_depth > 0 { "Quote" } else { "Normal" }
+    }
+
+    /// 表格类块（引用块 / Markdown 表格）之后的间隔段落。
+    ///
+    /// Word 里块与块的间距全部由**段落的** `w:spacing` 决定，表格自身没有“外边距”，所以
+    /// 表格后面必须跟一个带行高的空段落，否则会：
+    ///   · 与紧邻的表格被 Word 合并成一个（左边框连成一条、中间没有空隙）；
+    ///   · 与代码块（`CodeBlock` 样式 `before=0`）或正文段落紧贴。
+    ///
+    /// `em` 取 1.0 即与预览的 `table { margin: 1em 0 }` / `blockquote { margin: 1em 0 }` 一致。
+    /// 行高用 `exact` 精确控制，字号取 1pt，避免段落自身多出空白。
+    fn gap_paragraph_twips(&self, twips: u32) -> String {
+        let line = if twips == 0 { 20 } else { twips.max(20) };
+        format!(
+            "<w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"{}\" w:lineRule=\"exact\"/>\
+             <w:rPr><w:sz w:val=\"2\"/><w:szCs w:val=\"2\"/></w:rPr></w:pPr></w:p>",
+            line
+        )
     }
 
     /// 任务列表勾选字形（内联 run）
@@ -1412,24 +2392,35 @@ impl DocxBuilder {
     /// 列表项段落：首段带编号/项目符号；续段仅用 ListParagraph + 与文本对齐的缩进。
     /// `level` 决定是否消费配对闭合标签：调用方已消费 Start(Paragraph) 时传 1（吃掉 End(Paragraph)），
     /// 紧凑列表项的行内内容无包裹标签时传 0。消费 iter 到本段结束为止。
-    fn item_paragraph(&mut self, num: Option<(u32, u32)>, depth: u32, checked: Option<bool>, first: bool, level: u32, iter: &mut EventIter) {
-        // 缩进一律手写（left = 720×depth、hanging = 360）：编号层级 ilvl 不再等于缩进层级
-        // （有序列表恒为 ilvl=0，见 `Event::Start(Tag::List)` 的说明），段落级 `w:ind` 直接生效；
-        // 任务项与普通项也因此对齐同一列。
-        let left = depth.max(1) * 720;
+    fn item_paragraph(
+        &mut self,
+        num: Option<(u32, u32)>,
+        depth: u32,
+        checked: Option<bool>,
+        first: bool,
+        level: u32,
+        iter: &mut EventIter,
+        before: u32,
+    ) {
+        // 缩进/悬挂都按版式规范换算（不再写死 720/360）：
+        // 编号层级 ilvl 恒为 0，层级差异由段落 `w:ind` 表达。
+        // 先各取一次 twips 再乘层级，保证与 numbering.xml 的 `w:ind` 完全一致。
+        let indent = self.metrics.em_twips(self.metrics.layout.list.indent_em);
+        let hanging = self.metrics.em_twips(self.metrics.layout.list.hanging_em);
+        let left = depth.max(1) * indent;
         if first {
             match checked {
                 // 任务项：**不写 numPr**。预览里勾选框取代了项目符号，若同时写 numPr，Word 会
                 // 既画项目符号又画勾选框（双重标记）。
                 Some(c) => {
-                    self.p_start_ind("ListParagraph", None, Some((left, Some(360))));
+                    self.p_start_ind("ListParagraph", None, Some((left, Some(hanging))), before);
                     let glyph = self.task_glyph(c);
                     self.body.push_str(&glyph);
                 }
-                None => self.p_start_ind("ListParagraph", num, Some((left, Some(360)))),
+                None => self.p_start_ind("ListParagraph", num, Some((left, Some(hanging))), before),
             }
         } else {
-            self.p_start_ind("ListParagraph", None, Some((left, None)));
+            self.p_start_ind("ListParagraph", None, Some((left, None)), before);
         }
         let inner = self.render_inlines(iter, InlineState::default(), level);
         self.body.push_str(&inner);
@@ -1437,14 +2428,16 @@ impl DocxBuilder {
     }
 
     /// 空列表项（如 "- "）：只保留编号/项目符号，避免整个项目消失
-    fn empty_item_paragraph(&mut self, num: Option<(u32, u32)>, depth: u32, checked: Option<bool>) {
-        let left = depth.max(1) * 720;
+    fn empty_item_paragraph(&mut self, num: Option<(u32, u32)>, depth: u32, checked: Option<bool>, before: u32) {
+        let indent = self.metrics.em_twips(self.metrics.layout.list.indent_em);
+        let hanging = self.metrics.em_twips(self.metrics.layout.list.hanging_em);
+        let left = depth.max(1) * indent;
         if let Some(c) = checked {
-            self.p_start_ind("ListParagraph", None, Some((left, Some(360))));
+            self.p_start_ind("ListParagraph", None, Some((left, Some(hanging))), before);
             let glyph = self.task_glyph(c);
             self.body.push_str(&glyph);
         } else {
-            self.p_start_ind("ListParagraph", num, Some((left, Some(360))));
+            self.p_start_ind("ListParagraph", num, Some((left, Some(hanging))), before);
         }
         self.p_end();
     }
@@ -1452,9 +2445,10 @@ impl DocxBuilder {
     /// 表格一行。表头行（thead）加主题底色、跨页重复，单元格文字加粗。
     fn render_table_row(&mut self, iter: &mut EventIter, aligns: &[Alignment], head: bool, surface: &str) {
         if head {
-            self.body.push_str("<w:tr><w:trPr><w:tblHeader/></w:trPr>");
+            // CT_TrPr 顺序：cantSplit 在 tblHeader 之前
+            self.body.push_str("<w:tr><w:trPr><w:cantSplit/><w:tblHeader/></w:trPr>");
         } else {
-            self.body.push_str("<w:tr>");
+            self.body.push_str("<w:tr><w:trPr><w:cantSplit/></w:trPr>");
         }
         let mut col = 0usize;
         while let Some(ev) = iter.next() {
@@ -1473,7 +2467,7 @@ impl DocxBuilder {
                         self.body
                             .push_str(&format!("<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"{}\"/>", surface));
                     }
-                    self.body.push_str("<w:vAlign w:val=\"top\"/></w:tcPr>");
+                    self.body.push_str("<w:vAlign w:val=\"center\"/></w:tcPr>");
                     self.render_table_cell(iter, jc, head);
                     self.body.push_str("</w:tc>");
                 }
@@ -1487,10 +2481,14 @@ impl DocxBuilder {
 
     /// 单元格内容：段落间距与正文一致（预览单元格继承正文行高）+ 列对齐；表头文字加粗。
     fn render_table_cell(&mut self, iter: &mut EventIter, jc: &str, head: bool) {
+        // 规范：表格文字 10pt（相对正文 11pt 的比例），通过段落级 rPr 让单元格内所有 run 继承。
+        let table_sz = self.metrics.sz_scale(self.metrics.layout.table.scale);
+        // 表格单元格用单倍行距（240）：1.5 倍会把行高撑满，垂直居中看不出效果。
         self.body.push_str(&format!(
-            "<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"{}\" w:lineRule=\"auto\"/><w:jc w:val=\"{}\"/></w:pPr>",
-            self.metrics.line,
-            jc
+            "<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"240\" w:lineRule=\"auto\"/><w:jc w:val=\"{}\"/><w:rPr><w:sz w:val=\"{}\"/><w:szCs w:val=\"{}\"/></w:rPr></w:pPr>",
+            jc,
+            table_sz,
+            table_sz
         ));
         // GFM 单元格内容为行内事件直挂；容错处理可能出现的 Paragraph 包裹
         let level = if matches!(iter.peek(), Some(Event::Start(Tag::Paragraph))) {
@@ -1556,19 +2554,22 @@ impl DocxBuilder {
                     if !self.footnote_defined.contains(&*label) {
                         // 没有对应定义：按 Markdown 原文输出，不丢内容
                         out.push_str(&self.run(&format!("[^{}]", label), st, mono, None));
+                    } else if !self.footnote_ref_seen.insert(label.to_string()) {
+                        // 同一脚注的**第二次及以后**引用：不再生成 `footnoteReference`
+                        // （重复 id 会让 Word 判定文件损坏，见字段注释），降级为上标 `[label]`。
+                        // 与预览一致的粗/斜体沿用当前状态，但不带上链接样式。
+                        out.push_str(&self.run(
+                            &format!("[{}]", label),
+                            InlineState { sup: true, sub: false, link: false, ..st },
+                            mono,
+                            None,
+                        ));
                     } else {
                         let id = self.footnote_id(&label);
-                        // Word 不允许两条 footnoteReference 共用同一个 w:id（文件会损坏）。
-                        // 第二次及以后降级为不可点击的上标文字，脚注区仍只有一条定义。
-                        if self.footnote_referenced.insert(label.to_string()) {
-                            out.push_str(&format!(
-                                "<w:r><w:rPr><w:rStyle w:val=\"FootnoteReference\"/></w:rPr><w:footnoteReference w:id=\"{}\"/></w:r>",
-                                id
-                            ));
-                        } else {
-                            let sup = InlineState { sup: true, ..InlineState::default() };
-                            out.push_str(&self.run(&format!("[{}]", id), sup, mono, None));
-                        }
+                        out.push_str(&format!(
+                            "<w:r><w:rPr><w:rStyle w:val=\"FootnoteReference\"/></w:rPr><w:footnoteReference w:id=\"{}\"/></w:r>",
+                            id
+                        ));
                     }
                 }
                 // 数学公式：转为 Word 原生可编辑公式（OMML）。
@@ -1674,6 +2675,103 @@ impl DocxBuilder {
 
     // ---------- 块级渲染 ----------
 
+    /// 目录：一个「目录」标题段落 + TOC 域。
+    ///
+    /// **域结果在这里预先生成**（条目文字 + 指向 `_Toc` 书签的超链接），打开文档即可见，
+    /// 不需要用户按 F9。域本身仍然有效：用户改完标题按 F9，Word 会按大纲级别重新收集，
+    /// 补上页码、重排层级。
+    ///
+    /// 不生成 `word/settings.xml` 的 `<w:updateFields w:val="true"/>`，也不给 `fldChar` 加
+    /// `w:dirty` —— 两者都会让 Word 打开时弹「该文档包含的域可能引用了其他文件」。
+    fn toc_field(&mut self) {
+        // 目录标题走 TocHeading：它没有 outlineLvl，不会把自己也列进目录。
+        // 文案由前端按界面语言传入（`theme.toc_title`），缺省才回退中文。
+        let title = self
+            .theme
+            .toc_title
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or("目录")
+            .to_string();
+        // 目录块本身也是一个块：先取它相对前文的段前（表格后的 gap 已经承担时为 0），
+        // 再记录到段距状态里，后面的标题不会把它当成开头。
+        let heading_before = self.paragraph_before();
+        self.body.push_str(&format!(
+            "<w:p><w:pPr><w:pStyle w:val=\"TocHeading\"/><w:spacing w:before=\"{}\" w:after=\"0\"/></w:pPr>",
+            heading_before
+        ));
+        self.body.push_str(&self.run(&title, InlineState::default(), false, None));
+        self.body.push_str("</w:p>");
+
+        // `\o "1-N"` 收录到版式规范规定的层级；`\h` 生成可点击链接，
+        // `\z` 隐藏 Web 版页码，`\u` 用标题的大纲级别而不是自定义样式。
+        let max_level = self.metrics.layout.toc_max_level();
+        let instr = format!(" TOC \\o \"1-{}\" \\h \\z \\u ", max_level);
+        let items = self.toc_items.clone();
+        let total = items.len();
+        let heading_after = self.metrics.em_twips(self.metrics.layout.toc.heading_after_em);
+        let entry_gap = self.metrics.em_twips(self.metrics.layout.toc.entry_gap_em);
+
+        // 无标题：域留空（只保留域本身，更新后 Word 会显示「无目录项」），不写任何提示文字
+        if total == 0 {
+            self.body.push_str(&format!(
+                "<w:p><w:pPr><w:pStyle w:val=\"TOC1\"/><w:spacing w:before=\"{}\" w:after=\"0\"/></w:pPr>\
+                 <w:r><w:fldChar w:fldCharType=\"begin\"/></w:r>\
+                 <w:r><w:instrText xml:space=\"preserve\">{}</w:instrText></w:r>\
+                 <w:r><w:fldChar w:fldCharType=\"separate\"/></w:r>\
+                 <w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>",
+                heading_after, instr
+            ));
+            return;
+        }
+
+        for (i, entry) in items.iter().enumerate() {
+            let lv = entry.level;
+            let text = entry.text.as_str();
+            let page_no = entry.page;
+            let bm = toc_bookmark(i + 1);
+            let before = if i == 0 { heading_after } else { entry_gap };
+            self.body.push_str("<w:p>");
+            self.body.push_str(&format!(
+                "<w:pPr><w:pStyle w:val=\"TOC{}\"/><w:spacing w:before=\"{}\" w:after=\"0\"/></w:pPr>",
+                lv, before
+            ));
+            // 域代码只写一次：begin/separate 落在首个条目段，end 落在末个条目段
+            if i == 0 {
+                self.body.push_str("<w:r><w:fldChar w:fldCharType=\"begin\"/></w:r>");
+                self.body.push_str(&format!(
+                    "<w:r><w:instrText xml:space=\"preserve\">{}</w:instrText></w:r>",
+                    instr
+                ));
+                self.body.push_str("<w:r><w:fldChar w:fldCharType=\"separate\"/></w:r>");
+            }
+            let label = if text.trim().is_empty() { " " } else { text };
+            let text_run = self.run(label, InlineState::default(), false, None);
+            // 点线 + 页码：制表位（右对齐、dot leader）定义在 TOC1-6 样式里。
+            // 页码走 `PAGEREF` 域，但**域结果先填一个估算值**（`collect_toc` 按块高累加算出）——
+            // 这样打开文档就有页码可看，不必先按 F9；用户按 F9 后 Word 重新排版，
+            // 用真实页码覆盖这个估算值。纯文本而非嵌套域，Word 不会弹「域可能引用其他文件」。
+            let page = format!(
+                "<w:r><w:tab/></w:r>\
+                 <w:r><w:fldChar w:fldCharType=\"begin\"/></w:r>\
+                 <w:r><w:instrText xml:space=\"preserve\"> PAGEREF {bm} \\h </w:instrText></w:r>\
+                 <w:r><w:fldChar w:fldCharType=\"separate\"/></w:r>\
+                 <w:r><w:t>{page_no}</w:t></w:r>\
+                 <w:r><w:fldChar w:fldCharType=\"end\"/></w:r>"
+            );
+            let link = format!(
+                "<w:hyperlink w:anchor=\"{}\" w:history=\"1\">{}{}</w:hyperlink>",
+                bm, text_run, page
+            );
+            self.body.push_str(&link);
+            if i + 1 == total {
+                self.body.push_str("<w:r><w:fldChar w:fldCharType=\"end\"/></w:r>");
+            }
+            self.body.push_str("</w:p>");
+        }
+    }
+
     fn render_block_event(&mut self, iter: &mut EventIter, ev: Event) {
         match ev {
             Event::Start(Tag::Heading { level, .. }) => {
@@ -1686,23 +2784,41 @@ impl DocxBuilder {
                     HeadingLevel::H6 => 6,
                 };
                 let style = format!("Heading{}", lv);
-                self.p_start(&style, None);
+                // 标题上挂 `_Toc` 书签：目录域结果里的超链接靠它跳转（Word 自己更新域时
+                // 也会生成同名书签，顺序一致所以不冲突）
+                let max_level = self.metrics.layout.toc_max_level();
+                let bookmark = if lv <= max_level {
+                    self.heading_seq += 1;
+                    Some((self.heading_seq, toc_bookmark(self.heading_seq)))
+                } else {
+                    None
+                };
+                let before = self.heading_before(lv);
+                // 引用块里的标题也要让出 `Quote` 的左右内边距：表格 cell margin 已为 0，
+                // 标题样式自身没有缩进，不补就会贴住引用左边框。
+                let hanging = if self.quote_depth > 0 {
+                    Some((self.metrics.em_twips(self.metrics.layout.quote.padding_x_em), None))
+                } else {
+                    None
+                };
+                self.p_start_ind(&style, None, hanging, before);
+                if let Some((id, name)) = &bookmark {
+                    self.body.push_str(&format!(
+                        "<w:bookmarkStart w:id=\"{}\" w:name=\"{}\"/>",
+                        id, name
+                    ));
+                }
                 let inner = self.render_inlines(iter, InlineState::default(), 1);
                 self.body.push_str(&inner);
+                if let Some((id, _)) = &bookmark {
+                    self.body.push_str(&format!("<w:bookmarkEnd w:id=\"{}\"/>", id));
+                }
                 self.p_end();
             }
             Event::Start(Tag::Paragraph) => {
-                // `[toc]` 被前端替换成独占一行的标记：输出 Word 原生目录域，而不是静态列表。
-                if matches!(iter.peek(), Some(Event::Text(t)) if t.trim() == TOC_FIELD_MARK) {
-                    while let Some(ev2) = iter.next() {
-                        if matches!(ev2, Event::End(TagEnd::Paragraph)) {
-                            break;
-                        }
-                    }
-                    self.toc_field_paragraph();
                 // `$$…$$` 总是被解析器包在 Paragraph 里 → 块级公式按居中段落输出
                 // （若不在此拦截，DisplayMath 会落进行内渲染，公式左对齐且 `$$` 前后换行丢失）
-                } else if matches!(iter.peek(), Some(Event::DisplayMath(_))) {
+                if matches!(iter.peek(), Some(Event::DisplayMath(_))) {
                     if let Some(Event::DisplayMath(tex)) = iter.next() {
                         self.display_math_paragraph(&tex);
                     }
@@ -1712,8 +2828,16 @@ impl DocxBuilder {
                         }
                     }
                 } else {
-                    self.p_start(self.para_style(), None);
+                    // 先渲染到临时缓冲：独立成段的裸 `[toc]` / `[[toc]]` 直接换成 TOC 域，
+                    // 不留下一个只写着“[toc]”的段落；其它内容再按普通段落输出。
                     let inner = self.render_inlines(iter, InlineState::default(), 1);
+                    // 行内渲染可能把 `[toc]` 拆成多个 run（autolink 分段），先取纯文本再判断
+                    if is_toc_placeholder(&html_plain_text(&inner)) {
+                        self.toc_field();
+                        return;
+                    }
+                    let before = self.paragraph_before();
+                    self.p_start(self.para_style(), None, before);
                     self.body.push_str(&inner);
                     self.p_end();
                 }
@@ -1721,6 +2845,9 @@ impl DocxBuilder {
             // 引用块：内容先渲染到临时缓冲，最后整体裹进一个单元格表格（连续左边框 + 连续底色，
             // 嵌套层级由单元格外边距递进）—— 见 `quote_block_xml` 的说明
             Event::Start(Tag::BlockQuote(_)) => {
+                // 引用块是表格容器：表格没有段前距，先补 gap；首段也不该再叠一层。
+                self.gap_before_table_like();
+                self.suppress_before = true;
                 let saved = std::mem::take(&mut self.body);
                 self.quote_depth += 1;
                 while let Some(ev2) = iter.next() {
@@ -1734,8 +2861,15 @@ impl DocxBuilder {
                 self.quote_depth -= 1;
                 let inner = std::mem::replace(&mut self.body, saved);
                 self.body.push_str(&self.quote_block_xml(&inner));
-                // 引用块是表格；后面补 1em 间距，避免与后续段落/表格紧贴或被合并。
-                self.gap_paragraph();
+                // 引用块是 1×1 表格，而 Word 里**表格没有段前/段后距**（块间距全靠段落的
+                // `w:spacing`），所以表格后面必须补一个带行高的空段落，否则：
+                //   · 与紧邻的表格被合并成一个（实测 `Tables.Count` 由 2 变 1、左边框连成一条）；
+                //   · 与代码块（`CodeBlock` 样式 `before=0`）、正文段落紧贴（中间没有空隙）。
+                // 间距按版式规范取「表格间距」与下一个块段前的较大值；这同时满足了
+                // 「表格不能是 body 的最后一个元素」。
+                let gap = self.gap_after_table(iter);
+                self.body.push_str(&self.gap_paragraph_twips(gap));
+                self.suppress_before = true;
             }
             Event::Start(Tag::CodeBlock(kind)) => {
                 // 语言标记（围栏块的 info 串第一个词）：前端按「(语言, 代码)」查高亮片段表
@@ -1755,7 +2889,8 @@ impl DocxBuilder {
                 }
                 // 一个代码块 = 一个段落，块内换行用 `<w:br/>`：预览里 `pre` 是**单一**区块，
                 // 逐行拆段会在末尾多出一个空段落，选中/复制时也被当成多个段落
-                self.p_start("CodeBlock", None);
+                let before = self.code_before();
+                self.p_start("CodeBlock", None, before);
                 let content = self.code_block_content(lang, &code);
                 self.body.push_str(&content);
                 self.p_end();
@@ -1861,6 +2996,7 @@ impl DocxBuilder {
                     start: start.unwrap_or(1),
                     bullet_depth,
                     depth,
+                    items: 0,
                 });
                 self.list_stack.push(idx);
                 while let Some(ev2) = iter.next() {
@@ -1878,6 +3014,15 @@ impl DocxBuilder {
                 // 编号层级恒为 ilvl=0（见上：每个列表独占 abstractNum，实例内独立计数）
                 let depth = self.list_stack.len() as u32;
                 let num = self.list_stack.last().map(|i| (self.lists[*i].num_id, 0u32));
+                let first_item = self
+                    .list_stack
+                    .last()
+                    .map(|i| self.lists[*i].items == 0)
+                    .unwrap_or(false);
+                if let Some(&i) = self.list_stack.last() {
+                    self.lists[i].items += 1;
+                }
+                let first_before = self.list_before(first_item);
                 let mut checked: Option<bool> = None;
                 let mut first = true;
 
@@ -1912,7 +3057,7 @@ impl DocxBuilder {
                         Next::EndItem => {
                             // 空列表项（如 "- "）也要保留编号/项目符号
                             if first {
-                                self.empty_item_paragraph(num, depth, checked);
+                                self.empty_item_paragraph(num, depth, checked, first_before);
                             }
                             iter.next(); // 消费 End(Item)
                             break;
@@ -1923,13 +3068,15 @@ impl DocxBuilder {
                         }
                         Next::Para => {
                             iter.next(); // 消费 Start(Paragraph)
-                            self.item_paragraph(num, depth, checked, first, 1, iter);
+                            let before = if first { first_before } else { 0 };
+                            self.item_paragraph(num, depth, checked, first, 1, iter, before);
                             first = false;
                         }
                         // 行内起始标签（Strong/Emphasis/Link/Image/…）或紧凑项的行内内容：
                         // 不消费事件，交给 item_paragraph 统一渲染
                         Next::Inline | Next::Other => {
-                            self.item_paragraph(num, depth, checked, first, 0, iter);
+                            let before = if first { first_before } else { 0 };
+                            self.item_paragraph(num, depth, checked, first, 0, iter, before);
                             first = false;
                         }
                         // 其余块级（嵌套列表/代码块/表格/引用/标题）：原样交给块级渲染
@@ -1941,26 +3088,37 @@ impl DocxBuilder {
                 }
             }
             Event::Start(Tag::Table(alignments)) => {
+                // 表格本身没有段前距；先补 gap，表格后再补一个 gap。
+                self.gap_before_table_like();
                 let border = esc(&self.theme.border);
                 let surface = esc(&self.theme.surface);
-                // 对齐预览表格：整表 100% 宽、1px 全网格（--editor-border）、统一单元格内边距
+                // 对齐版式规范：整表 100% 宽、统一边框/单元格内边距
+                let border_sz = (self.metrics.layout.table.border_pt * 8.0).round().clamp(1.0, 96.0) as u32;
+                let cell_x = self.metrics.em_twips(self.metrics.layout.table.cell_margin_x_em);
+                let cell_y = self.metrics.em_twips(self.metrics.layout.table.cell_margin_y_em);
+                // 表格宽度 = 正文整宽（9026 twips）。
+                let table_w = self.metrics.text_width_twips();
                 self.body.push_str(&format!(
-                    "<w:tbl><w:tblPr><w:tblW w:w=\"5000\" w:type=\"pct\"/><w:tblLayout w:type=\"autofit\"/>\
-                     <w:tblBorders><w:top w:val=\"single\" w:sz=\"4\" w:space=\"0\" w:color=\"{b}\"/>\
-                     <w:left w:val=\"single\" w:sz=\"4\" w:space=\"0\" w:color=\"{b}\"/>\
-                     <w:bottom w:val=\"single\" w:sz=\"4\" w:space=\"0\" w:color=\"{b}\"/>\
-                     <w:right w:val=\"single\" w:sz=\"4\" w:space=\"0\" w:color=\"{b}\"/>\
-                     <w:insideH w:val=\"single\" w:sz=\"4\" w:space=\"0\" w:color=\"{b}\"/>\
-                     <w:insideV w:val=\"single\" w:sz=\"4\" w:space=\"0\" w:color=\"{b}\"/></w:tblBorders>\
-                     <w:tblCellMar><w:top w:w=\"120\" w:type=\"dxa\"/><w:left w:w=\"200\" w:type=\"dxa\"/>\
-                     <w:bottom w:w=\"120\" w:type=\"dxa\"/><w:right w:w=\"200\" w:type=\"dxa\"/></w:tblCellMar>\
+                    "<w:tbl><w:tblPr><w:tblW w:w=\"{tw}\" w:type=\"dxa\"/><w:tblLayout w:type=\"autofit\"/>\
+                     <w:tblBorders><w:top w:val=\"single\" w:sz=\"{sz}\" w:space=\"0\" w:color=\"{b}\"/>\
+                     <w:left w:val=\"single\" w:sz=\"{sz}\" w:space=\"0\" w:color=\"{b}\"/>\
+                     <w:bottom w:val=\"single\" w:sz=\"{sz}\" w:space=\"0\" w:color=\"{b}\"/>\
+                     <w:right w:val=\"single\" w:sz=\"{sz}\" w:space=\"0\" w:color=\"{b}\"/>\
+                     <w:insideH w:val=\"single\" w:sz=\"{sz}\" w:space=\"0\" w:color=\"{b}\"/>\
+                     <w:insideV w:val=\"single\" w:sz=\"{sz}\" w:space=\"0\" w:color=\"{b}\"/></w:tblBorders>\
+                     <w:tblCellMar><w:top w:w=\"{cy}\" w:type=\"dxa\"/><w:left w:w=\"{cx}\" w:type=\"dxa\"/>\
+                     <w:bottom w:w=\"{cy}\" w:type=\"dxa\"/><w:right w:w=\"{cx}\" w:type=\"dxa\"/></w:tblCellMar>\
                      </w:tblPr>",
-                    b = border
+                    sz = border_sz,
+                    b = border,
+                    tw = table_w,
+                    cx = cell_x,
+                    cy = cell_y
                 ));
                 // 列网格：按列数均分正文可用宽度（A4 去 2×2.54cm 页边距 = 9026 twips）。
                 // 没有 `w:tblGrid` 时 Word/WPS 需自行推断列宽，多列时容易宽窄不齐。
                 let cols = alignments.len().max(1);
-                let col_w = 9026 / cols as u32;
+                let col_w = table_w / cols as u32;
                 self.body.push_str("<w:tblGrid>");
                 for _ in 0..cols {
                     self.body.push_str(&format!("<w:gridCol w:w=\"{}\"/>", col_w));
@@ -1975,19 +3133,52 @@ impl DocxBuilder {
                     }
                 }
                 self.body.push_str("</w:tbl>");
-                // Word 要求表格后跟一个段落；这里用 1em 高的空段落同时解决
-                // “表格后无间距”和“两个表格直接相接被 Word 合并”的问题。
-                self.gap_paragraph();
+                // 表格后必须跟一个段落（Word 结构要求），同时承担与下一个块之间的间距。
+                // 取「表格间距」与下一个块段前的较大值，避免 Word 把两者相加。
+                let gap = self.gap_after_table(iter);
+                self.body.push_str(&self.gap_paragraph_twips(gap));
+                self.suppress_before = true;
             }
             Event::Text(t) => {
-                self.p_start(self.para_style(), None);
+                // 裸 `[toc]`（未走前端预处理）也按目录域处理
+                if is_toc_placeholder(&t) {
+                    self.toc_field();
+                    return;
+                }
+                let before = self.paragraph_before();
+                self.p_start(self.para_style(), None, before);
                 let run = self.run(&t, InlineState::default(), false, None);
                 self.body.push_str(&run);
                 self.p_end();
             }
             Event::Html(h) => {
+                // 前端把 `[toc]` 换成 HTML 注释标记，到这里输出 TOC 域
+                if is_toc_placeholder(&h) {
+                    self.toc_field();
+                    return;
+                }
+                // `<center>…</center>`：输出居中段落，不再把标签当正文打印
+                if let Some(text) = center_block_text(&h) {
+                    let before = self.paragraph_before();
+                    self.body.push_str(&format!(
+                        "<w:p><w:pPr><w:pStyle w:val=\"{}\"/><w:spacing w:before=\"{}\" w:after=\"0\"/><w:jc w:val=\"center\"/></w:pPr>",
+                        self.para_style(),
+                        before
+                    ));
+                    let mut first = true;
+                    for line in text.split('\n') {
+                        if !first {
+                            self.body.push_str(BR);
+                        }
+                        self.body.push_str(&self.run(line, InlineState::default(), false, None));
+                        first = false;
+                    }
+                    self.p_end();
+                    return;
+                }
                 let imgs = extract_imgs(&h);
-                self.p_start(self.para_style(), None);
+                let before = self.paragraph_before();
+                self.p_start(self.para_style(), None, before);
                 if imgs.is_empty() {
                     // 非图片的原始 HTML：保持原行为（按文本输出）
                     let run = self.run(&h, InlineState::default(), false, None);
@@ -2013,6 +3204,12 @@ impl DocxBuilder {
 }
 
 // ===================== OOXML 包生成 =====================
+
+// 注：这里**不生成** `word/settings.xml`。之前用 `<w:updateFields w:val="true"/>`
+// 让 Word 打开时自动更新域，代价是弹一个「该文档包含的域可能引用了其他文件，是否更新？」
+// 的对话框 —— 对 TOC 来说是误报。fldChar 上的 `w:dirty="true"` 也不写。
+// 代价是域不会自动重算，所以 `toc_field()` 把域结果（标题文字 + 超链接）直接写好，
+// 打开就能看到完整目录；用户改了标题再按 F9 即可让 Word 重算并补上页码。
 
 fn content_types(exts: &[String]) -> String {
     let mut s = String::from(
@@ -2048,64 +3245,98 @@ fn root_rels() -> String {
 fn styles_xml(theme: &DocxTheme, m: &Metrics) -> String {
     let accent = esc(&theme.accent);
     let text = esc(&theme.text);
-    let font = esc(&theme.font);
-    let mono = esc(&theme.mono_font);
+    let font_latin = esc(&m.font_latin);
+    let font_east_asia = esc(&m.font_east_asia);
+    let font_mono = esc(&m.font_mono);
     let surface = esc(&theme.surface);
+    let layout = &m.layout;
 
     let sz = m.body_sz;
     let line = m.line;
-    // 预览里的 em 间距换算（1em = 正文字号）
-    let after_1em = m.em_twips(1.0); // `p { margin-bottom: 1em }`
-    let h_before = m.em_twips(1.5); // `h1..h6 { margin-top: 1.5em }`
-    let h_after = m.em_twips(0.5); // `h1..h6 { margin-bottom: 0.5em }`
-    let h_line = m.line_of(1.3); // `h1..h6 { line-height: 1.3 }`
-    let li_after = m.em_twips(0.3); // `li { margin: 0.3em 0 }`
-    let pad = m.em_twips(1.0); // 引用/代码块左右内边距 1em
-    let code_sz = m.sz_scale(0.9); // `code { font-size: 0.9em }`
-    let fn_sz = m.footnote_sz(); // 脚注文字（与脚注内各段/各 run 共用同一基准，见 Metrics::FOOTNOTE_RATIO）
+    // 代码块用单倍行距：多倍行距在 Word 里把额外行距加在基线下方，
+    // 会造成上内边距比下内边距小；单倍下上下边框间距才对称。
+    let code_line = m.line_of(1.0);
+    // 段距全部走段前，段后恒为 0（见 DocxBuilder 的「段距折叠」说明）。
+    let body_before = m.em_twips(layout.paragraph.before_em);
+    let first_line = m.em_twips(layout.body.first_line_indent_em);
+    let h_line = m.line_of(1.3); // 标题行高 1.3 倍
+    let toc_line = m.line_of(layout.toc.line_height);
+    let code_sz = m.sz_scale(layout.code.scale);
+    let quote_sz = m.sz_scale(layout.quote.scale);
+    // 引用的左右内边距改由段落 `w:ind` 承担：表格单元格不再加左右 margin，
+    // 否则 100% 宽表格 + 左右 cell margin 会顶出页边距。
+    let quote_pad = m.em_twips(layout.quote.padding_x_em);
+    // 引用正文按规范用单倍行距（10.5pt）：Word 的多倍行距会把额外行距都加在基线下方，
+    // 单倍行距下文字正好填满行框，不会显得「贴在上沿」。
+    let quote_line = (240.0 * layout.quote.line_height).round().clamp(240.0, 1440.0) as u32;
+    let code_pad = m.em_twips(layout.code.padding_x_em);
+    // 代码块内边距：用「与底色同色的段落边框 + w:space」把底纹撑开。
+    // 段落本身没有 padding 属性，`w:shd` 只覆盖文字行；边框 space 让着色区域延伸到边框，
+    // 边框颜色 = 底色 ⇒ 视觉上就是四向内边距。
+    let code_pad_x_pt = (layout.code.padding_x_em * m.body_pt).round().clamp(0.0, 31.0) as u32;
+    let code_pad_y_pt = (layout.code.padding_y_em * m.body_pt).round().clamp(0.0, 31.0) as u32;
+    let fn_sz = m.footnote_sz();
+    let quote_color = if layout.quote.text_color.trim().is_empty() {
+        text.clone()
+    } else {
+        esc(&layout.quote.text_color)
+    };
+    let toc_max = layout.toc_max_level();
+    let toc_h_sz = m.sz_scale(layout.toc.heading_scale);
+    let body_jc = if layout.body.align.eq_ignore_ascii_case("both") { "both" } else { "left" };
 
     let mut s = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">".to_string();
     // 文档默认值：把字体/字号/行距写进 docDefaults（而不是只靠样式继承），
     // Word 的「正文」样式、新建段落、脚注等都直接取这里的值
     s.push_str(&format!(
-        "<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii=\"{font}\" w:hAnsi=\"{font}\" w:eastAsia=\"{font}\" w:cs=\"{font}\"/><w:sz w:val=\"{sz}\"/><w:szCs w:val=\"{sz}\"/><w:color w:val=\"{text}\"/><w:lang w:val=\"en-US\" w:eastAsia=\"zh-CN\"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after=\"{after_1em}\" w:line=\"{line}\" w:lineRule=\"auto\"/></w:pPr></w:pPrDefault></w:docDefaults>"
+        "<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii=\"{font_latin}\" w:hAnsi=\"{font_latin}\" w:eastAsia=\"{font_east_asia}\" w:cs=\"{font_latin}\"/><w:color w:val=\"{text}\"/><w:sz w:val=\"{sz}\"/><w:szCs w:val=\"{sz}\"/><w:lang w:val=\"en-US\" w:eastAsia=\"zh-CN\"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"{line}\" w:lineRule=\"auto\"/></w:pPr></w:pPrDefault></w:docDefaults>"
     ));
-    // Normal
+    // Normal：段前由 `p_start` 按块类型覆盖，段后恒为 0。
     s.push_str(&format!(
-        "<w:style w:type=\"paragraph\" w:default=\"1\" w:styleId=\"Normal\"><w:name w:val=\"Normal\"/><w:qFormat/><w:pPr><w:spacing w:after=\"{after_1em}\" w:line=\"{line}\" w:lineRule=\"auto\"/></w:pPr><w:rPr><w:rFonts w:ascii=\"{font}\" w:hAnsi=\"{font}\" w:eastAsia=\"{font}\" w:cs=\"{font}\"/><w:sz w:val=\"{sz}\"/><w:szCs w:val=\"{sz}\"/><w:color w:val=\"{text}\"/></w:rPr></w:style>"
+        "<w:style w:type=\"paragraph\" w:default=\"1\" w:styleId=\"Normal\"><w:name w:val=\"Normal\"/><w:qFormat/><w:pPr><w:spacing w:before=\"{body_before}\" w:after=\"0\" w:line=\"{line}\" w:lineRule=\"auto\"/><w:ind w:firstLine=\"{first_line}\" w:firstLineChars=\"0\"/><w:jc w:val=\"{body_jc}\"/></w:pPr><w:rPr><w:rFonts w:ascii=\"{font_latin}\" w:hAnsi=\"{font_latin}\" w:eastAsia=\"{font_east_asia}\" w:cs=\"{font_latin}\"/><w:color w:val=\"{text}\"/><w:sz w:val=\"{sz}\"/><w:szCs w:val=\"{sz}\"/></w:rPr></w:style>"
     ));
-    // 标题 1-6：字号取预览的 em 比例（`h1 2em / h2 1.5em / h3 1.25em`，h4-h6 与正文同号 —— 
-    // 预览的 h4-h6 没有独立字号，仅加粗）；此前是一组与预览无关的固定磅值，
-    // 且 H6（10pt）比正文（11pt）还小
-    const HEADING_EM: [f64; 6] = [2.0, 1.5, 1.25, 1.0, 1.0, 1.0];
-    for (i, em) in HEADING_EM.iter().enumerate() {
-        let lv = i + 1;
-        let hsz = m.sz_scale(*em);
+    // 标题 1-6：比例来自 DocxLayout，不再用 Rust 里的第二份表。
+    for lv in 1..=6 {
+        let hsz = m.sz_scale(layout.heading_scale(lv));
+        let h_before = m.em_twips(layout.heading_before_em(lv));
+        let bold = if layout.headings.bold { "<w:b/>" } else { "" };
         s.push_str(&format!(
-            "<w:style w:type=\"paragraph\" w:styleId=\"Heading{lv}\"><w:name w:val=\"heading {lv}\"/><w:basedOn w:val=\"Normal\"/><w:next w:val=\"Normal\"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before=\"{h_before}\" w:after=\"{h_after}\" w:line=\"{h_line}\" w:lineRule=\"auto\"/><w:outlineLvl w:val=\"{i}\"/></w:pPr><w:rPr><w:rFonts w:ascii=\"{font}\" w:hAnsi=\"{font}\" w:eastAsia=\"{font}\" w:cs=\"{font}\"/><w:b/><w:sz w:val=\"{hsz}\"/><w:szCs w:val=\"{hsz}\"/><w:color w:val=\"{accent}\"/></w:rPr></w:style>"
+            "<w:style w:type=\"paragraph\" w:styleId=\"Heading{lv}\"><w:name w:val=\"heading {lv}\"/><w:basedOn w:val=\"Normal\"/><w:next w:val=\"Normal\"/><w:qFormat/><w:pPr><w:keepNext/><w:keepLines/><w:spacing w:before=\"{h_before}\" w:after=\"0\" w:line=\"{h_line}\" w:lineRule=\"auto\"/><w:ind w:left=\"0\" w:right=\"0\" w:firstLine=\"0\" w:firstLineChars=\"0\"/><w:jc w:val=\"left\"/><w:outlineLvl w:val=\"{outline}\"/></w:pPr><w:rPr><w:rFonts w:ascii=\"{font_latin}\" w:hAnsi=\"{font_latin}\" w:eastAsia=\"{font_east_asia}\" w:cs=\"{font_latin}\"/>{bold}<w:color w:val=\"{accent}\"/><w:sz w:val=\"{hsz}\"/><w:szCs w:val=\"{hsz}\"/></w:rPr></w:style>",
+            outline = lv - 1
         ));
     }
-    // Word TOC 域结果使用的 TOC1–TOC6：沿用正文字体、按层级缩进，带点线右对齐制表位
-    for lv in 1..=6u32 {
-        let indent = (lv - 1) * 240;
+    // 目录标题（TOC 域上方那行字）：不能复用 Heading —— 带 outlineLvl 会把自己也收进目录
+    s.push_str(&format!(
+        "<w:style w:type=\"paragraph\" w:styleId=\"TocHeading\"><w:name w:val=\"TOC Heading\"/><w:basedOn w:val=\"Normal\"/><w:next w:val=\"Normal\"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"{h_line}\" w:lineRule=\"auto\"/><w:ind w:left=\"0\" w:right=\"0\" w:firstLine=\"0\" w:firstLineChars=\"0\"/><w:jc w:val=\"center\"/></w:pPr><w:rPr><w:rFonts w:ascii=\"{font_latin}\" w:hAnsi=\"{font_latin}\" w:eastAsia=\"{font_east_asia}\" w:cs=\"{font_latin}\"/><w:b/><w:color w:val=\"{text}\"/><w:sz w:val=\"{toc_h_sz}\"/><w:szCs w:val=\"{toc_h_sz}\"/></w:rPr></w:style>"
+    ));
+    // 目录条目 TOC1-N：段后 0，条目间距由 `toc_field` 的段前控制。
+    for lv in 1..=toc_max {
+        let ind = if lv > 1 {
+            format!("<w:ind w:left=\"{}\" w:firstLine=\"0\"/>", m.em_twips(1.0) * (lv - 1))
+        } else {
+            "<w:ind w:firstLine=\"0\"/>".to_string()
+        };
         s.push_str(&format!(
-            "<w:style w:type=\"paragraph\" w:styleId=\"TOC{lv}\"><w:name w:val=\"toc {lv}\"/><w:basedOn w:val=\"Normal\"/><w:next w:val=\"Normal\"/><w:qFormat/><w:pPr><w:tabs><w:tab w:val=\"right\" w:leader=\"dot\" w:pos=\"9026\"/></w:tabs><w:spacing w:after=\"60\" w:line=\"{line}\" w:lineRule=\"auto\"/><w:ind w:left=\"{indent}\"/></w:pPr><w:rPr><w:rFonts w:ascii=\"{font}\" w:hAnsi=\"{font}\" w:eastAsia=\"{font}\" w:cs=\"{font}\"/><w:sz w:val=\"{sz}\"/><w:szCs w:val=\"{sz}\"/></w:rPr></w:style>"
+            "<w:style w:type=\"paragraph\" w:styleId=\"TOC{lv}\"><w:name w:val=\"toc {lv}\"/><w:basedOn w:val=\"Normal\"/><w:next w:val=\"Normal\"/><w:uiPriority w:val=\"39\"/><w:pPr><w:tabs><w:tab w:val=\"right\" w:leader=\"dot\" w:pos=\"{tab}\"/></w:tabs><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"{toc_line}\" w:lineRule=\"auto\"/>{ind}<w:jc w:val=\"left\"/></w:pPr><w:rPr><w:rFonts w:ascii=\"{font_latin}\" w:hAnsi=\"{font_latin}\" w:eastAsia=\"{font_east_asia}\" w:cs=\"{font_latin}\"/><w:color w:val=\"{text}\"/><w:sz w:val=\"{sz}\"/><w:szCs w:val=\"{sz}\"/></w:rPr></w:style>",
+            tab = m.text_width_twips()
         ));
     }
-    // 列表段落（预览 `li { margin: 0.3em 0 }`）
+    // 列表段落：段前由 Item 处理器写入，段后恒为 0。
     s.push_str(&format!(
-        "<w:style w:type=\"paragraph\" w:styleId=\"ListParagraph\"><w:name w:val=\"List Paragraph\"/><w:basedOn w:val=\"Normal\"/><w:qFormat/><w:pPr><w:spacing w:after=\"{li_after}\" w:line=\"{line}\" w:lineRule=\"auto\"/></w:pPr></w:style>"
+        "<w:style w:type=\"paragraph\" w:styleId=\"ListParagraph\"><w:name w:val=\"List Paragraph\"/><w:basedOn w:val=\"Normal\"/><w:qFormat/><w:pPr><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"{line}\" w:lineRule=\"auto\"/><w:ind w:firstLine=\"0\" w:firstLineChars=\"0\"/><w:jc w:val=\"left\"/></w:pPr></w:style>"
     ));
-    // 代码块：等宽 + 主题 --editor-surface 底色 + 1em 内边距（预览 `pre code { padding: 1em }`）
-    // 行距跟随**预览行高**设置（与正文一致；预览里 `pre code` 没有自己的 line-height，
-    // 继承的是编辑器内容的行高）
+    // 代码块：等宽 + 主题 surface 底色 + 左右内边距。
     s.push_str(&format!(
-        "<w:style w:type=\"paragraph\" w:styleId=\"CodeBlock\"><w:name w:val=\"Code Block\"/><w:basedOn w:val=\"Normal\"/><w:pPr><w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"{surface}\"/><w:spacing w:before=\"0\" w:after=\"{after_1em}\" w:line=\"{line}\" w:lineRule=\"auto\"/><w:ind w:left=\"{pad}\" w:right=\"{pad}\"/></w:pPr><w:rPr><w:rFonts w:ascii=\"{mono}\" w:hAnsi=\"{mono}\" w:eastAsia=\"{mono}\" w:cs=\"{mono}\"/><w:sz w:val=\"{code_sz}\"/><w:szCs w:val=\"{code_sz}\"/></w:rPr></w:style>"
+        "<w:style w:type=\"paragraph\" w:styleId=\"CodeBlock\"><w:name w:val=\"Code Block\"/><w:basedOn w:val=\"Normal\"/><w:pPr><w:pBdr><w:top w:val=\"single\" w:sz=\"4\" w:space=\"{pad_y_pt}\" w:color=\"{surface}\"/><w:left w:val=\"single\" w:sz=\"4\" w:space=\"{pad_x_pt}\" w:color=\"{surface}\"/><w:bottom w:val=\"single\" w:sz=\"4\" w:space=\"{pad_y_pt}\" w:color=\"{surface}\"/><w:right w:val=\"single\" w:sz=\"4\" w:space=\"{pad_x_pt}\" w:color=\"{surface}\"/></w:pBdr><w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"{surface}\"/><w:spacing w:before=\"{code_before}\" w:after=\"0\" w:line=\"{code_line}\" w:lineRule=\"auto\"/><w:ind w:left=\"{pad}\" w:right=\"{pad}\" w:firstLine=\"0\"/><w:jc w:val=\"left\"/></w:pPr><w:rPr><w:rFonts w:ascii=\"{font_mono}\" w:hAnsi=\"{font_mono}\" w:eastAsia=\"{font_mono}\" w:cs=\"{font_mono}\"/><w:sz w:val=\"{code_sz}\"/><w:szCs w:val=\"{code_sz}\"/></w:rPr></w:style>",
+        code_before = m.em_twips(layout.code.before_em),
+        code_line = code_line,
+        pad = code_pad,
+        pad_x_pt = code_pad_x_pt,
+        pad_y_pt = code_pad_y_pt
     ));
-    // 引用：**只保留文字色**。左边框与底色由引用块的单元格表格绘制（见 `quote_block_xml`）——
-    // 段落级 `pBdr`/`shd` 在相邻段落间不会合并成连续容器，会被看成「断开的多个引用」。
+    // 引用：只保留文字色；边框/底色由引用块表格绘制。段距由引用块内段前控制。
     s.push_str(&format!(
-        "<w:style w:type=\"paragraph\" w:styleId=\"Quote\"><w:name w:val=\"Quote\"/><w:basedOn w:val=\"Normal\"/><w:qFormat/><w:pPr><w:spacing w:before=\"{li_after}\" w:after=\"{li_after}\" w:line=\"{line}\" w:lineRule=\"auto\"/></w:pPr><w:rPr><w:color w:val=\"666666\"/></w:rPr></w:style>"
+        "<w:style w:type=\"paragraph\" w:styleId=\"Quote\"><w:name w:val=\"Quote\"/><w:basedOn w:val=\"Normal\"/><w:qFormat/><w:pPr><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"{quote_line}\" w:lineRule=\"auto\"/><w:ind w:left=\"{quote_pad}\" w:right=\"{quote_pad}\" w:firstLine=\"0\" w:firstLineChars=\"0\"/><w:jc w:val=\"left\"/></w:pPr><w:rPr><w:color w:val=\"{quote_color}\"/><w:sz w:val=\"{quote_sz}\"/><w:szCs w:val=\"{quote_sz}\"/></w:rPr></w:style>"
     ));
     // 脚注：正文引用标记（上标）与脚注文字段落
     s.push_str(
@@ -2139,7 +3370,7 @@ fn footnotes_xml(footnotes: &[(u32, String)]) -> String {
     s
 }
 
-fn numbering_xml(lists: &[ListInstance]) -> String {
+fn numbering_xml(lists: &[ListInstance], m: &Metrics) -> String {
     let mut s = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:numbering xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">");
     // 每个列表（顶层与嵌套）**各占一个 `w:abstractNum`**：
     //   · `w:num` 只是 abstractNum 的实例，计数器挂在 abstractNum 上，只靠 `startOverride`
@@ -2149,8 +3380,10 @@ fn numbering_xml(lists: &[ListInstance]) -> String {
     //     与 `w:lvlOverride/w:startOverride`（双保险，兼容对 restart 语义实现不同的阅读器）
     //   · 编号层级恒为 ilvl=0：层级差异只靠段落 `w:ind` 缩进（预览里每个 `<ol>` 都是从 1
     //     开始的一级编号，靠 ilvl 会变成 Word 的 `1.1.` 多级编号）
+    let indent = m.em_twips(m.layout.list.indent_em);
+    let hanging = m.em_twips(m.layout.list.hanging_em);
     for (i, li) in lists.iter().enumerate() {
-        let left = li.depth.max(1) * 720;
+        let left = li.depth.max(1) * indent;
         let (num_fmt, lvl_text, start, rpr) = if li.ordered {
             ("decimal", "%1.".to_string(), li.start, String::new())
         } else {
@@ -2164,8 +3397,8 @@ fn numbering_xml(lists: &[ListInstance]) -> String {
             ("bullet", glyph.to_string(), 1, rpr)
         };
         s.push_str(&format!(
-            "<w:abstractNum w:abstractNumId=\"{}\"><w:multiLevelType w:val=\"singleLevel\"/><w:lvl w:ilvl=\"0\"><w:start w:val=\"{}\"/><w:numFmt w:val=\"{}\"/><w:lvlText w:val=\"{}\"/><w:lvlJc w:val=\"left\"/><w:pPr><w:ind w:left=\"{}\" w:hanging=\"360\"/></w:pPr>{}</w:lvl></w:abstractNum>",
-            i, start, num_fmt, lvl_text, left, rpr
+            "<w:abstractNum w:abstractNumId=\"{}\"><w:multiLevelType w:val=\"singleLevel\"/><w:lvl w:ilvl=\"0\"><w:start w:val=\"{}\"/><w:numFmt w:val=\"{}\"/><w:lvlText w:val=\"{}\"/><w:lvlJc w:val=\"left\"/><w:pPr><w:ind w:left=\"{}\" w:hanging=\"{}\"/></w:pPr>{}</w:lvl></w:abstractNum>",
+            i, start, num_fmt, lvl_text, left, hanging, rpr
         ));
     }
     // 实例与 abstractNum 一一对应
@@ -2240,7 +3473,7 @@ pub fn markdown_to_docx(md: &str, theme: DocxTheme, base_dir: Option<std::path::
         line_height: theme.line_height,
         code_highlights: theme.code_highlights,
         toc_title: theme.toc_title,
-        toc_hint: theme.toc_hint,
+        layout: theme.layout,
     };
 
     let mut builder = DocxBuilder::new(theme, base_dir, remote_images);
@@ -2250,8 +3483,8 @@ pub fn markdown_to_docx(md: &str, theme: DocxTheme, base_dir: Option<std::path::
 
     // 解析选项：与预览保持一致 ——
     //   · 关闭「智能标点」（预览 typographer:false，否则 `"引号"`→“ ”、`a--b`→a–b、`...`→… 会不一致）
-    //   · 关闭 `^x^` / `~x~` 扩展语法（预览没有对应插件，显示为字面文本；导出若转换会出现
-    //     「预览是 `^2^`、Word 里却变成上标」的不一致。应用自身的上标/下标走 `<sup>`/`<sub>` HTML）
+    //   · `^x^` / `~x~` / `==x==` 由 `inline_markers_to_html` 统一转成 `<sup>`/`<sub>`/`<mark>`，
+    //     不走 pulldown 的上下标位（它要求标记前有空白，`E=mc^2^` 会漏；且 SUBSCRIPT 会改变 `~~` 语义）
     //   · 脚注改用 GFM 语义（预览用 markdown-it-footnote）
     let mut opts = Options::all();
     opts.remove(Options::ENABLE_SMART_PUNCTUATION);
@@ -2260,7 +3493,12 @@ pub fn markdown_to_docx(md: &str, theme: DocxTheme, base_dir: Option<std::path::
     // 注意：ENABLE_OLD_FOOTNOTES 的位包含 ENABLE_FOOTNOTES，移除后必须补回 GFM 脚注位
     opts.remove(Options::ENABLE_OLD_FOOTNOTES);
     opts.insert(Options::ENABLE_FOOTNOTES);
-    let mut iter = Parser::new_ext(md, opts).peekable();
+    // `==高亮==` / `^上标^` / `~下标~` 统一预处理，标题扫描与正文解析走同一份文本
+    let md = inline_markers_to_html(md);
+    // 预扫描标题 + 估算页码：目录域的「域结果」在导出时就直接写好（见 `toc_field`），打开即可见
+    let toc_items = collect_toc(&md, &opts, &builder.metrics);
+    builder.toc_items = toc_items;
+    let mut iter = Parser::new_ext(&md, opts).peekable();
     while let Some(ev) = iter.next() {
         builder.render_block_event(&mut iter, ev);
     }
@@ -2302,8 +3540,8 @@ pub fn markdown_to_docx(md: &str, theme: DocxTheme, base_dir: Option<std::path::
         add("word/document.xml", body_xml.as_bytes())?;
         add("word/_rels/document.xml.rels", doc_rels.as_bytes())?;
         add("word/styles.xml", styles_xml(&builder.theme, &builder.metrics).as_bytes())?;
-        add("word/numbering.xml", numbering_xml(&builder.lists).as_bytes())?;
-        add("word/fontTable.xml", font_table_xml(&builder.theme).as_bytes())?;
+        add("word/numbering.xml", numbering_xml(&builder.lists, &builder.metrics).as_bytes())?;
+        add("word/fontTable.xml", font_table_xml(&builder.metrics).as_bytes())?;
         add("word/footnotes.xml", footnotes_xml(&builder.footnotes).as_bytes())?;
         // 脚注内部的超链接/图片关系归属 footnotes.xml（部件内 rel 只在本部件可见）
         if !builder.footnote_rels.is_empty() {
@@ -2434,7 +3672,7 @@ mod tests {
         let outer = doc.matches("<w:numPr>").count();
         assert!(outer >= 3, "unordered list items missing: {}", outer);
         assert!(
-            doc.contains("<w:ind w:left=\"1440\" w:hanging=\"360\"/>"),
+            doc.contains("<w:ind w:left=\"840\" w:hanging=\"210\"/>"),
             "嵌套列表缩进丢失: {}", doc
         );
         assert!(
@@ -2601,7 +3839,7 @@ mod tests {
         // 松散列表：列表项的第 2 段应仍是 ListParagraph（带对齐缩进），不能退回 Normal
         let doc = xml_of("- **小标题**\n\n  正常文本\n\n- 第二项\n");
         assert!(doc.contains("小标题") && doc.contains("正常文本"), "内容丢失: {}", doc);
-        assert!(doc.contains("<w:ind w:left=\"720\"/>"), "续段缩进缺失: {}", doc);
+        assert!(doc.contains("<w:ind w:left=\"420\"/>"), "续段缩进缺失: {}", doc);
         assert!(doc.matches("ListParagraph").count() >= 3, "续段未使用 ListParagraph: {}", doc);
     }
 
@@ -2626,7 +3864,7 @@ mod tests {
         let doc = xml_of("- **外层** 说明\n  - 内层项\n");
         assert!(doc.contains("外层") && doc.contains("说明") && doc.contains("内层项"), "内容丢失: {}", doc);
         // 嵌套层级 = 段落缩进 1440（编号层级恒为 ilvl=0，各列表自有实例）
-        assert!(doc.contains("<w:ind w:left=\"1440\" w:hanging=\"360\"/>"), "嵌套层级丢失: {}", doc);
+        assert!(doc.contains("<w:ind w:left=\"840\" w:hanging=\"210\"/>"), "嵌套层级丢失: {}", doc);
         assert!(!doc.contains("<w:ilvl w:val=\"1\"/>"), "编号层级应为 0: {}", doc);
     }
 
@@ -2686,8 +3924,8 @@ mod tests {
     fn table_matches_preview_style() {
         // 列对齐 左/右，表头行 + 一行数据
         let doc = xml_of("| 名称 | 数量 |\n|:-----|-----:|\n| 甲 | 1 |\n");
-        // 整表 100% 宽
-        assert!(doc.contains("w:tblW w:w=\"5000\" w:type=\"pct\""), "表格宽度未设为整页: {}", doc);
+        // 表格宽度 = 正文宽 - 左右 cell margin，避免 100% 宽 + 边距顶出页边距
+        assert!(doc.contains("w:tblW w:w=\"9026\" w:type=\"dxa\""), "表格宽度未铺满正文区: {}", doc);
         // 网格线使用主题 --editor-border（D5E2FF），而非硬编码灰
         assert!(doc.contains("w:color=\"D5E2FF\""), "边框未使用主题色: {}", doc);
         assert!(!doc.contains("BFBFBF"), "仍存在硬编码边框色: {}", doc);
@@ -2695,14 +3933,16 @@ mod tests {
         assert!(doc.contains("<w:tblHeader/>"), "表头未设置跨页重复: {}", doc);
         assert!(doc.contains("w:fill=\"F0F7FF\""), "表头底色缺失: {}", doc);
         assert!(doc.contains("<w:b/>"), "表头文字未加粗: {}", doc);
-        // 单元格：间距与正文一致（覆盖 Normal 的段后距/行距）+ 顶对齐 + 列对齐
-        assert!(doc.contains("<w:spacing w:before=\"0\" w:after=\"0\" w:line=\"360\" w:lineRule=\"auto\"/>"), "单元格间距不正确: {}", doc);
-        assert!(doc.contains("<w:vAlign w:val=\"top\"/>"), "单元格未顶对齐: {}", doc);
+        // 单元格：单倍行距 + 垂直居中 + 列对齐
+        assert!(doc.contains("<w:spacing w:before=\"0\" w:after=\"0\" w:line=\"240\" w:lineRule=\"auto\"/>"), "单元格行距不是单倍: {}", doc);
+        assert!(doc.contains("<w:vAlign w:val=\"center\"/>"), "单元格未垂直居中: {}", doc);
         assert!(doc.contains("<w:jc w:val=\"right\"/>"), "右对齐列未生效: {}", doc);
         assert_eq!(doc.matches("<w:tc>").count(), 4, "单元格数不对: {}", doc);
         assert_eq!(doc.matches("<w:tr>").count(), 2, "行数不对: {}", doc);
-        // 列网格：2 列均分正文宽度（缺 `w:tblGrid` 时 Word 自行推断列宽，容易宽窄不齐）
+        // 列网格：2 列均分「正文宽度 - 左右 cell margin」
         assert_eq!(doc.matches("<w:gridCol w:w=\"4513\"/>").count(), 2, "列网格缺失: {}", doc);
+        // 左右 0.2cm、上下 0.1cm 的单元格边距
+        assert!(doc.contains("<w:tblCellMar><w:top w:w=\"57\" w:type=\"dxa\"/><w:left w:w=\"113\" w:type=\"dxa\"/>"), "单元格边距不正确: {}", doc);
     }
 
     #[test]
@@ -2841,9 +4081,15 @@ mod tests {
             font_size_px: Some(16.0),
             line_height: Some(1.8),
             code_highlights: CodeHighlights::default(),
-            toc_title: "目录".into(),
-            toc_hint: "右键目录 → 更新域，或按 F9".into(),
+            toc_title: None,
+            layout: None,
         }
+    }
+
+    /// 测试用：按主题默认版式构造 Metrics（与 `markdown_to_docx` 的解析口径一致）
+    fn metrics_of(theme: &DocxTheme) -> Metrics {
+        let layout = theme.layout.clone().unwrap_or_default();
+        Metrics::new(theme.font_size_px, theme.line_height, layout, theme)
     }
 
     /// 用指定主题生成 docx 并取出某个部件的内容
@@ -2905,7 +4151,8 @@ mod tests {
 
     #[test]
     fn font_table_declares_alt_names_for_substitution() {
-        let ft = font_table_xml(&test_theme());
+        let theme = test_theme();
+        let ft = font_table_xml(&metrics_of(&theme));
         assert!(ft.contains("<w:font w:name=\"MiSans\">"), "{}", ft);
         assert!(
             ft.contains("<w:altName w:val=\"Microsoft YaHei, PingFang SC, Noto Sans SC, Segoe UI, Arial\"/>"),
@@ -2947,7 +4194,7 @@ mod tests {
     #[test]
     fn font_table_skips_duplicate_when_mono_equals_body() {
         let theme = DocxTheme { mono_font: "MiSans".into(), ..test_theme() };
-        let ft = font_table_xml(&theme);
+        let ft = font_table_xml(&metrics_of(&theme));
         assert_eq!(
             ft.matches("<w:font w:name=\"MiSans\">").count(),
             1,
@@ -3017,7 +4264,8 @@ mod tests {
             "二/三级项目符号未指定含字形字体: {}", numbering
         );
         // fontTable 里必须为该字体挂替代名链（macOS / 无雅黑的 Windows 上才有字可用）
-        let ft = font_table_xml(&test_theme());
+        let theme = test_theme();
+        let ft = font_table_xml(&metrics_of(&theme));
         assert!(ft.contains("<w:font w:name=\"Microsoft YaHei\">"), "字形字体缺 fontTable 条目: {}", ft);
         assert!(
             ft.contains("<w:altName w:val=\"Segoe UI Symbol, PingFang SC, Apple Symbols, Arial Unicode MS, DejaVu Sans\"/>"),
@@ -3222,11 +4470,12 @@ mod tests {
     #[test]
     fn metrics_defaults_match_app_css_defaults() {
         // 前端未传字号/行高时退回应用自身的 CSS 缺省（--font-size-base 16px / --line-height 1.8）
-        let a = Metrics::new(None, None);
-        let b = Metrics::new(Some(16.0), Some(1.8));
+        let theme = test_theme();
+        let a = Metrics::new(None, None, DocxLayout::default(), &theme);
+        let b = Metrics::new(Some(16.0), Some(1.8), DocxLayout::default(), &theme);
         assert_eq!((a.body_sz, a.line), (b.body_sz, b.line));
-        assert_eq!(a.body_sz, 24, "16px 应为 12pt（24 半磅）");
-        assert_eq!(a.line, 360, "1.8 倍行距 = 240×1.8/1.2");
+        assert_eq!(a.body_sz, 22, "规范固定 11pt（22 半磅）");
+        assert_eq!(a.line, 360, "规范 1.5 倍行距 = 240×1.5（Word 口径）");
     }
 
     #[test]
@@ -3234,23 +4483,23 @@ mod tests {
         // 用户设置：预览字号 20px、行高 2.0（应用默认设置值）
         let theme = || DocxTheme { font_size_px: Some(20.0), line_height: Some(2.0), ..test_theme() };
         let styles = docx_part("正文\n\n# 标题\n", theme(), "word/styles.xml");
-        // 20px → 15pt → 30 半磅；行高 2.0 → 240×2/1.2 = 400
-        assert!(styles.contains("<w:sz w:val=\"30\"/>"), "正文字号未跟随设置: {}", styles);
-        assert!(styles.contains("w:line=\"400\""), "行距未跟随设置: {}", styles);
-        // 段后距 = 1em = 15pt = 300 twips（随字号缩放）
-        assert!(styles.contains("w:after=\"300\""), "段后距未按字号换算: {}", styles);
-        // 标题按预览的 em 比例：h1 = 2em = 30pt = 60 半磅
-        assert!(styles.contains("<w:sz w:val=\"60\"/>"), "h1 字号未按 2em 换算: {}", styles);
-        // h3 = 1.25em = 18.75pt → 37.5 → 38 半磅
-        assert!(styles.contains("<w:sz w:val=\"38\"/>"), "h3 字号未按 1.25em 换算: {}", styles);
-        // 代码块也跟随设置的（预览里 `pre code` 没有自己的 line-height，继承容器值）
+        // 规范固定 11pt（22 半磅）/ 1.5 倍行距（300），不跟随预览字号
+        assert!(styles.contains("<w:sz w:val=\"22\"/>"), "正文字号不是规范 11pt: {}", styles);
+        assert!(styles.contains("w:line=\"360\""), "行距不是规范 1.5 倍: {}", styles);
+        // 段前距 = 6pt = 120 twips（段后恒为 0，避免 Word 相加）
+        assert!(styles.contains("w:before=\"120\""), "段前距不是规范 6pt: {}", styles);
+        // 标题按规范：h1 = 18pt = 36 半磅
+        assert!(styles.contains("<w:sz w:val=\"36\"/>"), "h1 字号不是规范 18pt: {}", styles);
+        // h3 = 13pt = 26 半磅
+        assert!(styles.contains("<w:sz w:val=\"26\"/>"), "h3 字号不是规范 13pt: {}", styles);
+        // 代码块行距跟随规范 1.5 倍
         let code_style = style_block(&styles, "CodeBlock");
-        assert!(code_style.contains("w:line=\"400\""), "代码块行距未跟随设置: {}", code_style);
-        // 表格单元格同理（`th/td` 也没有自己的 line-height）
+        assert!(code_style.contains("w:line=\"240\""), "代码块行距不是单倍: {}", code_style);
+        // 表格单元格同理
         let doc = docx_part("| a | b |\n|---|---|\n| 1 | 2 |\n", theme(), "word/document.xml");
         assert!(
-            doc.contains("<w:spacing w:before=\"0\" w:after=\"0\" w:line=\"400\" w:lineRule=\"auto\"/>"),
-            "单元格行距未跟随设置: {}",
+            doc.contains("<w:spacing w:before=\"0\" w:after=\"0\" w:line=\"240\" w:lineRule=\"auto\"/>"),
+            "单元格行距不是单倍: {}",
             doc
         );
     }
@@ -3347,6 +4596,31 @@ mod tests {
         assert!(rels.contains("relationships/footnotes"), "{}", rels);
     }
 
+    /// 同一个脚注被引用两次（复制粘贴带脚注的段落就会遇到）。
+    ///
+    /// Word 要求 `w:footnoteReference` 的 id 与 `footnotes.xml` 里的定义**一对一**：同一个 id
+    /// 出现两次时 Word 打开即报「文件可能已经损坏」（实测 `样式测试.docx` 就是这么坏的）。
+    /// 所以第二次及以后只输出上标文字，不再生成脚注引用。
+    #[test]
+    fn repeated_footnote_reference_is_downgraded() {
+        let md = "正文引用脚注[^1]。\n\n> 引用块里又写了一次[^1]。\n\n[^1]: 脚注定义文字\n";
+        let doc = docx_part(md, test_theme(), "word/document.xml");
+        let fnx = docx_part(md, test_theme(), "word/footnotes.xml");
+
+        // 核心约束：脚注引用只能出现一次
+        assert_eq!(
+            doc.matches("<w:footnoteReference").count(),
+            1,
+            "脚注引用重复（Word 会判定文件损坏）: {}",
+            doc
+        );
+        // 第二次降级为上标 `[1]`，标记不丢
+        assert!(doc.contains("<w:vertAlign w:val=\"superscript\"/>"), "降级标记缺失: {}", doc);
+        assert!(doc_text(&doc).contains("[1]"), "降级文字缺失: {}", doc);
+        // 定义仍只有一条，内容没被复制
+        assert_eq!(fnx.matches("<w:footnote w:id=\"1\">").count(), 1, "{}", fnx);
+    }
+
     /// 回归【8】：脚注里的**所有**文字都必须用脚注字号。
     ///
     /// 此前只有脚注首段被改写成 `FootnoteText`：脚注里的列表项用 `ListParagraph`（基于
@@ -3356,9 +4630,9 @@ mod tests {
     fn footnote_inner_paragraphs_use_footnote_size() {
         let md = "正文[^fmt]。\n\n[^fmt]: 脚注首段含 `行内代码`。\n\n    - 脚注里的列表\n    - 第二项\n\n    脚注第二段。\n";
         let fnx = docx_part(md, test_theme(), "word/footnotes.xml");
-        // 16px 正文 → sz 24；脚注 sz = round(24 × 0.83) = 20
-        let body_sz = 24;
-        let fn_sz = 20;
+        // 规范 11pt 正文 → sz 22；脚注 sz = round(22 × 0.83) = 18
+        let body_sz = 22;
+        let fn_sz = 18;
         assert!(
             fnx.contains(&format!("<w:sz w:val=\"{}\"/>", fn_sz)),
             "脚注未使用脚注字号: {}", fnx
@@ -3369,18 +4643,18 @@ mod tests {
         );
         // 脚注里的行内代码必须比脚注正文更小（否则「脚注正文 0.9 倍 = 正文字号」）
         assert!(
-            fnx.contains("<w:sz w:val=\"18\"/>"),
+            fnx.contains("<w:sz w:val=\"16\"/>"),
             "脚注行内代码未按脚注字号换算: {}", fnx
         );
         // 列表项与多段脚注的第二段都要显式写小字号
         assert!(
-            fnx.matches("<w:rPr><w:sz w:val=\"20\"/><w:szCs w:val=\"20\"/></w:rPr>").count() >= 2,
+            fnx.matches("<w:rPr><w:sz w:val=\"18\"/><w:szCs w:val=\"18\"/></w:rPr>").count() >= 2,
             "脚注段落（列表项/第二段）未写段落级字号: {}", fnx
         );
         // 脚注重定尺寸不能污染正文：正文用正文字号
         let doc = docx_part(md, test_theme(), "word/document.xml");
         assert!(
-            !doc.contains("<w:sz w:val=\"20\"/><w:szCs w:val=\"20\"/>"),
+            !doc.contains("<w:sz w:val=\"18\"/><w:szCs w:val=\"18\"/>"),
             "脚注字号泄漏到正文: {}", doc
         );
     }
@@ -3423,8 +4697,49 @@ mod tests {
         // Quote 样式只保留文字色（边框/底色/缩进都交给表格）
         let styles = docx_part("> 引用\n", test_theme(), "word/styles.xml");
         let quote = style_block(&styles, "Quote");
-        assert!(quote.contains("<w:color w:val=\"666666\"/>"), "引用文字色丢失: {}", quote);
+        assert!(quote.contains("<w:color w:val=\"333333\"/>"), "引用文字色未跟随正文: {}", quote);
         assert!(!quote.contains("w:pBdr") && !quote.contains("w:shd"), "Quote 样式不应再画边框/底色: {}", quote);
+    }
+
+    /// 回归：两个相邻引用块之间必须有间隔。
+    ///
+    /// 每个引用块是一个 1×1 表格，而 Word 会把**紧邻的表格合并**成一个（实测：文档里两个
+    /// `<w:tbl>` 直接相接时，打开后 `Tables.Count` 仍为 1，视觉上两块粘在一起、左边框连成
+    /// 一条，中间没有任何空隙）。所以两块之间要补一个 1em 高的空段落隔断。
+    #[test]
+    fn adjacent_blockquotes_are_not_merged() {
+        let doc = xml_of("> 第一块\n\n> 第二块\n");
+        assert_eq!(doc.matches("<w:tbl>").count(), 2, "应为两个独立的引用容器: {}", doc);
+        assert!(!doc.contains("</w:tbl><w:tbl>"), "两个引用表格直接相接，Word 会合并: {}", doc);
+        // 间隔段落：紧跟第一个表格之后、精确 1em 行高（16px 正文 → 240 twips）
+        assert!(
+            doc.contains("</w:tbl><w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"0\" w:line=\""),
+            "缺少引用块之间的间隔段落: {}",
+            doc
+        );
+        // 单个引用块后面同样要留间隔段落（表格没有段后距，否则下文会紧贴引用块底边）
+        let one = xml_of("> 只有一块\n");
+        assert_eq!(one.matches("<w:tbl>").count(), 1, "{}", one);
+        assert!(
+            one.contains("</w:tbl><w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"0\" w:line=\""),
+            "引用块后缺少间隔段落: {}",
+            one
+        );
+    }
+
+    /// 引用块（1×1 表格）与代码块相邻时也必须有间隔。
+    ///
+    /// `CodeBlock` 样式的 `w:spacing before="0"`（段落间距全靠上一段的 `after`），而表格
+    /// 没有段后距 —— 不补段落的话代码块会直接贴着引用块底边。
+    #[test]
+    fn blockquote_and_code_block_have_gap() {
+        let doc = xml_of("> 引用块\n\n```rust\nlet a = 1;\n```\n");
+        assert!(
+            doc.contains("</w:tbl><w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"0\" w:line=\""),
+            "引用块与代码块之间缺少间隔段落: {}",
+            doc
+        );
+        assert_eq!(doc.matches("w:pStyle w:val=\"CodeBlock\"").count(), 1, "{}", doc);
     }
 
     #[test]
@@ -3466,15 +4781,117 @@ mod tests {
     }
 
     #[test]
-    fn table_end_spacer_is_one_em() {
-        // 表格后必须有段落（Word 结构要求），同时补出与预览 `table { margin: 1em 0 }` 一致的间距
+    fn toc_field_uses_layout_max_level_and_bookmarks() {
+        let md = "# A\n\n<!--yizi:toc-->\n\n## B\n\n### C\n\n#### D\n\n##### E\n\n###### F\n";
+        let doc = xml_of(md);
+        // 目录收全部 1-6 级
+        assert!(doc.contains(" TOC \\o \"1-6\" \\h \\z \\u "), "目录域层级不对: {}", doc);
+        assert!(doc.contains("<w:pStyle w:val=\"TOC1\"/>"), "TOC1 缺失: {}", doc);
+        assert!(doc.contains("<w:pStyle w:val=\"TOC2\"/>"), "TOC2 缺失: {}", doc);
+        assert!(doc.contains("<w:pStyle w:val=\"TOC3\"/>"), "TOC3 缺失: {}", doc);
+        assert!(doc.contains("<w:pStyle w:val=\"TOC4\"/>"), "TOC4 缺失: {}", doc);
+        assert!(doc.contains("<w:pStyle w:val=\"TOC6\"/>"), "TOC6 缺失: {}", doc);
+        // 书签与超链接一一对应（1-6 级都挂）
+        assert!(doc.contains("<w:bookmarkStart w:id=\"1\" w:name=\"_Toc000000001\"/>"), "书签缺失: {}", doc);
+        assert!(doc.contains("<w:hyperlink w:anchor=\"_Toc000000001\""), "目录超链接缺失: {}", doc);
+        assert!(doc.contains("_Toc000000004"), "H4 也应挂目录书签: {}", doc);
+        assert!(doc.contains("_Toc000000006"), "H6 也应挂目录书签: {}", doc);
+    }
+
+    #[test]
+    fn center_html_block_is_centered() {
+        let doc = xml_of("<center>居中的文字</center>\n");
+        assert!(doc.contains("<w:jc w:val=\"center\"/>"), "center 块没有居中: {}", doc);
+        assert!(!doc.contains("&lt;center"), "center 标签被当成正文: {}", doc);
+        assert!(doc_text(&doc).contains("居中的文字"), "center 文字丢失: {}", doc);
+    }
+
+    #[test]
+    fn heading_inside_quote_has_left_padding() {
+        let doc = xml_of("> # 引用里的标题\n");
+        assert!(
+            doc.contains("<w:pStyle w:val=\"Heading1\"/><w:spacing w:before=\"0\" w:after=\"0\"/><w:ind w:left=\"227\"/>"),
+            "引用里的标题缺少左内边距: {}",
+            doc
+        );
+    }
+
+    #[test]
+    fn inline_sup_sub_highlight_and_strike_are_exported() {
+        let doc = xml_of("x^2^ H~2~O ==重点== ~~删~~\n");
+        assert!(doc.contains("<w:vertAlign w:val=\"superscript\"/>"), "上标缺失: {}", doc);
+        assert!(doc.contains("<w:vertAlign w:val=\"subscript\"/>"), "下标缺失: {}", doc);
+        assert!(doc.contains("<w:highlight w:val=\"yellow\"/>"), "高亮缺失: {}", doc);
+        assert!(doc.contains("<w:strike/>"), "删除线缺失: {}", doc);
+    }
+
+    #[test]
+    fn chinese_superscript_and_subscript_are_exported() {
+        let doc = xml_of("^上标^ 与 ~下标~\n");
+        assert!(doc.contains("<w:vertAlign w:val=\"superscript\"/>"), "中文上标缺失: {}", doc);
+        assert!(doc.contains("<w:vertAlign w:val=\"subscript\"/>"), "中文下标缺失: {}", doc);
+    }
+
+    #[test]
+    fn numeric_ranges_are_not_subscripts() {
+        let doc = xml_of("1~5 和 0~20\n");
+        assert!(!doc.contains("<w:vertAlign w:val=\"subscript\"/>"), "数字区间被误当下标: {}", doc);
+    }
+
+    #[test]
+    fn highlight_inside_code_is_not_converted() {
+        let doc = xml_of("`a==b==`\n\n```\nx==y==\n```\n");
+        assert!(doc.contains("a==b=="), "行内代码被改写: {}", doc);
+        assert!(doc.contains("x==y=="), "围栏代码被改写: {}", doc);
+    }
+
+    #[test]
+    fn raw_toc_paragraph_is_supported() {
+        // 前端正常会换成 HTML 标记；直接调用 markdown_to_docx 的测试/其它调用方传裸 [toc] 也要能认。
+        let doc = xml_of("# A\n\n[toc]\n\n## B\n");
+        assert!(doc.contains(" TOC \\o \"1-6\" \\h \\z \\u "), "裸 [toc] 未生成目录域: {}", doc);
+        assert!(!doc_text(&doc).contains("[toc]"), "裸 [toc] 仍留在正文: {}", doc);
+    }
+
+    #[test]
+    fn toc_page_estimate_accounts_for_the_toc_block() {
+        // 80 条目录约 2-3 页；如果估算时忽略目录自身高度，H0 会被误算成第 1 页。
+        let mut md = String::from("# Before\n\n<!--yizi:toc-->\n\n");
+        for i in 0..80 {
+            md.push_str(&format!("## H{}\n\n", i));
+        }
+        let theme = test_theme();
+        let m = metrics_of(&theme);
+        let entries = collect_toc(&md, &Options::all(), &m);
+        let before = entries.iter().find(|e| e.text == "Before").expect("Before");
+        let h0 = entries.iter().find(|e| e.text == "H0").expect("H0");
+        assert_eq!(before.page, 1, "目录前的标题应在第 1 页");
+        assert!(h0.page >= 2, "目录自身高度未计入页码估算: H0 在第 {} 页", h0.page);
+    }
+
+    #[test]
+    fn paragraph_spacing_uses_before_only() {
+        let doc = xml_of("第一段\n\n第二段\n");
+        // 第一段顶格：段前 0；第二段段前 6pt = 120 twips（规范 11pt 正文）
+        assert!(doc.contains("<w:spacing w:before=\"0\" w:after=\"0\"/>"), "首段段前不是 0: {}", doc);
+        assert!(doc.contains("<w:spacing w:before=\"120\" w:after=\"0\"/>"), "次段段前缺失: {}", doc);
+        // Word 会把段前/段后相加：正文段落绝不能再出现段后 6pt
+        assert!(!doc.contains("w:after=\"120\""), "正文仍存在段后距: {}", doc);
+    }
+
+    #[test]
+    fn table_end_gap_matches_layout() {
+        // 表格后必须有段落（Word 结构要求），高度由版式规范里的 table.gapEm 决定。
+        // 规范 6pt = 120 twips；下一个段落段前也是 6pt，取较大值后仍是 120。
         let doc = xml_of("| A | B |\n| --- | --- |\n| 1 | 2 |\n\n后续文字\n");
         assert!(doc.contains("</w:tbl>"), "表格缺失: {}", doc);
         let after = &doc[doc.find("</w:tbl>").unwrap() + "</w:tbl>".len()..];
         assert!(
-            after.starts_with("<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"240\" w:lineRule=\"exact\""),
-            "表格后的间隔段落不是 1em: {}", &after[..after.len().min(160)]
+            after.starts_with("<w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"120\" w:lineRule=\"exact\""),
+            "表格后的 gap 段落高度不符合规范: {}", &after[..after.len().min(180)]
         );
+        // 段后距绝不能回到 6pt：Word 会把段前/段后相加
+        assert!(!after[..after.len().min(400)].contains("w:after=\"120\""), "表格后仍有段后距: {}", &after[..after.len().min(400)]);
     }
 
     /// document.xml 里出现的 numId 序列
@@ -3530,16 +4947,16 @@ mod tests {
         // 两级有序列表都是 ilvl=0 + 各自缩进 720 / 1440
         assert_eq!(doc.matches("<w:ilvl w:val=\"0\"/>").count(), 2, "有序列表 ilvl 应为 0: {}", doc);
         assert!(!doc.contains("<w:ilvl w:val=\"1\"/>"), "编号层级不应大于 0: {}", doc);
-        assert!(doc.contains("<w:ind w:left=\"1440\" w:hanging=\"360\"/>"), "嵌套层缩进丢失: {}", doc);
+        assert!(doc.contains("<w:ind w:left=\"840\" w:hanging=\"210\"/>"), "嵌套层缩进丢失: {}", doc);
 
         // 项目符号嵌套：二级换用同尺寸的 ◦（不再靠 ilvl 递进），缩进同步 1440
         let bullets = xml_of("- 一级\n  - 二级\n");
-        assert!(bullets.contains("<w:ind w:left=\"1440\" w:hanging=\"360\"/>"), "二级缩进丢失: {}", bullets);
+        assert!(bullets.contains("<w:ind w:left=\"840\" w:hanging=\"210\"/>"), "二级缩进丢失: {}", bullets);
         let bn = docx_part("- 一级\n  - 二级\n", test_theme(), "word/numbering.xml");
         assert!(bn.contains("<w:lvlText w:val=\"\u{25E6}\"/>"), "二级项目符号应为 ◦: {}", bn);
         // 无序里嵌有序：有序层仍是 ilvl=0
         let mixed = xml_of("- 甲\n  1. 一\n  2. 二\n");
-        assert!(mixed.contains("<w:ind w:left=\"1440\" w:hanging=\"360\"/>"), "混合嵌套缩进丢失: {}", mixed);
+        assert!(mixed.contains("<w:ind w:left=\"840\" w:hanging=\"210\"/>"), "混合嵌套缩进丢失: {}", mixed);
     }
 
     #[test]
@@ -3566,7 +4983,7 @@ mod tests {
         assert!(doc.contains("☑") && doc.contains("☐"), "任务字形丢失: {}", doc);
         assert!(!doc.contains("<w:numPr>"), "任务项不应带编号（会变成双重标记）: {}", doc);
         assert_eq!(
-            doc.matches("<w:ind w:left=\"720\" w:hanging=\"360\"/>").count(),
+            doc.matches("<w:ind w:left=\"420\" w:hanging=\"210\"/>").count(),
             2,
             "任务项缩进未对齐编号文本位: {}", doc
         );
@@ -3592,25 +5009,21 @@ mod tests {
 
     #[test]
     fn superscript_subscript_and_inline_html_map_to_runs() {
-        // 应用的上标/下标走 HTML 标签（工具条插入 `<sup></sup>` / `<sub></sub>`，预览 `html:true` 才渲染），
-        // 所以导出只认这两个标签；`^a^` / `~b~` 这类拓展语法**预览不识别**（字面显示），
-        // 导出也必须保持字面 —— 否则会出现「预览是 `^a^`、Word 里却成了上标」的不一致。
-        let doc = xml_of("上标 <sup>2</sup> 与 <sub>i</sub>\n\n语法 ^a^ 与 ~b~\n");
+        // `<sup>`/`<sub>` HTML 与 `^a^`/`~b~` 扩展语法都映射到同一套 run 属性
+        let doc = xml_of("上标 <sup>2</sup> 与 <sub>i</sub>\n\n语法 ^a^ 与 ~b~，删除 ~~x~~\n");
         assert_eq!(
-            doc.matches("<w:vertAlign w:val=\"superscript\"/>").count(), 1,
-            "HTML 上标未生效: {}", doc
+            doc.matches("<w:vertAlign w:val=\"superscript\"/>").count(), 2,
+            "上标（HTML + ^^）未生效: {}", doc
         );
         assert_eq!(
-            doc.matches("<w:vertAlign w:val=\"subscript\"/>").count(), 1,
-            "HTML 下标未生效: {}", doc
+            doc.matches("<w:vertAlign w:val=\"subscript\"/>").count(), 2,
+            "下标（HTML + ~）未生效: {}", doc
         );
         let text = doc_text(&doc);
-        assert!(text.contains("^a^"), "`^a^` 不应被转换成上标: {}", text);
-        // 已知差异：pulldown 的删除线**同时接受单波浪线**（GFM 只认 `~~x~~`），关掉 SUBSCRIPT 后
-        // `~b~` 就落到删除线（预览里 markdown-it 只认 `~~`，`~b~` 是字面文本）。
-        // 二者不可兼得（无法只关单波浪线），取「保住 `~~删除线~~`」这一侧。
+        assert!(!text.contains("^a^"), "`^a^` 仍残留字面: {}", text);
+        assert!(!text.contains("~b~"), "`~b~` 仍残留字面: {}", text);
         assert!(doc.contains("<w:strike/>"), "`~~x~~` 删除线失效: {}", doc);
-        // 回归：`^a^` 此前会把整段拆碎（is_inline_start 未含 Superscript）
+        // 回归：上下标不能把整段拆碎
         assert_eq!(doc.matches("<w:p>").count(), 2, "段落被拆碎: {}", doc);
     }
 
@@ -4052,46 +5465,5 @@ mod tests {
             "仍有 webp 部件: {:?}", names
         );
     }
-    #[test]
-    fn toc_marker_becomes_word_toc_field() {
-        let doc = docx_part(TOC_FIELD_MARK, test_theme(), "word/document.xml");
-        assert!(doc.contains("w:fldCharType=\"begin\""), "缺少 TOC 域开始: {}", doc);
-        assert!(doc.contains("TOC \\o \"1-6\" \\h \\z \\u"), "缺少 TOC 域指令: {}", doc);
-        assert!(doc.contains("w:fldCharType=\"separate\""), "缺少 TOC 域分隔: {}", doc);
-        assert!(!doc.contains(TOC_FIELD_MARK), "TOC 标记泄漏到正文: {}", doc);
-    }
-
-    #[test]
-    fn toc_styles_exist_with_dot_leaders() {
-        let styles = docx_part("", test_theme(), "word/styles.xml");
-        for lv in 1..=6 {
-            assert!(styles.contains(&format!("w:styleId=\"TOC{lv}\"")), "缺少 TOC{lv} 样式");
-        }
-        assert!(styles.contains("w:leader=\"dot\""), "TOC 样式缺少点线制表位");
-    }
-
-    #[test]
-    fn duplicate_footnote_reference_is_degraded_to_superscript_text() {
-        let doc = xml_of("A[^1] B[^1]\n\n[^1]: note\n");
-        assert_eq!(doc.matches("<w:footnoteReference").count(), 1, "重复脚注引用: {}", doc);
-        assert!(doc.contains("<w:vertAlign w:val=\"superscript\"/>"), "第二处脚注引用未降级: {}", doc);
-    }
-
-    #[test]
-    fn nested_quote_cell_never_ends_with_table() {
-        let doc = xml_of("> > | A |\n> > | --- |\n> > | 1 |\n");
-        assert!(!doc.contains("</w:tbl></w:tc>"), "单元格以表格结尾: {}", doc);
-    }
-
-    #[test]
-    fn heading_style_rpr_keeps_rfonts_first() {
-        let styles = docx_part("", test_theme(), "word/styles.xml");
-        assert!(
-            styles.contains("<w:rPr><w:rFonts w:ascii=\"MiSans\" w:hAnsi=\"MiSans\" w:eastAsia=\"MiSans\" w:cs=\"MiSans\"/><w:b/>"),
-            "Heading 样式 rPr 顺序错误: {}", styles
-        );
-    }
-
-
 }
 

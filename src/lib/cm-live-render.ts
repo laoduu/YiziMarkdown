@@ -53,6 +53,10 @@ const headingClass = (level: number) =>
 const strongMark = Decoration.mark({ class: 'cm-md-strong' })
 const emMark = Decoration.mark({ class: 'cm-md-em' })
 const strikeMark = Decoration.mark({ class: 'cm-md-strike' })
+// `^上标^` / `~下标~` / `==高亮==`：与 HTML `<sup>/<sub>/<mark>` 复用同一套样式
+const liveSupMark = Decoration.mark({ class: 'cm-md-html-sup' })
+const liveSubMark = Decoration.mark({ class: 'cm-md-html-sub' })
+const liveHighlightMark = Decoration.mark({ class: 'cm-md-html-mark' })
 const codeMark = Decoration.mark({ class: 'cm-md-code' })
 const linkMark = Decoration.mark({ class: 'cm-md-link' })
 
@@ -180,6 +184,74 @@ function htmlMark(cls: string, style: string): Decoration {
 }
 
 const hideDeco = Decoration.mark({ class: 'cm-md-hiding-span' })
+
+/** 与 markdown-it / DOCX 同口径：中文上下标允许，`1~5`、`64K~512K` 这类区间排除。 */
+function validLiveMarker(content: string, marker: string): boolean {
+  if (!content.trim() || content !== content.trim()) return false
+  if (marker === '==') return true
+  if (marker === '^') return content.length <= 32
+  if (/\s/.test(content) || content.length > 8) return false
+  return !/^\d+[A-Za-z]+$/.test(content)
+}
+
+/** 把 `^上标^` / `~下标~` / `==高亮==` 的记号隐藏，并给内容套语义类。 */
+function pushInlineMarkerDecorations(
+  text: string,
+  base: number,
+  codeSpans: Array<[number, number]>,
+  htmlTags: Array<[number, number]>,
+  ranges: Array<{ from: number; to: number; value: Decoration }>,
+): void {
+  const inside = (i: number, spans: Array<[number, number]>) =>
+    spans.some(([a, b]) => i >= a && i < b)
+  let i = 0
+  while (i < text.length) {
+    if (inside(i, codeSpans) || inside(i, htmlTags)) {
+      i++
+      continue
+    }
+    const c = text[i]
+    if (c === '\\') {
+      i += 2
+      continue
+    }
+    // `~~删除线~~` 交给 Lezer 的 Strikethrough
+    if (text.startsWith('~~', i)) {
+      i += 2
+      continue
+    }
+    let marker = ''
+    let deco: Decoration | null = null
+    if (text.startsWith('==', i)) {
+      marker = '=='
+      deco = liveHighlightMark
+    } else if (c === '^') {
+      marker = '^'
+      deco = liveSupMark
+    } else if (c === '~' && !/[0-9]/.test(text[i - 1] ?? '')) {
+      marker = '~'
+      deco = liveSubMark
+    }
+    if (!marker || !deco) {
+      i++
+      continue
+    }
+    const close = text.indexOf(marker, i + marker.length)
+    if (close < 0) {
+      i++
+      continue
+    }
+    const content = text.slice(i + marker.length, close)
+    if (!validLiveMarker(content, marker)) {
+      i++
+      continue
+    }
+    ranges.push(hideDeco.range(base + i, base + i + marker.length))
+    ranges.push(deco.range(base + i + marker.length, base + close))
+    ranges.push(hideDeco.range(base + close, base + close + marker.length))
+    i = close + marker.length
+  }
+}
 
 /** 实体解码后的可见文字（如 &copy; → ©） */
 class EntityWidget extends WidgetType {
@@ -633,10 +705,12 @@ function buildDecorations(view: EditorView): DecorationSet {
 
       // 行内 HTML：按白名单解析标签，隐藏记号、给内容套语义类（style 只保留文字视觉属性）
       const opens: Array<{ start: number; end: number; name: string; cls: string; style: string }> = []
+      const htmlTagRanges: Array<[number, number]> = []
       HTML_TAG_TOKEN_RE.lastIndex = 0
       let hm: RegExpExecArray | null
       while ((hm = HTML_TAG_TOKEN_RE.exec(text))) {
         if (inSpans(codeSpans, hm.index)) continue
+        htmlTagRanges.push([hm.index, hm.index + hm[0].length])
         const parsed = parseHtmlTag(hm[0])
         if (!parsed) continue
         const tag = parsed.name
@@ -692,6 +766,9 @@ function buildDecorations(view: EditorView): DecorationSet {
       }
       // 本行内没等到闭合标签的开记号：预览里同样不可见，这里直接隐藏
       for (const open of opens) ranges.push(hideDeco.range(open.start, open.end))
+
+      // `^上标^` / `~下标~` / `==高亮==`（HTML 标签范围与行内代码已排除）
+      pushInlineMarkerDecorations(text, line.from, codeSpans, htmlTagRanges, ranges)
     }
   }
   // 按 from 排序，同 from 时 line decoration (side < 0) 排在 mark decoration (side >= 0) 之前

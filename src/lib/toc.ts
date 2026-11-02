@@ -5,9 +5,9 @@
  *   · 预览 / PDF / HTML / 演示模式 —— markdown-it 插件直接输出 `<nav class="markdown-toc">`；
  *   · DOCX —— Rust 侧只认 Markdown，所以把占位行替换成按标题层级缩进的项目符号列表。
  *
- * 标题 id 必须和 `markdown-it` 渲染标题时的算法一致（markdownRenderer.ts 的
- * `injectHeadingIds`），否则目录链接会跳空。这里刻意复用同一份
- * `generateHeadingId`，并按「text / code_inline 子节点」取标题纯文本 —— 与渲染器完全同源。
+ * 标题 id 的唯一来源是 markdownRenderer.ts 的 core 规则 `assignHeadingIds`：解析完立刻
+ * 把 id 写进 `heading_open` 的 attrs，这里直接读，不再自己算一遍。只有传入未安装该规则的
+ * md 实例（如 docxPrepare 的裸 MarkdownIt）时才退回本地计算，算法与规则保持一致。
  */
 
 import { generateHeadingId } from './headingId.ts'
@@ -48,7 +48,9 @@ function headingDisplayText(inline: any): string {
 
 /**
  * 从 markdown-it token 流收集标题。
- * core 阶段已经给 heading_open 写入 id；裸 MarkdownIt 调用保留兜底。
+ * 只遍历真正的 heading token，代码块里的 `#` 不会混进来。
+ *
+ * id 优先读 `heading_open` 上已注入的属性（与正文锚点同源）；拿不到才算。
  */
 export function collectTocItems(tokens: any[]): TocItem[] {
   const counter: Record<string, number> = {}
@@ -70,31 +72,38 @@ interface TocNode extends TocItem {
   children: TocNode[]
 }
 
+/** 按层级装进嵌套树；跳级（H1 后面直接 H3）自动归到最近的上级之下 */
 function buildTocTree(items: TocItem[]): TocNode[] {
   const root: TocNode[] = []
   const stack: TocNode[] = []
   for (const item of items) {
     const node: TocNode = { ...item, children: [] }
-    while (stack.length && stack[stack.length - 1].level >= item.level) stack.pop()
-    if (stack.length) stack[stack.length - 1].children.push(node)
+    while (stack.length > 0 && stack[stack.length - 1].level >= node.level) stack.pop()
+    if (stack.length > 0) stack[stack.length - 1].children.push(node)
     else root.push(node)
     stack.push(node)
   }
   return root
 }
 
-function renderTocList(nodes: TocNode[]): string {
-  if (!nodes.length) return ''
-  const lis = nodes.map((node) => {
-    const link = `<a class="markdown-toc__link" href="#${escapeHtml(node.id)}">${escapeHtml(node.text)}</a>`
-    return `<li class="markdown-toc__entry">${link}${renderTocList(node.children)}</li>`
-  }).join('')
+function renderTocNodes(nodes: TocNode[]): string {
+  const lis = nodes
+    .map((node) => {
+      const link = `<a class="markdown-toc__link" href="#${escapeHtml(node.id)}">${escapeHtml(node.text)}</a>`
+      const sub = node.children.length > 0 ? renderTocNodes(node.children) : ''
+      // 保留 level class 只为兼容既有样式（演示模式/实时预览块的扁平列表）
+      return `<li class="markdown-toc-level-${node.level}">${link}${sub}</li>`
+    })
+    .join('')
   return `<ul>${lis}</ul>`
 }
 
 export function renderTocHtml(items: TocItem[]): string {
   if (items.length === 0) return ''
-  return `<nav class="markdown-toc">${renderTocList(buildTocTree(items))}</nav>`
+  // 不给 nav 写死 aria-label：中文字面量会被 `scripts/check-i18n.mjs` 判成硬编码 UI 文案，
+  // 而本模块是纯函数（`node --test` 直接加载，见 docxPrepare），不能把 i18n / stores 拉进来。
+  // 目录的可见标题由 CSS 的 `.markdown-toc::before` 提供。
+  return `<nav class="markdown-toc">${renderTocNodes(buildTocTree(items))}</nav>`
 }
 
 export interface DeckTocEntry {
@@ -165,23 +174,27 @@ export function replaceTocPlaceholders(markdown: string, replacement: string): s
     .join('\n')
 }
 
-/** markdown-it 插件：在标题 id 分配之后把目录段落替换成 HTML 区块 */
+/** markdown-it 插件：在 inline 解析之后把目录段落替换成 HTML 区块 */
 export function tocPlugin(md: any): void {
-  md.core.ruler.after('assign_heading_ids', 'toc_placeholder', (state: any) => {
-    const items = collectTocItems(state.tokens)
-    // 空目录也要吞掉占位符，不能把 [toc] 原文漏到正文里
-    const html = renderTocHtml(items)
+  md.core.ruler.after('inline', 'toc_placeholder', (state: any) => {
+    const html = renderTocHtml(collectTocItems(state.tokens))
     for (let i = 0; i < state.tokens.length; i++) {
       const open = state.tokens[i]
       if (open.type !== 'paragraph_open') continue
       const inline = state.tokens[i + 1]
       if (!inline || inline.type !== 'inline') continue
       if (!TOC_PLACEHOLDER.test(String(inline.content ?? '').trim())) continue
+
+      if (!html) {
+        // 文档里一个标题都没有：把占位整段吞掉，别把 `[toc]` 原样漏进正文
+        state.tokens.splice(i, 3)
+        i -= 1
+        continue
+      }
       const token = new state.Token('html_block', '', 0)
       token.content = html
       token.block = true
       state.tokens.splice(i, 3, token)
-      i -= 1
     }
   })
 }

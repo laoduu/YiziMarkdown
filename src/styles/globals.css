@@ -1225,6 +1225,11 @@ a {
 }
 
 /* ===== 大纲点击标题高亮动画 ===== */
+/* 这里**不能**给标题加横向 padding + 负 margin。
+   主题会给 h1/h2/h3 单独写 `margin: 1.5em 0 0.5em` 这类简写，简写会把
+   `margin-left: -6px` 一起重置掉，于是只剩 6px 左内边距 —— 结果 H1-H3 比
+   H4-H6（主题没写规则、负 margin 还在）右移 6px，看起来像多缩进一格。
+   横向留白交给 box-shadow 外扩，不参与布局。 */
 .editor-content h1,
 .editor-content h2,
 .editor-content h3,
@@ -1237,6 +1242,7 @@ a {
 
 .editor-content .heading-highlight {
   background-color: var(--editor-selection-bg);
+  box-shadow: 0 0 0 6px var(--editor-selection-bg);
   animation: headingPulse 1.5s ease-out;
 }
 
@@ -2481,46 +2487,133 @@ a {
 }
 
 /* ===== [toc] 目录 ===== */
-/* 与导出 HTML 的侧栏目录区分：这是正文里的独立目录区块。
-   保留 Typora 式细边框，但去掉引用块式的左侧强调竖线；层级交给嵌套 ul。 */
-.editor-content .markdown-toc {
-  margin: 1em 0 1.6em;
-  padding: 0.65em 1em;
-  border: 1px solid var(--editor-border);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--editor-surface) 55%, transparent);
+/* 与导出 HTML 的侧栏目录区分：这是正文里的目录块，跟随当前主题与预览行高。
+   形态取极简：不画框、不铺底，只靠一行小标题 + 嵌套缩进区分身份与层级
+   （左竖线 + 底色是「引用块」的视觉语言，目录借用会让人误判）。
+   结构是嵌套 <ul>（toc.ts 的 buildTocTree），层级缩进交给 `ul ul`。
+   结构规则不挂 .editor-content：阅读模式（.reader-content）用的是同一份 HTML，
+   那边没有一层 .editor-content，挂前缀会让嵌套目录退回浏览器默认的项目符号。 */
+/* ==高亮==：预览用 <mark>，淡黄底保持暗色主题也可读；DOCX 侧映射 w:highlight */
+.editor-content mark,
+.reader-content mark {
+  background: rgba(255, 213, 74, 0.45);
+  color: inherit;
+  padding: 0 0.08em;
+  border-radius: 2px;
+}
+
+.markdown-toc {
+  margin: 1.4em 0;
+  padding: 0;
+  background: none;
+  border: 0;
   line-height: var(--preview-line-height, var(--line-height));
 }
 
-.editor-content .markdown-toc ul {
+/* 目录块不显示标题：「目录」这两个字只在导出的 Word 里出现（TOC 域上方那行，
+   由 docx_export.rs 的 toc_field 写入）。预览里正文流已经用 `[toc]` 定位，
+   再加一行标题纯属噪音，也省掉了一次 i18n 桥接（toc.ts 是纯模块，
+   不能 import i18n，之前只能靠 `--toc-title` 变量转一道）。 */
+
+.markdown-toc ul {
   margin: 0;
   padding-left: 0;
   list-style: none;
 }
 
-.editor-content .markdown-toc ul ul {
-  padding-left: 1.25em;
+.markdown-toc ul ul {
+  padding-left: 1.15em;
 }
 
-.editor-content .markdown-toc li {
+.markdown-toc li {
   margin: 0.22em 0;
   line-height: inherit;
 }
 
-.editor-content .markdown-toc li::marker {
+.markdown-toc li::marker {
   content: none;
 }
 
-/* 权重压过主题的 `.editor-content.theme-xxx a:hover`，避免目录 hover 时出现双下划线 */
-.editor-content .markdown-toc .markdown-toc__entry a.markdown-toc__link {
+/* 目录链接自成一套：nav + 3 个类的特异性压过主题的 `.editor-content.theme-x a`，
+   免得主题给的链接色 / 下划线 / border-bottom 渗进来（hover 时看出两条线） */
+.editor-content nav.markdown-toc .markdown-toc__link {
   color: var(--editor-text);
+  text-decoration: none;
+  border-bottom: none;
+  font-size: 0.94em;
+}
+
+.editor-content nav.markdown-toc .markdown-toc__link:hover {
+  color: var(--editor-accent);
   text-decoration: none;
   border-bottom: none;
 }
 
-.editor-content .markdown-toc .markdown-toc__entry a.markdown-toc__link:hover {
-  color: var(--editor-accent);
+/* 锚点跳转时给 sticky 工具栏让位，否则目标标题被顶栏盖住 */
+.editor-content :is(h1, h2, h3, h4, h5, h6) {
+  scroll-margin-top: 5rem;
 }
+
+/* ===== 提示块 `> [!NOTE]` ===== */
+/* 只加一个「图标 + 类型名」标题段（`<p class="md-alert-title">`，由 alert.ts 插入）。
+   引用块本身的边框/底色/圆角/阴影**一律不覆盖** —— 完全交给当前主题，
+   所以它在任何主题下都和同一篇文档里的普通引用块长得一模一样。
+   图标是 octicon 的 16×16 path，内联成 data URI 当 mask 用：没有图片文件，
+   颜色由 --alert-accent 一处控制（mask + background-color: currentColor）。
+   特异性 (0,3,1)：要压过 globals 后面 `blockquote p:first-of-type` 的 margin 规则。 */
+.editor-content blockquote.md-alert .md-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  margin: 0 0 0.35em;
+  font-weight: 600;
+  font-size: 0.92em;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: var(--alert-accent);
+}
+
+.editor-content blockquote.md-alert .md-alert-title::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 1em;
+  height: 1em;
+  background-color: currentColor;
+  -webkit-mask: var(--alert-icon) no-repeat center / contain;
+  mask: var(--alert-icon) no-repeat center / contain;
+}
+
+.editor-content .md-alert-note {
+  --alert-accent: #0969da;
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM8 3.75a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75Z'/%3E%3C/svg%3E");
+}
+
+.editor-content .md-alert-tip {
+  --alert-accent: #1f883d;
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.847a8.456 8.456 0 0 0-.542-.68c-.084-.1-.173-.205-.268-.32C3.201 7.75 2.5 6.766 2.5 5.25 2.5 2.31 4.863 0 8 0s5.5 2.31 5.5 5.25c0 1.516-.701 2.5-1.328 3.259-.095.115-.184.22-.268.32-.106.122-.202.223-.313.331-.503.562-.739.995-.739 1.59a.75.75 0 0 1-1.5 0c0-.641.211-1.215.798-1.876a8.46 8.46 0 0 1 .226-.275c.16-.183.318-.354.482-.552.414-.5.727-1.06.727-1.797 0-2.06-1.637-3.75-4-3.75ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z'/%3E%3C/svg%3E");
+}
+
+.editor-content .md-alert-important {
+  --alert-accent: #8250df;
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Z'/%3E%3C/svg%3E");
+}
+
+.editor-content .md-alert-warning {
+  --alert-accent: #9a6700;
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z'/%3E%3C/svg%3E");
+}
+
+.editor-content .md-alert-caution {
+  --alert-accent: #cf222e;
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z'/%3E%3C/svg%3E");
+}
+
+/* 深色主题只换色，图标与标题沿用 */
+.dark .editor-content .md-alert-note { --alert-accent: #6cb0ff; }
+.dark .editor-content .md-alert-tip { --alert-accent: #56d364; }
+.dark .editor-content .md-alert-important { --alert-accent: #d2a8ff; }
+.dark .editor-content .md-alert-warning { --alert-accent: #e3b341; }
+.dark .editor-content .md-alert-caution { --alert-accent: #ff7b72; }
 
 /* ===== 划词助手浮动工具栏 ===== */
 .selection-toolbar {
@@ -2618,6 +2711,13 @@ a {
    排在后面 ⇒ 主题赢。这里用 (0,2,2) 压住它。 */
 .editor-content blockquote p:first-of-type { margin-top: 0; }
 .editor-content blockquote p:last-of-type { margin-bottom: 0; }
+/* 引用块首/尾不一定是 <p>：以标题、列表、代码、嵌套引用开头时，它们自身的外边距
+   会把引用顶部的内边距撑大（看起来像多了半行到一行）。这里统一抹掉首尾子元素的外边距。
+   双写 .editor-content 提高特异性，压住主题运行时注入的 `.editor-content.theme-x p`。 */
+.editor-content.editor-content blockquote > :first-child { margin-top: 0; }
+.editor-content.editor-content blockquote > :last-child { margin-bottom: 0; }
+.reader-content.reader-content blockquote > :first-child { margin-top: 0; }
+.reader-content.reader-content blockquote > :last-child { margin-bottom: 0; }
 
 /* ===== 元信息属性面板的类型菜单 =====
    刻意挂在 **light DOM**（见 lib/cm-properties.ts 的说明）：

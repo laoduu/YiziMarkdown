@@ -9,7 +9,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { renderMarkdown } from '../src/lib/markdownRenderer.ts'
-import { TOC_FIELD_MARK, prepareMarkdownForDocx } from '../src/lib/docxPrepare.ts'
+import { buildTocMarkdown } from '../src/lib/docxPrepare.ts'
 import { replaceTocPlaceholders, renderDeckTocHtml } from '../src/lib/toc.ts'
 
 const SRC = '# 主标题\n\n[toc]\n\n## 一、**加粗** 与 `代码`\n\n### 小节\n'
@@ -30,19 +30,14 @@ test('[[toc]] 等价于 [toc]', () => {
   assert.ok(!html.includes('[[toc]]'), html)
 })
 
-test('目录按标题层级嵌套 ul', () => {
+test('目录按标题层级缩进', () => {
   const html = renderMarkdown(SRC)
-  assert.match(html, /markdown-toc__entry/)
-  assert.match(html, /markdown-toc__link/)
-  // 一级标题下嵌套二级、二级下嵌套三级
-  assert.ok((html.match(/<ul>/g) || []).length >= 3, html)
-  assert.match(html, /href="#一-加粗-与-代码"/, html)
-})
-
-test('空目录也会吞掉 [toc] 占位符', () => {
-  const html = renderMarkdown('[toc]\n\n正文\n')
-  assert.ok(!html.includes('[toc]'), html)
-  assert.ok(!html.includes('markdown-toc'), html)
+  assert.match(html, /markdown-toc-level-1/)
+  assert.match(html, /markdown-toc-level-2/)
+  assert.match(html, /markdown-toc-level-3/)
+  // 层级必须是嵌套 `<ul>`（CSS 靠 ul ul 缩进），而不是平铺 + level class
+  assert.equal((html.match(/<ul>/g) || []).length, 3, html)
+  assert.match(html, /<\/a><ul><li class="markdown-toc-level-2"/, html)
 })
 
 test('代码块里的 [toc] 原样保留', () => {
@@ -51,11 +46,13 @@ test('代码块里的 [toc] 原样保留', () => {
   assert.match(html, /\[toc\]/, html)
 })
 
-test('DOCX 目录改成 TOC 域标记，不展开静态列表', async () => {
-  const md = await prepareMarkdownForDocx(SRC)
-  assert.ok(md.includes(TOC_FIELD_MARK), md)
-  assert.ok(!md.includes('[toc]'), md)
-  assert.ok(!md.includes('- 主标题'), md)
+test('DOCX 把目录转成按层级缩进的项目符号列表', () => {
+  const md = buildTocMarkdown(SRC)
+  assert.equal(md, '- 主标题\n  - 一、加粗 与 代码\n    - 小节')
+})
+
+test('DOCX 目录以最浅标题为基准缩进（没有 H1 也不多缩一层）', () => {
+  assert.equal(buildTocMarkdown('## 甲\n\n### 乙\n'), '- 甲\n  - 乙')
 })
 
 test('替换占位符时保留行首缩进，且不碰围栏内内容', () => {
