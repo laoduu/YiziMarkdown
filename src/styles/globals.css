@@ -2502,11 +2502,14 @@ a {
   border-radius: 2px;
 }
 
+/* 正文里的独立目录区块：保留 Typora 式细边框与半透明底（与引用块的左侧强调竖线区分开），
+   层级交给嵌套 ul。结构规则不挂 .editor-content，阅读模式（.reader-content）用同一套 HTML。 */
 .markdown-toc {
-  margin: 1.4em 0;
-  padding: 0;
-  background: none;
-  border: 0;
+  margin: 1em 0 1.6em;
+  padding: 0.65em 1em;
+  background: color-mix(in srgb, var(--editor-surface) 55%, transparent);
+  border: 1px solid var(--editor-border);
+  border-radius: 6px;
   line-height: var(--preview-line-height, var(--line-height));
 }
 

@@ -72,12 +72,25 @@ function assignHeadingIds(md: MarkdownIt): void {
 // - `^x^` → <sup>，`~x~` → <sub>（`~~x~~` 仍交给 markdown-it 的 strikethrough）
 // - `==x==` → <mark>
 // 内容按纯文本处理（不递归解析强调），与导出的 `w:vertAlign` / `w:highlight` 一致。
-/** 与 Rust 侧 `valid_inline_marker_content` 同口径：中文上下标允许，`64K~512K` 这类区间排除。 */
+/**
+ * 上下标内容里禁止出现的字符：空白、中英文标点、括号、Markdown / 代码标记。
+ *
+ * 单波浪线在中文里常被当区间号用（`64K~512K、0~20`），只按「数字+单位」过滤不够：
+ * 配对是就近闭合的，`512K、0` 这类跨区间内容会被整段吞成下标。`^` 若允许 `[` `]`，
+ * 一个孤立的 `^` 会一路配到很远的 `^`，把 `[^1]` 脚注引用卷进上标。
+ */
+const MARKER_FORBIDDEN =
+  /[\s、，。；：！？…·—－“”‘’（）【】《》〈〉「」『』\[\](){}<>"'`$*_^=~\\/|,;:!?]/
+
+/** 与 Rust 侧 `valid_inline_marker_content` 同口径。 */
 function validMarkerContent(content: string, marker: string): boolean {
   if (!content.trim() || content !== content.trim()) return false
-  if (marker === '==') return true
-  if (marker === '^') return content.length <= 32
-  if (/\s/.test(content) || content.length > 8) return false
+  // 高亮允许中文、空格与标点，只限制长度，避免跨行乱配
+  if (marker === '==') return content.length <= 64
+  if (MARKER_FORBIDDEN.test(content)) return false
+  // 上标没有「区间号」歧义，中文也允许；只限制长度，避免吞掉整段
+  if (marker === '^') return [...content].length <= 32
+  if ([...content].length > 8) return false
   // `512K` 这类「数字+单位」是区间，不是下标
   return !/^\d+[A-Za-z]+$/.test(content)
 }
@@ -117,8 +130,17 @@ function addInlineMarkerRule(
 
     if (!silent) {
       state.push(`${name}_open`, tag, 1)
-      const text = state.push('text', '', 0)
-      text.content = content
+      if (marker === '==') {
+        // 高亮内容按行内 Markdown 解析：`==**加粗**==` 在预览里也应是「高亮 + 加粗」。
+        // 导出侧只把 `==` 换成 `<mark>`，内容仍交给 pulldown-cmark 解析，两边必须同口径。
+        const children: any[] = []
+        state.md.inline.parse(content, state.md, state.env, children)
+        state.tokens.push(...children)
+      } else {
+        // 上下标保持纯文本：规则里已禁止 `*` `_` 等标记字符，与导出的 w:vertAlign 一致
+        const text = state.push('text', '', 0)
+        text.content = content
+      }
       state.push(`${name}_close`, tag, -1)
     }
     state.pos = pos + len

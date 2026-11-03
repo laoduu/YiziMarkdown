@@ -255,18 +255,81 @@ fn convert_inline_markers_line(line: &str) -> String {
 ///
 /// 单波浪线在中文文档里常被当区间号用（`64K~512K`、`0~20轮`），若不加约束会把
 /// 整段区间误当 `<sub>`；长度/字符集过滤后即可与真正的 `H~2~O` 区分。
+/// 上下标内容里禁止出现的字符：空白、中英文标点、括号、Markdown / 代码标记。
+///
+/// 与前端 `markdownRenderer.ts` 的 `MARKER_FORBIDDEN` 同口径：
+/// - `64K~512K、0~20` 里的顿号会阻断跨区间配对，`512K、0` 不再被吞成下标；
+/// - `^` 禁止 `[` `]`，避免孤立 `^` 把 `[^1]` 脚注引用卷进上标。
+fn is_marker_forbidden(c: char) -> bool {
+    c.is_whitespace()
+        || matches!(
+            c,
+            '、' | '，'
+                | '。'
+                | '；'
+                | '：'
+                | '！'
+                | '？'
+                | '…'
+                | '·'
+                | '—'
+                | '－'
+                | '“'
+                | '”'
+                | '‘'
+                | '’'
+                | '（'
+                | '）'
+                | '【'
+                | '】'
+                | '《'
+                | '》'
+                | '〈'
+                | '〉'
+                | '「'
+                | '」'
+                | '『'
+                | '』'
+                | '['
+                | ']'
+                | '('
+                | ')'
+                | '{'
+                | '}'
+                | '<'
+                | '>'
+                | '"'
+                | '\''
+                | '`'
+                | '$'
+                | '*'
+                | '_'
+                | '^'
+                | '='
+                | '~'
+                | '\\'
+                | '/'
+                | '|'
+                | ','
+                | ';'
+                | ':'
+                | '!'
+                | '?'
+        )
+}
+
 fn valid_inline_marker_content(content: &str, marker: &str) -> bool {
     if content.trim().is_empty() || content != content.trim() {
         return false;
     }
     match marker {
-        // 高亮内容不限（中文/空格都允许）
-        "==" => true,
-        // 上标没有「区间号」歧义，中文也允许；只限制长度，避免吞掉整段
-        "^" => content.chars().count() <= 32,
-        // 下标：拒绝 `64K~512K` 这类「数字+单位」区间；`2`、`n-1`、`下标` 都保留
+        // 高亮内容不限字符（中文/空格/标点都允许），只限制长度，避免跨段乱配
+        "==" => content.chars().count() <= 64,
+        // 上标：中文也允许，但禁止标点/括号/标记字符，避免吞掉正文与脚注引用
+        "^" => content.chars().count() <= 32 && !content.chars().any(is_marker_forbidden),
+        // 下标：更短，且拒绝 `64K~512K` 这类「数字+单位」区间
         "~" => {
-            if content.chars().count() > 8 || content.chars().any(|c| c.is_whitespace()) {
+            if content.chars().count() > 8 || content.chars().any(is_marker_forbidden) {
                 return false;
             }
             let mut chars = content.chars();
@@ -5025,6 +5088,48 @@ mod tests {
         assert!(doc.contains("<w:strike/>"), "`~~x~~` 删除线失效: {}", doc);
         // 回归：上下标不能把整段拆碎
         assert_eq!(doc.matches("<w:p>").count(), 2, "段落被拆碎: {}", doc);
+    }
+
+    #[test]
+    fn inline_markers_do_not_pair_across_ranges() {
+        // 回归：同一行多个数字区间，标点必须阻断配对，不能把 `512K、0` 吞成下标
+        let doc = xml_of("数字区间：64K~512K、0~20、1~5\n");
+        assert!(
+            !doc.contains("<w:vertAlign w:val=\"subscript\"/>"),
+            "跨区间不应变成下标: {}",
+            doc
+        );
+        assert!(doc_text(&doc).contains("64K~512K"), "原文被改写: {}", doc);
+    }
+
+    #[test]
+    fn superscript_does_not_swallow_footnote_reference() {
+        // 回归：`^` 内容禁止 `[` `]`，孤立的 `^2^` 与 `^3^` 不能把 `[^1]` 卷进上标
+        let doc = xml_of("正文 ^2^ 与脚注[^1]，后续 ^3^。\n\n[^1]: 脚注内容\n");
+        assert_eq!(
+            doc.matches("<w:vertAlign w:val=\"superscript\"/>").count(),
+            2,
+            "只应有两个上标: {}",
+            doc
+        );
+        assert!(
+            doc.contains("<w:footnoteReference w:id=\"1\"/>"),
+            "脚注引用缺失: {}",
+            doc
+        );
+    }
+
+    #[test]
+    fn highlight_keeps_nested_emphasis() {
+        // 与预览同口径：`==**加粗**==` 在 Word 里同时是高亮 + 加粗
+        let doc = xml_of("==**加粗** 与 *斜体*==\n");
+        assert!(
+            doc.contains("<w:highlight w:val=\"yellow\"/>"),
+            "高亮缺失: {}",
+            doc
+        );
+        assert!(doc.contains("<w:b/>"), "高亮内加粗丢失: {}", doc);
+        assert!(doc.contains("<w:i/>"), "高亮内斜体丢失: {}", doc);
     }
 
     #[test]

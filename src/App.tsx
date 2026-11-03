@@ -41,7 +41,7 @@ import { windowOps } from './lib/windowOps'
 import { useWindowStateStore } from './stores/windowStateStore'
 import { buildDocxPalette } from './lib/docxPalette'
 import { collectCodeHighlights } from './lib/docxCodeHighlight'
-import { prepareMarkdownForDocx } from './lib/docxPrepare'
+import { prepareMarkdownForDocx, DOCX_TOC_MARKER } from './lib/docxPrepare'
 import { buildDocxLayout } from './lib/docxLayout'
 import { renderMermaidSvgForExport } from './renderers/mermaid'
 import { readThemePalette, type ThemePalette } from './lib/themePalette'
@@ -607,9 +607,9 @@ function App() {
 
 
 
-  const showToast = useCallback((message: string) => {
+  const showToast = useCallback((message: string, duration = 2000) => {
     setToast({ message, visible: true })
-    setTimeout(() => setToast({ message: '', visible: false }), 2000)
+    setTimeout(() => setToast({ message: '', visible: false }), duration)
   }, [])
 
   /** 打开 EPUB 字节：解析后直接进入全屏阅读模式，不创建编辑器标签页。 */
@@ -1202,6 +1202,9 @@ function App() {
 
     if (!savedPath) return  // 用户取消
 
+    // 导出的文档里是否含目录域：含则成功后补一句「按 F9 更新页码」提示
+    let tocIncluded = false
+
     try {
       if (format === 'docx') {
         // 相对图片以 md 所在目录为基准解析
@@ -1262,6 +1265,7 @@ function App() {
           (code) => renderMermaidSvgForExport(code, docxMermaidPalette, false),
           docxLayout.toc.maxLevel,
         )
+        tocIncluded = docxMd.includes(DOCX_TOC_MARKER)
         // 用 invokeTauriOrThrow：导出失败必须抛错显示，不能吞错假装成功
         await invokeTauriOrThrow('export_docx', {
           path: savedPath,
@@ -1357,7 +1361,12 @@ function App() {
         }
         await invokeTauri('save_file', { path: savedPath, content: output })
       }
-      showToast(t('app.exported', { name: savedPath.split('\\').pop() || 'file' }))
+      const exported = t('app.exported', { name: savedPath.split('\\').pop() || 'file' })
+      // 目录页码是前端按页高估算的，可能不准；Word 里更新域即可校正，提示停留久一点
+      showToast(
+        tocIncluded ? `${exported} · ${t('docx.tocHint')}` : exported,
+        tocIncluded ? 6000 : 2000,
+      )
     } catch (e) {
       console.error('[export] failed:', e)
       showToast(t('app.exportFailed'))
