@@ -833,6 +833,13 @@ pluginEpubDesc: 'Exporteer het huidige document als EPUB 3 e-book',
     warnRemoteImages: '{n} remote image(s) were not embedded (only data URL images are packaged).',
     warnNoHeadingSplit: 'No suitable heading was found; exported as a single chapter.'
   },
+  docxExport: {
+    title: 'Word-document exporteren',
+    themeColors: 'Themakleuren exporteren',
+    themeColorsHint: 'Titels, tabelkoppen en code-highlighting gebruiken het huidige thema; uit voor zwart-wit.',
+    followPreview: 'Lettergrootte en regelhoogte volgen de preview',
+    followPreviewHint: 'Uit: gebruikt de standaardlay-out A4 / 11 pt / 1,5 regelafstand.',
+  },
   docx: {
     tocHint: 'Rechtsklik op de inhoudsopgave → Veld bijwerken (F9)',
   }

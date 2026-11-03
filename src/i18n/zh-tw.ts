@@ -850,6 +850,13 @@ pluginEpubDesc: '將目前文件匯出為 EPUB 3 電子書（實驗性）',
     warnRemoteImages: '{n} remote image(s) were not embedded (only data URL images are packaged).',
     warnNoHeadingSplit: 'No suitable heading was found; exported as a single chapter.'
   },
+  docxExport: {
+    title: '匯出 Word 文件',
+    themeColors: '匯出主題色',
+    themeColorsHint: '標題、表頭與程式碼高亮使用目前主題配色；關閉後統一為黑白灰。',
+    followPreview: '字號與行距跟隨預覽',
+    followPreviewHint: '關閉後使用規範版式：A4 / 11 磅 / 1.5 倍行距。',
+  },
   docx: {
     tocHint: '右鍵目錄 → 更新功能變數（或按 F9）',
   }

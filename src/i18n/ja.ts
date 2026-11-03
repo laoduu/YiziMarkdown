@@ -833,6 +833,13 @@ pluginEpubDesc: '現在のドキュメントを EPUB 3 電子書籍として書�
     warnRemoteImages: '{n} remote image(s) were not embedded (only data URL images are packaged).',
     warnNoHeadingSplit: 'No suitable heading was found; exported as a single chapter.'
   },
+  docxExport: {
+    title: 'Word 文書をエクスポート',
+    themeColors: 'テーマカラーをエクスポート',
+    themeColorsHint: '見出し・表ヘッダー・コードの色に現在のテーマを使用します。オフにすると白黒になります。',
+    followPreview: 'フォントサイズと行間をプレビューに合わせる',
+    followPreviewHint: 'オフにすると標準レイアウト（A4 / 11pt / 1.5 行間）を使用します。',
+  },
   docx: {
     tocHint: '目次を右クリック → フィールド更新（F9）',
   }

@@ -9,6 +9,7 @@ import HomePage from './components/HomePage'
 import Slideshow from './components/Slideshow'
 import Reader from './components/Reader'
 import PptxExportDialog from './components/PptxExportDialog'
+import DocxExportDialog, { type DocxExportOptions } from './components/DocxExportDialog'
 import PluginExportDialog, { type PluginExportSource } from './components/PluginExportDialog'
 import AIChatPanel from './components/AIChatPanel'
 import { PanelLeftClose, PanelLeft, Loader2 } from 'lucide-react'
@@ -186,6 +187,8 @@ function App() {
   } | null>(null)
   /** 插件导出面板（EPUB 等）：由已启用插件的能力菜单触发 */
   const [pluginExportDialog, setPluginExportDialog] = useState<{ pluginId: string; format: string } | null>(null)
+  /** DOCX 导出弹窗：先选「主题色 / 跟随预览」，确认后再走保存对话框 */
+  const [docxDialogOpen, setDocxDialogOpen] = useState(false)
   /** 从工具栏「先看演示效果 / 告警跳页」启动演示时的首屏页码（0-based） */
   const [slideshowStart, setSlideshowStart] = useState<number | undefined>(undefined)
   /** 演示已打开时外部请求翻页：token 递增，保证同一页连续点两次也各跳一次 */
@@ -1163,7 +1166,7 @@ function App() {
     }
   }, [currentTheme, isDark])
 
-  const handleExport = useCallback(async (format: string) => {
+  const handleExport = useCallback(async (format: string, docxOptions?: DocxExportOptions) => {
     const tab = currentTab()
     if (!tab) return
 
@@ -1236,16 +1239,25 @@ function App() {
         probe.remove()
         // docx 页面恒为白底：暗色主题的亮色正文/近黑底色不可照搬（见 lib/docxPalette.ts），
         // 顺带把 rgb()/#rgb 归一成 #rrggbb（Rust 侧只解析十六进制）
-        const palette = buildDocxPalette({
+        let palette = buildDocxPalette({
           isDark,
           accent: accentRaw,
           text: textRaw,
           surface: surfaceRaw,
           border: borderRaw,
         })
+        // 导出弹窗关闭「主题色」：标题、表头、代码高亮统一走黑白灰，不跟随当前主题
+        if (docxOptions?.themeColors === false) {
+          palette = { text: '#000000', accent: '#000000', surface: '#f5f5f5', border: '#dddddd' }
+        }
         // Word 版式的单一事实源：标题比例、段距、引用/代码/表格间距、目录层级
         // 都在这里定死，Rust 只负责序列化，不再自己猜一套值。
         const docxLayout = buildDocxLayout(previewFontFamily, mono)
+        // 弹窗「跟随预览」：字号与行距都取预览设置；关闭才用规范版式（A4 / 11pt / 1.5）
+        if (docxOptions?.followPreview !== false) {
+          docxLayout.body.followPreviewSize = true
+          docxLayout.body.lineHeight = previewLineHeight
+        }
         // DOCX 只能读 Markdown：先把预览里已经「不是 Markdown」的内容落回可解析形式
         //   · [toc] → DOCX_TOC_MARKER（Rust 侧输出真正的 TOC 域）
         //   · ```mermaid → SVG data URL（白底 palette，Rust 转 PNG/SVG 嵌入）
@@ -1284,10 +1296,12 @@ function App() {
             lineHeight: previewLineHeight,
             // 代码块语法高亮：直接读预览 DOM（分词与颜色都与预览一致，见该函数注释）。
             // 暗色主题的 token 是给深色页面配的亮色，导出到白底文档要压暗（同 palette 的处理）
-            codeHighlights: collectCodeHighlights(document.querySelector('.editor-content'), {
-              isDark,
-              baseColor: palette.text,
-            }),
+            codeHighlights: docxOptions?.themeColors === false
+              ? { styles: {}, blocks: {} }
+              : collectCodeHighlights(document.querySelector('.editor-content'), {
+                isDark,
+                baseColor: palette.text,
+              }),
             // 目录标题同理跟随界面语言：Word 里 TOC 域上方那行字由 Rust 侧写出，
             // 它看不到前端 i18n，只能由这里把词条传过去（`reader.toc`，与预览那块同一个键）
             tocTitle: translate(getCurrentLang(), 'reader.toc'),
@@ -1423,7 +1437,11 @@ function App() {
         onInsertFootnote={() => editorRef.current?.insertFootnote()}
         onSaveAs={handleSaveAs}
         onSaveToCloud={handleSaveToCloud}
-        onExport={(format) => { handleExport(format) }}
+        onExport={(format) => {
+          // DOCX 先开选项弹窗（主题色 / 字号行距），确认后由弹窗回调再走保存对话框
+          if (format === 'docx') { setDocxDialogOpen(true); return }
+          handleExport(format)
+        }}
         pluginExports={pluginExports.map(({ format, labelKey }) => ({ format, labelKey }))}
         onSearch={handleSearchToggle}
         onSettings={handleSettings}
@@ -1703,6 +1721,13 @@ function App() {
           onExit={handleReaderExit}
         />
       )}
+
+      {/* 导出 DOCX：先选主题色 / 字号行距，再走保存对话框 */}
+      <DocxExportDialog
+        open={docxDialogOpen}
+        onClose={() => setDocxDialogOpen(false)}
+        onExport={(options) => { handleExport('docx', options) }}
+      />
 
       {/* 导出 PPTX：工具栏 / 演示 HUD 共用同一个弹窗（弹窗内部先选路径再生成） */}
       {pptxDialog && tab && (

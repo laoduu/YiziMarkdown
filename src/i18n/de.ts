@@ -833,6 +833,13 @@ pluginEpubDesc: 'Aktuelles Dokument als EPUB-3-E-Book exportieren',
     warnRemoteImages: '{n} remote image(s) were not embedded (only data URL images are packaged).',
     warnNoHeadingSplit: 'No suitable heading was found; exported as a single chapter.'
   },
+  docxExport: {
+    title: 'Word-Dokument exportieren',
+    themeColors: 'Themenfarben exportieren',
+    themeColorsHint: 'Überschriften, Tabellenköpfe und Code-Hervorhebung nutzen das aktuelle Thema; deaktiviert für reines Schwarzweiß.',
+    followPreview: 'Schriftgröße und Zeilenabstand wie in der Vorschau',
+    followPreviewHint: 'Deaktiviert wird das Standardlayout verwendet: A4 / 11 pt / 1,5 Zeilenabstand.',
+  },
   docx: {
     tocHint: 'Rechtsklick auf das Inhaltsverzeichnis → Feld aktualisieren (F9)',
   }

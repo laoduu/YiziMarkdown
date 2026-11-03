@@ -833,6 +833,13 @@ pluginEpubDesc: 'Eksportuj bieżący dokument jako e-book EPUB 3',
     warnRemoteImages: '{n} remote image(s) were not embedded (only data URL images are packaged).',
     warnNoHeadingSplit: 'No suitable heading was found; exported as a single chapter.'
   },
+  docxExport: {
+    title: 'Eksportuj dokument Word',
+    themeColors: 'Eksportuj kolory motywu',
+    themeColorsHint: 'Nagłówki, nagłówki tabel i kolorowanie kodu używają bieżącego motywu; wyłącz, aby uzyskać czerń i biel.',
+    followPreview: 'Dopasuj rozmiar czcionki i interlinię do podglądu',
+    followPreviewHint: 'Wyłączone: standardowy układ A4 / 11 pt / interlinia 1,5.',
+  },
   docx: {
     tocHint: 'Kliknij prawym przyciskiem myszy spis treści → Aktualizuj pole (F9)',
   }

@@ -833,6 +833,13 @@ pluginEpubDesc: 'Geçerli belgeyi EPUB 3 e-kitap olarak dışa aktar',
     warnRemoteImages: '{n} remote image(s) were not embedded (only data URL images are packaged).',
     warnNoHeadingSplit: 'No suitable heading was found; exported as a single chapter.'
   },
+  docxExport: {
+    title: 'Word belgesini dışa aktar',
+    themeColors: 'Tema renklerini dışa aktar',
+    themeColorsHint: 'Başlıklar, tablo başlıkları ve kod vurgusu geçerli temayı kullanır; kapatınca siyah-beyaz olur.',
+    followPreview: 'Yazı tipi boyutu ve satır aralığı önizlemeyle aynı olsun',
+    followPreviewHint: 'Kapalıyken standart düzen kullanılır: A4 / 11 pt / 1,5 satır aralığı.',
+  },
   docx: {
     tocHint: 'İçindekiler tablosuna sağ tıklayın → Alanı güncelle (F9)',
   }

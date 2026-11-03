@@ -852,6 +852,13 @@ pluginEpubDesc: 'Export the current document as an EPUB 3 eBook',
     warnRemoteImages: '{n} remote image(s) were not embedded (only data URL images are packaged).',
     warnNoHeadingSplit: 'No suitable heading was found; exported as a single chapter.'
   },
+  docxExport: {
+    title: 'Export Word document',
+    themeColors: 'Export theme colors',
+    themeColorsHint: 'Headings, table headers and code highlighting use the current theme; turn off for plain black and white.',
+    followPreview: 'Match preview font size and line spacing',
+    followPreviewHint: 'When off, uses the standard layout: A4 / 11 pt / 1.5 line spacing.',
+  },
   docx: {
     tocHint: 'Right-click the table of contents → Update Field (F9)',
   }

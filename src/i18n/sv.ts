@@ -833,6 +833,13 @@ pluginEpubDesc: 'Exportera det aktuella dokumentet som en EPUB 3 e-bok',
     warnRemoteImages: '{n} remote image(s) were not embedded (only data URL images are packaged).',
     warnNoHeadingSplit: 'No suitable heading was found; exported as a single chapter.'
   },
+  docxExport: {
+    title: 'Exportera Word-dokument',
+    themeColors: 'Exportera temafärger',
+    themeColorsHint: 'Rubriker, tabellrubriker och kodmarkering använder aktuellt tema; av för svartvitt.',
+    followPreview: 'Följ förhandsvisningens teckenstorlek och radavstånd',
+    followPreviewHint: 'Av: använder standardlayout A4 / 11 pt / radavstånd 1,5.',
+  },
   docx: {
     tocHint: 'Högerklicka på innehållsförteckningen → Uppdatera fält (F9)',
   }

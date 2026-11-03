@@ -833,6 +833,13 @@ pluginEpubDesc: 'Експортувати поточний документ як
     warnRemoteImages: '{n} remote image(s) were not embedded (only data URL images are packaged).',
     warnNoHeadingSplit: 'No suitable heading was found; exported as a single chapter.'
   },
+  docxExport: {
+    title: 'Експортувати документ Word',
+    themeColors: 'Експортувати кольори теми',
+    themeColorsHint: 'Заголовки, заголовки таблиць і підсвічування коду використовують поточну тему; вимкніть для чорно-білого.',
+    followPreview: 'Розмір шрифту та інтервал як у попередньому перегляді',
+    followPreviewHint: 'Вимкнено: стандартний макет A4 / 11 pt / інтервал 1,5.',
+  },
   docx: {
     tocHint: 'Клацніть правою кнопкою на змісті → Оновити поле (F9)',
   }
