@@ -5133,6 +5133,33 @@ mod tests {
     }
 
     #[test]
+    fn reported_cross_range_and_footnote_regressions() {
+        // 用户实测上报：预览修好后 DOCX 仍错。前端曾另有一套转换规则，已改为只由 Rust 处理。
+        let doc = xml_of("数字区间连写：64K~512K、0~20、1~5\n");
+        assert_eq!(
+            doc.matches("<w:vertAlign w:val=\"subscript\"/>").count(),
+            0,
+            "数字区间不应变成下标: {}",
+            doc
+        );
+        assert!(doc_text(&doc).contains("64K~512K"), "原文被改写: {}", doc);
+
+        let doc = xml_of("这里引用一个脚注[^1]，再引用第二个[^2]。\n\n[^1]: 一\n[^2]: 二\n");
+        assert_eq!(
+            doc.matches("<w:vertAlign w:val=\"superscript\"/>").count(),
+            0,
+            "脚注引用之间的文字不应变成上标: {}",
+            doc
+        );
+        assert_eq!(
+            doc.matches("<w:footnoteReference").count(),
+            2,
+            "两条脚注引用应各自保留: {}",
+            doc
+        );
+    }
+
+    #[test]
     fn inline_html_formatting_and_breaks() {
         let doc = xml_of("前<u>下划线</u>与<mark>高亮</mark>，换行<br>下一行\n");
         assert!(doc.contains("<w:u w:val=\"single\"/>"), "下划线未生效: {}", doc);
