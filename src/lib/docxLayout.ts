@@ -11,9 +11,30 @@
  */
 
 export interface DocxFonts {
+  /** 正文西文字体 */
   latin: string
+  /** 正文东亚字体 */
   eastAsia: string
+  /** 标题西文字体 */
+  headingLatin: string
+  /** 标题东亚字体 */
+  headingEastAsia: string
+  /** 等宽字体 */
   mono: string
+}
+
+/** 「字体跟随预览」关闭时使用的 Word 经典默认字体（Windows / macOS Office 均自带或可回退） */
+export const WORD_DEFAULT_FONTS: DocxFonts = {
+  latin: 'Calibri',
+  eastAsia: 'DengXian',
+  headingLatin: 'Calibri Light',
+  headingEastAsia: 'DengXian Light',
+  mono: 'Consolas',
+}
+
+export interface DocxLayoutOptions {
+  /** false = 使用 Word 默认字体；缺省/true = 正文与标题都跟随预览字体 */
+  followPreviewFont?: boolean
 }
 
 export interface DocxBodyLayout {
@@ -178,7 +199,8 @@ export function resolveDocxFonts(fontFamily: string, monoFamily: string): DocxFo
       : 'Microsoft YaHei'
   const mono = concreteFont(splitFontStack(monoFamily)[0] || '', 'Consolas')
 
-  return { latin, eastAsia, mono }
+  // 跟随预览时标题与正文同一族；标题的层级只靠字号/加粗表达（与现有行为一致）
+  return { latin, eastAsia, headingLatin: latin, headingEastAsia: eastAsia, mono }
 }
 
 /**
@@ -189,11 +211,20 @@ export function resolveDocxFonts(fontFamily: string, monoFamily: string): DocxFo
  *
  * `followPreviewSize = true` 时正文字号跟随设置里的「预览字号」，其余比例不变；
  * 默认 false，即任何电脑上导出的 Word 都是同一套标准字号。
+ * `followPreviewFont = false` 时改用 `WORD_DEFAULT_FONTS`（Word 经典默认字体），
+ * 标题与正文使用不同的字体族（Calibri Light / DengXian Light vs Calibri / DengXian）。
  */
-export function buildDocxLayout(fontFamily: string, monoFamily: string): DocxLayout {
+export function buildDocxLayout(
+  fontFamily: string,
+  monoFamily: string,
+  options: DocxLayoutOptions = {},
+): DocxLayout {
   const bodyPt = 11
+  const fonts = options.followPreviewFont === false
+    ? { ...WORD_DEFAULT_FONTS }
+    : resolveDocxFonts(fontFamily, monoFamily)
   return {
-    fonts: resolveDocxFonts(fontFamily, monoFamily),
+    fonts,
     body: { sizePt: bodyPt, lineHeight: 1.5, followPreviewSize: false, align: 'both', firstLineIndentEm: 0 },
     headings: {
       // 18/15/13/12/11/11pt ÷ 11pt

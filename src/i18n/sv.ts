@@ -845,6 +845,8 @@ pluginEpubDesc: 'Exportera det aktuella dokumentet som en EPUB 3 e-bok',
     themeColorsHint: 'Rubriker, tabellrubriker och kodmarkering använder aktuellt tema; av för svartvitt.',
     followPreview: 'Följ förhandsvisningens teckenstorlek och radavstånd',
     followPreviewHint: 'Av: använder standardlayout A4 / 11 pt / radavstånd 1,5.',
+    followPreviewFont: 'Använd förhandsgranskningens teckensnitt',
+    followPreviewFontHint: 'Av: Words standardteckensnitt – brödtext Calibri / DengXian, rubriker Calibri Light / DengXian Light (reserv PingFang SC / Microsoft YaHei).',
   },
   docx: {
     tocHint: 'Högerklicka på innehållsförteckningen → Uppdatera fält (F9)',

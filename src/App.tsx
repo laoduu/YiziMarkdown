@@ -1252,7 +1252,10 @@ function App() {
         }
         // Word 版式的单一事实源：标题比例、段距、引用/代码/表格间距、目录层级
         // 都在这里定死，Rust 只负责序列化，不再自己猜一套值。
-        const docxLayout = buildDocxLayout(previewFontFamily, mono)
+        const docxLayout = buildDocxLayout(previewFontFamily, mono, {
+          // 弹窗「字体跟随预览」：关闭时由 layout 换成 Word 经典默认字体（含标题字体）
+          followPreviewFont: docxOptions?.followPreviewFont !== false,
+        })
         // 弹窗「跟随预览」：字号与行距都取预览设置；关闭才用规范版式（A4 / 11pt / 1.5）
         if (docxOptions?.followPreview !== false) {
           docxLayout.body.followPreviewSize = true

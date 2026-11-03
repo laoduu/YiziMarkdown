@@ -343,7 +343,7 @@ export default function Toolbar({
           />
           {showTemplateMenu && (
             <div 
-              className="fixed py-1 w-52 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50 max-h-80 overflow-auto"
+              className="fixed py-1 min-w-52 w-max max-w-[20rem] bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50 max-h-80 overflow-auto"
               style={{ top: templateMenuPos.top, left: templateMenuPos.left }}
               onMouseEnter={() => {
                 if (templateHideTimerRef.current) {
@@ -401,7 +401,7 @@ export default function Toolbar({
           {showExportMenu && (
             <div 
               ref={exportMenuRef}
-              className="fixed py-1 w-52 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50"
+              className="fixed py-1 min-w-52 w-max max-w-[20rem] bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50"
               style={{ top: exportMenuPos.top, left: exportMenuPos.left }}
               onMouseEnter={() => {
                 if (exportHideTimerRef.current) {
@@ -521,7 +521,7 @@ export default function Toolbar({
           />
           {showCodeMenu && (
             <div 
-              className="fixed py-1 w-40 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50"
+              className="fixed py-1 min-w-40 w-max max-w-[20rem] bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50"
               style={{ top: codeMenuPos.top, left: codeMenuPos.left }}
               onMouseEnter={() => {
                 if (codeHideTimerRef.current) {
@@ -586,7 +586,7 @@ export default function Toolbar({
           />
           {showAlertMenu && (
             <div
-              className="fixed py-1 w-52 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50"
+              className="fixed py-1 min-w-52 w-max max-w-[20rem] bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50"
               style={{ top: alertMenuPos.top, left: alertMenuPos.left }}
               onMouseEnter={() => {
                 if (alertHideTimerRef.current) {
@@ -729,7 +729,7 @@ export default function Toolbar({
           />
           {showMathMenu && (
             <div
-              className="fixed py-1 w-40 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50"
+              className="fixed py-1 min-w-40 w-max max-w-[20rem] bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50"
               style={{ top: mathMenuPos.top, left: mathMenuPos.left }}
               onMouseEnter={() => {
                 if (mathHideTimerRef.current) {
@@ -911,10 +911,10 @@ function ExportMenuItem({ icon, label, onClick }: { icon: React.ReactNode; label
     <button
       onMouseDown={(e) => e.stopPropagation()}
       onClick={onClick}
-      className="w-full px-3 py-1.5 text-sm text-left text-[var(--editor-text)] hover:bg-[var(--editor-hover)] flex items-center gap-2 whitespace-nowrap"
+      className="w-full px-3 py-1.5 text-sm text-left text-[var(--editor-text)] hover:bg-[var(--editor-hover)] flex items-start gap-2"
     >
-      {icon}
-      {label}
+      <span className="shrink-0 flex items-center mt-0.5">{icon}</span>
+      <span className="min-w-0 flex-1 break-words">{label}</span>
     </button>
   )
 }

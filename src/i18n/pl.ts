@@ -845,6 +845,8 @@ pluginEpubDesc: 'Eksportuj bieżący dokument jako e-book EPUB 3',
     themeColorsHint: 'Nagłówki, nagłówki tabel i kolorowanie kodu używają bieżącego motywu; wyłącz, aby uzyskać czerń i biel.',
     followPreview: 'Dopasuj rozmiar czcionki i interlinię do podglądu',
     followPreviewHint: 'Wyłączone: standardowy układ A4 / 11 pt / interlinia 1,5.',
+    followPreviewFont: 'Użyj czcionki podglądu',
+    followPreviewFontHint: 'Wyłączone: domyślne czcionki Word – tekst Calibri / DengXian, nagłówki Calibri Light / DengXian Light (zapasowe PingFang SC / Microsoft YaHei).',
   },
   docx: {
     tocHint: 'Kliknij prawym przyciskiem myszy spis treści → Aktualizuj pole (F9)',

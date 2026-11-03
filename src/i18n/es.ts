@@ -845,6 +845,8 @@ pluginEpubDesc: 'Exportar el documento actual como libro electrónico EPUB 3',
     themeColorsHint: 'Los títulos, encabezados de tabla y el resaltado de código usan el tema actual; desactívalo para usar solo blanco y negro.',
     followPreview: 'Usar el tamaño de fuente e interlineado de la vista previa',
     followPreviewHint: 'Desactivado, usa el diseño estándar: A4 / 11 pt / interlineado 1,5.',
+    followPreviewFont: 'Usar la fuente de la vista previa',
+    followPreviewFontHint: 'Desactivado: fuentes predeterminadas de Word: texto Calibri / DengXian, títulos Calibri Light / DengXian Light (respaldo PingFang SC / Microsoft YaHei).',
   },
   docx: {
     tocHint: 'Haz clic derecho en el índice → Actualizar campo (F9)',

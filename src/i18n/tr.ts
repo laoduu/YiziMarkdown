@@ -845,6 +845,8 @@ pluginEpubDesc: 'Geçerli belgeyi EPUB 3 e-kitap olarak dışa aktar',
     themeColorsHint: 'Başlıklar, tablo başlıkları ve kod vurgusu geçerli temayı kullanır; kapatınca siyah-beyaz olur.',
     followPreview: 'Yazı tipi boyutu ve satır aralığı önizlemeyle aynı olsun',
     followPreviewHint: 'Kapalıyken standart düzen kullanılır: A4 / 11 pt / 1,5 satır aralığı.',
+    followPreviewFont: 'Önizleme yazı tipini kullan',
+    followPreviewFontHint: 'Kapalı: Word varsayılan yazı tipleri – gövde Calibri / DengXian, başlıklar Calibri Light / DengXian Light (yedek PingFang SC / Microsoft YaHei).',
   },
   docx: {
     tocHint: 'İçindekiler tablosuna sağ tıklayın → Alanı güncelle (F9)',

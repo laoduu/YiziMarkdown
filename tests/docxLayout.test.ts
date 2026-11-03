@@ -6,7 +6,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildDocxLayout, resolveDocxFonts, splitFontStack } from '../src/lib/docxLayout.ts'
+import { WORD_DEFAULT_FONTS, buildDocxLayout, resolveDocxFonts, splitFontStack } from '../src/lib/docxLayout.ts'
 
 test('字体栈：拉丁与东亚字体拆分（Inter + 微软雅黑）', () => {
   const fonts = resolveDocxFonts("Inter, 'Microsoft YaHei', system-ui, sans-serif", 'Consolas')
@@ -32,8 +32,28 @@ test('字体栈：空值/var() 回落到规范默认值', () => {
   const fonts = resolveDocxFonts('', '')
   assert.equal(fonts.latin, 'Calibri')
   assert.equal(fonts.eastAsia, 'Microsoft YaHei')
+  assert.equal(fonts.headingLatin, 'Calibri')
+  assert.equal(fonts.headingEastAsia, 'Microsoft YaHei')
   assert.equal(fonts.mono, 'Consolas')
   assert.deepEqual(splitFontStack('var(--font-preview)'), [])
+})
+
+test('字体：字体跟随预览时标题与正文同族', () => {
+  const fonts = resolveDocxFonts('Inter, Microsoft YaHei, sans-serif', 'Consolas')
+  assert.equal(fonts.headingLatin, fonts.latin)
+  assert.equal(fonts.headingEastAsia, fonts.eastAsia)
+})
+
+test('字体：关闭「字体跟随预览」使用 Word 经典默认字体', () => {
+  const layout = buildDocxLayout('Inter, Microsoft YaHei, sans-serif', 'Consolas', {
+    followPreviewFont: false,
+  })
+  assert.deepEqual(layout.fonts, WORD_DEFAULT_FONTS)
+  assert.equal(layout.fonts.latin, 'Calibri')
+  assert.equal(layout.fonts.eastAsia, 'DengXian')
+  assert.equal(layout.fonts.headingLatin, 'Calibri Light')
+  assert.equal(layout.fonts.headingEastAsia, 'DengXian Light')
+  assert.equal(layout.fonts.mono, 'Consolas')
 })
 
 const near = (a: number, b: number) => Math.abs(a - b) < 1e-9

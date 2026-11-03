@@ -845,6 +845,8 @@ pluginEpubDesc: 'Exporter le document actuel en livre numérique EPUB 3',
     themeColorsHint: 'Les titres, en-têtes de tableau et la coloration du code utilisent le thème actuel ; désactivez pour un rendu noir et blanc.',
     followPreview: 'Suivre la taille et l’interligne de l’aperçu',
     followPreviewHint: 'Désactivé, utilise la mise en page standard : A4 / 11 pt / interligne 1,5.',
+    followPreviewFont: 'Reprendre la police de l\'aperçu',
+    followPreviewFontHint: 'Désactivé : polices Word par défaut – texte Calibri / DengXian, titres Calibri Light / DengXian Light (repli PingFang SC / Microsoft YaHei).',
   },
   docx: {
     tocHint: 'Clic droit sur la table des matières → Mettre à jour le champ (F9)',

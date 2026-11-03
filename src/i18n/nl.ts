@@ -845,6 +845,8 @@ pluginEpubDesc: 'Exporteer het huidige document als EPUB 3 e-book',
     themeColorsHint: 'Titels, tabelkoppen en code-highlighting gebruiken het huidige thema; uit voor zwart-wit.',
     followPreview: 'Lettergrootte en regelhoogte volgen de preview',
     followPreviewHint: 'Uit: gebruikt de standaardlay-out A4 / 11 pt / 1,5 regelafstand.',
+    followPreviewFont: 'Lettertype van voorbeeld gebruiken',
+    followPreviewFontHint: 'Uit: standaardlettertypen van Word – tekst Calibri / DengXian, koppen Calibri Light / DengXian Light (terugval PingFang SC / Microsoft YaHei).',
   },
   docx: {
     tocHint: 'Rechtsklik op de inhoudsopgave → Veld bijwerken (F9)',

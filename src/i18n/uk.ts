@@ -845,6 +845,8 @@ pluginEpubDesc: 'Експортувати поточний документ як
     themeColorsHint: 'Заголовки, заголовки таблиць і підсвічування коду використовують поточну тему; вимкніть для чорно-білого.',
     followPreview: 'Розмір шрифту та інтервал як у попередньому перегляді',
     followPreviewHint: 'Вимкнено: стандартний макет A4 / 11 pt / інтервал 1,5.',
+    followPreviewFont: 'Використовувати шрифт попереднього перегляду',
+    followPreviewFontHint: 'Вимкнено: стандартні шрифти Word – текст Calibri / DengXian, заголовки Calibri Light / DengXian Light (запасні PingFang SC / Microsoft YaHei).',
   },
   docx: {
     tocHint: 'Клацніть правою кнопкою на змісті → Оновити поле (F9)',

@@ -4,6 +4,7 @@
  * 与 PPTX 导出弹窗保持同一套视觉（dialog token / 圆角 / 遮罩），但选项更少：
  *   - 是否导出主题色（关闭后标题、表头、代码高亮统一走黑白灰）
  *   - 字号行距是否跟随预览（关闭则用 Word 规范版式：A4 / 11pt / 1.5 倍行距）
+ *   - 字体是否跟随预览（关闭则用 Word 经典默认字体：正文 Calibri / 等线，标题 Calibri Light / 等线 Light）
  *
  * 选项不落盘：每次打开都回到默认（跟随主题 + 跟随预览），避免用户忘记上次关过什么。
  */
@@ -16,6 +17,8 @@ export interface DocxExportOptions {
   themeColors: boolean
   /** 字号与行距跟随预览；false = 规范版式 11pt / 1.5 */
   followPreview: boolean
+  /** 字体跟随预览；false = Word 默认字体（Calibri / 等线 + Light 标题） */
+  followPreviewFont: boolean
 }
 
 interface Props {
@@ -28,6 +31,7 @@ export default function DocxExportDialog({ open, onClose, onExport }: Props) {
   const { t } = useI18n()
   const [themeColors, setThemeColors] = useState(true)
   const [followPreview, setFollowPreview] = useState(true)
+  const [followPreviewFont, setFollowPreviewFont] = useState(true)
 
   if (!open) return null
 
@@ -94,6 +98,21 @@ export default function DocxExportDialog({ open, onClose, onExport }: Props) {
               </span>
             </span>
           </label>
+
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={followPreviewFont}
+              onChange={(e) => setFollowPreviewFont(e.target.checked)}
+              className="mt-0.5"
+            />
+            <span>
+              <span className="font-medium">{t('docxExport.followPreviewFont')}</span>
+              <span className="block text-[11px] text-[var(--sidebar-text)] leading-relaxed">
+                {t('docxExport.followPreviewFontHint')}
+              </span>
+            </span>
+          </label>
         </div>
 
         <div
@@ -107,7 +126,7 @@ export default function DocxExportDialog({ open, onClose, onExport }: Props) {
             {t('common.cancel')}
           </button>
           <button
-            onClick={() => { onExport({ themeColors, followPreview }); onClose() }}
+            onClick={() => { onExport({ themeColors, followPreview, followPreviewFont }); onClose() }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[var(--editor-accent)] text-white hover:opacity-90"
           >
             <FileDown size={13} />

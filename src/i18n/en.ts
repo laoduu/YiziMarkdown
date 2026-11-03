@@ -864,6 +864,8 @@ pluginEpubDesc: 'Export the current document as an EPUB 3 eBook',
     themeColorsHint: 'Headings, table headers and code highlighting use the current theme; turn off for plain black and white.',
     followPreview: 'Match preview font size and line spacing',
     followPreviewHint: 'When off, uses the standard layout: A4 / 11 pt / 1.5 line spacing.',
+    followPreviewFont: 'Match preview font',
+    followPreviewFontHint: 'When off, uses Word default fonts: body Calibri / DengXian, headings Calibri Light / DengXian Light, with PingFang SC / Microsoft YaHei fallbacks.',
   },
   docx: {
     tocHint: 'Right-click the table of contents → Update Field (F9)',

@@ -845,6 +845,8 @@ pluginEpubDesc: '현재 문서를 EPUB 3 전자책으로 내보내기',
     themeColorsHint: '제목, 표 머리글, 코드 강조에 현재 테마 색상을 사용합니다. 끄면 검정·회색으로 표시됩니다.',
     followPreview: '글꼴 크기와 줄 간격을 미리보기에 맞추기',
     followPreviewHint: '끄면 표준 레이아웃(A4 / 11pt / 1.5 줄 간격)을 사용합니다.',
+    followPreviewFont: '미리보기 글꼴 따르기',
+    followPreviewFontHint: '끄면 Word 기본 글꼴 사용: 본문 Calibri / DengXian, 제목 Calibri Light / DengXian Light (대체 PingFang SC / Microsoft YaHei).',
   },
   docx: {
     tocHint: '목차를 마우스 오른쪽 버튼으로 클릭 → 필드 업데이트(F9)',

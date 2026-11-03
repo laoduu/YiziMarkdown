@@ -845,6 +845,8 @@ pluginEpubDesc: 'Aktuelles Dokument als EPUB-3-E-Book exportieren',
     themeColorsHint: 'Überschriften, Tabellenköpfe und Code-Hervorhebung nutzen das aktuelle Thema; deaktiviert für reines Schwarzweiß.',
     followPreview: 'Schriftgröße und Zeilenabstand wie in der Vorschau',
     followPreviewHint: 'Deaktiviert wird das Standardlayout verwendet: A4 / 11 pt / 1,5 Zeilenabstand.',
+    followPreviewFont: 'Vorschauschrift übernehmen',
+    followPreviewFontHint: 'Aus: Word-Standardschriften – Text Calibri / DengXian, Überschriften Calibri Light / DengXian Light (Fallback PingFang SC / Microsoft YaHei).',
   },
   docx: {
     tocHint: 'Rechtsklick auf das Inhaltsverzeichnis → Feld aktualisieren (F9)',

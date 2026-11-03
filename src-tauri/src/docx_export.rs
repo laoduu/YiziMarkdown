@@ -619,12 +619,22 @@ fn collect_toc(md: &str, opts: &Options, m: &Metrics) -> Vec<TocEntry> {
 pub struct DocxFonts {
     pub latin: String,
     pub east_asia: String,
+    /// 标题西文字体；空串 = 跟随正文（兼容旧调用方）
+    pub heading_latin: String,
+    /// 标题东亚字体；空串 = 跟随正文
+    pub heading_east_asia: String,
     pub mono: String,
 }
 
 impl Default for DocxFonts {
     fn default() -> Self {
-        Self { latin: String::new(), east_asia: String::new(), mono: String::new() }
+        Self {
+            latin: String::new(),
+            east_asia: String::new(),
+            heading_latin: String::new(),
+            heading_east_asia: String::new(),
+            mono: String::new(),
+        }
     }
 }
 
@@ -958,6 +968,9 @@ struct Metrics {
     /// 解析后的拉丁 / 东亚 / 等宽字体名（主题只给 CSS 栈，这里拆成 Word 可用的具体字体）
     font_latin: String,
     font_east_asia: String,
+    /// 标题字体；与正文分开，用于复刻 Word 的「标题用 Light 字族」默认
+    font_heading_latin: String,
+    font_heading_east_asia: String,
     font_mono: String,
 }
 
@@ -1003,6 +1016,17 @@ impl Metrics {
         } else {
             layout.fonts.mono.trim().to_string()
         };
+        // 标题字体：空串字典回退到正文（旧调用方保持原来的「标题与正文同族」行为）
+        let font_heading_latin = if layout.fonts.heading_latin.trim().is_empty() {
+            font_latin.clone()
+        } else {
+            layout.fonts.heading_latin.trim().to_string()
+        };
+        let font_heading_east_asia = if layout.fonts.heading_east_asia.trim().is_empty() {
+            font_east_asia.clone()
+        } else {
+            layout.fonts.heading_east_asia.trim().to_string()
+        };
         let mut m = Metrics {
             body_pt,
             body_sz,
@@ -1010,6 +1034,8 @@ impl Metrics {
             layout,
             font_latin,
             font_east_asia,
+            font_heading_latin,
+            font_heading_east_asia,
             font_mono,
         };
         m.line = match word_line {
@@ -1233,6 +1259,8 @@ fn font_table_xml(m: &Metrics) -> String {
     let charset = |f: &str| if is_cjk_family(f) { "86" } else { "00" };
     let latin = &m.font_latin;
     let east_asia = &m.font_east_asia;
+    let heading_latin = &m.font_heading_latin;
+    let heading_east_asia = &m.font_heading_east_asia;
     let mono = &m.font_mono;
     // 拉丁正文：一条链同时覆盖 Windows / macOS / Linux 与拉丁兜底
     s.push_str(&format!(
@@ -1248,8 +1276,36 @@ fn font_table_xml(m: &Metrics) -> String {
             charset(east_asia)
         ));
     }
-    // 等宽字体（与正文同名则跳过——fontTable 以 name 为键，不可重复）
-    if !mono.eq_ignore_ascii_case(latin) && !mono.eq_ignore_ascii_case(east_asia) {
+    // 标题西文：Word 默认的 Calibri Light / 等线 Light 与正文字体不同；
+    // 缺失时回退到 Arial / Helvetica Neue（macOS），而不是继续用正文的 Calibri。
+    if !heading_latin.eq_ignore_ascii_case(latin)
+        && !heading_latin.eq_ignore_ascii_case(east_asia)
+        && !heading_latin.eq_ignore_ascii_case(mono)
+    {
+        s.push_str(&format!(
+            "<w:font w:name=\"{}\"><w:altName w:val=\"Calibri, Arial, Helvetica Neue, Liberation Sans\"/><w:charset w:val=\"{}\"/><w:family w:val=\"swiss\"/><w:pitch w:val=\"variable\"/></w:font>",
+            esc(heading_latin),
+            charset(heading_latin)
+        ));
+    }
+    // 标题东亚：等线 Light 缺失时优先落到微软雅黑 / 苹方 / 思源黑体
+    if !heading_east_asia.eq_ignore_ascii_case(latin)
+        && !heading_east_asia.eq_ignore_ascii_case(east_asia)
+        && !heading_east_asia.eq_ignore_ascii_case(heading_latin)
+        && !heading_east_asia.eq_ignore_ascii_case(mono)
+    {
+        s.push_str(&format!(
+            "<w:font w:name=\"{}\"><w:altName w:val=\"Microsoft YaHei, PingFang SC, Noto Sans SC, SimHei, SimSun\"/><w:charset w:val=\"{}\"/><w:family w:val=\"swiss\"/><w:pitch w:val=\"variable\"/></w:font>",
+            esc(heading_east_asia),
+            charset(heading_east_asia)
+        ));
+    }
+    // 等宽字体（与正文/标题同名则跳过——fontTable 以 name 为键，不可重复）
+    if !mono.eq_ignore_ascii_case(latin)
+        && !mono.eq_ignore_ascii_case(east_asia)
+        && !mono.eq_ignore_ascii_case(heading_latin)
+        && !mono.eq_ignore_ascii_case(heading_east_asia)
+    {
         s.push_str(&format!(
             "<w:font w:name=\"{}\"><w:altName w:val=\"Cascadia Mono, Consolas, Courier New, DejaVu Sans Mono\"/><w:charset w:val=\"{}\"/><w:family w:val=\"modern\"/><w:pitch w:val=\"fixed\"/></w:font>",
             esc(mono),
@@ -3455,6 +3511,8 @@ fn styles_xml(theme: &DocxTheme, m: &Metrics) -> String {
     let text = esc(&theme.text);
     let font_latin = esc(&m.font_latin);
     let font_east_asia = esc(&m.font_east_asia);
+    let font_heading_latin = esc(&m.font_heading_latin);
+    let font_heading_east_asia = esc(&m.font_heading_east_asia);
     let font_mono = esc(&m.font_mono);
     let surface = esc(&theme.surface);
     let layout = &m.layout;
@@ -3509,13 +3567,13 @@ fn styles_xml(theme: &DocxTheme, m: &Metrics) -> String {
         let h_before = m.em_twips(layout.heading_before_em(lv));
         let bold = if layout.headings.bold { "<w:b/>" } else { "" };
         s.push_str(&format!(
-            "<w:style w:type=\"paragraph\" w:styleId=\"Heading{lv}\"><w:name w:val=\"heading {lv}\"/><w:basedOn w:val=\"Normal\"/><w:next w:val=\"Normal\"/><w:qFormat/><w:pPr><w:keepNext/><w:keepLines/><w:spacing w:before=\"{h_before}\" w:after=\"0\" w:line=\"{h_line}\" w:lineRule=\"auto\"/><w:ind w:left=\"0\" w:right=\"0\" w:firstLine=\"0\" w:firstLineChars=\"0\"/><w:jc w:val=\"left\"/><w:outlineLvl w:val=\"{outline}\"/></w:pPr><w:rPr><w:rFonts w:ascii=\"{font_latin}\" w:hAnsi=\"{font_latin}\" w:eastAsia=\"{font_east_asia}\" w:cs=\"{font_latin}\"/>{bold}<w:color w:val=\"{accent}\"/><w:sz w:val=\"{hsz}\"/><w:szCs w:val=\"{hsz}\"/></w:rPr></w:style>",
+            "<w:style w:type=\"paragraph\" w:styleId=\"Heading{lv}\"><w:name w:val=\"heading {lv}\"/><w:basedOn w:val=\"Normal\"/><w:next w:val=\"Normal\"/><w:qFormat/><w:pPr><w:keepNext/><w:keepLines/><w:spacing w:before=\"{h_before}\" w:after=\"0\" w:line=\"{h_line}\" w:lineRule=\"auto\"/><w:ind w:left=\"0\" w:right=\"0\" w:firstLine=\"0\" w:firstLineChars=\"0\"/><w:jc w:val=\"left\"/><w:outlineLvl w:val=\"{outline}\"/></w:pPr><w:rPr><w:rFonts w:ascii=\"{font_heading_latin}\" w:hAnsi=\"{font_heading_latin}\" w:eastAsia=\"{font_heading_east_asia}\" w:cs=\"{font_heading_latin}\"/>{bold}<w:color w:val=\"{accent}\"/><w:sz w:val=\"{hsz}\"/><w:szCs w:val=\"{hsz}\"/></w:rPr></w:style>",
             outline = lv - 1
         ));
     }
     // 目录标题（TOC 域上方那行字）：不能复用 Heading —— 带 outlineLvl 会把自己也收进目录
     s.push_str(&format!(
-        "<w:style w:type=\"paragraph\" w:styleId=\"TocHeading\"><w:name w:val=\"TOC Heading\"/><w:basedOn w:val=\"Normal\"/><w:next w:val=\"Normal\"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"{h_line}\" w:lineRule=\"auto\"/><w:ind w:left=\"0\" w:right=\"0\" w:firstLine=\"0\" w:firstLineChars=\"0\"/><w:jc w:val=\"center\"/></w:pPr><w:rPr><w:rFonts w:ascii=\"{font_latin}\" w:hAnsi=\"{font_latin}\" w:eastAsia=\"{font_east_asia}\" w:cs=\"{font_latin}\"/><w:b/><w:color w:val=\"{text}\"/><w:sz w:val=\"{toc_h_sz}\"/><w:szCs w:val=\"{toc_h_sz}\"/></w:rPr></w:style>"
+        "<w:style w:type=\"paragraph\" w:styleId=\"TocHeading\"><w:name w:val=\"TOC Heading\"/><w:basedOn w:val=\"Normal\"/><w:next w:val=\"Normal\"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"{h_line}\" w:lineRule=\"auto\"/><w:ind w:left=\"0\" w:right=\"0\" w:firstLine=\"0\" w:firstLineChars=\"0\"/><w:jc w:val=\"center\"/></w:pPr><w:rPr><w:rFonts w:ascii=\"{font_heading_latin}\" w:hAnsi=\"{font_heading_latin}\" w:eastAsia=\"{font_heading_east_asia}\" w:cs=\"{font_heading_latin}\"/><w:b/><w:color w:val=\"{text}\"/><w:sz w:val=\"{toc_h_sz}\"/><w:szCs w:val=\"{toc_h_sz}\"/></w:rPr></w:style>"
     ));
     // 目录条目 TOC1-N：段后 0，条目间距由 `toc_field` 的段前控制。
     for lv in 1..=toc_max {
@@ -4355,6 +4413,54 @@ mod tests {
         // 兜底：空串 / 只有逗号
         assert_eq!(first_family(""), "Microsoft YaHei");
         assert_eq!(first_family(", ,"), "Microsoft YaHei");
+    }
+
+    #[test]
+    fn heading_and_body_fonts_are_serialized_separately() {
+        // 「字体跟随预览」关闭时前端传入 Word 经典默认字体：正文 Calibri/等线，标题 Calibri Light/等线 Light
+        let mut theme = test_theme();
+        let mut layout = DocxLayout::default();
+        layout.fonts = DocxFonts {
+            latin: "Calibri".into(),
+            east_asia: "DengXian".into(),
+            heading_latin: "Calibri Light".into(),
+            heading_east_asia: "DengXian Light".into(),
+            mono: "Consolas".into(),
+        };
+        theme.layout = Some(layout);
+
+        let m = metrics_of(&theme);
+        assert_eq!(m.font_latin, "Calibri");
+        assert_eq!(m.font_heading_latin, "Calibri Light");
+        assert_eq!(m.font_heading_east_asia, "DengXian Light");
+
+        let styles = styles_xml(&theme, &m);
+        let normal = style_block(&styles, "Normal");
+        assert!(normal.contains("w:ascii=\"Calibri\""), "{}", normal);
+        assert!(normal.contains("w:eastAsia=\"DengXian\""), "{}", normal);
+        let heading = style_block(&styles, "Heading1");
+        assert!(heading.contains("w:ascii=\"Calibri Light\""), "{}", heading);
+        assert!(heading.contains("w:eastAsia=\"DengXian Light\""), "{}", heading);
+
+        let ft = font_table_xml(&m);
+        assert!(ft.contains("<w:font w:name=\"Calibri Light\">"), "{}", ft);
+        assert!(
+            ft.contains("<w:altName w:val=\"Calibri, Arial, Helvetica Neue, Liberation Sans\"/>"),
+            "标题西文替代链缺失: {}", ft
+        );
+        assert!(ft.contains("<w:font w:name=\"DengXian Light\">"), "{}", ft);
+        assert!(
+            ft.contains("<w:altName w:val=\"Microsoft YaHei, PingFang SC, Noto Sans SC, SimHei, SimSun\"/>"),
+            "标题东亚替代链缺失: {}", ft
+        );
+    }
+
+    #[test]
+    fn heading_fonts_fall_back_to_body_when_not_set() {
+        let theme = test_theme(); // layout 为 None，旧调用方
+        let m = metrics_of(&theme);
+        assert_eq!(m.font_heading_latin, m.font_latin);
+        assert_eq!(m.font_heading_east_asia, m.font_east_asia);
     }
 
     #[test]

@@ -864,6 +864,8 @@ pluginEpubDesc: '将当前文档导出为 EPUB 3 电子书（实验性）',
     themeColorsHint: '标题、表头与代码高亮使用当前主题配色；关闭后统一为黑白灰。',
     followPreview: '字号与行距跟随预览',
     followPreviewHint: '关闭后使用规范版式：A4 / 11 磅 / 1.5 倍行距。',
+    followPreviewFont: '字体跟随预览',
+    followPreviewFontHint: '关闭后使用 Word 默认字体：正文 Calibri / 等线，标题 Calibri Light / 等线 Light；缺字自动回退苹方 / 微软雅黑。',
   },
   docx: {
     tocHint: '右键目录 → 更新域（或按 F9）',
