@@ -15,6 +15,8 @@ import {
   Italic,
   Strikethrough,
   Superscript,
+  Subscript,
+  Highlighter,
   TextQuote,
   Code,
   Code2,
@@ -89,11 +91,11 @@ interface ToolbarProps {
 }
 
 /** 格式工具栏自动收折阈值：窗口内宽低于此值自动收起。
- *  实测（playwright @1400px）全量展开需 ≈1310px（brand 109 + 文件按钮区 + 格式条 533
- *  + 右组 + 窗口控件 144 + 间距/内边距），低于它必然拥挤 —— 阈值取 1320，「放得下才展开」。
- *  1320 以下若用户手动展开，则进入压缩带：格式条参与 flex 压缩（见 .fmt-strip，
+ *  实测（playwright @1400px）全量展开需 ≈1370px（brand 109 + 文件按钮区 + 格式条 589
+ *  + 右组 + 窗口控件 144 + 间距/内边距），低于它必然拥挤 —— 阈值取 1380，「放得下才展开」。
+ *  1380 以下若用户手动展开，则进入压缩带：格式条参与 flex 压缩（见 .fmt-strip，
  *  刻意不加 flex-shrink:0），品牌名同时缩为 YiziMD（见 .brand-name）。 */
-const AUTO_COLLAPSE_THRESHOLD = 1320
+const AUTO_COLLAPSE_THRESHOLD = 1380
 
 export default function Toolbar({
   onNew, onNewFromTemplate, onOpen, onSave, onSaveAs, onSaveToCloud, onToggleSidebar, onToggleDark, onUndo, onRedo,
@@ -478,7 +480,9 @@ export default function Toolbar({
             <ToolbarButton icon={<Bold size={16} />} tooltip={t('toolbar.bold')} onClick={() => onInsertMarkdown('**', 'wrap')} />
             <ToolbarButton icon={<Italic size={16} />} tooltip={t('toolbar.italic')} onClick={() => onInsertMarkdown('*', 'wrap')} />
             <ToolbarButton icon={<Strikethrough size={16} />} tooltip={t('toolbar.strikethrough')} onClick={() => onInsertMarkdown('~~', 'wrap')} />
-            <ToolbarButton icon={<Superscript size={16} />} tooltip={t('toolbar.superscript')} onClick={() => onInsertMarkdown('<sup></sup>', 'tag')} />
+            <ToolbarButton icon={<Superscript size={16} />} tooltip={t('toolbar.superscript')} onClick={() => onInsertMarkdown('^', 'wrap')} />
+            <ToolbarButton icon={<Subscript size={16} />} tooltip={t('toolbar.subscript')} onClick={() => onInsertMarkdown('~', 'wrap')} />
+            <ToolbarButton icon={<Highlighter size={16} />} tooltip={t('toolbar.highlight')} onClick={() => onInsertMarkdown('==', 'wrap')} />
             <ToolbarButton icon={<TextQuote size={16} />} tooltip={t('toolbar.footnote')} onClick={onInsertFootnote} />
         <div
           className="relative flex min-w-0"

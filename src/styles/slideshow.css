@@ -946,6 +946,30 @@
   color: var(--sidebar-text, inherit);
 }
 
+/* GitHub 风格提示块：图标 + 类型名，与预览保持一致；底色/边框仍交给主题的引用样式 */
+.ys-slide blockquote.md-alert .md-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  /* 标题是块内第一个段落：恢复普通段落原有的段前距，
+     否则会显得比 [!NOTE] 作为普通文字时更贴顶 */
+  margin: 0.7em 0 0.35em;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 0.92em;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: var(--alert-accent);
+}
+.ys-slide blockquote.md-alert .md-alert-title::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 1em;
+  height: 1em;
+  background-color: currentColor;
+  -webkit-mask: var(--alert-icon) no-repeat center / contain;
+  mask: var(--alert-icon) no-repeat center / contain;
+}
 /* 表格 */
 .ys-slide table {
   border-collapse: collapse;

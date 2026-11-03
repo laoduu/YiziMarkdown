@@ -351,6 +351,8 @@ export type BlockType =
   | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
   | 'p' | 'ul' | 'ol' | 'task' | 'quote' | 'table'
   | 'image' | 'formula' | 'code' | 'chart'
+  /** `> [!NOTE]` 等提示块：首块不能走金句页（quote）版式 */
+  | 'alert'
   /** 分栏分隔（`***`）：独占一块、不参与合并 —— 仅用于打断同类型块合并，
    *  使版式推断不会把跨栏的两个列表当成一个（见 splitColumns）。 */
   | 'columns'
@@ -408,6 +410,10 @@ export function scanBlocks(src: string): BlockInfo[] {
     if (t === COLUMN_BREAK) { blocks.push({ type: 'columns', items: 1, depth: 0 }); continue }
     const heading = t.match(/^#{1,6}\s/)
     if (heading) { blocks.push({ type: `h${heading[0].length - 1}` as BlockType, items: 1, depth: 0 }); continue }
+    if (/^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*$/i.test(t)) {
+      pushBlock('alert')
+      continue
+    }
     if (/^>\s?/.test(t)) { pushBlock('quote'); continue }
     if (/^\|/.test(t)) { pushBlock('table'); continue }
     if (/^!\[/.test(t)) { pushBlock('image'); continue }

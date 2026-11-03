@@ -42,6 +42,7 @@ import { useWindowStateStore } from './stores/windowStateStore'
 import { buildDocxPalette } from './lib/docxPalette'
 import { collectCodeHighlights } from './lib/docxCodeHighlight'
 import { prepareMarkdownForDocx } from './lib/docxPrepare'
+import { buildDocxLayout } from './lib/docxLayout'
 import { renderMermaidSvgForExport } from './renderers/mermaid'
 import { readThemePalette, type ThemePalette } from './lib/themePalette'
 import { buildExportHtml as buildExportDocumentHtml } from './lib/exportHtml'
@@ -1239,8 +1240,11 @@ function App() {
           surface: surfaceRaw,
           border: borderRaw,
         })
+        // Word 版式的单一事实源：标题比例、段距、引用/代码/表格间距、目录层级
+        // 都在这里定死，Rust 只负责序列化，不再自己猜一套值。
+        const docxLayout = buildDocxLayout(previewFontFamily, mono)
         // DOCX 只能读 Markdown：先把预览里已经「不是 Markdown」的内容落回可解析形式
-        //   · [toc] → 层级项目符号列表
+        //   · [toc] → DOCX_TOC_MARKER（Rust 侧输出真正的 TOC 域）
         //   · ```mermaid → SVG data URL（白底 palette，Rust 转 PNG/SVG 嵌入）
         const docxMermaidPalette: ThemePalette = {
           bg: '#ffffff',
@@ -1256,6 +1260,7 @@ function App() {
         const docxMd = await prepareMarkdownForDocx(
           tab.content,
           (code) => renderMermaidSvgForExport(code, docxMermaidPalette, false),
+          docxLayout.toc.maxLevel,
         )
         // 用 invokeTauriOrThrow：导出失败必须抛错显示，不能吞错假装成功
         await invokeTauriOrThrow('export_docx', {
@@ -1279,8 +1284,10 @@ function App() {
               isDark,
               baseColor: palette.text,
             }),
-            tocTitle: t('reader.toc'),
-            tocHint: t('docx.tocHint'),
+            // 目录标题同理跟随界面语言：Word 里 TOC 域上方那行字由 Rust 侧写出，
+            // 它看不到前端 i18n，只能由这里把词条传过去（`reader.toc`，与预览那块同一个键）
+            tocTitle: translate(getCurrentLang(), 'reader.toc'),
+            layout: docxLayout,
           },
         })
       } else if (format === 'pdf') {

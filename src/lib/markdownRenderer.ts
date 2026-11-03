@@ -5,6 +5,7 @@ import hljs from 'highlight.js'
 import { generateHeadingId } from './headingId.ts'
 import { splitFrontMatter } from './frontMatter.ts'
 import { tocPlugin } from './toc.ts'
+import { alertPlugin } from './alert.ts'
 import { extendCoreMarkdownIt } from '../renderers/index.ts'
 
 // ---- Core ruler：给块级元素注入 data-source-line 属性 ----
@@ -42,27 +43,98 @@ function injectFenceSourceLine(md: MarkdownIt): void {
   }
 }
 
-// ---- 标题 ID：在 core 阶段统一注入，目录 / 渲染器 / 大纲都读同一份 token attrs ----
+// ---- Core ruler：解析完就给每个标题注入唯一 ID ----
+// 以前 id 在渲染阶段（renderer.rules.heading_open）才生成，而 `[toc]` 插件跑在 core 的
+// inline 之后 —— 那时拿不到 id，只能自己再跑一遍 generateHeadingId，靠「同一个函数 +
+// 相同遍历顺序」维持一致。现在改成在 core 里写进 heading_open 的 attrs，目录直接读，
+// 只有一个来源，也就不会出现目录与锚点静默分叉。
 function assignHeadingIds(md: MarkdownIt): void {
-  md.core.ruler.after('inline', 'assign_heading_ids', (state) => {
-    const counter: Record<string, number> = {}
+  md.core.ruler.after('inline', 'heading_ids', (state) => {
+    Object.keys(headingCountRef).forEach(k => delete headingCountRef[k])
     for (let i = 0; i < state.tokens.length; i++) {
       const token = state.tokens[i]
       if (token.type !== 'heading_open') continue
-      const inline = state.tokens[i + 1]
-      if (!inline || inline.type !== 'inline') continue
-      const text = inline.children
-        ? inline.children
-          .filter((t) => t.type === 'text' || t.type === 'code_inline')
-          .map((t) => t.content)
-          .join('')
-        : String(inline.content ?? '')
-      token.attrSet('id', generateHeadingId(text, counter))
+      const inlineToken = state.tokens[i + 1]
+      const text = inlineToken?.children
+        ? inlineToken.children
+            .filter(t => t.type === 'text' || t.type === 'code_inline')
+            .map(t => t.content)
+            .join('')
+        : String(inlineToken?.content ?? '')
+      const id = generateHeadingId(text, headingCountRef)
+      if (id) token.attrSet('id', id)
     }
   })
 }
 
-// ---- 标题计数器已移入 core 规则内部，按每次解析独立维护 ----
+// ---- 行内扩展：^上标^ / ~下标~ / ==高亮== ----
+// markdown-it 原生只有 ~~删除线~~；这里补三条行内规则，输出与 DOCX 侧保持同一套语义：
+// - `^x^` → <sup>，`~x~` → <sub>（`~~x~~` 仍交给 markdown-it 的 strikethrough）
+// - `==x==` → <mark>
+// 内容按纯文本处理（不递归解析强调），与导出的 `w:vertAlign` / `w:highlight` 一致。
+/** 与 Rust 侧 `valid_inline_marker_content` 同口径：中文上下标允许，`64K~512K` 这类区间排除。 */
+function validMarkerContent(content: string, marker: string): boolean {
+  if (!content.trim() || content !== content.trim()) return false
+  if (marker === '==') return true
+  if (marker === '^') return content.length <= 32
+  if (/\s/.test(content) || content.length > 8) return false
+  // `512K` 这类「数字+单位」是区间，不是下标
+  return !/^\d+[A-Za-z]+$/.test(content)
+}
+
+function addInlineMarkerRule(
+  md: MarkdownIt,
+  marker: string,
+  name: string,
+  tag: string,
+  beforeRule: string,
+): void {
+  md.inline.ruler.before(beforeRule, name, (state: any, silent: boolean) => {
+    const start = state.pos as number
+    const len = marker.length
+    if (state.src.slice(start, start + len) !== marker) return false
+    // `~~x~~` 是删除线，不是两个下标；交给 strikethrough 规则
+    if (marker === '~' && state.src.charCodeAt(start + 1) === 0x7e) return false
+    // 被反斜杠转义的标记不解析
+    if (start > 0 && state.src.charCodeAt(start - 1) === 0x5c) return false
+    // `1~5`、`0~20` 这类数字区间不当下标
+    if (marker === '~' && start > 0 && /[0-9]/.test(state.src[start - 1])) return false
+
+    let pos = start + len
+    while (pos < state.posMax) {
+      const ch = state.src.charCodeAt(pos)
+      if (ch === 0x0a) return false
+      if (ch === 0x5c) {
+        pos += 2
+        continue
+      }
+      if (state.src.startsWith(marker, pos)) break
+      pos++
+    }
+    if (pos >= state.posMax || pos === start + len) return false
+    const content = state.src.slice(start + len, pos)
+    if (!validMarkerContent(content, marker)) return false
+
+    if (!silent) {
+      state.push(`${name}_open`, tag, 1)
+      const text = state.push('text', '', 0)
+      text.content = content
+      state.push(`${name}_close`, tag, -1)
+    }
+    state.pos = pos + len
+    return true
+  })
+}
+
+/** 安装 `^上标^` / `~下标~` / `==高亮==` 三条行内规则。 */
+function inlineExtensions(md: MarkdownIt): void {
+  addInlineMarkerRule(md, '^', 'yizi_sup', 'sup', 'emphasis')
+  addInlineMarkerRule(md, '~', 'yizi_sub', 'sub', 'strikethrough')
+  addInlineMarkerRule(md, '==', 'yizi_mark', 'mark', 'emphasis')
+}
+
+// ---- 标题计数器引用，供外部重置 ----
+let headingCountRef: Record<string, number> = {}
 
 /**
  * 创建 markdown-it 实例
@@ -110,14 +182,20 @@ export function createMarkdownIt(
     return defaultValidateLink(url)
   }
 
+  // 行内扩展要在内置规则表上注册（strikethrough 已存在，sub 规则依赖它让开 `~~`）
+  inlineExtensions(md)
   md.use(taskLists, { enabled: true, label: true, labelAfter: false })
   // 脚注（学术引用）：[^n] 上标 → 点击跳文末定义，定义带 ↩ 返回链（markdown-it-footnote 原生行为）
   md.use(footnote)
   injectSourceLineMap(md)
   injectFenceSourceLine(md)
-  assignHeadingIds(md)
   // [toc] / [[toc]]：必须在 inline 规则之后、渲染之前替换成目录 HTML
   tocPlugin(md)
+  // 标题 id 要在 tocPlugin 的规则之前执行：`Ruler.after('inline')` 插在 inline 之后的第一位，
+  // 所以这里在 tocPlugin 之后注册，实际执行顺序反而是 heading_ids → toc_placeholder
+  assignHeadingIds(md)
+  // > [!NOTE] 这类提示块：摘掉标记行并给 blockquote 挂类型 class
+  alertPlugin(md)
 
   // 核心渲染器（数学公式 / Mermaid）默认安装；Mermaid 的 SVG 模块仍是懒加载
   extendCoreMarkdownIt(md)
@@ -134,6 +212,7 @@ export function createMarkdownIt(
 
 // 默认实例（无插件）
 let defaultMd: MarkdownIt | null = null
+let lastPluginKey: string | null = null
 
 /**
  * 获取 markdown-it 实例
@@ -142,12 +221,11 @@ let defaultMd: MarkdownIt | null = null
 export function getMarkdownIt(
   pluginExtenders?: Array<(md: MarkdownIt) => void>
 ): MarkdownIt {
-  // 有插件时每次都重建：插件 ID/配置变化不能靠“扩展数量”判断（旧实现同数量切换插件
-  // 会复用旧实例，插件配置也永远不更新）。无插件（绝大多数文档）仍走全局缓存。
-  if (pluginExtenders && pluginExtenders.length > 0) return createMarkdownIt(pluginExtenders)
-  if (defaultMd) return defaultMd
+  const key = pluginExtenders ? pluginExtenders.map(() => '1').join('') : ''
+  if (defaultMd && lastPluginKey === key) return defaultMd
 
-  defaultMd = createMarkdownIt()
+  defaultMd = createMarkdownIt(pluginExtenders)
+  lastPluginKey = key
   return defaultMd
 }
 
@@ -160,6 +238,8 @@ export function renderMarkdown(
   content: string,
   pluginExtenders?: Array<(md: MarkdownIt) => void>
 ): string {
+  // 重置标题计数
+  Object.keys(headingCountRef).forEach(k => delete headingCountRef[k])
   // 元信息块不参与预览渲染。解析统一在 lib/frontMatter.ts
   // （此前这里有一份与 slides.ts 规则不一致的内联正则）。
   return getMarkdownIt(pluginExtenders).render(splitFrontMatter(content).body)

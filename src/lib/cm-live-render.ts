@@ -53,11 +53,53 @@ const headingClass = (level: number) =>
 const strongMark = Decoration.mark({ class: 'cm-md-strong' })
 const emMark = Decoration.mark({ class: 'cm-md-em' })
 const strikeMark = Decoration.mark({ class: 'cm-md-strike' })
+// `^上标^` / `~下标~` / `==高亮==`：与 HTML `<sup>/<sub>/<mark>` 复用同一套样式
+const liveSupMark = Decoration.mark({ class: 'cm-md-html-sup' })
+const liveSubMark = Decoration.mark({ class: 'cm-md-html-sub' })
+const liveHighlightMark = Decoration.mark({ class: 'cm-md-html-mark' })
 const codeMark = Decoration.mark({ class: 'cm-md-code' })
 const linkMark = Decoration.mark({ class: 'cm-md-link' })
 
 const lineClass = (cls: string) => Decoration.line({ class: cls })
-const quoteLine = lineClass('cm-md-quote-line')
+
+// 预览里的 GitHub 风格提示块：实时模式把 `> [!NOTE]` 这一行换成图标 + 类型名，
+// 正文行继续沿用引用行样式；光标进入该行时仍显示源码，保持可编辑。
+const ALERT_RE = /^\s*>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*$/i
+const ALERT_LABEL: Record<string, string> = {
+  note: 'Note',
+  tip: 'Tip',
+  important: 'Important',
+  warning: 'Warning',
+  caution: 'Caution',
+}
+function alertTypeOf(text: string): string | null {
+  const m = ALERT_RE.exec(text)
+  return m ? m[1].toLowerCase() : null
+}
+class AlertTitleWidget extends WidgetType {
+  constructor(
+    readonly type: string,
+    readonly view: EditorView,
+    readonly pos: number,
+  ) { super() }
+  eq(other: AlertTitleWidget): boolean {
+    return other.type === this.type && other.pos === this.pos
+  }
+  // 默认 WidgetType 会吞掉鼠标事件；显式把点击映射到标记行行首，
+  // 这样点标题就能直接进入编辑，不需要点到行尾。
+  ignoreEvent(): boolean { return false }
+  toDOM(): HTMLElement {
+    const span = document.createElement('span')
+    span.className = `cm-md-alert-title cm-md-alert-title-${this.type}`
+    span.textContent = ALERT_LABEL[this.type] || this.type
+    span.addEventListener('mousedown', (e) => {
+      e.preventDefault()
+      this.view.dispatch({ selection: { anchor: this.pos } })
+      this.view.focus()
+    })
+    return span
+  }
+}
 const bulletItemLine = lineClass('cm-md-bullet-item')
 const orderedItemLine = lineClass('cm-md-ordered-item')
 const taskItemLine = lineClass('cm-md-task-item')
@@ -180,6 +222,74 @@ function htmlMark(cls: string, style: string): Decoration {
 }
 
 const hideDeco = Decoration.mark({ class: 'cm-md-hiding-span' })
+
+/** 与 markdown-it / DOCX 同口径：中文上下标允许，`1~5`、`64K~512K` 这类区间排除。 */
+function validLiveMarker(content: string, marker: string): boolean {
+  if (!content.trim() || content !== content.trim()) return false
+  if (marker === '==') return true
+  if (marker === '^') return content.length <= 32
+  if (/\s/.test(content) || content.length > 8) return false
+  return !/^\d+[A-Za-z]+$/.test(content)
+}
+
+/** 把 `^上标^` / `~下标~` / `==高亮==` 的记号隐藏，并给内容套语义类。 */
+function pushInlineMarkerDecorations(
+  text: string,
+  base: number,
+  codeSpans: Array<[number, number]>,
+  htmlTags: Array<[number, number]>,
+  ranges: Array<{ from: number; to: number; value: Decoration }>,
+): void {
+  const inside = (i: number, spans: Array<[number, number]>) =>
+    spans.some(([a, b]) => i >= a && i < b)
+  let i = 0
+  while (i < text.length) {
+    if (inside(i, codeSpans) || inside(i, htmlTags)) {
+      i++
+      continue
+    }
+    const c = text[i]
+    if (c === '\\') {
+      i += 2
+      continue
+    }
+    // `~~删除线~~` 交给 Lezer 的 Strikethrough
+    if (text.startsWith('~~', i)) {
+      i += 2
+      continue
+    }
+    let marker = ''
+    let deco: Decoration | null = null
+    if (text.startsWith('==', i)) {
+      marker = '=='
+      deco = liveHighlightMark
+    } else if (c === '^') {
+      marker = '^'
+      deco = liveSupMark
+    } else if (c === '~' && !/[0-9]/.test(text[i - 1] ?? '')) {
+      marker = '~'
+      deco = liveSubMark
+    }
+    if (!marker || !deco) {
+      i++
+      continue
+    }
+    const close = text.indexOf(marker, i + marker.length)
+    if (close < 0) {
+      i++
+      continue
+    }
+    const content = text.slice(i + marker.length, close)
+    if (!validLiveMarker(content, marker)) {
+      i++
+      continue
+    }
+    ranges.push(hideDeco.range(base + i, base + i + marker.length))
+    ranges.push(deco.range(base + i + marker.length, base + close))
+    ranges.push(hideDeco.range(base + close, base + close + marker.length))
+    i = close + marker.length
+  }
+}
 
 /** 实体解码后的可见文字（如 &copy; → ©） */
 class EntityWidget extends WidgetType {
@@ -483,9 +593,21 @@ function buildDecorations(view: EditorView): DecorationSet {
         if (name === 'Blockquote') {
           const sL = view.state.doc.lineAt(nFrom).number
           const eL = view.state.doc.lineAt(Math.min(nTo, view.state.doc.length)).number
+          const first = view.state.doc.line(sL)
+          const alertType = alertTypeOf(first.text)
+          const quoteCls = alertType
+            ? `cm-md-quote-line cm-md-alert-line cm-md-alert-${alertType}`
+            : 'cm-md-quote-line'
           for (let ln = sL; ln <= eL; ln++) {
             const lo = view.state.doc.line(ln)
-            if (!seenQuoteLines.has(lo.from)) { seenQuoteLines.add(lo.from); ranges.push(quoteLine.range(lo.from)) }
+            if (!seenQuoteLines.has(lo.from)) {
+              seenQuoteLines.add(lo.from)
+              ranges.push(lineClass(quoteCls).range(lo.from))
+            }
+            // 标记行本身换成「图标 + 类型名」；光标在该行时保留源码，便于编辑。
+            if (alertType && ln === sL && !caretOnLine(ln)) {
+              ranges.push(Decoration.replace({ widget: new AlertTitleWidget(alertType, view, lo.from) }).range(lo.from, lo.to))
+            }
           }
           return
         }
@@ -633,10 +755,12 @@ function buildDecorations(view: EditorView): DecorationSet {
 
       // 行内 HTML：按白名单解析标签，隐藏记号、给内容套语义类（style 只保留文字视觉属性）
       const opens: Array<{ start: number; end: number; name: string; cls: string; style: string }> = []
+      const htmlTagRanges: Array<[number, number]> = []
       HTML_TAG_TOKEN_RE.lastIndex = 0
       let hm: RegExpExecArray | null
       while ((hm = HTML_TAG_TOKEN_RE.exec(text))) {
         if (inSpans(codeSpans, hm.index)) continue
+        htmlTagRanges.push([hm.index, hm.index + hm[0].length])
         const parsed = parseHtmlTag(hm[0])
         if (!parsed) continue
         const tag = parsed.name
@@ -692,6 +816,9 @@ function buildDecorations(view: EditorView): DecorationSet {
       }
       // 本行内没等到闭合标签的开记号：预览里同样不可见，这里直接隐藏
       for (const open of opens) ranges.push(hideDeco.range(open.start, open.end))
+
+      // `^上标^` / `~下标~` / `==高亮==`（HTML 标签范围与行内代码已排除）
+      pushInlineMarkerDecorations(text, line.from, codeSpans, htmlTagRanges, ranges)
     }
   }
   // 按 from 排序，同 from 时 line decoration (side < 0) 排在 mark decoration (side >= 0) 之前
@@ -788,6 +915,18 @@ export const liveEditTheme = EditorView.theme({
   '.cm-md-quote-line': {
     borderLeft: '3px solid var(--code-quote-bar)', paddingLeft: '12px',
     color: 'var(--code-quote-fg)', fontStyle: 'italic', backgroundColor: 'var(--code-quote-bg)',
+  },
+  // 提示块标题：与预览一致，图标由 CSS mask 绘制，类型名由 widget 写入
+  '.cm-md-alert-title': {
+    display: 'inline-flex', alignItems: 'center', gap: '0.4em',
+    fontStyle: 'normal', fontWeight: '600', fontSize: '0.92em', lineHeight: '1.4',
+    color: 'var(--alert-accent)',
+  },
+  '.cm-md-alert-title::before': {
+    content: '""', flex: '0 0 auto', width: '1em', height: '1em',
+    backgroundColor: 'currentColor',
+    WebkitMask: 'var(--alert-icon) no-repeat center / contain',
+    mask: 'var(--alert-icon) no-repeat center / contain',
   },
   '.cm-md-hr-line': {
     // 用背景画线而不是 border：线不参与盒尺寸 ⇒ 光标进出该行时行高不变（45px → 44px
