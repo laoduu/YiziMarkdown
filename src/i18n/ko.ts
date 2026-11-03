@@ -833,6 +833,13 @@ pluginEpubDesc: '현재 문서를 EPUB 3 전자책으로 내보내기',
     warnRemoteImages: '{n} remote image(s) were not embedded (only data URL images are packaged).',
     warnNoHeadingSplit: 'No suitable heading was found; exported as a single chapter.'
   },
+  docxExport: {
+    title: 'Word 문서 내보내기',
+    themeColors: '테마 색상 내보내기',
+    themeColorsHint: '제목, 표 머리글, 코드 강조에 현재 테마 색상을 사용합니다. 끄면 검정·회색으로 표시됩니다.',
+    followPreview: '글꼴 크기와 줄 간격을 미리보기에 맞추기',
+    followPreviewHint: '끄면 표준 레이아웃(A4 / 11pt / 1.5 줄 간격)을 사용합니다.',
+  },
   docx: {
     tocHint: '목차를 마우스 오른쪽 버튼으로 클릭 → 필드 업데이트(F9)',
   }

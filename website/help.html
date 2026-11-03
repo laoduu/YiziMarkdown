@@ -351,9 +351,13 @@
                             <tr><td>行内代码</td><td><code>`代码`</code></td></tr>
                             <tr><td>代码块</td><td>围栏 <code>```语言</code> 包裹</td></tr>
                             <tr><td>分割线</td><td><code>---</code>（单独成行）</td></tr>
+                            <tr><td>上标 / 下标</td><td><code>^上标^</code> / <code>~下标~</code></td></tr>
+                            <tr><td>高亮</td><td><code>==高亮==</code></td></tr>
                         </tbody>
                     </table>
                 </div>
+                <p>上下标内容不能含空格、标点与括号，因此 <code>64K~512K</code>、<code>0~20</code> 这类数字区间不会被当作下标；<code>^</code> 也不会把脚注引用卷进上标。高亮内容支持中文、空格与行内强调（<code>==**加粗**==</code>）。</p>
+                <p>引用块首行写 <code>[!NOTE]</code> / <code>[!TIP]</code> / <code>[!IMPORTANT]</code> / <code>[!WARNING]</code> / <code>[!CAUTION]</code> 会渲染为 GitHub 风格提示块。标题固定为英文（Note / Tip / …），与 GitHub 原版一致。</p>
             </div>
 
             <div class="help-sub" id="writing-table">

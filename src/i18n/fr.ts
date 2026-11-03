@@ -833,6 +833,13 @@ pluginEpubDesc: 'Exporter le document actuel en livre numérique EPUB 3',
     warnRemoteImages: '{n} remote image(s) were not embedded (only data URL images are packaged).',
     warnNoHeadingSplit: 'No suitable heading was found; exported as a single chapter.'
   },
+  docxExport: {
+    title: 'Exporter le document Word',
+    themeColors: 'Exporter les couleurs du thème',
+    themeColorsHint: 'Les titres, en-têtes de tableau et la coloration du code utilisent le thème actuel ; désactivez pour un rendu noir et blanc.',
+    followPreview: 'Suivre la taille et l’interligne de l’aperçu',
+    followPreviewHint: 'Désactivé, utilise la mise en page standard : A4 / 11 pt / interligne 1,5.',
+  },
   docx: {
     tocHint: 'Clic droit sur la table des matières → Mettre à jour le champ (F9)',
   }

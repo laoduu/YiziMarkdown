@@ -10,7 +10,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { replaceMermaidFences, prepareMarkdownForDocx, svgToDataUrl, DOCX_TOC_MARKER, inlineMarkersToHtml } from '../src/lib/docxPrepare.ts'
+import { replaceMermaidFences, prepareMarkdownForDocx, svgToDataUrl, DOCX_TOC_MARKER } from '../src/lib/docxPrepare.ts'
 
 const MERMAID = '```mermaid\ngraph LR\nA-->B\n```\n'
 
@@ -61,14 +61,18 @@ test('完整预处理：目录换成 TOC 域标记，Mermaid 同时生效', asyn
   assert.match(out, /!\[Mermaid diagram\]/, out)
 })
 
-test('DOCX 预处理：^上标^ / ~下标~ / ==高亮== 落成 HTML，代码与公式不改写', () => {
-  const out = inlineMarkersToHtml('x^2^ H~2~O ==重点== `a==b==` $x^2^$\n')
-  assert.ok(out.includes('<sup>2</sup>'), out)
-  assert.ok(out.includes('<sub>2</sub>'), out)
-  assert.ok(out.includes('<mark>重点</mark>'), out)
-  assert.ok(out.includes('a==b=='), out)
-  assert.ok(out.includes('$x^2^$'), out)
-  assert.ok(!inlineMarkersToHtml('1~5 与 64K~512K\n').includes('<sub>'), '区间被误转')
+test('DOCX 预处理：行内上下标/高亮原样交给 Rust（前端不再各写一套规则）', async () => {
+  const src = 'x^2^ H~2~O ==重点== 区间 64K~512K、0~20 脚注[^1] 与 [^2]\n'
+  const out = await prepareMarkdownForDocx(src)
+  // 前端只做 toc / mermaid；标记本身原样保留，由 Rust 统一转换，避免规则漂移
+  assert.ok(out.includes('x^2^'), out)
+  assert.ok(out.includes('H~2~O'), out)
+  assert.ok(out.includes('==重点=='), out)
+  assert.ok(out.includes('64K~512K、0~20'), out)
+  assert.ok(out.includes('[^1]'), out)
+  assert.ok(!out.includes('<sup>'), out)
+  assert.ok(!out.includes('<sub>'), out)
+  assert.ok(!out.includes('<mark>'), out)
 })
 
 test('显式限制 3 级：只有 H4 时不生成 TOC 域', async () => {

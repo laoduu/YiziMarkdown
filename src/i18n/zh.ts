@@ -852,6 +852,13 @@ pluginEpubDesc: '将当前文档导出为 EPUB 3 电子书（实验性）',
     warnRemoteImages: '有 {n} 张远程图片未能嵌入（EPUB 只打包 data URL 图片）。',
     warnNoHeadingSplit: '没有找到可拆分的标题，已按单章导出。'
   },
+  docxExport: {
+    title: '导出 Word 文档',
+    themeColors: '导出主题色',
+    themeColorsHint: '标题、表头与代码高亮使用当前主题配色；关闭后统一为黑白灰。',
+    followPreview: '字号与行距跟随预览',
+    followPreviewHint: '关闭后使用规范版式：A4 / 11 磅 / 1.5 倍行距。',
+  },
   docx: {
     tocHint: '右键目录 → 更新域（或按 F9）',
   }
