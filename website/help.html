@@ -330,7 +330,7 @@
         </section>
 
         <!-- ========== 4. 写作进阶 ========== -->
-        <section class="help-section" id="writing" data-kw="markdown 语法 表格 代码块 高亮 图片 链接 公式 katex mermaid 图表 HTML 渲染 脚注 引用 文献">
+        <section class="help-section" id="writing" data-kw="markdown 语法 表格 代码块 高亮 图片 链接 公式 katex mermaid 图表 HTML 渲染 脚注 引用 文献 提示块 alert callout admonition 注意 提示 重要 警告 谨慎">
             <h2><a class="anchor" href="#writing">#</a>写作进阶</h2>
             <p class="help-lead">Markdown 语法速查，以及表格、代码、公式、图表、图片等增强能力。</p>
 
@@ -341,9 +341,11 @@
                         <thead><tr><th>效果</th><th>语法</th></tr></thead>
                         <tbody>
                             <tr><td>标题</td><td><code># 一级</code> ~ <code>###### 六级</code></td></tr>
-                            <tr><td>粗体 / 斜体</td><td><code>**粗体**</code> / <code>*斜体*</code></td></tr>
+                            <tr><td>粗体</td><td><code>**粗体**</code></td></tr>
+                            <tr><td>斜体</td><td><code>*斜体*</code></td></tr>
                             <tr><td>删除线</td><td><code>~~删除线~~</code></td></tr>
-                            <tr><td>无序 / 有序列表</td><td><code>- 项目</code> / <code>1. 项目</code></td></tr>
+                            <tr><td>无序列表</td><td><code>- 项目</code></td></tr>
+                            <tr><td>有序列表</td><td><code>1. 项目</code></td></tr>
                             <tr><td>任务列表</td><td><code>- [x] 已完成</code> / <code>- [ ] 待办</code></td></tr>
                             <tr><td>引用</td><td><code>&gt; 引用内容</code></td></tr>
                             <tr><td>链接</td><td><code>[文字](https://example.com)</code></td></tr>
@@ -351,13 +353,32 @@
                             <tr><td>行内代码</td><td><code>`代码`</code></td></tr>
                             <tr><td>代码块</td><td>围栏 <code>```语言</code> 包裹</td></tr>
                             <tr><td>分割线</td><td><code>---</code>（单独成行）</td></tr>
-                            <tr><td>上标 / 下标</td><td><code>^上标^</code> / <code>~下标~</code></td></tr>
+                            <tr><td>上标</td><td><code>^上标^</code></td></tr>
+                            <tr><td>下标</td><td><code>~下标~</code></td></tr>
                             <tr><td>高亮</td><td><code>==高亮==</code></td></tr>
                         </tbody>
                     </table>
                 </div>
                 <p>上下标内容不能含空格、标点与括号，因此 <code>64K~512K</code>、<code>0~20</code> 这类数字区间不会被当作下标；<code>^</code> 也不会把脚注引用卷进上标。高亮内容支持中文、空格与行内强调（<code>==**加粗**==</code>）。</p>
-                <p>引用块首行写 <code>[!NOTE]</code> / <code>[!TIP]</code> / <code>[!IMPORTANT]</code> / <code>[!WARNING]</code> / <code>[!CAUTION]</code> 会渲染为 GitHub 风格提示块。标题固定为英文（Note / Tip / …），与 GitHub 原版一致。</p>
+            </div>
+
+            <div class="help-sub" id="writing-alert" data-kw="提示块 提示框 标注块 alert callout admonition note tip important warning caution 注意 提示 重要 警告 谨慎">
+                <h3>提示块</h3>
+                <p>提示块（GitHub 风格 alert，通用组件领域也叫 callout / admonition）必须在引用块首行写类型标记。类型决定图标与配色，支持 5 种：</p>
+                <div class="help-table-wrap">
+                    <table>
+                        <thead><tr><th>标记</th><th>默认标题</th><th>语义</th><th>强调色</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>[!NOTE]</code></td><td>Note</td><td>补充说明、背景信息</td><td>蓝</td></tr>
+                            <tr><td><code>[!TIP]</code></td><td>Tip</td><td>技巧、建议</td><td>绿</td></tr>
+                            <tr><td><code>[!IMPORTANT]</code></td><td>Important</td><td>关键信息</td><td>紫</td></tr>
+                            <tr><td><code>[!WARNING]</code></td><td>Warning</td><td>风险提醒</td><td>琥珀</td></tr>
+                            <tr><td><code>[!CAUTION]</code></td><td>Caution</td><td>严重后果、危险操作</td><td>红</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p>同一行 <code>]</code> 后面紧跟的文字会成为自定义标题（中间可有空格，也可直接相连，如 <code>&gt; [!TIP] 小技巧</code> / <code>&gt; [!IMPORTANT]重要提醒</code>）；不写时标题固定为英文（Note / Tip / …），与 GitHub 原版一致。预览、实时、演示与 DOCX 导出都会显示类型图标和标题（DOCX 内嵌矢量图标，旧版 Word / WPS 走 PNG 回退）。</p>
+                <p>格式工具栏的提示块按钮（引用按钮右侧）hover 后列出 5 种类型，点击即可插入「类型标记 + 默认标题 + 空正文」模板，默认标题跟随界面语言。</p>
             </div>
 
             <div class="help-sub" id="writing-table">
@@ -1153,7 +1174,7 @@
 
 <script src="assets/js/site-chrome.js?v=3"></script>
 <script src="assets/js/icons.js?v=2"></script>
-<script src="assets/js/help.js?v=2"></script>
+<script src="assets/js/help.js?v=3"></script>
 
 </body>
 </html>

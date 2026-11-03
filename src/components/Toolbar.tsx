@@ -25,6 +25,12 @@ import {
   List,
   ListOrdered,
   Quote,
+  Info,
+  Lightbulb,
+  MessageSquare,
+  MessageSquareWarning,
+  TriangleAlert,
+  OctagonAlert,
   Heading1,
   Heading2,
   Heading3,
@@ -60,6 +66,7 @@ import { orderThemes } from '../lib/themeOrder'
 import { CUSTOM_THEME, readUserCss } from '../lib/themeLoader'
 import { loadThemeCatalog } from '../lib/themeCatalog'
 import { COLUMN_REGION_SNIPPET } from '../lib/slides'
+import { buildAlertMarkdown } from '../lib/alertTemplate'
 import { useI18n } from '../i18n'
 import LinkModal from './LinkModal'
 import ImageModal from './ImageModal'
@@ -121,6 +128,9 @@ export default function Toolbar({
   const [showCodeMenu, setShowCodeMenu] = useState(false)
   const [codeMenuPos, setCodeMenuPos] = useState({top: 0, left: 0})
   const codeHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [showAlertMenu, setShowAlertMenu] = useState(false)
+  const [alertMenuPos, setAlertMenuPos] = useState({top: 0, left: 0})
+  const alertHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const tableHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mathHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showThemeMenu, setShowThemeMenu] = useState(false)
@@ -507,6 +517,7 @@ export default function Toolbar({
             icon={<Code size={16} />} 
             tooltip={t('toolbar.inlineCode')} 
             onClick={() => {}}
+            accent
           />
           {showCodeMenu && (
             <div 
@@ -548,6 +559,73 @@ export default function Toolbar({
         <ToolbarButton icon={<ListOrdered size={16} />} tooltip={t('toolbar.orderedList')} onClick={() => onInsertMarkdown('1. ', 'ordered')} />
         <ToolbarButton icon={<CheckSquare size={16} />} tooltip={t('toolbar.taskList')} onClick={() => onInsertMarkdown('- [ ] ', 'prefix')} />
         <ToolbarButton icon={<Quote size={16} />} tooltip={t('toolbar.quote')} onClick={() => onInsertMarkdown('> ', 'prefix')} />
+        {/* 提示块：hover 菜单列出 5 种 GitHub alert，点击插入带默认标题的模板 */}
+        <div
+          className="relative flex min-w-0"
+          onMouseEnter={(e) => {
+            if (alertHideTimerRef.current) {
+              clearTimeout(alertHideTimerRef.current)
+              alertHideTimerRef.current = null
+            }
+            // 定位走 currentTarget，理由同代码块/公式菜单（ref 重挂载后可能失联）
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+            setAlertMenuPos({ top: rect.bottom + 4, left: rect.left })
+            setShowAlertMenu(true)
+          }}
+          onMouseLeave={() => {
+            alertHideTimerRef.current = setTimeout(() => {
+              setShowAlertMenu(false)
+            }, 100)
+          }}
+        >
+          <ToolbarButton
+            icon={<MessageSquareWarning size={16} />}
+            tooltip={t('toolbar.alert')}
+            onClick={() => {}}
+            accent
+          />
+          {showAlertMenu && (
+            <div
+              className="fixed py-1 w-52 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg shadow-lg z-50"
+              style={{ top: alertMenuPos.top, left: alertMenuPos.left }}
+              onMouseEnter={() => {
+                if (alertHideTimerRef.current) {
+                  clearTimeout(alertHideTimerRef.current)
+                  alertHideTimerRef.current = null
+                }
+              }}
+              onMouseLeave={() => {
+                setShowAlertMenu(false)
+              }}
+            >
+              <ExportMenuItem
+                icon={<Info size={14} />}
+                label={t('toolbar.alertNote')}
+                onClick={() => { onInsertMarkdown(buildAlertMarkdown('NOTE', t('toolbar.alertNote'))); setShowAlertMenu(false) }}
+              />
+              <ExportMenuItem
+                icon={<Lightbulb size={14} />}
+                label={t('toolbar.alertTip')}
+                onClick={() => { onInsertMarkdown(buildAlertMarkdown('TIP', t('toolbar.alertTip'))); setShowAlertMenu(false) }}
+              />
+              <ExportMenuItem
+                icon={<MessageSquare size={14} />}
+                label={t('toolbar.alertImportant')}
+                onClick={() => { onInsertMarkdown(buildAlertMarkdown('IMPORTANT', t('toolbar.alertImportant'))); setShowAlertMenu(false) }}
+              />
+              <ExportMenuItem
+                icon={<TriangleAlert size={14} />}
+                label={t('toolbar.alertWarning')}
+                onClick={() => { onInsertMarkdown(buildAlertMarkdown('WARNING', t('toolbar.alertWarning'))); setShowAlertMenu(false) }}
+              />
+              <ExportMenuItem
+                icon={<OctagonAlert size={14} />}
+                label={t('toolbar.alertCaution')}
+                onClick={() => { onInsertMarkdown(buildAlertMarkdown('CAUTION', t('toolbar.alertCaution'))); setShowAlertMenu(false) }}
+              />
+            </div>
+          )}
+        </div>
         <ToolbarDivider />
         <ToolbarButton icon={<Link size={16} />} tooltip={t('toolbar.link')} onClick={() => setShowLinkModal(true)} />
         <ToolbarButton icon={<Image size={16} />} tooltip={t('toolbar.image')} onClick={() => setShowImageModal(true)} />

@@ -10,7 +10,26 @@
     var resultsBox = document.getElementById('helpResults');
 
     /* ---------- 图标：直接取自 lucide-react，与桌面端界面同一套 ---------- */
-    var L = window.LUCIDE || {};
+    // icons.js 是自动生成文件（勿手改）；这里补充语法表 / 提示块表额外需要的 Lucide 图标，
+    // 路径同样来自 lucide-react 0.408.0。
+    function iconSvg(paths) {
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+            'stroke-linecap="round" stroke-linejoin="round">' + paths + '</svg>';
+    }
+    var EXTRA_ICONS = {
+        'check-square': iconSvg('<path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'),
+        'highlighter': iconSvg('<path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>'),
+        'list-ordered': iconSvg('<line x1="10" x2="21" y1="6" y2="6"/><line x1="10" x2="21" y1="12" y2="12"/><line x1="10" x2="21" y1="18" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/>'),
+        'superscript': iconSvg('<path d="m4 19 8-8"/><path d="m12 19-8-8"/><path d="M20 12h-4c0-1.5.442-2 1.5-2.5S20 8.334 20 7.002c0-.472-.17-.93-.484-1.29a2.105 2.105 0 0 0-2.617-.436c-.42.239-.738.614-.899 1.06"/>'),
+        'subscript': iconSvg('<path d="m4 5 8 8"/><path d="m12 5-8 8"/><path d="M20 19h-4c0-1.5.44-2 1.5-2.5S20 15.33 20 14c0-.47-.17-.93-.48-1.29a2.11 2.11 0 0 0-2.62-.44c-.42.24-.74.62-.9 1.07"/>'),
+        'info': iconSvg('<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>'),
+        'lightbulb': iconSvg('<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>'),
+        'message-square': iconSvg('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'),
+        'triangle-alert': iconSvg('<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>'),
+        'octagon-alert': iconSvg('<path d="M12 16h.01"/><path d="M12 8v4"/><path d="M15.312 2a2 2 0 0 1 1.414.586l4.688 4.688A2 2 0 0 1 22 8.688v6.624a2 2 0 0 1-.586 1.414l-4.688 4.688a2 2 0 0 1-1.414.586H8.688a2 2 0 0 1-1.414-.586l-4.688-4.688A2 2 0 0 1 2 15.312V8.688a2 2 0 0 1 .586-1.414l4.688-4.688A2 2 0 0 1 8.688 2z"/>'),
+        'message-square-warning': iconSvg('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M12 7v2"/><path d="M12 13h.01"/>')
+    };
+    var L = Object.assign({}, window.LUCIDE || {}, EXTRA_ICONS);
     var META = window.LUCIDE_META || {};
     var ICONS = {};
     Object.keys(META.chapter || {}).forEach(function (id) {
@@ -29,8 +48,13 @@
     /* 功能表格里补上软件同款按钮图标（按首列文字匹配） */
     var ROW_ICONS = {
         '粗体': 'bold', '斜体': 'italic', '删除线': 'strikethrough', '行内代码': 'code',
-        '标题': 'heading-1', '列表': 'list', '引用': 'quote', '链接': 'link', '图片': 'image',
-        '代码块': 'code-2', '分割线': 'minus', '公式': 'sigma', '图表': 'workflow', '表格': 'table',
+        '标题': 'heading-1', '列表': 'list', '无序列表': 'list', '有序列表': 'list-ordered',
+        '任务列表': 'check-square', '引用': 'quote', '链接': 'link', '图片': 'image',
+        '代码块': 'code-2', '分割线': 'minus', '上标': 'superscript', '下标': 'subscript',
+        '高亮': 'highlighter', '公式': 'sigma', '图表': 'workflow', '表格': 'table',
+        // 提示块类型表：首列文字是 `[!TYPE]`
+        '[!NOTE]': 'info', '[!TIP]': 'lightbulb', '[!IMPORTANT]': 'message-square',
+        '[!WARNING]': 'triangle-alert', '[!CAUTION]': 'octagon-alert',
         // 后 5 项对应 src/components/TabBar.tsx 的视图按钮
         '源码': 'code', '实时模式': 'sparkles', '并排模式': 'columns-2',
         '预览模式': 'eye', '演示模式': 'presentation'

@@ -410,7 +410,7 @@ export function scanBlocks(src: string): BlockInfo[] {
     if (t === COLUMN_BREAK) { blocks.push({ type: 'columns', items: 1, depth: 0 }); continue }
     const heading = t.match(/^#{1,6}\s/)
     if (heading) { blocks.push({ type: `h${heading[0].length - 1}` as BlockType, items: 1, depth: 0 }); continue }
-    if (/^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*$/i.test(t)) {
+    if (/^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*(.*?)$/i.test(t)) {
       pushBlock('alert')
       continue
     }

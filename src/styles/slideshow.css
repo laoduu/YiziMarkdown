@@ -946,7 +946,7 @@
   color: var(--sidebar-text, inherit);
 }
 
-/* GitHub 风格提示块：图标 + 类型名，与预览保持一致；底色/边框仍交给主题的引用样式 */
+/* GitHub 风格提示块：图标 + 标题，与预览保持一致；底色/边框仍交给主题的引用样式 */
 .ys-slide blockquote.md-alert .md-alert-title {
   display: flex;
   align-items: center;

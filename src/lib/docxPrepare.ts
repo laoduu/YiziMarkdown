@@ -1,10 +1,11 @@
 /**
  * DOCX 导出前的 Markdown 预处理。
  *
- * Rust 侧 `export_docx` 直接解析 Markdown，看不到预览 DOM，所以两类「预览里已经不是
+ * Rust 侧 `export_docx` 直接解析 Markdown，看不到预览 DOM，所以几类「预览里已经不是
  * Markdown 代码」的内容必须在这里先落成 Rust 认识的形式：
  *   · `[toc]` → `<!--yizi:toc-->` 标记，Rust 侧在该处输出 Word 的 TOC 域（见 TOC_MARKER）；
- *   · ` ```mermaid ` 围栏 → `data:image/svg+xml;base64,…` 图片（Rust 会转成 PNG/SVG 嵌入）。
+ *   · ` ```mermaid ` 围栏 → `data:image/svg+xml;base64,…` 图片（Rust 会转成 PNG/SVG 嵌入）；
+ *   · 提示块自定义标题 → `<!--yizi:alert-title:base64-->` 标记（见 DOCX_ALERT_TITLE_MARKER）。
  *
  * 这里只做纯文本变换（Mermaid 的实际渲染由调用方注入），便于单元测试。
  */
@@ -84,6 +85,52 @@ export async function replaceMermaidFences(
   return lines.join('\n')
 }
 
+/**
+ * 提示块自定义标题的占位标记：与 Rust `docx_export.rs` 的 `ALERT_TITLE_MARKER` 同字符串。
+ * 标题用 base64 编码，避免标题里的 `-->` 等字符提前截断 HTML 注释。
+ */
+export const DOCX_ALERT_TITLE_MARKER = '<!--yizi:alert-title:'
+
+/**
+ * 提示块自定义标题：`> [!TIP] 小技巧` →
+ * `> [!TIP]` + `> <!--yizi:alert-title:5bCP5oqA5ben-->`。
+ *
+ * Rust 侧的 GFM 解析器（pulldown-cmark）只在 `[!TYPE]` **独占一行**时识别提示块；
+ * 标题跟在后面会让整行退化成普通引用文本，`[!TIP]` 原样漏进 Word。把标题改成标记行
+ * 之后的 HTML 注释，Rust 就能按类型渲染「图标 + 彩色标题」，不出现裸露的标记。
+ * 代码围栏里的内容不处理（否则会改坏示例代码）。
+ */
+// `]` 后与标题之间的空格可有可无（预览/实时模式同样允许 `[!TIP]小技巧`），
+// 末尾的 `(.+?)` 至少一个字符，保证 `[!TIP]` 独占一行时保持原样、不被误改成空标题。
+const ALERT_TITLE_LINE_RE = /^(\s*(?:>\s*)+)\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\][ \t]*(.+?)[ \t]*$/i
+
+export function normalizeAlertTitles(markdown: string): string {
+  const out: string[] = []
+  // 围栏标记与长度：只有同字符、长度不短于开围栏的行才算闭合（避免内容里的 `~~~` 提前结束）
+  let fence: { char: string; len: number } | null = null
+  for (const line of markdown.split('\n')) {
+    const fenceMark = /^\s*(`{3,}|~{3,})/.exec(line)
+    if (fence) {
+      if (fenceMark && fenceMark[1][0] === fence.char && fenceMark[1].length >= fence.len) fence = null
+      out.push(line)
+      continue
+    }
+    if (fenceMark) {
+      fence = { char: fenceMark[1][0], len: fenceMark[1].length }
+      out.push(line)
+      continue
+    }
+
+    const m = ALERT_TITLE_LINE_RE.exec(line)
+    if (!m || !m[3]) { out.push(line); continue }
+    out.push(
+      `${m[1]}[!${m[2]}]`,
+      `${m[1]}${DOCX_ALERT_TITLE_MARKER}${utf8ToBase64(m[3].trim())}-->`,
+    )
+  }
+  return out.join('\n')
+}
+
 /** 导出 DOCX 前的完整预处理：目录 → TOC 域标记；Mermaid → 图片（行内扩展由 Rust 统一转换） */
 export async function prepareMarkdownForDocx(
   markdown: string,
@@ -95,7 +142,8 @@ export async function prepareMarkdownForDocx(
   const md = new MarkdownIt({ html: true })
   const hasHeadings = collectTocItems(md.parse(splitFrontMatter(markdown).body, {}))
     .some((item) => item.level <= tocMaxLevel)
-  let out = replaceTocPlaceholders(markdown, hasHeadings ? DOCX_TOC_MARKER : '')
+  let out = normalizeAlertTitles(markdown)
+  out = replaceTocPlaceholders(out, hasHeadings ? DOCX_TOC_MARKER : '')
   // 行内扩展（`^上标^` / `~下标~` / `==高亮==`）**不在这里转换**：Rust 侧
   // `inline_markers_to_html` 是唯一实现。前端再写一套规则曾导致预览已修好、
   // 导出的 DOCX 仍按旧规则把 `64K~512K、0~20` 与 `[^1]` 误判成下标/上标。

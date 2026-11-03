@@ -92,3 +92,33 @@ test('不传 renderMermaid 时只处理目录，代码块保持原样', async ()
   const out = await prepareMarkdownForDocx(MERMAID)
   assert.equal(out, MERMAID)
 })
+
+test('DOCX 预处理：提示块自定义标题写成 base64 占位注释', async () => {
+  const src = '> [!TIP] 小技巧\n> 正文\n'
+  const out = await prepareMarkdownForDocx(src)
+  assert.equal(
+    out,
+    '> [!TIP]\n> <!--yizi:alert-title:5bCP5oqA5ben-->\n> 正文\n',
+  )
+})
+
+test('DOCX 预处理：类型与标题之间没有空格也能识别', async () => {
+  const src = '> [!IMPORTANT]重要提醒\n> 正文\n'
+  const out = await prepareMarkdownForDocx(src)
+  assert.equal(
+    out,
+    '> [!IMPORTANT]\n> <!--yizi:alert-title:6YeN6KaB5o+Q6YaS-->\n> 正文\n',
+  )
+})
+
+test('DOCX 预处理：无标题的提示块保持原样，嵌套提示块同样写占位注释', async () => {
+  const src = '> [!NOTE]\n> 正文\n\n> > [!WARNING] 小心\n'
+  const out = await prepareMarkdownForDocx(src)
+  assert.ok(out.includes('> [!NOTE]\n> 正文\n'), out)
+  assert.ok(out.includes('> > [!WARNING]\n> > <!--yizi:alert-title:5bCP5b+D-->'), out)
+})
+
+test('DOCX 预处理：代码围栏里的提示块示例不被改写', async () => {
+  const src = '```markdown\n> [!TIP] 小技巧\n```\n'
+  assert.equal(await prepareMarkdownForDocx(src), src)
+})

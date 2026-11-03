@@ -298,7 +298,7 @@ ${body}
 
 <script src="assets/js/site-chrome.js?v=2"></script>
 <script src="assets/js/icons.js?v=2"></script>
-<script src="assets/js/help.js?v=2"></script>
+<script src="assets/js/help.js?v=3"></script>
 
 </body>
 </html>

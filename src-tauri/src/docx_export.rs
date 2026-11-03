@@ -3,7 +3,10 @@
 //! 用 pulldown-cmark 解析 Markdown，手工生成 OOXML 包（zip）：
 //! 标题/列表/表格/代码块/引用/图片全部使用 Word 原生语义，颜色由前端传入的主题变量决定。
 
-use pulldown_cmark::{Alignment, CodeBlockKind, Event, HeadingLevel, LinkType, Options, Parser, Tag, TagEnd};
+use pulldown_cmark::{
+    Alignment, BlockQuoteKind, CodeBlockKind, Event, HeadingLevel, LinkType, Options, Parser, Tag,
+    TagEnd,
+};
 use base64::Engine as _;
 use std::io::Write;
 use std::path::Path;
@@ -28,6 +31,63 @@ fn is_toc_placeholder(text: &str) -> bool {
 /// 目录书签名：`_Toc000000001`。Word 更新域时也生成同名书签，顺序一致所以不冲突。
 fn toc_bookmark(seq: usize) -> String {
     format!("_Toc{:09}", seq)
+}
+
+/// 提示块自定义标题的占位标记：与前端 `docxPrepare.ts` 的 `DOCX_ALERT_TITLE_MARKER` 同字符串。
+///
+/// `> [!TIP] 小技巧` 里 `]` 后的标题在 GFM 解析层会把整行退化成普通引用文本，所以前端
+/// 把标题转成引用块内的 HTML 注释（base64 载荷，标题里的 `-->` 等字符不会破坏注释），
+/// 这里解析到它就把标题单独渲染成「图标 + 彩色标题」段落。
+const ALERT_TITLE_MARKER: &str = "<!--yizi:alert-title:";
+
+fn alert_title_from_marker(text: &str) -> Option<String> {
+    let t = text.trim();
+    let payload = t.strip_prefix(ALERT_TITLE_MARKER)?.strip_suffix("-->")?;
+    let bytes = base64::engine::general_purpose::STANDARD.decode(payload.trim()).ok()?;
+    String::from_utf8(bytes).ok()
+}
+
+/// 类型 → `(默认标题, 强调色, octicon path)`。
+///
+/// 颜色与图标路径和预览侧 `src/styles/globals.css` 的 `.md-alert-*` 保持一致（浅色系，
+/// Word 始终是白底，暗色主题也会先经过 docxPalette 换成白底等效色）。
+fn alert_meta(kind: BlockQuoteKind) -> (&'static str, &'static str, &'static str) {
+    match kind {
+        BlockQuoteKind::Note => (
+            "Note",
+            "0969DA",
+            "M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM8 3.75a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75Z",
+        ),
+        BlockQuoteKind::Tip => (
+            "Tip",
+            "1F883D",
+            "M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.847a8.456 8.456 0 0 0-.542-.68c-.084-.1-.173-.205-.268-.32C3.201 7.75 2.5 6.766 2.5 5.25 2.5 2.31 4.863 0 8 0s5.5 2.31 5.5 5.25c0 1.516-.701 2.5-1.328 3.259-.095.115-.184.22-.268.32-.106.122-.202.223-.313.331-.503.562-.739.995-.739 1.59a.75.75 0 0 1-1.5 0c0-.641.211-1.215.798-1.876a8.46 8.46 0 0 1 .226-.275c.16-.183.318-.354.482-.552.414-.5.727-1.06.727-1.797 0-2.06-1.637-3.75-4-3.75ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z",
+        ),
+        BlockQuoteKind::Important => (
+            "Important",
+            "8250DF",
+            "M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Z",
+        ),
+        BlockQuoteKind::Warning => (
+            "Warning",
+            "9A6700",
+            "M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z",
+        ),
+        BlockQuoteKind::Caution => (
+            "Caution",
+            "CF222E",
+            "M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z",
+        ),
+    }
+}
+
+/// 提示块图标 SVG（16×16，填充色即类型强调色）；由 `image_run` 转成 PNG + 矢量双份。
+fn alert_icon_svg(kind: BlockQuoteKind) -> String {
+    let (_, color, path) = alert_meta(kind);
+    format!(
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 16 16\" width=\"16\" height=\"16\"><path fill=\"#{}\" d=\"{}\"/></svg>",
+        color, path
+    )
 }
 
 /// A4（11906×16838 twips）扣掉上下各 1 英寸页边距后的正文区高度，估算分页用。
@@ -2359,6 +2419,48 @@ impl DocxBuilder {
         self.body.push_str("</w:p>");
     }
 
+    /// 提示块标题段落：图标 + 类型强调色 + 自定义标题。
+    ///
+    /// 预览里标题是 `display:flex` 的一行：16×16 octicon + 0.92em 粗体类型色文字。
+    /// Word 侧用内嵌 SVG（`image_run` 会同时写矢量与 PNG 回退）复刻图标；字号取 Quote 样式
+    /// 的 0.92 倍，标题段后距按预览的 0.35em 留白。
+    fn alert_title_xml(&mut self, kind: BlockQuoteKind, title: &str) -> String {
+        let (_, color, _) = alert_meta(kind);
+        // Quote 样式字号 → 标题字号（预览 .md-alert-title 为 0.92em）
+        let quote_sz = self.metrics.sz_scale(self.metrics.layout.quote.scale);
+        let title_sz = Metrics::sz_scale_from(quote_sz, 0.92);
+        let title_pt = title_sz as f64 / 2.0;
+
+        let svg = alert_icon_svg(kind);
+        let icon_url = format!(
+            "data:image/svg+xml;base64,{}",
+            base64::engine::general_purpose::STANDARD.encode(svg.as_bytes())
+        );
+        // 图标与字号同高；w:position 下沉约 1.5pt，让方形图标与文字视觉居中
+        let mut icon = self.image_run("", &icon_url, Some(SizeHint::Pt(title_pt)));
+        if icon.starts_with("<w:r>") {
+            icon = icon.replacen("<w:r>", "<w:r><w:rPr><w:position w:val=\"-3\"/></w:rPr>", 1);
+        }
+        // 图标与文字之间留 0.4em（预览 gap）：一个空格 + 1pt 字距
+        let gap = format!(
+            "<w:r><w:rPr><w:spacing w:val=\"20\"/><w:sz w:val=\"{0}\"/><w:szCs w:val=\"{0}\"/></w:rPr><w:t xml:space=\"preserve\"> </w:t></w:r>",
+            title_sz
+        );
+        let title_run = format!(
+            "<w:r><w:rPr><w:b/><w:bCs/><w:color w:val=\"{}\"/><w:sz w:val=\"{}\"/><w:szCs w:val=\"{}\"/></w:rPr><w:t xml:space=\"preserve\">{}</w:t></w:r>",
+            color,
+            title_sz,
+            title_sz,
+            esc(title)
+        );
+        let line = (240.0 * self.metrics.layout.quote.line_height).round().clamp(240.0, 1440.0) as u32;
+        let after = self.metrics.em_twips(0.35);
+        format!(
+            "<w:p><w:pPr><w:pStyle w:val=\"Quote\"/><w:keepNext/><w:spacing w:before=\"0\" w:after=\"{}\" w:line=\"{}\" w:lineRule=\"auto\"/></w:pPr>{}{}{}</w:p>",
+            after, line, icon, gap, title_run
+        )
+    }
+
     /// 引用块 → 单元格表格（`quote_table` 的内层实现）。
     ///
     /// 预览里的 `blockquote` 是**一个**容器：左边框与底色是连续的，内部多段落、嵌套引用、
@@ -2907,22 +3009,65 @@ impl DocxBuilder {
             }
             // 引用块：内容先渲染到临时缓冲，最后整体裹进一个单元格表格（连续左边框 + 连续底色，
             // 嵌套层级由单元格外边距递进）—— 见 `quote_block_xml` 的说明
-            Event::Start(Tag::BlockQuote(_)) => {
+            Event::Start(Tag::BlockQuote(kind)) => {
                 // 引用块是表格容器：表格没有段前距，先补 gap；首段也不该再叠一层。
                 self.gap_before_table_like();
                 self.suppress_before = true;
                 let saved = std::mem::take(&mut self.body);
                 self.quote_depth += 1;
+                // 提示块：类型来自 GFM 的 BlockQuoteKind；自定义标题由前端写成紧随其后的
+                // HTML 注释（见 ALERT_TITLE_MARKER），必须在正文第一个块之前出现。
+                let mut alert: Option<(BlockQuoteKind, String)> =
+                    kind.map(|k| (k, alert_meta(k).0.to_string()));
+                let mut title_slot = kind.is_some();
                 while let Some(ev2) = iter.next() {
                     match ev2 {
                         Event::End(TagEnd::BlockQuote(_)) => break, // 消费 End(BlockQuote)
                         Event::End(_) => {}                        // 容错：忽略多余闭合标签
-                        Event::Start(_) => self.render_block_event(iter, ev2),
-                        _ => {}
+                        // 标题占位注释会被解析器包成 `HtmlBlock`：先消费这一块并取注释内容。
+                        // 提示块若以其它 HTML 块开头，原有行为本来也不渲染，consume 不引入回归。
+                        Event::Start(Tag::HtmlBlock) if title_slot => {
+                            while let Some(inner) = iter.next() {
+                                match inner {
+                                    Event::Html(h) => {
+                                        if let Some(custom) = alert_title_from_marker(&h) {
+                                            if let Some((_, title)) = alert.as_mut() {
+                                                *title = custom;
+                                            }
+                                        }
+                                    }
+                                    Event::End(TagEnd::HtmlBlock) => break,
+                                    _ => {}
+                                }
+                            }
+                            title_slot = false;
+                        }
+                        Event::Start(_) => {
+                            title_slot = false;
+                            self.render_block_event(iter, ev2);
+                        }
+                        Event::Html(h) => {
+                            if title_slot {
+                                if let Some(custom) = alert_title_from_marker(&h) {
+                                    if let Some((_, title)) = alert.as_mut() {
+                                        *title = custom;
+                                    }
+                                }
+                                title_slot = false;
+                            }
+                        }
+                        _ => title_slot = false,
                     }
                 }
                 self.quote_depth -= 1;
                 let inner = std::mem::replace(&mut self.body, saved);
+                let inner = match alert {
+                    // 标题段放在正文前；正文第一段已被 suppress_before 压成 0，间距只由标题段后距提供
+                    Some((kind, title)) => {
+                        format!("{}{}", self.alert_title_xml(kind, &title), inner)
+                    }
+                    None => inner,
+                };
                 self.body.push_str(&self.quote_block_xml(&inner));
                 // 引用块是 1×1 表格，而 Word 里**表格没有段前/段后距**（块间距全靠段落的
                 // `w:spacing`），所以表格后面必须补一个带行高的空段落，否则：
@@ -4803,6 +4948,38 @@ mod tests {
             doc
         );
         assert_eq!(doc.matches("w:pStyle w:val=\"CodeBlock\"").count(), 1, "{}", doc);
+    }
+
+    #[test]
+    fn gfm_alert_renders_type_icon_and_default_title() {
+        // GFM 的 `[!TIP]` 独占一行 → pulldown-cmark 给出 BlockQuoteKind::Tip
+        let doc = xml_of("> [!TIP]\n> 正文内容\n");
+        assert!(doc.contains("w:color w:val=\"1F883D\""), "提示块标题未使用类型色: {}", doc);
+        assert!(doc.contains("<w:t xml:space=\"preserve\">Tip</w:t>"), "缺少默认标题: {}", doc);
+        assert!(doc.contains("<w:drawing>"), "缺少图标图片: {}", doc);
+        assert!(doc.contains("正文内容"), "正文丢失: {}", doc);
+        assert!(xml_is_well_formed(&doc), "提示块 XML 结构损坏: {}", doc);
+        // 标题段在正文段之前
+        let title_at = doc.find(">Tip</w:t>").expect("title");
+        let body_at = doc.find("正文内容").expect("body");
+        assert!(title_at < body_at, "标题应在正文前: {}", doc);
+    }
+
+    #[test]
+    fn gfm_alert_uses_custom_title_marker_and_type_color() {
+        // 前端把 `> [!CAUTION] 危险操作` 转成「标记行 + base64 注释」
+        let doc = xml_of("> [!CAUTION]\n> <!--yizi:alert-title:5bCP5oqA5ben-->\n> 正文\n");
+        assert!(doc.contains("w:color w:val=\"CF222E\""), "类型色不对: {}", doc);
+        assert!(doc.contains("<w:t xml:space=\"preserve\">小技巧</w:t>"), "自定义标题丢失: {}", doc);
+        assert!(!doc.contains("yizi:alert-title"), "占位注释漏进正文: {}", doc);
+        assert!(doc.contains("<w:drawing>"), "缺少图标: {}", doc);
+    }
+
+    #[test]
+    fn plain_blockquote_does_not_gain_alert_title_or_icon() {
+        let doc = xml_of("> 普通引用\n");
+        assert!(!doc.contains("<w:drawing>"), "普通引用不应有图标: {}", doc);
+        assert!(!doc.contains(">Tip</w:t>"), "普通引用不应有提示块标题: {}", doc);
     }
 
     #[test]
