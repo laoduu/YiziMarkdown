@@ -84,7 +84,7 @@ export async function replaceMermaidFences(
   return lines.join('\n')
 }
 
-/** 导出 DOCX 前的完整预处理：目录 → TOC 域标记；行内扩展 → HTML；Mermaid → 图片 */
+/** 导出 DOCX 前的完整预处理：目录 → TOC 域标记；Mermaid → 图片（行内扩展由 Rust 统一转换） */
 export async function prepareMarkdownForDocx(
   markdown: string,
   renderMermaid?: (code: string) => Promise<string | null>,
