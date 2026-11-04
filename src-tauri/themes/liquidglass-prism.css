@@ -25,8 +25,11 @@
   --editor-selection-bg: rgba(37, 99, 235, 0.2);
   --editor-cursor: #2563eb;
   --editor-h1: #1e40af;
-  --editor-h2: #1e40af;
-  --editor-h3: #2563eb;
+  --editor-h2: #1e3da3;
+  --editor-h3: #1d3b97;
+  --editor-h4: #1d3789;
+  --editor-h5: #1c3478;
+  --editor-h6: #1c3068;
 
   /* 顶部工具栏：实色基底 + 流动冰蓝光影（第三版要写 .toolbar 选择器 + z-index，现在只给值） */
   --toolbar-bg: #f2f7ff;
@@ -126,8 +129,11 @@
   --editor-selection-bg: rgba(122, 179, 255, 0.24);
   --editor-cursor: #7ab3ff;
   --editor-h1: #7ab3ff;
-  --editor-h2: #9ac3ff;
-  --editor-h3: #7ab3ff;
+  --editor-h2: #83b7fd;
+  --editor-h3: #8bbbfb;
+  --editor-h4: #95bff9;
+  --editor-h5: #a1c4f6;
+  --editor-h6: #adcaf4;
 
   --toolbar-bg: #0f1728;
   --toolbar-fg: #cfd9ec;
@@ -253,10 +259,13 @@
   border-bottom: 1px solid rgba(37, 99, 235, 0.12);
 }
 .editor-content.theme-liquidglass-prism h3 {
-  font-size: 1.25em;
+  font-size: 1.3em;
   font-weight: 600;
   margin: 1.2em 0 0.3em;
 }
+.editor-content.theme-liquidglass-prism h4 { font-size: 1.2em; font-weight: 600; margin: 1.1em 0 0.35em; letter-spacing: -0.01em; }
+.editor-content.theme-liquidglass-prism h5 { font-size: 1.1em; font-weight: 600; margin: 1em 0 0.3em; letter-spacing: 0; }
+.editor-content.theme-liquidglass-prism h6 { font-size: 1em; font-weight: 600; margin: 0.9em 0 0.3em; letter-spacing: 0.02em; }
 .dark .editor-content.theme-liquidglass-prism h2 {
   border-bottom-color: rgba(122, 179, 255, 0.14);
 }

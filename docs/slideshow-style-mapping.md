@@ -235,7 +235,7 @@ date: 2026-08-13
 
 - 幻灯片**自动继承应用当前主题与明暗**，无需配置。
 - 取色来自主题的 CSS 变量（`--editor-bg/text/accent/surface/border/...`、`--font-sans/mono`），因此换主题，幻灯片同步换肤。
-- **标题颜色**通过主题变量 `--editor-h1 / --editor-h2 / --editor-h3` 继承（各主题已定义这些变量，对应各自 h1/h2/h3 配色；深色模式另有取值）。行内代码用 `--editor-accent`。
+- **标题颜色**通过主题变量 `--editor-h1 … --editor-h6` 继承（各主题已定义六级标题色阶，深色模式另有取值）。行内代码用 `--editor-accent`。
 - 主题 CSS 中的 `:root.theme-*` 会被自动改写为幻灯片作用域以提供变量；幻灯片的字号/对齐/居中由 `slideshow.css` 全权控制（不继承编辑器的元素排版规则，避免左对齐/小字号覆盖演示版式）。
 
 ---
@@ -337,4 +337,4 @@ date: 2026-08-13
 
 ## 扩展版式（进阶）
 
-如需新增或调整某类版式的观感，编辑 `src/styles/slideshow.css` 中 `.ys-layout-<类型>` 规则即可（`cover / section / thanks / agenda / content / content-list / table / roadmap / figure / image / quote / code / chart / formula`）。版式识别逻辑在 `src/lib/slides.ts` 的 `detectLayout`；标题颜色在主题文件的 `--editor-h1/h2/h3` 变量中调整。
+如需新增或调整某类版式的观感，编辑 `src/styles/slideshow.css` 中 `.ys-layout-<类型>` 规则即可（`cover / section / thanks / agenda / content / content-list / table / roadmap / figure / image / quote / code / chart / formula`）。版式识别逻辑在 `src/lib/slides.ts` 的 `detectLayout`；标题颜色在主题文件的 `--editor-h1..h6` 变量中调整。

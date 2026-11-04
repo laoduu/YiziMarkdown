@@ -9,13 +9,14 @@
   --sel-toolbar-accent: #0066cc;
   --editor-border: #e8e8e8;
   --editor-surface: #fafafa;
-  --editor-hover: #f5f5f5;
-  --editor-selection: #0066cc;
-  --editor-selection-bg: rgba(0, 102, 204, 0.35);
+  --editor-hover: #f5f5f5;  --editor-selection-bg: rgba(0, 102, 204, 0.35);
   --editor-cursor: #0066cc;
   --editor-h1: var(--editor-text);
   --editor-h2: var(--editor-text);
   --editor-h3: var(--editor-text);
+  --editor-h4: var(--editor-text);
+  --editor-h5: var(--editor-text);
+  --editor-h6: var(--editor-text);
   --sidebar-bg: #f8f8f8;
   --sidebar-text: #666666;
   --sel-toolbar-bg: #ffffff;
@@ -35,13 +36,14 @@
   --editor-accent: #4a9eff;
   --editor-border: #2e2e2e;
   --editor-surface: #222222;
-  --editor-hover: #2a2a2a;
-  --editor-selection: #4a9eff;
-  --editor-selection-bg: rgba(74, 158, 255, 0.45);
+  --editor-hover: #2a2a2a;  --editor-selection-bg: rgba(74, 158, 255, 0.45);
   --editor-cursor: #4a9eff;
   --editor-h1: #4a9eff;
-  --editor-h2: #4a9eff;
-  --editor-h3: #4a9eff;
+  --editor-h2: #58a3fb;
+  --editor-h3: #66a9f6;
+  --editor-h4: #76aff1;
+  --editor-h5: #89b7eb;
+  --editor-h6: #9dbee5;
   --sidebar-bg: #1e1e1e;
   --sidebar-text: #777777;
   --statusbar-bg: #2a2a2a;
@@ -51,7 +53,10 @@
 /* 极简风 - 标题样式 */
 .editor-content.theme-minimal h1 { font-size: 2em; font-weight: 600; margin: 1.5em 0 0.5em; letter-spacing: -0.02em; }
 .editor-content.theme-minimal h2 { font-size: 1.5em; font-weight: 600; margin: 1.3em 0 0.4em; letter-spacing: -0.01em; }
-.editor-content.theme-minimal h3 { font-size: 1.25em; font-weight: 500; margin: 1.2em 0 0.3em; }
+.editor-content.theme-minimal h3 { font-size: 1.3em; font-weight: 600; margin: 1.2em 0 0.3em; }
+.editor-content.theme-minimal h4 { font-size: 1.2em; font-weight: 600; margin: 1.1em 0 0.35em; letter-spacing: 0; }
+.editor-content.theme-minimal h5 { font-size: 1.1em; font-weight: 600; margin: 1em 0 0.3em; letter-spacing: 0; }
+.editor-content.theme-minimal h6 { font-size: 1em; font-weight: 600; margin: 0.9em 0 0.3em; letter-spacing: 0.02em; }
 .editor-content.theme-minimal p { margin: 0 0 var(--paragraph-spacing); }
 .editor-content.theme-minimal blockquote { border-left: 3px solid var(--editor-accent); padding: 0.5em 1em; margin: 0.5em 0; color: var(--sidebar-text); }
 .editor-content.theme-minimal code { font-family: var(--font-mono); font-size: 0.9em; background: color-mix(in srgb, var(--editor-text) 10%, var(--editor-surface));

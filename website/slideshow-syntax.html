@@ -9,7 +9,7 @@
     <meta name="author" content="YiziPaper">
     <meta name="robots" content="index, follow">
     <meta name="docs-src" content="docs/slideshow-style-mapping.md">
-    <meta name="docs-hash" content="b33776a61848cc0c8184b0225f4ddec3d9815574e40c843da917e452fac57bc7">
+    <meta name="docs-hash" content="43665809085ed7ef3617c7ef9e58effee60eb46970019c8003dd41a38ee71223">
     <link rel="canonical" href="https://md.yizigpt.com/slideshow-syntax.html">
 
     <!-- Open Graph -->
@@ -453,12 +453,12 @@ date: 2026-08-13
 
 </section>
 
-<section class="help-section" id="配色主题继承" data-icon="palette" data-kw="配色：主题继承 幻灯片 自动继承应用当前主题与明暗 ，无需配置。 取色来自主题的 CSS 变量（ --editor-bg/text/accent/surface/border/... 、 --font-sans/mono ），因此换主题，幻灯片同步换肤。 标题颜色 通过主题变量 --editor-h1 / --editor-h2 / --editor-h3 继承（各主题已定义这些变量，对应各自 h1/h2/h3 配色；深色模式另有取值）。行内代码用 --editor-accent 。 主题 CSS 中的 :root">
+<section class="help-section" id="配色主题继承" data-icon="palette" data-kw="配色：主题继承 幻灯片 自动继承应用当前主题与明暗 ，无需配置。 取色来自主题的 CSS 变量（ --editor-bg/text/accent/surface/border/... 、 --font-sans/mono ），因此换主题，幻灯片同步换肤。 标题颜色 通过主题变量 --editor-h1 … --editor-h6 继承（各主题已定义六级标题色阶，深色模式另有取值）。行内代码用 --editor-accent 。 主题 CSS 中的 :root.theme-* 会被自动改写为幻灯片作用域以提供变量；幻">
 <h2><a class="anchor" href="#配色主题继承">#</a>配色：主题继承</h2>
 <ul>
 <li>幻灯片<strong>自动继承应用当前主题与明暗</strong>，无需配置。</li>
 <li>取色来自主题的 CSS 变量（<code>--editor-bg/text/accent/surface/border/...</code>、<code>--font-sans/mono</code>），因此换主题，幻灯片同步换肤。</li>
-<li><strong>标题颜色</strong>通过主题变量 <code>--editor-h1 / --editor-h2 / --editor-h3</code> 继承（各主题已定义这些变量，对应各自 h1/h2/h3 配色；深色模式另有取值）。行内代码用 <code>--editor-accent</code>。</li>
+<li><strong>标题颜色</strong>通过主题变量 <code>--editor-h1 … --editor-h6</code> 继承（各主题已定义六级标题色阶，深色模式另有取值）。行内代码用 <code>--editor-accent</code>。</li>
 <li>主题 CSS 中的 <code>:root.theme-*</code> 会被自动改写为幻灯片作用域以提供变量；幻灯片的字号/对齐/居中由 <code>slideshow.css</code> 全权控制（不继承编辑器的元素排版规则，避免左对齐/小字号覆盖演示版式）。</li>
 </ul>
 
@@ -656,7 +656,7 @@ date: 2026-08-13
 
 <section class="help-section" id="扩展版式进阶" data-icon="file-text" data-kw="扩展版式（进阶） 如需新增或调整某类版式的观感，编辑 src/styles/slideshow.css 中 .ys-layout-&lt;类型&gt; 规则即可（ cover / section / thanks / agenda / content / content-list / table / roadmap / figure / image / quote / code / chart / formula ）。版式识别逻辑在 src/lib/slides.ts 的 detectLayout ；标题颜色在主题文件的 --">
 <h2><a class="anchor" href="#扩展版式进阶">#</a>扩展版式（进阶）</h2>
-<p>如需新增或调整某类版式的观感，编辑 <code>src/styles/slideshow.css</code> 中 <code>.ys-layout-&lt;类型&gt;</code> 规则即可（<code>cover / section / thanks / agenda / content / content-list / table / roadmap / figure / image / quote / code / chart / formula</code>）。版式识别逻辑在 <code>src/lib/slides.ts</code> 的 <code>detectLayout</code>；标题颜色在主题文件的 <code>--editor-h1/h2/h3</code> 变量中调整。</p>
+<p>如需新增或调整某类版式的观感，编辑 <code>src/styles/slideshow.css</code> 中 <code>.ys-layout-&lt;类型&gt;</code> 规则即可（<code>cover / section / thanks / agenda / content / content-list / table / roadmap / figure / image / quote / code / chart / formula</code>）。版式识别逻辑在 <code>src/lib/slides.ts</code> 的 <code>detectLayout</code>；标题颜色在主题文件的 <code>--editor-h1..h6</code> 变量中调整。</p>
 
 </section>
 

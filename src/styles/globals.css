@@ -11,7 +11,6 @@
   --editor-border: #e5e5e5;
   --editor-surface: #f8f8f8;
   --editor-hover: rgba(0, 0, 0, 0.03);
-  --editor-selection: #0066cc;
   --editor-selection-bg: rgba(0, 102, 204, 0.35);
   --editor-cursor: #0066cc;
   --sidebar-bg: #fafafa;
@@ -176,13 +175,17 @@
   --code-search-active: rgba(255, 150, 0, 0.4);
 
   /* ===== 预览排版令牌 =====
-     预览区排版的颜色此前由 Tailwind prose 的 --tw-prose-* 变量驱动（见 tailwind.config.ts），
+     预览区排版的颜色由 Tailwind prose 的 --tw-prose-* 变量驱动（见 tailwind.config.ts），
      但那些变量直接指向 --editor-* 基础层，主题想细分就得写 `.editor-content.theme-x h1 { … }`。
      这里插一层令牌：prose 变量改指向这些令牌 ⇒ 主题只给值就能定制预览外观，不必写选择器。
-     默认值全部等于 tailwind.config.ts 里原来的取值 ⇒ 零视觉变化。
-     --editor-h1/2/3 接在这里：这三个变量 17 个主题都声明了，但此前全仓只有 slideshow.css 消费，
-     是个"设了没反应"的假旋钮。 */
+     --editor-h1..h6 逐级接到 --h1-color..--h6-color：主题声明六级标题色后，
+     预览、阅读模式与幻灯片共用同一套阶梯；缺失时逐级回退，保证旧自定义主题仍可用。 */
   --h1-color: var(--editor-h1, var(--editor-text));
+  --h2-color: var(--editor-h2, var(--h1-color));
+  --h3-color: var(--editor-h3, var(--h2-color));
+  --h4-color: var(--editor-h4, var(--h3-color));
+  --h5-color: var(--editor-h5, var(--h4-color));
+  --h6-color: var(--editor-h6, var(--h5-color));
   --link-color: var(--editor-accent);
   --strong-color: var(--editor-text);
   --quote-fg: var(--editor-text);
@@ -259,7 +262,6 @@
   --editor-border: #3c3c3c;
   --editor-surface: #252526;
   --editor-hover: rgba(255, 255, 255, 0.05);
-  --editor-selection: #569cd6;
   --editor-selection-bg: rgba(86, 156, 214, 0.45);
   --editor-cursor: #569cd6;
   --sidebar-bg: #252526;
@@ -941,9 +943,32 @@ a {
   line-height: 1.3;
 }
 
-.editor-content h1 { font-size: 2em; }
-.editor-content h2 { font-size: 1.5em; }
-.editor-content h3 { font-size: 1.25em; }
+.editor-content h1 { font-size: 2em; color: var(--h1-color); }
+.editor-content h2 { font-size: 1.5em; color: var(--h2-color); }
+.editor-content h3 { font-size: 1.3em; color: var(--h3-color); }
+
+/* H4–H6：基准兜底。预设主题会在各自文件里按设计语言覆盖。
+   H6 与正文同为 1em，靠字重 / 颜色 / 字距保持标题感，不再小于正文。 */
+.editor-content h4 {
+  font-size: 1.2em;
+  margin-top: 1.1em;
+  margin-bottom: 0.35em;
+  color: var(--h4-color);
+}
+.editor-content h5 {
+  font-size: 1.1em;
+  margin-top: 1em;
+  margin-bottom: 0.3em;
+  letter-spacing: 0.01em;
+  color: var(--h5-color);
+}
+.editor-content h6 {
+  font-size: 1em;
+  margin-top: 0.9em;
+  margin-bottom: 0.3em;
+  letter-spacing: 0.03em;
+  color: var(--h6-color);
+}
 
 .editor-content p {
   margin-bottom: 1em;

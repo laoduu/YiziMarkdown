@@ -34,16 +34,17 @@
   --editor-hover: #ffe6e8;
 
   /* 文字选中态：选中文字的颜色（与强调色一致） */
-  --editor-selection: #E63946;
-
   /* 文字选中背景：半透明红色覆盖层，让选中区域有红色底 */
   --editor-selection-bg: rgba(230, 57, 70, 0.25);
 
   /* 光标颜色：输入时竖线的颜色 */
   --editor-cursor: #E63946;
   --editor-h1: #E63946;
-  --editor-h2: #b72f3b;
-  --editor-h3: #9a323a;
+  --editor-h2: #d33743;
+  --editor-h3: #c13540;
+  --editor-h4: #aa333c;
+  --editor-h5: #903137;
+  --editor-h6: #762e33;
 
   /* 侧栏（大纲/文件浏览）背景色 */
   --sidebar-bg: #FFEEEE;
@@ -100,16 +101,17 @@
   --editor-hover: #2d1e20;
 
   /* 选中文字色 */
-  --editor-selection: #ff7a85;
-
   /* 选中背景：半透明红色，深色模式下透明度略高 */
   --editor-selection-bg: rgba(255, 122, 133, 0.35);
 
   /* 光标色 */
   --editor-cursor: #ff7a85;
   --editor-h1: #f87171;
-  --editor-h2: #ef4444;
-  --editor-h3: #dc2626;
+  --editor-h2: #f77d7d;
+  --editor-h3: #f68889;
+  --editor-h4: #f59697;
+  --editor-h5: #f4a7a7;
+  --editor-h6: #f3b7b8;
 
   /* 侧栏背景：比编辑区略深，形成层次 */
   --sidebar-bg: #1e1516;
@@ -155,10 +157,13 @@
 
 /* 三级标题：1.25em，更深的红 */
 .editor-content.theme-lychee h3 {
-  font-size: 1.25em;
+  font-size: 1.3em;
   font-weight: 600;
   margin: 1.2em 0 0.3em;
 }
+.editor-content.theme-lychee h4 { font-size: 1.2em; font-weight: 600; margin: 1.1em 0 0.35em; letter-spacing: 0; }
+.editor-content.theme-lychee h5 { font-size: 1.1em; font-weight: 600; margin: 1em 0 0.3em; letter-spacing: 0.01em; }
+.editor-content.theme-lychee h6 { font-size: 1em; font-weight: 600; margin: 0.9em 0 0.3em; letter-spacing: 0.03em; }
 
 /* 段落间距 */
 .editor-content.theme-lychee p {

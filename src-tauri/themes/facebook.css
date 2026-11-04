@@ -15,13 +15,14 @@
   --sel-toolbar-accent: #1877F2;
   --editor-border: #e4e6eb;
   --editor-surface: #ffffff;
-  --editor-hover: #e4e6eb;
-  --editor-selection: #1877F2;
-  --editor-selection-bg: rgba(24, 119, 242, 0.15);
+  --editor-hover: #e4e6eb;  --editor-selection-bg: rgba(24, 119, 242, 0.15);
   --editor-cursor: #1877F2;
   --editor-h1: #1877F2;
-  --editor-h2: #1665d8;
-  --editor-h3: #3a5a8a;
+  --editor-h2: #166cda;
+  --editor-h3: #1460c3;
+  --editor-h4: #1253a6;
+  --editor-h5: #0f4385;
+  --editor-h6: #0d3364;
   --sidebar-bg: #ffffff;
   --sidebar-text: #65676b;
   --sel-toolbar-bg: #ffffff;
@@ -41,13 +42,14 @@
   --editor-accent: #2d88ff;
   --editor-border: #3e4042;
   --editor-surface: #242526;
-  --editor-hover: #3a3b3c;
-  --editor-selection: #2d88ff;
-  --editor-selection-bg: rgba(45, 136, 255, 0.2);
+  --editor-hover: #3a3b3c;  --editor-selection-bg: rgba(45, 136, 255, 0.2);
   --editor-cursor: #2d88ff;
   --editor-h1: #4da3ff;
-  --editor-h2: #6bb3ff;
-  --editor-h3: #8ec3ff;
+  --editor-h2: #5caafd;
+  --editor-h3: #6bb0fb;
+  --editor-h4: #7db8f9;
+  --editor-h5: #92c2f6;
+  --editor-h6: #a8cbf3;
   --sidebar-bg: #242526;
   --sidebar-text: #a8a8a8;
   --statusbar-bg: #2d88ff;
@@ -58,11 +60,14 @@
   font-size: 1.6em; font-weight: 700; margin: 1.2em 0 0.4em; letter-spacing: -0.01em;
 }
 .editor-content.theme-facebook h2 {
-  font-size: 1.3em; font-weight: 700; margin: 1em 0 0.3em;
+  font-size: 1.35em; font-weight: 700; margin: 1em 0 0.3em;
 }
 .editor-content.theme-facebook h3 {
-  font-size: 1.1em; font-weight: 600; margin: 0.9em 0 0.25em;
+  font-size: 1.2em; font-weight: 600; margin: 0.9em 0 0.25em;
 }
+.editor-content.theme-facebook h4 { font-size: 1.1em; font-weight: 600; margin: 0.85em 0 0.2em; }
+.editor-content.theme-facebook h5 { font-size: 1.05em; font-weight: 600; margin: 0.8em 0 0.2em; letter-spacing: 0.01em; }
+.editor-content.theme-facebook h6 { font-size: 1em; font-weight: 600; margin: 0.75em 0 0.2em; letter-spacing: 0.03em; }
 .editor-content.theme-facebook p {
   margin: 0 0 var(--paragraph-spacing); color: #1c1e21;
 }

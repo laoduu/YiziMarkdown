@@ -17,13 +17,14 @@
   --sel-toolbar-accent: #0077b6;
   --editor-border: #c0c8d8;
   --editor-surface: #ffffff;
-  --editor-hover: #e8eef6;
-  --editor-selection: #0077b6;
-  --editor-selection-bg: rgba(0, 119, 182, 0.15);
+  --editor-hover: #e8eef6;  --editor-selection-bg: rgba(0, 119, 182, 0.15);
   --editor-cursor: #0077b6;
   --editor-h1: #0077b6;
   --editor-h2: #9b2fa6;
   --editor-h3: #0096c7;
+  --editor-h4: #0777a1;
+  --editor-h5: #0c5e82;
+  --editor-h6: #114564;
   --sidebar-bg: #e8eef6;
   --sidebar-text: #1a1a2e;
   --sel-toolbar-bg: #f0f4f8;
@@ -44,13 +45,14 @@
   --editor-accent: #00d4ff;
   --editor-border: #151530;
   --editor-surface: #0a0a20;
-  --editor-hover: #151535;
-  --editor-selection: #ee00ee;
-  --editor-selection-bg: rgba(238, 0, 238, 0.2);
+  --editor-hover: #151535;  --editor-selection-bg: rgba(238, 0, 238, 0.2);
   --editor-cursor: #00d4ff;
   --editor-h1: #00f0ff;
   --editor-h2: #ff00ff;
   --editor-h3: #00d4ff;
+  --editor-h4: #2ad3f9;
+  --editor-h5: #53d2f3;
+  --editor-h6: #7dd2ec;
   --sidebar-bg: #030306;
   --sidebar-text: #009db0;
   --statusbar-bg: linear-gradient(90deg, #00d4ff, #ee00ee);
@@ -68,15 +70,20 @@
   padding-bottom: 0.3em;
 }
 .editor-content.theme-cyberpunk h2 {
-  font-size: 1.5em;
+  font-size: 1.7em;
   font-weight: 800;
   margin: 1.3em 0 0.4em;
+  text-transform: uppercase;
 }
 .editor-content.theme-cyberpunk h3 {
-  font-size: 1.25em;
+  font-size: 1.45em;
   font-weight: 700;
   margin: 1.2em 0 0.3em;
+  text-transform: uppercase;
 }
+.editor-content.theme-cyberpunk h4 { font-size: 1.28em; font-weight: 700; margin: 1.1em 0 0.25em; letter-spacing: 0.02em; text-transform: uppercase; }
+.editor-content.theme-cyberpunk h5 { font-size: 1.14em; font-weight: 700; margin: 1em 0 0.2em; letter-spacing: 0.05em; text-transform: uppercase; }
+.editor-content.theme-cyberpunk h6 { font-size: 1em; font-weight: 700; margin: 0.9em 0 0.2em; letter-spacing: 0.08em; text-transform: uppercase; }
 .editor-content.theme-cyberpunk p {
   margin: 0 0 var(--paragraph-spacing);
   color: #2a2a3e;
@@ -237,4 +244,14 @@
 }
 .dark .editor-content.theme-cyberpunk hr {
   background: linear-gradient(90deg, transparent, #00f0ff, #ff00ff, transparent);
+}
+
+.dark .editor-content.theme-cyberpunk h4 {
+  text-shadow: 0 0 5px rgba(0, 240, 255, 0.24);
+}
+.dark .editor-content.theme-cyberpunk h5 {
+  text-shadow: 0 0 4px rgba(255, 0, 255, 0.2);
+}
+.dark .editor-content.theme-cyberpunk h6 {
+  text-shadow: 0 0 3px rgba(0, 212, 255, 0.16);
 }

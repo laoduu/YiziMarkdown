@@ -127,7 +127,6 @@
 .reader-content h5,
 .reader-content h6 {
   font-family: var(--font-heading, var(--reader-font));
-  color: var(--editor-h2, var(--editor-accent, var(--reader-text)));
   font-weight: 700;
   line-height: 1.28;
   margin: 1.15em 0 0.5em;
@@ -135,10 +134,10 @@
 }
 .reader-content h1 { font-size: 1.9em; margin-top: 0.4em; color: var(--editor-h1, var(--editor-accent, var(--reader-text))); }
 .reader-content h2 { font-size: 1.5em; color: var(--editor-h2, var(--editor-accent, var(--reader-text))); }
-.reader-content h3 { font-size: 1.26em; color: var(--editor-h3, var(--editor-accent, var(--reader-text))); }
-.reader-content h4 { font-size: 1.12em; color: var(--editor-h3, var(--editor-accent, var(--reader-text))); }
-.reader-content h5 { font-size: 1.04em; color: var(--editor-h3, var(--editor-accent, var(--reader-text))); }
-.reader-content h6 { font-size: 0.98em; opacity: 0.8; color: var(--editor-h3, var(--editor-accent, var(--reader-text))); }
+.reader-content h3 { font-size: 1.3em; color: var(--editor-h3, var(--editor-accent, var(--reader-text))); }
+.reader-content h4 { font-size: 1.2em; color: var(--editor-h4, var(--editor-accent, var(--reader-text))); }
+.reader-content h5 { font-size: 1.1em; color: var(--editor-h5, var(--editor-accent, var(--reader-text))); }
+.reader-content h6 { font-size: 1em; color: var(--editor-h6, var(--editor-accent, var(--reader-text))); }
 
 .reader-content p {
   margin: 0 0 0.9em;

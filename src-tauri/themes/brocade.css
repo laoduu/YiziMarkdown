@@ -37,8 +37,11 @@
   --editor-selection-bg: rgba(161, 98, 7, 0.22);
   --editor-cursor: #a16207;
   --editor-h1: #854d0e;
-  --editor-h2: #a16207;
-  --editor-h3: #b45309;
+  --editor-h2: #7c4910;
+  --editor-h3: #744612;
+  --editor-h4: #694114;
+  --editor-h5: #5d3c17;
+  --editor-h6: #513719;
   --sidebar-bg: #f5efe2;
   --sidebar-text: #7d7260;
   --statusbar-bg: #3a2f1e;
@@ -145,8 +148,11 @@
   --editor-selection-bg: rgba(224, 176, 64, 0.24);
   --editor-cursor: #e0b040;
   --editor-h1: #f0c860;
-  --editor-h2: #e0b040;
-  --editor-h3: #d9a441;
+  --editor-h2: #eec969;
+  --editor-h3: #ecca73;
+  --editor-h4: #eacc7e;
+  --editor-h5: #e8cd8b;
+  --editor-h6: #e5cf98;
   --sidebar-bg: #1c160e;
   --sidebar-text: #8a7d66;
   --statusbar-bg: #221a10;
@@ -213,5 +219,8 @@
   border-bottom: 2px solid var(--hr-color);
 }
 .editor-content.theme-brocade h2 { font-size: 1.5em; font-weight: 600; margin: 1.3em 0 0.4em; }
-.editor-content.theme-brocade h3 { font-size: 1.25em; font-weight: 600; margin: 1.2em 0 0.3em; }
+.editor-content.theme-brocade h3 { font-size: 1.3em; font-weight: 600; margin: 1.2em 0 0.3em; }
+.editor-content.theme-brocade h4 { font-size: 1.2em; font-weight: 600; margin: 1.1em 0 0.35em; letter-spacing: 0; }
+.editor-content.theme-brocade h5 { font-size: 1.1em; font-weight: 600; margin: 1em 0 0.3em; letter-spacing: 0.01em; }
+.editor-content.theme-brocade h6 { font-size: 1em; font-weight: 600; margin: 0.9em 0 0.3em; letter-spacing: 0.03em; }
 .editor-content.theme-brocade p  { margin: 0 0 var(--paragraph-spacing); }

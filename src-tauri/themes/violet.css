@@ -25,15 +25,16 @@
   --editor-surface: #f4eafb;
   /* 悬停态：工具栏按钮、侧栏文件项、Tab 等元素的 hover 背景 */
   --editor-hover: #ede0f8;
-  /* 文字选中态：选中文字的颜色（与强调色一致） */
-  --editor-selection: #7209B7;
-  /* 文字选中背景：半透明紫色覆盖层，让选中区域有紫色底 */
+  /* 文字选中态：选中文字的颜色（与强调色一致） */  /* 文字选中背景：半透明紫色覆盖层，让选中区域有紫色底 */
   --editor-selection-bg: rgba(114, 9, 183, 0.25);
   /* 光标颜色：输入时竖线的颜色 */
   --editor-cursor: #7209B7;
   --editor-h1: #7209B7;
-  --editor-h2: #5f0899;
-  --editor-h3: #4e077e;
+  --editor-h2: #6b0baa;
+  --editor-h3: #630d9c;
+  --editor-h4: #5a0f8c;
+  --editor-h5: #501179;
+  --editor-h6: #451466;
   /* 侧栏（大纲/文件浏览）背景色 */
   --sidebar-bg: #f4eafb;
   /* 侧栏文字色：柔紫色，用于大纲标题、文件名、Tab 未激活文字等辅助信息 */
@@ -71,15 +72,16 @@
   --editor-surface: #1e152c;
   /* 悬停态：比表面色略亮 */
   --editor-hover: #271b38;
-  /* 选中文字色 */
-  --editor-selection: #a75cf0;
-  /* 选中背景：半透明紫色，深色模式下透明度略高（0.35 vs 0.25） */
+  /* 选中文字色 */  /* 选中背景：半透明紫色，深色模式下透明度略高（0.35 vs 0.25） */
   --editor-selection-bg: rgba(167, 92, 240, 0.35);
   /* 光标色 */
   --editor-cursor: #a75cf0;
   --editor-h1: #c084fc;
-  --editor-h2: #a855f7;
-  --editor-h3: #9333ea;
+  --editor-h2: #c38cfb;
+  --editor-h3: #c795f9;
+  --editor-h4: #cb9ff8;
+  --editor-h5: #d0abf6;
+  --editor-h6: #d4b6f4;
   /* 侧栏背景：比编辑区略深，形成层次 */
   --sidebar-bg: #1b1228;
   /* 侧栏文字色：浅紫调 */
@@ -116,10 +118,13 @@
 }
 /* 三级标题：1.25em，更深紫罗兰 */
 .editor-content.theme-violet h3 {
-  font-size: 1.25em;
+  font-size: 1.3em;
   font-weight: 600;
   margin: 1.2em 0 0.3em;
 }
+.editor-content.theme-violet h4 { font-size: 1.2em; font-weight: 600; margin: 1.1em 0 0.35em; letter-spacing: 0; }
+.editor-content.theme-violet h5 { font-size: 1.1em; font-weight: 600; margin: 1em 0 0.3em; letter-spacing: 0.01em; }
+.editor-content.theme-violet h6 { font-size: 1em; font-weight: 600; margin: 0.9em 0 0.3em; letter-spacing: 0.03em; }
 /* 段落间距 */
 .editor-content.theme-violet p {
   margin: 0 0 var(--paragraph-spacing);

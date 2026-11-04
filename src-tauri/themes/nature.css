@@ -9,13 +9,14 @@
   --sel-toolbar-accent: #4a7c59;
   --editor-border: #d4cfc0;
   --editor-surface: #eae7de;
-  --editor-hover: #e5e0d5;
-  --editor-selection: #4a7c59;
-  --editor-selection-bg: rgba(74, 124, 89, 0.35);
+  --editor-hover: #e5e0d5;  --editor-selection-bg: rgba(74, 124, 89, 0.35);
   --editor-cursor: #4a7c59;
   --editor-h1: #3a5a3c;
-  --editor-h2: #4a6a4c;
-  --editor-h3: #5a7a5c;
+  --editor-h2: #39573b;
+  --editor-h3: #375439;
+  --editor-h4: #365038;
+  --editor-h5: #344b36;
+  --editor-h6: #324734;
   --sidebar-bg: #eae7de;
   --sidebar-text: #6b7a6c;
   --sel-toolbar-bg: #f5f2eb;
@@ -38,13 +39,14 @@
   --editor-accent: #7db88e;
   --editor-border: #2e3a2e;
   --editor-surface: #242c24;
-  --editor-hover: #2a332a;
-  --editor-selection: #7db88e;
-  --editor-selection-bg: rgba(125, 184, 142, 0.45);
+  --editor-hover: #2a332a;  --editor-selection-bg: rgba(125, 184, 142, 0.45);
   --editor-cursor: #7db88e;
   --editor-h1: #7db88e;
-  --editor-h2: #7db88e;
-  --editor-h3: #7db88e;
+  --editor-h2: #85bb94;
+  --editor-h3: #8cbe99;
+  --editor-h4: #95c1a0;
+  --editor-h5: #a0c5a7;
+  --editor-h6: #aac9af;
   --sidebar-bg: #1e241e;
   --sidebar-text: #7a8a78;
   --statusbar-bg: #2a332a;
@@ -61,15 +63,29 @@
 }
 .editor-content.theme-nature h2 { 
   font-family: var(--font-heading);
-  font-size: 1.6em; 
+  font-size: 1.75em; 
   font-weight: 600; 
   margin: 1.5em 0 0.4em;
 }
 .editor-content.theme-nature h3 { 
   font-family: var(--font-heading);
-  font-size: 1.3em; 
-  font-weight: 500; 
+  font-size: 1.5em; 
+  font-weight: 600; 
   margin: 1.3em 0 0.35em;
+}
+.editor-content.theme-nature h4 {
+  font-family: var(--font-heading);
+  font-size: 1.35em; font-weight: 600; margin: 1.2em 0 0.3em;
+}
+.editor-content.theme-nature h5 {
+  font-family: var(--font-heading);
+  font-size: 1.2em; font-weight: 600; margin: 1.1em 0 0.3em;
+  letter-spacing: 0.01em;
+}
+.editor-content.theme-nature h6 {
+  font-family: var(--font-heading);
+  font-size: 1.08em; font-weight: 600;
+  margin: 1em 0 0.25em; letter-spacing: 0.05em;
 }
 .editor-content.theme-nature p { margin: 0 0 var(--paragraph-spacing); }
 .editor-content.theme-nature blockquote { 

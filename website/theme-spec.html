@@ -9,7 +9,7 @@
     <meta name="author" content="YiziPaper">
     <meta name="robots" content="index, follow">
     <meta name="docs-src" content="docs/THEME-DESIGN-SPEC.md">
-    <meta name="docs-hash" content="2248b69e0aaab3b7357d27c187896f0e279a6516bf43193bbe2f0ec8a3033de7">
+    <meta name="docs-hash" content="a720f08e9ed874739a3791e071cd454010097dc3d675ed3460c51008c07dca19">
     <link rel="canonical" href="https://md.yizigpt.com/theme-spec.html">
 
     <!-- Open Graph -->
@@ -69,7 +69,7 @@
         </nav>
         <h1 class="help-title">主题设计规范</h1>
         <p class="docs-subtitle">从令牌分层到明暗双模式，写出一套能通过校验门禁的主题。</p>
-        <div class="docs-meta"><span>基线 v0.3.2+</span><span>更新 2026-09-24</span><span>面向主题作者</span></div>
+        <div class="docs-meta"><span>基线 v0.4.2+</span><span>更新 2026-11-04</span><span>面向主题作者</span></div>
         <div class="help-search">
             <svg class="help-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
             <input type="text" class="help-search-input" id="helpSearch" placeholder="搜索令牌或规则，例如「--editor-bg」" autocomplete="off">
@@ -96,7 +96,7 @@
 <p>一个主题 = <strong>一个 CSS 文件</strong>，内容是一组 CSS 自定义属性（下称「令牌」）的覆盖值，配合少量「无法令牌化的结构性装饰」规则。</p>
 <p>主题<strong>不重写组件选择器</strong>，不修改布局，不新增 DOM。它只回答一个问题：<strong>「把这个应用里每一个可见区域，染成什么颜色、配上什么形状、加什么光影？」</strong></p>
 </div>
-<div class="help-sub" id="12-三条铁律" data-kw="1.2 三条铁律 # 铁律 理由 1 只覆盖令牌，不写组件选择器 组件选择器（ .toolbar { … } ）会与全局层、运行时注入层争夺特异性，导致 !important 、层级打架、被 overflow 裁切 2 颜色令牌必须亮/暗各声明一次 只写一侧，另一模式会静默回落到基础值 —— 表现为「暗色下某个角落还是亮的」 3 令牌名必须存在于 globals.css 或主题自身 CSS 变量名写错 不会报错，只会静默失效 。这是本项目最大的历史坑（17 个主题都定义了 --editor-h1/2/3 ，但长期无">
+<div class="help-sub" id="12-三条铁律" data-kw="1.2 三条铁律 # 铁律 理由 1 只覆盖令牌，不写组件选择器 组件选择器（ .toolbar { … } ）会与全局层、运行时注入层争夺特异性，导致 !important 、层级打架、被 overflow 裁切 2 颜色令牌必须亮/暗各声明一次 只写一侧，另一模式会静默回落到基础值 —— 表现为「暗色下某个角落还是亮的」 3 令牌名必须存在于 globals.css 或主题自身 CSS 变量名写错 不会报错，只会静默失效 。这是本项目最大的历史坑（17 个主题都定义了 --editor-h1/2/3 ，但长期只">
 <h3>1.2 三条铁律</h3>
 <div class="help-table-wrap"><table class="docs-table docs-table--nowrap-first">
 <thead>
@@ -120,7 +120,7 @@
 <tr>
 <td class="docs-cell-num">3</td>
 <td><strong>令牌名必须存在于 <code>globals.css</code> 或主题自身</strong></td>
-<td>CSS 变量名写错<strong>不会报错，只会静默失效</strong>。这是本项目最大的历史坑（17 个主题都定义了 <code>--editor-h1/2/3</code>，但长期无人消费 ⇒ 「标题色」旋钮是死的）</td>
+<td>CSS 变量名写错<strong>不会报错，只会静默失效</strong>。这是本项目最大的历史坑（17 个主题都定义了 <code>--editor-h1/2/3</code>，但长期只有幻灯片消费 ⇒ 「标题色」旋钮曾是死的；现在 <code>--editor-h1..h6</code> 已接入预览 / 阅读 / 演示三处）</td>
 </tr>
 </tbody>
 </table></div>
@@ -281,7 +281,7 @@ node scripts/check-themes.mjs --strict # 发布前自查，告警也算失败
 </tr>
 <tr>
 <td><code>scripts/check-themes.mjs</code></td>
-<td>六项一致性门禁</td>
+<td>八项一致性门禁</td>
 </tr>
 </tbody>
 </table></div>
@@ -645,18 +645,11 @@ typewriter vibrant   violet
 <td>悬停底色</td>
 </tr>
 <tr>
-<td><code>--editor-selection</code></td>
-<td>color</td>
-<td><code>#0066cc</code></td>
-<td><code>#569cd6</code></td>
-<td>选区色（<strong>已知死旋钮</strong>，当前无消费点）</td>
-</tr>
-<tr>
 <td><code>--editor-selection-bg</code></td>
 <td>color</td>
 <td><code>rgba(0,102,204,0.35)</code></td>
 <td><code>rgba(86,156,214,0.45)</code></td>
-<td>选区背景（实际生效的是这个）</td>
+<td>选区背景</td>
 </tr>
 <tr>
 <td><code>--editor-cursor</code></td>
@@ -1595,6 +1588,31 @@ typewriter vibrant   violet
 <td><code>--tw-prose-headings</code></td>
 </tr>
 <tr>
+<td><code>--h2-color</code></td>
+<td><code>var(--editor-h2, var(--h1-color))</code></td>
+<td>H2 元素颜色</td>
+</tr>
+<tr>
+<td><code>--h3-color</code></td>
+<td><code>var(--editor-h3, var(--h2-color))</code></td>
+<td>H3 元素颜色</td>
+</tr>
+<tr>
+<td><code>--h4-color</code></td>
+<td><code>var(--editor-h4, var(--h3-color))</code></td>
+<td>H4 元素颜色</td>
+</tr>
+<tr>
+<td><code>--h5-color</code></td>
+<td><code>var(--editor-h5, var(--h4-color))</code></td>
+<td>H5 元素颜色</td>
+</tr>
+<tr>
+<td><code>--h6-color</code></td>
+<td><code>var(--editor-h6, var(--h5-color))</code></td>
+<td>H6 元素颜色</td>
+</tr>
+<tr>
 <td><code>--link-color</code></td>
 <td><code>var(--editor-accent)</code></td>
 <td><code>--tw-prose-links</code></td>
@@ -1651,8 +1669,8 @@ typewriter vibrant   violet
 </tr>
 </tbody>
 </table></div>
-<h4 id="关于-editor-h1-editor-h2-editor-h3">关于 <code>--editor-h1 / --editor-h2 / --editor-h3</code></h4>
-<p>这三个变量<strong>曾是假旋钮</strong>：17 个主题都声明了，但全仓只有 <code>slideshow.css</code> 消费。v0.3.2 已把它们接进真实消费点：</p>
+<h4 id="关于-editor-h1-editor-h6">关于 <code>--editor-h1 … --editor-h6</code></h4>
+<p>六个标题色令牌都<strong>必须接入真实消费点</strong>，否则就是假旋钮。当前消费链：</p>
 <div class="help-table-wrap"><table class="docs-table docs-table--nowrap-first">
 <thead>
 <tr>
@@ -1663,19 +1681,72 @@ typewriter vibrant   violet
 <tbody>
 <tr>
 <td><code>--editor-h1</code></td>
-<td><code>--h1-color</code>（预览 + 实时标题色）；<code>slideshow.css</code> h1</td>
+<td><code>--h1-color</code>（预览）；阅读模式 h1；<code>slideshow.css</code> h1</td>
 </tr>
 <tr>
 <td><code>--editor-h2</code></td>
-<td><code>slideshow.css</code> h2</td>
+<td><code>--h2-color</code>；阅读模式 h2；<code>slideshow.css</code> h2</td>
 </tr>
 <tr>
 <td><code>--editor-h3</code></td>
-<td><code>slideshow.css</code> h3</td>
+<td><code>--h3-color</code>；阅读模式 h3；<code>slideshow.css</code> h3</td>
+</tr>
+<tr>
+<td><code>--editor-h4</code></td>
+<td><code>--h4-color</code>；阅读模式 h4；<code>slideshow.css</code> h4</td>
+</tr>
+<tr>
+<td><code>--editor-h5</code></td>
+<td><code>--h5-color</code>；阅读模式 h5；<code>slideshow.css</code> h5</td>
+</tr>
+<tr>
+<td><code>--editor-h6</code></td>
+<td><code>--h6-color</code>；阅读模式 h6；<code>slideshow.css</code> h6</td>
 </tr>
 </tbody>
 </table></div>
-<p>因此主题声明它们<strong>现在会生效</strong>（至少作用于 h1 预览与幻灯片标题）。</p>
+<h4 id="六级标题色阶">六级标题色阶</h4>
+<p>主题应使用统一的「H1 品牌色 → 正文色」过渡，让字号越小、对比度越高：</p>
+<div class="help-table-wrap"><table class="docs-table docs-table--nowrap-first">
+<thead>
+<tr>
+<th>级别</th>
+<th>建议比例（品牌色 / 正文色）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>H1</td>
+<td class="docs-cell-num">100 / 0</td>
+</tr>
+<tr>
+<td>H2</td>
+<td class="docs-cell-num">90 / 10</td>
+</tr>
+<tr>
+<td>H3</td>
+<td class="docs-cell-num">80 / 20</td>
+</tr>
+<tr>
+<td>H4</td>
+<td class="docs-cell-num">68 / 32</td>
+</tr>
+<tr>
+<td>H5</td>
+<td class="docs-cell-num">54 / 46</td>
+</tr>
+<tr>
+<td>H6</td>
+<td class="docs-cell-num">40 / 60</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>H1–H4 作为大字，对比度 ≥ 3:1</li>
+<li>H5/H6 是正文级字号，对比度 ≥ 4.5:1</li>
+<li>H6 字号不得小于正文 <code>1em</code>，靠字重、颜色、字距保持标题感</li>
+<li>颜色建议写显式十六进制值，便于 <code>check-themes.mjs</code> 做对比度校验</li>
+</ul>
 <h4 id="设计指引-6">设计指引</h4>
 <ul>
 <li><strong><code>--quote-bg</code> 接受渐变</strong>（消费在 <code>background</code> 简写上），可做「玻璃引用块」。</li>
@@ -1859,6 +1930,11 @@ typewriter vibrant   violet
 <td><code>letter-spacing</code> / <code>font-weight</code> 组合</td>
 <td>标题字重</td>
 </tr>
+<tr>
+<td>六级标题层级</td>
+<td>字号 / 字重 / 间距逐级递减</td>
+<td>H1–H6 元素规则、H4–H6 默认基线</td>
+</tr>
 </tbody>
 </table></div>
 <h4 id="写法规范">写法规范</h4>
@@ -1926,10 +2002,10 @@ h1 { /* … */ }
 </div>
 </section>
 
-<section class="help-section" id="8-校验门禁check-themes-六项检查" data-icon="workflow" data-kw="8. 校验门禁：check-themes 六项检查 scripts/check-themes.mjs 把「靠肉眼发现」变成「构建时失败」。 node scripts/check-themes.mjs # 默认：只让真 bug（1、4）失败 node scripts/check-themes.mjs --strict # 发布前自查：告警也算失败 node scripts/check-themes.mjs --quiet # 只输出失败与统计 # 检查 级别 含义 1 变量白名单 失败 var(--x) 里的 x 必">
-<h2><a class="anchor" href="#8-校验门禁check-themes-六项检查">#</a>8. 校验门禁：check-themes 六项检查</h2>
+<section class="help-section" id="8-校验门禁check-themes-八项检查" data-icon="workflow" data-kw="8. 校验门禁：check-themes 八项检查 scripts/check-themes.mjs 把「靠肉眼发现」变成「构建时失败」。 node scripts/check-themes.mjs # 默认：只让真 bug（1、4、7、8）失败 node scripts/check-themes.mjs --strict # 发布前自查：告警也算失败 node scripts/check-themes.mjs --quiet # 只输出失败与统计 # 检查 级别 含义 1 变量白名单 失败 var(--x) 里的">
+<h2><a class="anchor" href="#8-校验门禁check-themes-八项检查">#</a>8. 校验门禁：check-themes 八项检查</h2>
 <p><code>scripts/check-themes.mjs</code> 把「靠肉眼发现」变成「构建时失败」。</p>
-<pre><code class="language-bash">node scripts/check-themes.mjs           # 默认：只让真 bug（1、4）失败
+<pre><code class="language-bash">node scripts/check-themes.mjs           # 默认：只让真 bug（1、4、7、8）失败
 node scripts/check-themes.mjs --strict  # 发布前自查：告警也算失败
 node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 </code></pre>
@@ -1979,12 +2055,24 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 <td>告警</td>
 <td><code>src/assets/themes/</code> 再现即告警（该目录已删除）</td>
 </tr>
+<tr>
+<td class="docs-cell-num">7</td>
+<td><strong>标题六阶完整性</strong></td>
+<td><strong>失败</strong></td>
+<td>每个预设主题必须有 <code>--editor-h1..h6</code> 与 H4–H6 元素规则</td>
+</tr>
+<tr>
+<td class="docs-cell-num">8</td>
+<td><strong>标题对比度</strong></td>
+<td><strong>失败</strong></td>
+<td>H1–H4 ≥ 3:1，H5/H6 ≥ 4.5:1</td>
+</tr>
 </tbody>
 </table></div>
-<p><strong>退出码</strong>：真 bug（1、4）恒为失败；告警默认只提示，加 <code>--strict</code> 才失败。语义与 <code>check-i18n.mjs</code> 一致：<strong>历史遗留问题不该阻塞构建，但也不该被忽略</strong>。</p>
-<div class="help-sub" id="81-为什么需要死声明检查" data-kw="8.1 为什么需要「死声明」检查 CSS 变量名写错 不报错、只静默失效 。历史踩坑：17 个主题都定义了 --editor-h1/2/3 ，但全仓只有 slideshow.css 消费 ⇒ 「标题色」旋钮长期是死的。第 3 项就是为这类问题设的。 检查器 必须先剥掉注释 再扫反模式 —— 否则「文档里提到 !important 」都会被算成反模式（真实踩过）。">
+<p><strong>退出码</strong>：真 bug（1、4、7、8）恒为失败；告警默认只提示，加 <code>--strict</code> 才失败。语义与 <code>check-i18n.mjs</code> 一致：<strong>历史遗留问题不该阻塞构建，但也不该被忽略</strong>。</p>
+<div class="help-sub" id="81-为什么需要死声明检查" data-kw="8.1 为什么需要「死声明」检查 CSS 变量名写错 不报错、只静默失效 。历史踩坑：17 个主题都定义了 --editor-h1/2/3 ，但全仓只有 slideshow.css 消费 ⇒ 「标题色」旋钮长期是死的。第 3 项就是为这类问题设的；现在 --editor-h1..h6 已接入预览 / 阅读 / 演示三处。 检查器 必须先剥掉注释 再扫反模式 —— 否则「文档里提到 !important 」都会被算成反模式（真实踩过）。">
 <h3>8.1 为什么需要「死声明」检查</h3>
-<p>CSS 变量名写错<strong>不报错、只静默失效</strong>。历史踩坑：17 个主题都定义了 <code>--editor-h1/2/3</code>，但全仓只有 <code>slideshow.css</code> 消费 ⇒ 「标题色」旋钮长期是死的。第 3 项就是为这类问题设的。</p>
+<p>CSS 变量名写错<strong>不报错、只静默失效</strong>。历史踩坑：17 个主题都定义了 <code>--editor-h1/2/3</code>，但全仓只有 <code>slideshow.css</code> 消费 ⇒ 「标题色」旋钮长期是死的。第 3 项就是为这类问题设的；现在 <code>--editor-h1..h6</code> 已接入预览 / 阅读 / 演示三处。</p>
 <blockquote>
 <p>检查器<strong>必须先剥掉注释</strong>再扫反模式 —— 否则「文档里提到 <code>!important</code>」都会被算成反模式（真实踩过）。</p>
 </blockquote>
@@ -2127,7 +2215,7 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
   :root.theme-*        →  .yizi-slideshow.theme-*
   :root.theme-*.dark   →  .yizi-slideshow.theme-*.dark
 </code></pre>
-<div class="help-sub" id="111-继承的是变量而非元素规则" data-kw="11.1 继承的是「变量」而非「元素规则」 继承 不继承 主题 CSS 变量（ --editor-bg/text/accent/surface/border/… 、 --font-* 、 --editor-h1/2/3 ） .editor-content.theme-* &lt;el&gt; 的 元素级排版规则 （左对齐 / 小字号） 原因 ：若把元素规则也改写过去，编辑器的「左对齐 / 小字号」会覆盖演示版式的「居中 / 大字号」，导致「标题没居中」。幻灯片的 字号 / 对齐 / 居中由 slideshow.css 全权控制">
+<div class="help-sub" id="111-继承的是变量而非元素规则" data-kw="11.1 继承的是「变量」而非「元素规则」 继承 不继承 主题 CSS 变量（ --editor-bg/text/accent/surface/border/… 、 --font-* 、 --editor-h1..h6 ） .editor-content.theme-* &lt;el&gt; 的 元素级排版规则 （左对齐 / 小字号） 原因 ：若把元素规则也改写过去，编辑器的「左对齐 / 小字号」会覆盖演示版式的「居中 / 大字号」，导致「标题没居中」。幻灯片的 字号 / 对齐 / 居中由 slideshow.css 全权控制">
 <h3>11.1 继承的是「变量」而非「元素规则」</h3>
 <div class="help-table-wrap"><table class="docs-table">
 <thead>
@@ -2138,18 +2226,18 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 </thead>
 <tbody>
 <tr>
-<td>主题 CSS 变量（<code>--editor-bg/text/accent/surface/border/…</code>、<code>--font-*</code>、<code>--editor-h1/2/3</code>）</td>
+<td>主题 CSS 变量（<code>--editor-bg/text/accent/surface/border/…</code>、<code>--font-*</code>、<code>--editor-h1..h6</code>）</td>
 <td><code>.editor-content.theme-* &lt;el&gt;</code> 的<strong>元素级排版规则</strong>（左对齐 / 小字号）</td>
 </tr>
 </tbody>
 </table></div>
 <p><strong>原因</strong>：若把元素规则也改写过去，编辑器的「左对齐 / 小字号」会覆盖演示版式的「居中 / 大字号」，导致「标题没居中」。幻灯片的<strong>字号 / 对齐 / 居中由 <code>slideshow.css</code> 全权控制</strong>。</p>
 </div>
-<div class="help-sub" id="112-设计指引" data-kw="11.2 设计指引 主题作者只需保证 变量正确 ，幻灯片即自动跟随换肤。 标题颜色 通过 --editor-h1/h2/h3 继承（对应各主题 h1/h2/h3 配色，深色另有取值）。 不要在主题里写幻灯片选择器 ：版式扩展编辑 src/styles/slideshow.css 的 .ys-layout-&lt;类型&gt; 规则。 「自定义主题」同样生效 ：HUD 主题菜单里会出现「自定义主题」（user.css 非空时）；其变量 = 基底主题变量块 + user.css 变量块（归一到 custom 后合并），元素规则照旧">
+<div class="help-sub" id="112-设计指引" data-kw="11.2 设计指引 主题作者只需保证 变量正确 ，幻灯片即自动跟随换肤。 标题颜色 通过 --editor-h1..h6 继承（对应各主题 H1–H6 配色，深色另有取值）。 不要在主题里写幻灯片选择器 ：版式扩展编辑 src/styles/slideshow.css 的 .ys-layout-&lt;类型&gt; 规则。 「自定义主题」同样生效 ：HUD 主题菜单里会出现「自定义主题」（user.css 非空时）；其变量 = 基底主题变量块 + user.css 变量块（归一到 custom 后合并），元素规则照旧丢弃。">
 <h3>11.2 设计指引</h3>
 <ul>
 <li>主题作者只需保证<strong>变量正确</strong>，幻灯片即自动跟随换肤。</li>
-<li><strong>标题颜色</strong>通过 <code>--editor-h1/h2/h3</code> 继承（对应各主题 h1/h2/h3 配色，深色另有取值）。</li>
+<li><strong>标题颜色</strong>通过 <code>--editor-h1..h6</code> 继承（对应各主题 H1–H6 配色，深色另有取值）。</li>
 <li><strong>不要在主题里写幻灯片选择器</strong>：版式扩展编辑 <code>src/styles/slideshow.css</code> 的 <code>.ys-layout-&lt;类型&gt;</code> 规则。</li>
 <li><strong>「自定义主题」同样生效</strong>：HUD 主题菜单里会出现「自定义主题」（user.css 非空时）；其变量 = 基底主题变量块 + user.css 变量块（归一到 <code>custom</code> 后合并），元素规则照旧丢弃。</li>
 </ul>
@@ -2226,8 +2314,11 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
   --editor-selection-bg: rgba(15, 118, 110, 0.22);
   --editor-cursor: #0f766e;
   --editor-h1: #115e59;
-  --editor-h2: #0f766e;
-  --editor-h3: #0f766e;
+  --editor-h2: #125954;
+  --editor-h3: #13544f;
+  --editor-h4: #154e49;
+  --editor-h5: #164742;
+  --editor-h6: #183f3c;
   --sidebar-bg: #edf4f2;
   --sidebar-text: #5f7a74;
   --statusbar-bg: #0f766e;
@@ -2299,8 +2390,11 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
   --editor-selection-bg: rgba(45, 212, 191, 0.24);
   --editor-cursor: #2dd4bf;
   --editor-h1: #5eead4;
-  --editor-h2: #2dd4bf;
-  --editor-h3: #2dd4bf;
+  --editor-h2: #69e9d5;
+  --editor-h3: #75e9d6;
+  --editor-h4: #82e8d8;
+  --editor-h5: #92e7d9;
+  --editor-h6: #a2e6db;
   --sidebar-bg: #111c1a;
   --sidebar-text: #5f7a74;
   --statusbar-bg: #13201d;
@@ -2353,7 +2447,10 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
   border-bottom: 2px solid var(--hr-color);
 }
 .editor-content.theme-ink-jade h2 { font-size: 1.5em; font-weight: 600; margin: 1.3em 0 0.4em; }
-.editor-content.theme-ink-jade h3 { font-size: 1.25em; font-weight: 600; margin: 1.2em 0 0.3em; }
+.editor-content.theme-ink-jade h3 { font-size: 1.3em; font-weight: 600; margin: 1.2em 0 0.3em; }
+.editor-content.theme-ink-jade h4 { font-size: 1.2em; font-weight: 600; margin: 1.1em 0 0.35em; }
+.editor-content.theme-ink-jade h5 { font-size: 1.1em; font-weight: 600; margin: 1em 0 0.3em; letter-spacing: 0.01em; }
+.editor-content.theme-ink-jade h6 { font-size: 1em; font-weight: 600; margin: 0.9em 0 0.3em; letter-spacing: 0.03em; }
 .editor-content.theme-ink-jade p  { margin: 0 0 var(--paragraph-spacing); }
 </code></pre>
 <p><strong>注册 + 校验</strong>：</p>
@@ -2368,13 +2465,16 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 
 </section>
 
-<section class="help-section" id="13-新增主题检查清单" data-icon="list" data-kw="13. 新增主题检查清单 [ ] 文件放在 src-tauri/themes/&lt;name&gt;.css （ 不要 放 src/assets/themes/ ） [ ] 文件名 == :root.theme-&lt;name&gt; == theme.json 键，三者一致 [ ] 亮色块与暗色块 都 存在 [ ] 所有 颜色令牌 亮暗各声明一次（偶数次） [ ] 未使用 !important / [class*=] / 裸 z-index [ ] 未写未加作用域的选择器（必须 .editor-content.theme-&lt;name">
+<section class="help-section" id="13-新增主题检查清单" data-icon="list" data-kw="13. 新增主题检查清单 [ ] 文件放在 src-tauri/themes/&lt;name&gt;.css （ 不要 放 src/assets/themes/ ） [ ] 文件名 == :root.theme-&lt;name&gt; == theme.json 键，三者一致 [ ] 亮色块与暗色块 都 存在 [ ] 所有 颜色令牌 亮暗各声明一次（偶数次） [ ] --editor-h1..h6 六个标题色令牌齐全，亮暗各一套 [ ] H4–H6 有显式元素规则；H6 字号不小于正文 1em [ ] 标题色阶对比度达标：H1–H4 ">
 <h2><a class="anchor" href="#13-新增主题检查清单">#</a>13. 新增主题检查清单</h2>
 <ul>
 <li>[ ] 文件放在 <code>src-tauri/themes/&lt;name&gt;.css</code>（<strong>不要</strong>放 <code>src/assets/themes/</code>）</li>
 <li>[ ] 文件名 == <code>:root.theme-&lt;name&gt;</code> == <code>theme.json</code> 键，三者一致</li>
 <li>[ ] 亮色块与暗色块<strong>都</strong>存在</li>
 <li>[ ] 所有<strong>颜色令牌</strong>亮暗各声明一次（偶数次）</li>
+<li>[ ] <code>--editor-h1..h6</code> 六个标题色令牌齐全，亮暗各一套</li>
+<li>[ ] H4–H6 有显式元素规则；H6 字号不小于正文 <code>1em</code></li>
+<li>[ ] 标题色阶对比度达标：H1–H4 ≥ 3:1，H5/H6 ≥ 4.5:1</li>
 <li>[ ] 未使用 <code>!important</code> / <code>[class*=]</code> / 裸 <code>z-index</code></li>
 <li>[ ] 未写未加作用域的选择器（必须 <code>.editor-content.theme-&lt;name&gt;</code> 或 <code>.theme-&lt;name&gt;</code>）</li>
 <li>[ ] 未覆盖布局定位属性（<code>position</code> / <code>display</code> / <code>inset</code> / <code>height</code>）</li>
@@ -2427,7 +2527,7 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 <p>快速检索用。<strong>类型</strong>：<code>C</code>=颜色（需亮暗配对）、<code>S</code>=尺寸 / 形状、<code>F</code>=字体、<code>V</code>=任意值。
 <strong>状态</strong>：<code>●</code>=已接入消费点、<code>○</code>=已声明待接入（声明不报错但暂不生效）。</p>
 </blockquote>
-<div class="help-sub" id="a1-基础层" data-kw="A.1 基础层 令牌 类型 默认（亮） 状态 --editor-bg C #ffffff ● --editor-text C #333333 ● --editor-accent C #0066cc ● --editor-border C #e5e5e5 ● --editor-surface C #f8f8f8 ● --editor-hover C rgba(0,0,0,0.03) ● --editor-selection C #0066cc ○ 死旋钮 --editor-selection-bg C rgba(0,">
+<div class="help-sub" id="a1-基础层" data-kw="A.1 基础层 令牌 类型 默认（亮） 状态 --editor-bg C #ffffff ● --editor-text C #333333 ● --editor-accent C #0066cc ● --editor-border C #e5e5e5 ● --editor-surface C #f8f8f8 ● --editor-hover C rgba(0,0,0,0.03) ● --editor-selection-bg C rgba(0,102,204,0.35) ● --editor-cursor C #">
 <h3>A.1 基础层</h3>
 <div class="help-table-wrap"><table class="docs-table">
 <thead>
@@ -2476,12 +2576,6 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 <td style="text-align:center">●</td>
 </tr>
 <tr>
-<td><code>--editor-selection</code></td>
-<td style="text-align:center">C</td>
-<td><code>#0066cc</code></td>
-<td style="text-align:center">○ 死旋钮</td>
-</tr>
-<tr>
 <td><code>--editor-selection-bg</code></td>
 <td style="text-align:center">C</td>
 <td><code>rgba(0,102,204,0.35)</code></td>
@@ -2494,9 +2588,9 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 <td style="text-align:center">●</td>
 </tr>
 <tr>
-<td><code>--editor-h1</code> / <code>--editor-h2</code> / <code>--editor-h3</code></td>
+<td><code>--editor-h1</code> / <code>--editor-h2</code> / <code>--editor-h3</code> / <code>--editor-h4</code> / <code>--editor-h5</code> / <code>--editor-h6</code></td>
 <td style="text-align:center">C</td>
-<td>（无，回退正文）</td>
+<td>（无，逐级回退）</td>
 <td style="text-align:center">●</td>
 </tr>
 <tr>
@@ -2944,7 +3038,7 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 </tbody>
 </table></div>
 </div>
-<div class="help-sub" id="a7-预览排版令牌" data-kw="A.7 预览排版令牌 令牌 默认 状态 --h1-color var(--editor-h1, var(--editor-text)) ● --link-color var(--editor-accent) ● --strong-color var(--editor-text) ● --quote-fg var(--editor-text) ● --quote-bar var(--editor-accent) ● --quote-bg transparent ● 接受渐变 --inline-code-fg var(">
+<div class="help-sub" id="a7-预览排版令牌" data-kw="A.7 预览排版令牌 令牌 默认 状态 --h1-color var(--editor-h1, var(--editor-text)) ● --h2-color var(--editor-h2, var(--h1-color)) ● --h3-color var(--editor-h3, var(--h2-color)) ● --h4-color var(--editor-h4, var(--h3-color)) ● --h5-color var(--editor-h5, var(--h4-color)) ● --">
 <h3>A.7 预览排版令牌</h3>
 <div class="help-table-wrap"><table class="docs-table">
 <thead>
@@ -2958,6 +3052,31 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 <tr>
 <td><code>--h1-color</code></td>
 <td><code>var(--editor-h1, var(--editor-text))</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--h2-color</code></td>
+<td><code>var(--editor-h2, var(--h1-color))</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--h3-color</code></td>
+<td><code>var(--editor-h3, var(--h2-color))</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--h4-color</code></td>
+<td><code>var(--editor-h4, var(--h3-color))</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--h5-color</code></td>
+<td><code>var(--editor-h5, var(--h4-color))</code></td>
+<td style="text-align:center">●</td>
+</tr>
+<tr>
+<td><code>--h6-color</code></td>
+<td><code>var(--editor-h6, var(--h5-color))</code></td>
 <td style="text-align:center">●</td>
 </tr>
 <tr>
@@ -3200,7 +3319,7 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 </tr>
 <tr>
 <td><code>scripts/check-themes.mjs</code></td>
-<td>六项一致性门禁</td>
+<td>八项一致性门禁</td>
 </tr>
 <tr>
 <td><code>src/components/SettingsModal.tsx</code></td>
@@ -3220,7 +3339,7 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 </tr>
 </tbody>
 </table></div>
-<p><em>本文档描述 v0.3.2+ 的主题系统。新增令牌或改变分层时，请同步更新本文件与 <code>scripts/check-themes.mjs</code>。</em></p>
+<p><em>本文档描述 v0.4.2+ 的主题系统。新增令牌或改变分层时，请同步更新本文件与 <code>scripts/check-themes.mjs</code>。</em></p>
 
 </section>
 

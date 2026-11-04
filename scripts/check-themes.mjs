@@ -6,13 +6,15 @@
  * slideshow.css 消费它，于是「标题色」这个旋钮长期是死的）。
  * 这个脚本把这类问题从"靠肉眼发现"变成"构建时失败"。
  *
- * 六项检查：
+ * 八项检查：
  *   1) 变量白名单 —— var(--x) 里的 x 必须真的存在（拼写错误）  【默认失败】
  *   2) 亮/暗一致性 —— 同一变量应同时定义在亮色与暗色块          【告警】
  *   3) 死声明     —— 主题定义了但全仓无人消费的变量              【告警】
  *   4) 命名一致   —— 文件名必须与 :root.theme-<name> 选择器一致 【默认失败】
  *   5) 反模式     —— !important / [class*= / 直接写 z-index      【告警】
  *   6) 双目录漂移 —— src/assets/themes/ 与 src-tauri/themes/ 不一致【告警】
+ *   7) 标题六阶   —— 每个主题必须声明 --editor-h1..h6 且具备 H4-H6 规则【默认失败】
+ *   8) 标题对比度 —— H1-H4 ≥ 3:1，H5-H6 ≥ 4.5:1                【默认失败】
  *
  * 用法：node scripts/check-themes.mjs [--strict] [--quiet]
  *   --strict 把告警也视为失败（用于发布前自查；默认只让真 bug 失败）
@@ -61,6 +63,33 @@ const isModeIndependent = (v) =>
 const read = (p) => readFileSync(p, 'utf8')
 const declaredVars = (text) => [...text.matchAll(/^\s*(--[\w-]+)\s*:/gm)].map((m) => m[1])
 const usedVars = (text) => [...text.matchAll(/var\(\s*(--[\w-]+)/g)].map((m) => m[1])
+
+/** 解析 #rgb / #rrggbb；其它颜色格式返回 null（对比度检查会跳过并告警）。 */
+function parseHexColor(v) {
+  const s = String(v ?? '').trim()
+  const m6 = /^#([0-9a-f]{6})$/i.exec(s)
+  if (m6) {
+    const n = parseInt(m6[1], 16)
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+  }
+  const m3 = /^#([0-9a-f]{3})$/i.exec(s)
+  if (m3) return [...m3[1]].map((x) => parseInt(x + x, 16))
+  return null
+}
+
+function relativeLuminance([r, g, b]) {
+  const channel = (x) => {
+    const c = x / 255
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+  }
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+}
+
+function contrastRatio(a, b) {
+  const l1 = relativeLuminance(a)
+  const l2 = relativeLuminance(b)
+  return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)
+}
 
 /** 递归收集 src/ 下的源码，用于判断某变量是否真的被消费 */
 function walk(dir, acc = []) {
@@ -141,6 +170,61 @@ for (const file of themeFiles) {
   // 4) 命名一致性：文件名 ↔ :root.theme-<name>
   if (!text.includes(`:root.theme-${name}`)) {
     failures.push(`${file}  缺少 \`:root.theme-${name}\` 选择器（文件名与主题名必须一致）`)
+  }
+
+  // 7) 标题六阶：六个颜色令牌齐全，且 H4-H6 有显式元素规则。
+  //    允许自定义主题走全局 fallback，但**预设主题必须完整**，否则又会出现“H5/H6 像正文”。
+  const headingProblems = []
+  for (const n of [1, 2, 3, 4, 5, 6]) {
+    if (!new RegExp(`--editor-h${n}\\s*:`).test(text)) {
+      headingProblems.push(`--editor-h${n}`)
+    }
+  }
+  for (const n of [4, 5, 6]) {
+    if (!new RegExp(`\\.editor-content\\.theme-${name} h${n}\\s*\\{`).test(text)) {
+      headingProblems.push(`h${n} 元素规则`)
+    }
+  }
+  if (headingProblems.length) {
+    failures.push(`${file}  标题六阶不完整：缺少 ${headingProblems.join(', ')}`)
+  }
+
+  // 8) 标题对比度：H1-H4 是大字（≥3:1），H5/H6 是正文级字号（≥4.5:1）。
+  //    只解析亮/暗两个 :root 块里的十六进制值；var(--editor-text) 按正文色解析。
+  const rootBlocks = [...text.matchAll(new RegExp(`:root\\.theme-${name}(?:\\.dark)?\\s*\\{([\\s\\S]*?)\\n\\}`, 'g'))]
+  if (rootBlocks.length < 2) {
+    failures.push(`${file}  找不到亮/暗两个 :root.theme-${name} 变量块`)
+  }
+  for (const block of rootBlocks) {
+    const mode = block[0].includes('.dark') ? '暗色' : '亮色'
+    const body = block[1]
+    const getVar = (v) => {
+      const m = new RegExp(`--${v}\\s*:\\s*([^;]+);`).exec(body)
+      return m ? m[1].trim() : null
+    }
+    const bg = parseHexColor(getVar('editor-bg'))
+    const textColor = getVar('editor-text')
+    if (!bg || !textColor) {
+      warnings.push(`${file}  ${mode}标题对比度无法解析（--editor-bg / --editor-text 不是十六进制）`)
+      continue
+    }
+    for (const n of [1, 2, 3, 4, 5, 6]) {
+      let raw = getVar(`editor-h${n}`)
+      if (!raw) continue
+      if (raw.includes('var(--editor-text)')) raw = textColor
+      const fg = parseHexColor(raw)
+      if (!fg) {
+        warnings.push(`${file}  ${mode} --editor-h${n} 不是十六进制，跳过对比度检查`)
+        continue
+      }
+      const ratio = contrastRatio(fg, bg)
+      const need = n >= 5 ? 4.5 : 3
+      if (ratio < need) {
+        failures.push(
+          `${file}  ${mode} --editor-h${n} 对比度 ${ratio.toFixed(2)}:1 < ${need}:1`
+        )
+      }
+    }
   }
 
   // 5) 反模式：这些是"变量体系表达力不足"的症状，应当改用令牌。

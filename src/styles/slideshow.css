@@ -21,7 +21,9 @@
   --ys-page-title-size: clamp(36px, 4.2vw, 60px);
   --ys-title-h1-size: clamp(43.2px, 5.04vw, 72px);
   --ys-title-h3-size: clamp(27px, 3.15vw, 45px);
-  --ys-title-h4-size: clamp(20.7px, 2.415vw, 34.5px);
+  --ys-title-h4-size: clamp(22.5px, 2.625vw, 37.5px);
+  --ys-title-h5-size: clamp(20.16px, 2.352vw, 33.6px);
+  --ys-title-h6-size: clamp(18px, 2.1vw, 30px);
   --ys-title-cover-size: clamp(50.4px, 6vw, 135px);
   --ys-title-section-size: clamp(36px, 4.5vw, 90px);
   --ys-title-thanks-size: clamp(46.8px, 6vw, 120px);
@@ -704,7 +706,25 @@
   font-size: var(--ys-title-h4-size);
   font-weight: 600;
   text-align: left;
+  color: var(--editor-h4, var(--editor-accent, #4f46e5));
   margin: 0.8em 0 0.4em;
+}
+
+.ys-slide h5 {
+  font-size: var(--ys-title-h5-size);
+  font-weight: 600;
+  text-align: left;
+  color: var(--editor-h5, var(--editor-accent, #4f46e5));
+  margin: 0.7em 0 0.3em;
+}
+
+.ys-slide h6 {
+  font-size: var(--ys-title-h6-size);
+  font-weight: 600;
+  text-align: left;
+  color: var(--editor-h6, var(--editor-accent, #4f46e5));
+  margin: 0.6em 0 0.3em;
+  letter-spacing: 0.03em;
 }
 
 .ys-slide p,

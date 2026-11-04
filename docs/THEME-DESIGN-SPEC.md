@@ -2,8 +2,8 @@
 
 > **文档性质**：主题（Theme）系统的开发者参考手册。面向「想新增一个主题」「想微调现有主题」「想知道某个旋钮到底管什么」的人。
 > **权威来源**：`src/styles/globals.css`（令牌全集）+ `src-tauri/themes/*.css`（主题实现）+ `scripts/check-themes.mjs`（校验门禁）。
-> **基线版本**：v0.3.2+（主题令牌体系：区域 / 装饰 / 效果三层；「自定义主题」= 基底主题 + user.css）
-> **更新日期**：2026-09-24
+> **基线版本**：v0.4.2+（主题令牌体系：区域 / 装饰 / 效果三层；六级标题色阶；「自定义主题」= 基底主题 + user.css）
+> **更新日期**：2026-11-04
 
 ---
 
@@ -26,7 +26,7 @@
    - 6.9 [语义色令牌](#69-语义色令牌semantic)
    - 6.10 [结构性装饰：无法令牌化的部分](#610-结构性装饰无法令牌化的部分)
 7. [明暗双模式规范](#7-明暗双模式规范)
-8. [校验门禁：check-themes 六项检查](#8-校验门禁check-themes-六项检查)
+8. [校验门禁：check-themes 八项检查](#8-校验门禁check-themes-六项检查)
 9. [反模式与最佳实践](#9-反模式与最佳实践)
 10. [主题元数据 theme.json](#10-主题元数据-themejson)
 11. [演示模式的主题继承](#11-演示模式的主题继承)
@@ -52,7 +52,7 @@
 |---|------|------|
 | 1 | **只覆盖令牌，不写组件选择器** | 组件选择器（`.toolbar { … }`）会与全局层、运行时注入层争夺特异性，导致 `!important`、层级打架、被 `overflow` 裁切 |
 | 2 | **颜色令牌必须亮/暗各声明一次** | 只写一侧，另一模式会静默回落到基础值 —— 表现为「暗色下某个角落还是亮的」 |
-| 3 | **令牌名必须存在于 `globals.css` 或主题自身** | CSS 变量名写错**不会报错，只会静默失效**。这是本项目最大的历史坑（17 个主题都定义了 `--editor-h1/2/3`，但长期无人消费 ⇒ 「标题色」旋钮是死的） |
+| 3 | **令牌名必须存在于 `globals.css` 或主题自身** | CSS 变量名写错**不会报错，只会静默失效**。这是本项目最大的历史坑（17 个主题都定义了 `--editor-h1/2/3`，但长期只有幻灯片消费 ⇒ 「标题色」旋钮曾是死的；现在 `--editor-h1..h6` 已接入预览 / 阅读 / 演示三处） |
 
 ### 1.3 为什么令牌化：一次真实的重构
 
@@ -177,7 +177,7 @@ node scripts/check-themes.mjs --strict # 发布前自查，告警也算失败
 | `src/styles/globals.css` | 基准令牌全集 + 组件消费点。**同时是校验器的变量白名单** |
 | `src/lib/themeLoader.ts` | 主题样式**唯一注入入口**（含「自定义主题」合成） |
 | `src/lib/userCss.ts` | 选择器归一 / 提权（主题文件归属 + 用户 CSS 覆盖） |
-| `scripts/check-themes.mjs` | 六项一致性门禁 |
+| `scripts/check-themes.mjs` | 八项一致性门禁 |
 
 > ⚠️ **`src/assets/themes/` 已于 2026-09-22 删除**，全仓零引用。它曾害过一次 bug：改了那份副本，运行时却从 `src-tauri/` 读取，导致变量未生效。`check-themes.mjs` 第 6 项保留为哨兵 —— 该目录再现即告警。**不要重建副本。**
 
@@ -334,8 +334,7 @@ App.tsx
 | `--editor-border` | color | `#e5e5e5` | `#3c3c3c` | 通用描边 |
 | `--editor-surface` | color | `#f8f8f8` | `#252526` | 次级表面：卡片、输入框、代码块底 |
 | `--editor-hover` | color | `rgba(0,0,0,0.03)` | `rgba(255,255,255,0.05)` | 悬停底色 |
-| `--editor-selection` | color | `#0066cc` | `#569cd6` | 选区色（**已知死旋钮**，当前无消费点） |
-| `--editor-selection-bg` | color | `rgba(0,102,204,0.35)` | `rgba(86,156,214,0.45)` | 选区背景（实际生效的是这个） |
+| `--editor-selection-bg` | color | `rgba(0,102,204,0.35)` | `rgba(86,156,214,0.45)` | 选区背景 |
 | `--editor-cursor` | color | `#0066cc` | `#569cd6` | 主题色光标源色（JS 据此生成 I-beam） |
 | `--sidebar-bg` | color | `#fafafa` | `#252526` | 侧边栏背景（区域令牌的源头之一） |
 | `--sidebar-text` | color | `#666666` | `#858585` | 次级 / 弱化文字（大量用于 muted 场景） |
@@ -741,6 +740,11 @@ App.tsx
 | 令牌 | 默认值 | 对应 prose 变量 |
 |------|--------|-----------------|
 | `--h1-color` | `var(--editor-h1, var(--editor-text))` | `--tw-prose-headings` |
+| `--h2-color` | `var(--editor-h2, var(--h1-color))` | H2 元素颜色 |
+| `--h3-color` | `var(--editor-h3, var(--h2-color))` | H3 元素颜色 |
+| `--h4-color` | `var(--editor-h4, var(--h3-color))` | H4 元素颜色 |
+| `--h5-color` | `var(--editor-h5, var(--h4-color))` | H5 元素颜色 |
+| `--h6-color` | `var(--editor-h6, var(--h5-color))` | H6 元素颜色 |
 | `--link-color` | `var(--editor-accent)` | `--tw-prose-links` |
 | `--strong-color` | `var(--editor-text)` | `--tw-prose-bold` |
 | `--quote-fg` | `var(--editor-text)` | `--tw-prose-quotes` |
@@ -753,17 +757,36 @@ App.tsx
 | `--table-border` | `var(--editor-border)` | `--tw-prose-th-borders` / `td` |
 | `--table-head-bg` | `var(--editor-surface)` | （表头背景） |
 
-#### 关于 `--editor-h1 / --editor-h2 / --editor-h3`
+#### 关于 `--editor-h1 … --editor-h6`
 
-这三个变量**曾是假旋钮**：17 个主题都声明了，但全仓只有 `slideshow.css` 消费。v0.3.2 已把它们接进真实消费点：
+六个标题色令牌都**必须接入真实消费点**，否则就是假旋钮。当前消费链：
 
 | 变量 | 消费点 |
 |------|--------|
-| `--editor-h1` | `--h1-color`（预览 + 实时标题色）；`slideshow.css` h1 |
-| `--editor-h2` | `slideshow.css` h2 |
-| `--editor-h3` | `slideshow.css` h3 |
+| `--editor-h1` | `--h1-color`（预览）；阅读模式 h1；`slideshow.css` h1 |
+| `--editor-h2` | `--h2-color`；阅读模式 h2；`slideshow.css` h2 |
+| `--editor-h3` | `--h3-color`；阅读模式 h3；`slideshow.css` h3 |
+| `--editor-h4` | `--h4-color`；阅读模式 h4；`slideshow.css` h4 |
+| `--editor-h5` | `--h5-color`；阅读模式 h5；`slideshow.css` h5 |
+| `--editor-h6` | `--h6-color`；阅读模式 h6；`slideshow.css` h6 |
 
-因此主题声明它们**现在会生效**（至少作用于 h1 预览与幻灯片标题）。
+#### 六级标题色阶
+
+主题应使用统一的「H1 品牌色 → 正文色」过渡，让字号越小、对比度越高：
+
+| 级别 | 建议比例（品牌色 / 正文色） |
+|------|------------------------------|
+| H1 | 100 / 0 |
+| H2 | 90 / 10 |
+| H3 | 80 / 20 |
+| H4 | 68 / 32 |
+| H5 | 54 / 46 |
+| H6 | 40 / 60 |
+
+- H1–H4 作为大字，对比度 ≥ 3:1
+- H5/H6 是正文级字号，对比度 ≥ 4.5:1
+- H6 字号不得小于正文 `1em`，靠字重、颜色、字距保持标题感
+- 颜色建议写显式十六进制值，便于 `check-themes.mjs` 做对比度校验
 
 #### 设计指引
 
@@ -851,6 +874,7 @@ App.tsx
 | 伪元素光带 | 需要 `::before` / `::after` 内容 | 引用块顶部高光折线 |
 | 复杂布局微调 | 涉及 `padding` / `margin` / `position` | 正文卡片留白 |
 | 字体排版细节 | `letter-spacing` / `font-weight` 组合 | 标题字重 |
+| 六级标题层级 | 字号 / 字重 / 间距逐级递减 | H1–H6 元素规则、H4–H6 默认基线 |
 
 #### 写法规范
 
@@ -905,12 +929,12 @@ h1 { /* … */ }
 
 ---
 
-## 8. 校验门禁：check-themes 六项检查
+## 8. 校验门禁：check-themes 八项检查
 
 `scripts/check-themes.mjs` 把「靠肉眼发现」变成「构建时失败」。
 
 ```bash
-node scripts/check-themes.mjs           # 默认：只让真 bug（1、4）失败
+node scripts/check-themes.mjs           # 默认：只让真 bug（1、4、7、8）失败
 node scripts/check-themes.mjs --strict  # 发布前自查：告警也算失败
 node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 ```
@@ -923,12 +947,14 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 | 4 | **命名一致性** | **失败** | 文件名必须与 `:root.theme-<name>` 选择器一致 |
 | 5 | **反模式计数** | 告警 | `!important` / `[class*=]` / 直接写 `z-index` |
 | 6 | **双目录漂移** | 告警 | `src/assets/themes/` 再现即告警（该目录已删除） |
+| 7 | **标题六阶完整性** | **失败** | 每个预设主题必须有 `--editor-h1..h6` 与 H4–H6 元素规则 |
+| 8 | **标题对比度** | **失败** | H1–H4 ≥ 3:1，H5/H6 ≥ 4.5:1 |
 
-**退出码**：真 bug（1、4）恒为失败；告警默认只提示，加 `--strict` 才失败。语义与 `check-i18n.mjs` 一致：**历史遗留问题不该阻塞构建，但也不该被忽略**。
+**退出码**：真 bug（1、4、7、8）恒为失败；告警默认只提示，加 `--strict` 才失败。语义与 `check-i18n.mjs` 一致：**历史遗留问题不该阻塞构建，但也不该被忽略**。
 
 ### 8.1 为什么需要「死声明」检查
 
-CSS 变量名写错**不报错、只静默失效**。历史踩坑：17 个主题都定义了 `--editor-h1/2/3`，但全仓只有 `slideshow.css` 消费 ⇒ 「标题色」旋钮长期是死的。第 3 项就是为这类问题设的。
+CSS 变量名写错**不报错、只静默失效**。历史踩坑：17 个主题都定义了 `--editor-h1/2/3`，但全仓只有 `slideshow.css` 消费 ⇒ 「标题色」旋钮长期是死的。第 3 项就是为这类问题设的；现在 `--editor-h1..h6` 已接入预览 / 阅读 / 演示三处。
 
 > 检查器**必须先剥掉注释**再扫反模式 —— 否则「文档里提到 `!important`」都会被算成反模式（真实踩过）。
 
@@ -1017,14 +1043,14 @@ Slideshow.tsx 改写选择器
 
 | 继承 | 不继承 |
 |------|--------|
-| 主题 CSS 变量（`--editor-bg/text/accent/surface/border/…`、`--font-*`、`--editor-h1/2/3`） | `.editor-content.theme-* <el>` 的**元素级排版规则**（左对齐 / 小字号） |
+| 主题 CSS 变量（`--editor-bg/text/accent/surface/border/…`、`--font-*`、`--editor-h1..h6`） | `.editor-content.theme-* <el>` 的**元素级排版规则**（左对齐 / 小字号） |
 
 **原因**：若把元素规则也改写过去，编辑器的「左对齐 / 小字号」会覆盖演示版式的「居中 / 大字号」，导致「标题没居中」。幻灯片的**字号 / 对齐 / 居中由 `slideshow.css` 全权控制**。
 
 ### 11.2 设计指引
 
 - 主题作者只需保证**变量正确**，幻灯片即自动跟随换肤。
-- **标题颜色**通过 `--editor-h1/h2/h3` 继承（对应各主题 h1/h2/h3 配色，深色另有取值）。
+- **标题颜色**通过 `--editor-h1..h6` 继承（对应各主题 H1–H6 配色，深色另有取值）。
 - **不要在主题里写幻灯片选择器**：版式扩展编辑 `src/styles/slideshow.css` 的 `.ys-layout-<类型>` 规则。
 - **「自定义主题」同样生效**：HUD 主题菜单里会出现「自定义主题」（user.css 非空时）；其变量 = 基底主题变量块 + user.css 变量块（归一到 `custom` 后合并），元素规则照旧丢弃。
 
@@ -1073,8 +1099,11 @@ v0.3.3 起演示模式有一组自己的排版变量，默认值声明在 `globa
   --editor-selection-bg: rgba(15, 118, 110, 0.22);
   --editor-cursor: #0f766e;
   --editor-h1: #115e59;
-  --editor-h2: #0f766e;
-  --editor-h3: #0f766e;
+  --editor-h2: #125954;
+  --editor-h3: #13544f;
+  --editor-h4: #154e49;
+  --editor-h5: #164742;
+  --editor-h6: #183f3c;
   --sidebar-bg: #edf4f2;
   --sidebar-text: #5f7a74;
   --statusbar-bg: #0f766e;
@@ -1146,8 +1175,11 @@ v0.3.3 起演示模式有一组自己的排版变量，默认值声明在 `globa
   --editor-selection-bg: rgba(45, 212, 191, 0.24);
   --editor-cursor: #2dd4bf;
   --editor-h1: #5eead4;
-  --editor-h2: #2dd4bf;
-  --editor-h3: #2dd4bf;
+  --editor-h2: #69e9d5;
+  --editor-h3: #75e9d6;
+  --editor-h4: #82e8d8;
+  --editor-h5: #92e7d9;
+  --editor-h6: #a2e6db;
   --sidebar-bg: #111c1a;
   --sidebar-text: #5f7a74;
   --statusbar-bg: #13201d;
@@ -1200,7 +1232,10 @@ v0.3.3 起演示模式有一组自己的排版变量，默认值声明在 `globa
   border-bottom: 2px solid var(--hr-color);
 }
 .editor-content.theme-ink-jade h2 { font-size: 1.5em; font-weight: 600; margin: 1.3em 0 0.4em; }
-.editor-content.theme-ink-jade h3 { font-size: 1.25em; font-weight: 600; margin: 1.2em 0 0.3em; }
+.editor-content.theme-ink-jade h3 { font-size: 1.3em; font-weight: 600; margin: 1.2em 0 0.3em; }
+.editor-content.theme-ink-jade h4 { font-size: 1.2em; font-weight: 600; margin: 1.1em 0 0.35em; }
+.editor-content.theme-ink-jade h5 { font-size: 1.1em; font-weight: 600; margin: 1em 0 0.3em; letter-spacing: 0.01em; }
+.editor-content.theme-ink-jade h6 { font-size: 1em; font-weight: 600; margin: 0.9em 0 0.3em; letter-spacing: 0.03em; }
 .editor-content.theme-ink-jade p  { margin: 0 0 var(--paragraph-spacing); }
 ```
 
@@ -1225,6 +1260,9 @@ node scripts/check-themes.mjs --strict
 - [ ] 文件名 == `:root.theme-<name>` == `theme.json` 键，三者一致
 - [ ] 亮色块与暗色块**都**存在
 - [ ] 所有**颜色令牌**亮暗各声明一次（偶数次）
+- [ ] `--editor-h1..h6` 六个标题色令牌齐全，亮暗各一套
+- [ ] H4–H6 有显式元素规则；H6 字号不小于正文 `1em`
+- [ ] 标题色阶对比度达标：H1–H4 ≥ 3:1，H5/H6 ≥ 4.5:1
 - [ ] 未使用 `!important` / `[class*=]` / 裸 `z-index`
 - [ ] 未写未加作用域的选择器（必须 `.editor-content.theme-<name>` 或 `.theme-<name>`）
 - [ ] 未覆盖布局定位属性（`position` / `display` / `inset` / `height`）
@@ -1266,10 +1304,9 @@ node scripts/check-themes.mjs --strict
 | `--editor-border` | C | `#e5e5e5` | ● |
 | `--editor-surface` | C | `#f8f8f8` | ● |
 | `--editor-hover` | C | `rgba(0,0,0,0.03)` | ● |
-| `--editor-selection` | C | `#0066cc` | ○ 死旋钮 |
 | `--editor-selection-bg` | C | `rgba(0,102,204,0.35)` | ● |
 | `--editor-cursor` | C | `#0066cc` | ● |
-| `--editor-h1` / `--editor-h2` / `--editor-h3` | C | （无，回退正文） | ● |
+| `--editor-h1` / `--editor-h2` / `--editor-h3` / `--editor-h4` / `--editor-h5` / `--editor-h6` | C | （无，逐级回退） | ● |
 | `--sidebar-bg` | C | `#fafafa` | ● |
 | `--sidebar-text` | C | `#666666` | ● |
 | `--statusbar-bg` | V | `#f5f5f5` | ● 接受渐变 |
@@ -1370,6 +1407,11 @@ node scripts/check-themes.mjs --strict
 | 令牌 | 默认 | 状态 |
 |------|------|:----:|
 | `--h1-color` | `var(--editor-h1, var(--editor-text))` | ● |
+| `--h2-color` | `var(--editor-h2, var(--h1-color))` | ● |
+| `--h3-color` | `var(--editor-h3, var(--h2-color))` | ● |
+| `--h4-color` | `var(--editor-h4, var(--h3-color))` | ● |
+| `--h5-color` | `var(--editor-h5, var(--h4-color))` | ● |
+| `--h6-color` | `var(--editor-h6, var(--h5-color))` | ● |
 | `--link-color` | `var(--editor-accent)` | ● |
 | `--strong-color` | `var(--editor-text)` | ● |
 | `--quote-fg` | `var(--editor-text)` | ● |
@@ -1426,7 +1468,7 @@ node scripts/check-themes.mjs --strict
 | `src/lib/themeLoader.ts` | 主题样式唯一注入入口（含「自定义主题」合成） |
 | `src/lib/userCss.ts` | 选择器归一 / 提权（`normalizeUserCss` / `retargetThemeCss`） |
 | `src/lib/themeCursor.ts` | 主题色光标生成（注入 `--cursor-*`） |
-| `scripts/check-themes.mjs` | 六项一致性门禁 |
+| `scripts/check-themes.mjs` | 八项一致性门禁 |
 | `src/components/SettingsModal.tsx` | 主题列表 UI（含「自定义主题」条目）+ `academic` 内置元数据 |
 | `src/components/Slideshow.tsx` | 主题选择器改写（`:root.theme-*` → `.yizi-slideshow.theme-*`）+ custom 支持 |
 | `tests/userCss.test.ts` | 归一 / 提权的 16 条单测 |
@@ -1434,6 +1476,6 @@ node scripts/check-themes.mjs --strict
 
 ---
 
-*本文档描述 v0.3.2+ 的主题系统。新增令牌或改变分层时，请同步更新本文件与 `scripts/check-themes.mjs`。*
+*本文档描述 v0.4.2+ 的主题系统。新增令牌或改变分层时，请同步更新本文件与 `scripts/check-themes.mjs`。*
 
 
