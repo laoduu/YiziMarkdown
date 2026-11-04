@@ -2,7 +2,7 @@
 
 ## v0.4.2
 
-> **未发布**（截至 2026-11-04）：合并社区 PR #7（Word 版式与上下标/高亮）及后续修复。`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已同步到 `0.4.2`，尚未打包、未打 tag。
+> **已发布**（2026-11-04）：合并社区 PR #7（Word 版式与上下标/高亮）及后续修复。`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已同步到 `0.4.2`，tag 与 GitHub Release 随本轮发布。
 
 ### 设置：品牌名称自定义（2026-11-04）
 
