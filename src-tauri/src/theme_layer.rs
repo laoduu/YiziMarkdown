@@ -587,6 +587,65 @@ fn read_theme_css_at(builtin: &Path, user: &Path, raw_id: &str) -> Result<String
     fs::read_to_string(&path).map_err(|e| format!("Failed to read theme: {}", e))
 }
 
+/// 把用户选择的 CSS 文件复制到 `custom/`，返回最终主题 id。
+///
+/// 不覆盖任何已有主题：文件 id 与内置主题或已有自建主题重名时，自动加
+/// `-2` / `-3` 后缀。源文件本身已在 `custom/` 中且 id 未变时直接返回原 id。
+fn import_theme_at(builtin: &Path, user: &Path, source: &Path) -> Result<String, String> {
+    let ext = source
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or_default();
+    if !ext.eq_ignore_ascii_case("css") {
+        return Err("Theme file must use the .css extension".to_string());
+    }
+    let stem = source
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or_default()
+        .trim();
+    if !is_safe_id(stem) {
+        return Err(format!("Invalid theme file name: {}", source.display()));
+    }
+    let bytes = fs::read(source)
+        .map_err(|e| format!("Failed to read theme file: {}", e))?;
+    if bytes.is_empty() {
+        return Err("Theme file is empty".to_string());
+    }
+    if std::str::from_utf8(&bytes).is_err() {
+        return Err("Theme file must be UTF-8 encoded".to_string());
+    }
+
+    let dir = custom_dir(user);
+    fs::create_dir_all(&dir)
+        .map_err(|e| format!("Failed to create themes dir: {}", e))?;
+
+    // 用户直接选了 custom/ 里已有的文件：不复制，直接返回原主题。
+    if let (Ok(src), Ok(target)) = (
+        source.canonicalize(),
+        dir.join(format!("{}.css", stem)).canonicalize(),
+    ) {
+        if src == target {
+            return Ok(stem.to_string());
+        }
+    }
+
+    let manifest = load_manifest(builtin)?;
+    let known: BTreeSet<&str> = manifest.themes.iter().map(|t| t.id.as_str()).collect();
+    let mut id = stem.to_string();
+    let mut n = 2u32;
+    while known.contains(id.as_str())
+        || is_reserved_id(&id)
+        || dir.join(format!("{}.css", id)).exists()
+    {
+        id = format!("{}-{}", stem, n);
+        n += 1;
+    }
+    fs::write(dir.join(format!("{}.css", id)), bytes)
+        .map_err(|e| format!("Failed to import theme: {}", e))?;
+    Ok(id)
+}
+
 fn rename_theme_at(builtin: &Path, user: &Path, id: &str, name: &str) -> Result<(), String> {
     if !is_safe_id(id) || is_reserved_id(id) {
         return Err(format!("Invalid theme id: {}", id));
@@ -726,6 +785,14 @@ pub fn resolve_theme_update(id: String, use_builtin: bool) -> Result<(), String>
     resolve_theme_update_at(&builtin, &user, &id, use_builtin)
 }
 
+/// 导入用户选择的 CSS 主题文件（复制到 `custom/`，绝不覆盖已有主题）。
+#[tauri::command]
+pub fn import_user_theme(source_path: String) -> Result<String, String> {
+    let builtin = get_builtin_themes_dir()?;
+    let user = get_user_themes_dir()?;
+    import_theme_at(&builtin, &user, Path::new(&source_path))
+}
+
 // ===== 测试 =====
 
 #[cfg(test)]
@@ -815,6 +882,46 @@ mod tests {
         let mine = catalog.themes.iter().find(|t| t.id == "mine").unwrap();
         assert_eq!(mine.name, "我的主题");
         assert_eq!(mine.source, "custom");
+    }
+
+    #[test]
+    fn import_theme_copies_and_avoids_collisions() {
+        let tmp = TempDir::new();
+        let (builtin, user) = (tmp.builtin(), tmp.user());
+        setup_builtin(&builtin, "tech-body", "academic-body");
+
+        let src = tmp.0.join("incoming").join("mine.css");
+        write(&src, "mine-css");
+        assert_eq!(import_theme_at(&builtin, &user, &src).unwrap(), "mine");
+        assert_eq!(
+            fs::read_to_string(custom_dir(&user).join("mine.css")).unwrap(),
+            "mine-css"
+        );
+
+        // 同名再来一次不能覆盖，自动加 -2
+        assert_eq!(import_theme_at(&builtin, &user, &src).unwrap(), "mine-2");
+        assert_eq!(
+            fs::read_to_string(custom_dir(&user).join("mine-2.css")).unwrap(),
+            "mine-css"
+        );
+
+        // 与内置主题重名同样避让
+        let tech = tmp.0.join("incoming").join("tech.css");
+        write(&tech, "my-tech");
+        assert_eq!(import_theme_at(&builtin, &user, &tech).unwrap(), "tech-2");
+
+        // 保留 id `custom` 也不能占用
+        let reserved = tmp.0.join("incoming").join("custom.css");
+        write(&reserved, "reserved-css");
+        assert_eq!(
+            import_theme_at(&builtin, &user, &reserved).unwrap(),
+            "custom-2"
+        );
+
+        // 非 CSS 文件直接拒绝
+        let txt = tmp.0.join("incoming").join("notes.txt");
+        write(&txt, "not a theme");
+        assert!(import_theme_at(&builtin, &user, &txt).is_err());
     }
 
     #[test]

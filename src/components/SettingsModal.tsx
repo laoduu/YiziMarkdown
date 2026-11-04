@@ -1,7 +1,7 @@
 import { invokeTauri, invokeTauriOrThrow } from '../lib/tauri'
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { X, Loader2, ChevronRight, FolderOpen, Palette, FileText, Keyboard, Settings2, Eye, EyeOff, Info, Github, History, BookOpen, ExternalLink, Zap, Globe, Puzzle, Bot, Cloud, Boxes, Download, RefreshCw, Presentation, Layers, Sparkles } from 'lucide-react'
-import { useSettingsStore } from '../stores/settingsStore'
+import { X, Loader2, ChevronRight, FolderOpen, Palette, FileText, Keyboard, Settings2, Eye, EyeOff, Info, Github, History, BookOpen, ExternalLink, Zap, Globe, Puzzle, Bot, Cloud, Boxes, Download, RefreshCw, Presentation, Layers, Sparkles, Plus } from 'lucide-react'
+import { useSettingsStore, UI_TEXT_SCALE_DEFAULT, UI_TEXT_SCALE_MIN, UI_TEXT_SCALE_MAX } from '../stores/settingsStore'
 import { useUpdateStore } from '../stores/updateStore'
 import type { UpdateBlocker } from '../lib/updateClient'
 import { isManualUpdateChannel } from '../lib/updateClient'
@@ -415,7 +415,7 @@ function ThemeCard({
           {active && <span className="settings-theme-check" aria-hidden="true">✓</span>}
         </span>
         <span className="settings-theme-doc">
-          <span className="settings-theme-desc">{entry.desc || t('settings.customThemeDesc')}</span>
+          <span className="settings-theme-desc">{entry.desc || (entry.id === CUSTOM_THEME ? t('settings.customThemeDesc') : t('settings.userThemeDesc'))}</span>
           <span className="settings-theme-line">
             {t('settings.themeSampleText')} <span className="settings-theme-sel">{t('settings.themeSampleSelection')}</span>
           </span>
@@ -430,6 +430,31 @@ function ThemeCard({
   )
 }
 
+/** 用户主题末尾的「新增主题」卡：选择 CSS 文件后由 Rust 复制进 custom/。 */
+function AddThemeCard({
+  title, hint, busy, onClick,
+}: {
+  title: string
+  hint: string
+  busy: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      className="settings-theme-add"
+      onClick={onClick}
+      disabled={busy}
+    >
+      <span className="settings-theme-add-icon">
+        {busy ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
+      </span>
+      <span className="settings-theme-add-title">{title}</span>
+      <span className="settings-theme-add-hint">{hint}</span>
+    </button>
+  )
+}
+
 function AppearanceSettings() {
   const { t } = useI18n()
   const { currentTheme, isDark, customCssBase, setField } = useSettingsStore()
@@ -440,6 +465,8 @@ function AppearanceSettings() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [updatePrompt, setUpdatePrompt] = useState<ThemeEntry | null>(null)
+  const [importingTheme, setImportingTheme] = useState(false)
+  const [themeImportError, setThemeImportError] = useState<string | null>(null)
 
   // user.css 是否非空：决定「自定义主题」是否出现（合成条目 = 基底主题 + user.css）
   const refreshUserCssFlag = useCallback(() => {
@@ -480,7 +507,9 @@ function AppearanceSettings() {
     source: 'custom',
     hasUpdate: false,
   } : null
-  const themeList = customEntry ? [customEntry, ...catalog] : catalog
+  const presetThemes = catalog.filter((entry) => entry.source !== 'custom')
+  const userThemes = catalog.filter((entry) => entry.source === 'custom')
+  const userThemeList = customEntry ? [customEntry, ...userThemes] : userThemes
 
   const activate = (id: string) => setField('currentTheme', id)
   const isCardDark = (id: string) => darkPreview[id] ?? isDark
@@ -518,34 +547,69 @@ function AppearanceSettings() {
     await refreshCatalog()
   }
 
+  // 「新增主题」：选择 CSS 文件 → Rust 复制到 custom/ → 刷新目录与预览
+  const importTheme = async () => {
+    if (importingTheme) return
+    setImportingTheme(true)
+    setThemeImportError(null)
+    try {
+      const id = await invokeTauriOrThrow<string | null>('import_theme_dialog')
+      if (!id) return
+      await refreshCatalog()
+    } catch (e) {
+      setThemeImportError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setImportingTheme(false)
+    }
+  }
+
+  const renderThemeCard = (entry: ThemeEntry) => (
+    <ThemeCard
+      key={entry.id}
+      entry={entry}
+      previewKey={entry.id === CUSTOM_THEME ? customCssBase : entry.id}
+      active={currentTheme === entry.id}
+      darkPreview={isCardDark(entry.id)}
+      editable={entry.id !== CUSTOM_THEME}
+      editing={editingId === entry.id}
+      editName={editName}
+      onActivate={() => activate(entry.id)}
+      onToggleDark={() => toggleDarkPreview(entry.id)}
+      onStartEdit={() => startEdit(entry)}
+      onEditName={setEditName}
+      onCommitEdit={commitEdit}
+      onCancelEdit={() => setEditingId(null)}
+      onShowUpdate={() => setUpdatePrompt(entry)}
+    />
+  )
+
   return (
     <>
       <style>{previewCss}</style>
       <div className="settings-content-scroll">
         <div className="space-y-4">
-          <Section title={t('settings.theme')}>
+          <Section title={t('settings.themePreset')}>
             <div className="settings-theme-grid">
-              {themeList.map((entry) => (
-                <ThemeCard
-                  key={entry.id}
-                  entry={entry}
-                  previewKey={entry.id === CUSTOM_THEME ? customCssBase : entry.id}
-                  active={currentTheme === entry.id}
-                  darkPreview={isCardDark(entry.id)}
-                  editable={entry.id !== CUSTOM_THEME}
-                  editing={editingId === entry.id}
-                  editName={editName}
-                  onActivate={() => activate(entry.id)}
-                  onToggleDark={() => toggleDarkPreview(entry.id)}
-                  onStartEdit={() => startEdit(entry)}
-                  onEditName={setEditName}
-                  onCommitEdit={commitEdit}
-                  onCancelEdit={() => setEditingId(null)}
-                  onShowUpdate={() => setUpdatePrompt(entry)}
-                />
-              ))}
+              {presetThemes.map(renderThemeCard)}
             </div>
-            <p className="text-[10px] text-[var(--sidebar-text)] mt-2">{t('settings.themeEditHint')}</p>
+            <p className="text-[0.6875rem] text-[var(--sidebar-text)] mt-2">{t('settings.themeEditHint')}</p>
+          </Section>
+          <Section title={t('settings.themeUser')}>
+            <div className="settings-theme-grid">
+              {userThemeList.map(renderThemeCard)}
+              <AddThemeCard
+                title={t('settings.themeAdd')}
+                hint={importingTheme ? t('settings.themeImporting') : t('settings.themeAddHint')}
+                busy={importingTheme}
+                onClick={importTheme}
+              />
+            </div>
+            <p className="text-[0.6875rem] text-[var(--sidebar-text)] mt-2">{t('settings.themeUserHint')}</p>
+            {themeImportError && (
+              <p className="text-[0.6875rem] text-red-500 mt-1 break-all">
+                {t('settings.themeImportFailed', { message: themeImportError })}
+              </p>
+            )}
           </Section>
           <Section title={t('settings.mode')}>
             <Row label={t('settings.darkMode')}>

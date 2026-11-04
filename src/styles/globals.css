@@ -2117,6 +2117,56 @@ a {
   box-shadow: 0 0 0 2px var(--editor-accent), 0 1px 4px rgba(15, 23, 42, 0.1);
 }
 
+/* 用户主题末尾的「新增主题」卡：虚线占位，与主题卡同高 */
+.settings-theme-add {
+  height: 142px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 12px;
+  background: transparent;
+  color: var(--sidebar-text);
+  border: 1px dashed var(--editor-border, rgba(0, 0, 0, 0.18));
+  border-radius: var(--border-radius, 6px);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.settings-theme-add:hover:not(:disabled) {
+  border-color: var(--editor-accent);
+  color: var(--editor-accent);
+  background: var(--editor-hover);
+}
+.settings-theme-add:focus-visible {
+  outline: 2px solid var(--editor-accent);
+  outline-offset: 2px;
+}
+.settings-theme-add:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+.settings-theme-add-icon {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  opacity: 0.85;
+}
+.settings-theme-add-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.settings-theme-add-hint {
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  max-width: 210px;
+}
+
 /* 侧栏：首行用强调色代表「选中项」 */
 .settings-theme-side {
   width: 34px;

@@ -28,8 +28,8 @@ mod webdav;
 // 主题资产分层：内置只读 + 用户层（见 theme_layer.rs 模块头）
 mod theme_layer;
 use theme_layer::{
-    get_theme_catalog, list_themes, read_theme_css, read_theme_json, rename_theme,
-    resolve_theme_update,
+    get_theme_catalog, import_user_theme, list_themes, read_theme_css, read_theme_json,
+    rename_theme, resolve_theme_update,
 };
 
 use ai_proxy::{ai_cancel, ai_chat, ai_clear_key, ai_has_key, ai_list_models, ai_set_key, ai_verify_key};
@@ -379,6 +379,27 @@ async fn pick_image_file(app: tauri::AppHandle) -> Result<Option<String>, String
             .map(|p| p.to_string_lossy().to_string());
 
         Ok(result)
+    })
+    .await
+    .map_err(|e| format!("Dialog task failed: {}", e))?
+}
+
+/// 选择 CSS 主题文件并复制到用户主题目录 `custom/`，返回最终主题 id。
+#[tauri::command]
+async fn import_theme_dialog(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let picked = app
+            .dialog()
+            .file()
+            .add_filter("CSS Theme", &["css"])
+            .blocking_pick_file()
+            .and_then(|p| p.into_path().ok());
+        let Some(path) = picked else {
+            return Ok(None);
+        };
+        theme_layer::import_user_theme(path.to_string_lossy().to_string()).map(Some)
     })
     .await
     .map_err(|e| format!("Dialog task failed: {}", e))?
@@ -1912,12 +1933,14 @@ fn main() {
             get_system_fonts,
             pick_and_read_file,
             pick_image_file,
+            import_theme_dialog,
             get_config_dir,
             get_theme_catalog,
             list_themes,
             read_theme_css,
             read_theme_json,
             rename_theme,
+            import_user_theme,
             resolve_theme_update,
             read_user_css,
             write_user_css,
