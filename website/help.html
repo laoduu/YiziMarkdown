@@ -188,7 +188,7 @@
                 <h3>单实例与文件关联</h3>
                 <ul>
                     <li><strong>单实例</strong>：双击 <code>.md</code> 文件时不会开多个窗口，自动合并到已有实例并定位到该标签</li>
-                    <li><strong>文件关联</strong>：「设置 → 通用」一键设为系统默认 Markdown 编辑器，可随时取消</li>
+                    <li><strong>文件关联</strong>：「设置 → 通用 → 文件关联」可分别设为系统默认 <code>.md</code> 编辑器和 <code>.epub</code> 电子书阅读器，互不影响，均可随时取消</li>
                 </ul>
             </div>
         </section>
@@ -608,7 +608,7 @@
                     <li><code>&lt;!-- layout: quote --&gt;</code> 强制指定版式</li>
                     <li><code>&lt;!-- align: left|center|right --&gt;</code> 指定整页对齐</li>
                     <li>左下角显示章节名 + 页码页脚，底部主题色进度条随翻页增长</li>
-                    <li>配色继承当前主题与明暗，标题颜色随主题变化——<strong>换主题，幻灯片同步换肤</strong></li>
+                    <li>配色继承当前主题与明暗，标题颜色（H1–H6）随主题变化——<strong>换主题，幻灯片同步换肤</strong></li>
                     <li><strong>滚轮翻页</strong>：内容<strong>真正超出可视区</strong>时先滚动内容，到上/下边界再翻页（内容已完整显示则直接翻页）；翻页后短暂锁定防惯性连翻</li>
                 </ul>
             </div>
@@ -663,7 +663,7 @@
                 </div>
                 <div class="callout callout-tip">
                     <span class="callout-icon">i</span>
-                    <p>用户目录 <code>~/Documents/yizimarkdown/templates/Slide-Template-new.md</code> 是一份演示模式完全指南（34 页，覆盖全部自动版式、分栏、指令与备注），每页末尾都标出了触发该版式的结构。打开后按 <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd> 即可体验。</p>
+                    <p>用户目录 <code>~/Documents/yizimarkdown/templates/Slide-Template.md</code> 是一份演示模式完全指南（37 页，覆盖全部自动版式、分栏、指令与备注），每页末尾都标出了触发该版式的结构。打开后按 <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd> 即可体验。</p>
                 </div>
                 <div class="callout callout-new">
                     <span class="callout-icon">→</span>
@@ -673,7 +673,7 @@
         </section>
 
         <!-- ========== 6. AI 助手 ========== -->
-        <section class="help-section" id="ai" data-kw="AI 大模型 聊天 面板 API 密钥 keychain 供应商 自定义服务 流式 思考过程 引用文档 上下文 停止">
+        <section class="help-section" id="ai" data-kw="AI 大模型 聊天 面板 API 密钥 keychain 供应商 自定义服务 获取模型 模型列表 流式 思考过程 引用文档 上下文 停止">
             <h2><a class="anchor" href="#ai">#</a>AI 大模型助手</h2>
             <p class="help-lead">右侧聊天面板内置大模型。API 密钥存系统钥匙串，安全不落盘。</p>
 
@@ -708,6 +708,21 @@
                 <div class="callout callout-tip">
                     <span class="callout-icon">i</span>
                     <p>软件本身免费开源，AI 调用费用由对应服务商收取；使用 Ollama 本地模型则<strong>完全免费</strong>。</p>
+                </div>
+            </div>
+
+            <div class="help-sub" id="ai-models">
+                <h3>模型 ID 与「获取模型」</h3>
+                <p>「设置 → AI 助手 → 模型 ID」右侧新增<strong>获取模型</strong>按钮：点击后自动请求当前供应商的模型列表，成功后输入框下方出现下拉框，选择即可填入并保存。输入框仍然保留，可继续手动填写。</p>
+                <ul>
+                    <li><strong>OpenAI 兼容端点</strong>：读取 <code>{base}/models</code>；Base URL 不以 <code>/v1</code> 结尾时自动回退 <code>{base}/v1/models</code>（LongCat 即走此路径）</li>
+                    <li><strong>Anthropic</strong>：读取 <code>{base}/v1/models</code></li>
+                    <li><strong>Ollama</strong>：读取 <code>{base}/api/tags</code></li>
+                    <li>输入框有密钥时优先使用；为空时回退系统钥匙串。两者都没有且该供应商需要密钥时，会直接提示补填 API Key，不会误报「未获取到模型」</li>
+                </ul>
+                <div class="callout callout-tip">
+                    <span class="callout-icon">i</span>
+                    <p>部分供应商未提供模型列表接口（例如火山方舟的模型是推理接入点），此时请手动填写模型 ID；本地 Ollama 与自定义端点可将密钥留空。</p>
                 </div>
             </div>
 
@@ -895,6 +910,8 @@
                     <div class="theme-shot"><img src="screenshots/typewriter.webp" width="1141" height="600" alt="复古打字机" loading="lazy"><span>复古打字机</span></div>
                 </div>
                 <p>在「设置 → 外观」中可切换主题、编辑主题名称。每张主题卡都是一块该主题自己的「迷你编辑器窗格」，卡上的日 / 月按钮只预览这张卡的明暗，点卡片其他区域才激活主题。按 <kbd>F2</kbd> 可快速切换深色 / 亮色模式。</p>
+                <p>每套主题都提供完整的 <strong>H1–H6 六级标题层级</strong>：字号逐级递减，标题色从主题品牌色过渡到正文色；H6 与正文同字号，通过字重、颜色和字距保持标题感。</p>
+                <p>正文目录块（<code>[toc]</code>）的背景与边线由主题令牌控制：<code>--toc-bg</code>、<code>--toc-border</code>。在自定义 CSS 中设为 <code>--toc-bg: transparent; --toc-border: none;</code> 即可取消目录背景和边线。</p>
             </div>
 
             <div class="help-sub" id="appearance-font">
@@ -931,19 +948,19 @@
         </section>
 
         <!-- ========== 10. 设置详解 ========== -->
-        <section class="help-section" id="settings" data-kw="设置 通用 外观 编辑器 AI 云端 快捷键 插件 模板 版本与更新 关于 其他产品 在线更新 自动保存 语言">
+        <section class="help-section" id="settings" data-kw="设置 通用 界面设置 界面字号 界面语言 文件关联 EPUB 默认阅读器 外观 编辑器 AI 助手 云端 快捷键 插件 模板 版本与更新 关于 其他产品 在线更新 自动保存">
             <h2><a class="anchor" href="#settings">#</a>设置详解</h2>
-            <p class="help-lead">设置面板共 10 个分类，覆盖软件全部可配置项。</p>
+            <p class="help-lead">设置面板共 12 个分类，覆盖软件全部可配置项。</p>
 
             <div class="help-sub" id="settings-list">
                 <div class="help-table-wrap">
                     <table>
                         <thead><tr><th>分类</th><th>主要能力</th></tr></thead>
                         <tbody>
-                            <tr><td>通用</td><td>界面语言（15 种）、自动保存间隔、文件关联、默认模板</td></tr>
+                            <tr><td>通用</td><td>界面设置（语言 15 种、界面字号 80%–120%）、自动保存间隔、Markdown / EPUB 文件关联、默认模板</td></tr>
                             <tr><td>外观</td><td>主题选择与管理、深色模式、自定义 CSS（保存即生成「自定义主题」）</td></tr>
                             <tr><td>编辑器</td><td>源码 / 预览字体字号行高、实时模式动画、拼写检查、鼠标光标样式（原生 / 加粗）</td></tr>
-                            <tr><td>AI</td><td>供应商与模型、API 密钥、上下文轮数、引用上限</td></tr>
+                            <tr><td>AI 助手</td><td>供应商与模型、API 密钥、上下文轮数、引用上限</td></tr>
                             <tr><td>云端存储</td><td>WebDAV 服务器地址、凭据（存系统凭据库）、起始目录、测试连接</td></tr>
                             <tr><td>快捷键</td><td>可视化配置、按键录制、冲突检测、恢复默认</td></tr>
                             <tr><td>插件</td><td>EPUB 导出开关；KaTeX 公式与 Mermaid 已内置为核心渲染器，无需在插件页开启</td></tr>
@@ -957,8 +974,9 @@
             </div>
 
             <div class="help-sub" id="settings-lang">
-                <h3>界面语言</h3>
-                <p>支持 15 种：简体中文（默认）、繁體中文、English、日本語、한국어、Deutsch、Français、Español、Português、Italiano、Polski、Nederlands、Türkçe、Svenska、Українська。在「设置 → 通用 → 界面语言」切换，即时生效，无需重启。</p>
+                <h3>界面设置</h3>
+                <p>界面语言支持 15 种：简体中文（默认）、繁體中文、English、日本語、한국어、Deutsch、Français、Español、Português、Italiano、Polski、Nederlands、Türkçe、Svenska、Українська。在「设置 → 通用 → 界面设置 → 界面语言」切换，即时生效，无需重启。</p>
+                <p>界面字号支持 80%–120%（步进 5%，默认 100%），只放大或缩小界面文字与图标；设置面板尺寸、工具栏布局以及文档编辑与预览的字号、行距都不受影响。常规 UI 字号按 11 / 12 / 13 / 14px 四档收口（100% 基准），品牌字与大标题作为特例保留。</p>
             </div>
 
             <div class="help-sub" id="settings-update">
@@ -1054,7 +1072,7 @@
 
             <div class="help-sub" id="faq-template-move">
                 <h3>v0.2.4 起文档模板存在哪里？卸载重装会丢吗？</h3>
-                <p>文档模板也从应用目录迁至用户目录 <code>~/Documents/yizimarkdown/templates/</code>，卸载、重装、升级都<strong>不会丢失</strong>。内置模板会在首次启动时自动同步到该目录，且只补齐缺失文件、<strong>不会覆盖你自己的模板</strong>；你也可以在「设置 → 模板」中直接新建或编辑。</p>
+                <p>文档模板也从应用目录迁至用户目录 <code>~/Documents/yizimarkdown/templates/</code>，卸载、重装、升级都<strong>不会丢失</strong>。内置模板会在启动时同步到该目录；<strong>同名内置模板随版本更新覆盖</strong>，用户自建的其他文件名不受影响。你也可以在「设置 → 模板」中直接新建或编辑。</p>
             </div>
 
             <div class="help-sub" id="faq-theme">

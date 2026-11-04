@@ -38,8 +38,8 @@ export const DOC_PAGES = [
     title: '主题设计规范',
     subtitle: '从令牌分层到明暗双模式，写出一套能通过校验门禁的主题。',
     description:
-      'YiziMarkdown 主题设计规范：主题令牌分层（基础 / 区域 / 装饰 / 效果）、文件与命名、明暗双模式、theme.json 元数据、check-themes 校验门禁、从零写一个主题的完整示例与令牌总表。',
-    keywords: 'YiziMarkdown,主题设计,主题规范,CSS变量,令牌,theme.json,自定义主题',
+      'YiziMarkdown 主题设计规范：主题令牌分层（基础 / 区域 / 装饰 / 效果）、文件与命名、明暗双模式、builtin.json / themes.user.json 元数据、check-themes 校验门禁、从零写一个主题的完整示例与令牌总表。',
+    keywords: 'YiziMarkdown,主题设计,主题规范,CSS变量,令牌,builtin.json,自定义主题',
     meta: ['基线 v0.4.2+', '更新 2026-11-04', '面向主题作者'],
     searchPlaceholder: '搜索令牌或规则，例如「--editor-bg」',
     skipSections: ['目录'],

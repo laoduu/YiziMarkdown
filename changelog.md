@@ -4,6 +4,78 @@
 
 > **未发布**（截至 2026-11-04）：合并社区 PR #7（Word 版式与上下标/高亮）及后续修复。`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已同步到 `0.4.2`，尚未打包、未打 tag。
 
+### EPUB 阅读：公式样式保留与图表主题修复（2026-11-04）
+
+**修复**：
+- EPUB 阅读清洗不再删除 KaTeX 子树的内联 `style`（`height` / `vertical-align` / `margin` 等排版属性），避免公式塌陷、错位、看起来像黑块；仍继续拦截 `url()` / `expression` / `javascript:`。
+- EPUB 阅读中的 Mermaid 改为按**当前阅读主题**重渲染，而不是沿用应用根主题或导出时的颜色，避免浅色书页出现深色图表/黑块。
+- 阅读清洗保留 `.mermaid` 外层 div（含 `data-source`）：此前带预渲染 `<svg>` 的 div 会被当成普通容器展开，`data-source` 丢失，阅读器无法重渲染，旧深色 SVG 就原样留在浅色书页上。
+- 阅读模式公式容器取消段落首行缩进，并允许横向滚动，避免公式被裁切或偏移。
+
+### 演示模板：合并新旧模板并改为覆盖同步（2026-11-04）
+
+**新增/变更**：
+- 删除旧的 `Slide-Template.md`，把新版 `Slide-Template-new.md` 改名为 `Slide-Template.md`，只保留一份随包发布的演示模板。
+- 内置模板同步策略从「只补齐缺失文件」改为「同名内置模板覆盖」：应用版本变化或内置模板内容变化时，用新版覆盖用户目录中的同名文件；用户自建的其他模板文件名不受影响。
+- `templates.json` 增加内置模板树指纹；即使应用版本号不变，模板内容更新也会触发同步。旧版内置 `Slide-Template-new.md` 会在同步时清理。
+- 重写模板中过时内容：Mermaid / KaTeX 已是核心渲染器，无需启用插件；补齐 `align: left|center|right`；修正页级 `<!-- fragments: on -->` 可覆盖 deck 级关闭的说法；补充 `slideshow-fragments: off` 默认值。
+- 封面后新增「请先复制，再修改」提示页：建议把模板复制成新文件名后再改，不要把长期设定保存在会被升级覆盖的示例模板里。模板现为 37 页。
+
+**文档**：
+- `help.md` / 官网帮助中心同步模板文件名与新覆盖策略。
+
+### 代码块换行偏好持久化（2026-11-04）
+
+**新增**：
+- 代码块右上角的「切换换行」改为全局持久化偏好（`settings.codeBlockWrap`），记录在设置存档中；切换文档、刷新或重启应用后保持上次选择。
+
+**实现说明**：
+- 预览、实时模式、阅读模式共用 `<html class="code-block-wrap">` 根类；换行状态由 CSS 统一控制，不再逐块写内联 `white-space`。
+- 新增存档字段默认 `false`（横向滚动）；旧存档迁移时自动补默认值。
+
+### 主题：六级标题字号与颜色体系（2026-11-04）
+
+**新增**：
+- 统一 H1–H6 六级标题字号：H1 2.0 / H2 1.5 / H3 1.3 / H4 1.2 / H5 1.1 / H6 1.0em；H6 与正文同字号，通过字重、颜色、字距保持标题感。
+- 新增 `--editor-h4` / `--editor-h5` / `--editor-h6` 与 `--h4-color` / `--h5-color` / `--h6-color`，预览、阅读模式、演示模式共用同一套六级标题色。
+- 全部 16 个预设主题补齐 H4–H6 元素规则，并按「H1 品牌色 → 正文色」过渡重新设计六级标题色：H2 90%、H3 80%、H4 68%、H5 54%、H6 40%。
+- 演示模式补 H5/H6 字号变量与元素规则，H4 也接入标题色。
+- `[toc]` 目录块的背景、边线、圆角与间距改为主题令牌：`--toc-bg` / `--toc-border` / `--toc-radius` / `--toc-padding` / `--toc-margin`；16 个预设主题都声明了 `--toc-bg` 与 `--toc-border`。自定义 CSS 设为 `--toc-bg: transparent; --toc-border: none;` 即可取消背景与边线。
+
+**优化**：
+- `magazine` 使用衬线标题并保留斜体、大写；`nature` 使用衬线标题并统一 H3–H6 字重。
+- `typewriter` / `cyberpunk` 的 H1–H6 统一大写；暗色补对应发光。
+- `matrix` / `sunset` 暗色 H4–H6 增加分层发光，H1–H3 颜色改由六级令牌统一驱动。
+- `minimal` 统一 H3–H6 字重为 600，避免 H3/H5 偏细；`facebook` / `typewriter` 使用紧凑字号与间距。
+
+**校验**：
+- `check-themes.mjs` 扩展为八项检查：新增标题六阶完整性与标题对比度（H1–H4 ≥ 3:1，H5/H6 ≥ 4.5:1）。
+- 全部主题的 H4–H6 对比度通过校验。
+- 移除历史死令牌 `--editor-selection`（全仓无消费点），`check-themes --strict` 恢复零告警。
+
+**文档**：
+- `THEME-DESIGN-SPEC.md` 更新六级标题令牌、颜色阶梯、主题模板与检查清单。
+- 主题元数据章节更新为 `builtin.json`（内置）/ `themes.user.json`（用户层），并补充 `custom/` 自建主题与 `overrides/` 覆盖内置主题的说明。
+- `help.md` 与官网帮助中心补充主题六级标题说明。
+
+### AI 助手：模型列表获取、供应商鉴权与缺失密钥提示（2026-11-04）
+
+**新增**：
+- 设置 → AI 助手「模型 ID」右侧新增「获取模型」按钮：请求当前供应商的模型列表，成功后以下拉框选择并自动填入、保存；手动输入方式保留。
+- OpenAI 兼容端点读取 `{base}/models`，Base URL 不以 `/v1` 结尾时回退 `{base}/v1/models`；Anthropic 读取 `{base}/v1/models`；Ollama 读取 `{base}/api/tags`。
+- 未填写输入框且系统钥匙串中没有该供应商密钥时，「获取模型」直接提示补填 API Key，不再发起无意义请求；15 种语言新增 `settings.aiFetchModels*` 与 `settings.aiFetchModelsNoKey` 文案。
+
+**修复**：
+- Rust `default_base_url` 补上 LongCat / MiMo 默认地址，避免 Base URL 留空时静默回退 OpenAI 端点并返回 401；其余 16 个供应商逐一核对无缺失。
+- MiMo 模型列表、聊天与密钥验证统一附加 `api-key` 请求头（同时保留 `Authorization: Bearer`）。
+- LongCat 模型列表兼容 `/openai/models` 与 `/openai/v1/models` 两种路径。
+
+**实现说明**：
+- 新增 Tauri 命令 `ai_list_models`，按 wire format 分派 OpenAI / Anthropic / Ollama，返回模型 ID 去重、排序。
+- 前端在获取前用 `ai_has_key` 实时确认钥匙串状态，避免把「无密钥」误报成「未获取到模型」。
+- 新增 Rust 单元测试覆盖全部 18 个供应商默认 Base URL，防止后续新增供应商时再次漏配。
+- 帮助中心（`help.md` 与官网 `help.html`）补充「获取模型」说明。
+
 ### 社区 PR #7 合并与后续修复（2026-11-03）
 
 **来源**：社区贡献 PR #7（`feat(docx): 规范 Word 版式并支持上下标/高亮`），合并后按 #8–#12 跟进。
@@ -39,6 +111,24 @@
 **其他**：
 - 术语沿用「提示块」，正式描述为 GitHub 风格提示块（alert）；通用组件领域也叫 callout / admonition。
 - 帮助中心、官网语法速查与版本日志同步补充本轮说明。
+
+### 设置：界面字号、偏好布局与 EPUB 文件关联（2026-11-04）
+
+**新增**：
+- 设置 → 通用中的「界面语言」模块改为「界面设置」，保留「界面语言」，新增「界面字号」80%–120%（步进 5%，默认 100%）。
+- 用户看到的 100% 以当前推荐观感为基准（实际 CSS 倍率 1.1）；只缩放界面文字与图标，面板尺寸、工具栏布局、文档编辑 / 预览内容均不受影响。
+- 常规 UI 字号收口为 11 / 12 / 13 / 14px 四档（100% 基准）：辅助说明 / 次要标签 / 控件正文 / 标题与主菜单；品牌字 15px、快捷键大标题 18px 作为特例。
+- 设置页左右两列改为 1:1；左侧分类栏宽度从 180px 增加到 260px，避免德语等长语言把菜单项挤成两行。
+- 设置分类「AI」更名为「AI 助手」，15 种语言同步。
+- 文件关联新增「设为默认 EPUB 电子书阅读器」：Windows 写入 `YiziMarkdown.epub` ProgId 与 `.epub` 关联，macOS 使用 `org.idpf.epub-container` UTI；与 Markdown 关联互相独立。
+- `tauri.conf.json` 增加 EPUB 文件关联声明（`application/epub+zip` / Viewer），安装包也会注册「打开方式」。
+- UI 字体栈改为 `system-ui / Segoe UI / Microsoft YaHei UI / PingFang SC` 优先；移除全局 `antialiased`，Windows 下恢复系统抗锯齿。
+
+**实现说明**：
+- `uiTextScale` 持久化到设置存档（v19 迁移，越界值收敛到 80%~120%）；实际倍率 = 用户值 × 1.1。
+- 界面字号通过根元素 rem 基准 + `--ui-text-scale` 实现；Lucide 图标按原始尺寸等比缩放，文档内容仍使用独立的 px/字号设置。
+- 阅读 / 演示模式抽屉目录的字号与字体改为 UI 字号体系（11 / 13 / 14px 档，`--font-ui`），不再写死 px。
+- EPUB 取消关联时 Windows 恢复关联前记录的原处理器；macOS 优先恢复其它处理器，找不到再退回 Apple Books。
 
 ## v0.4.1
 

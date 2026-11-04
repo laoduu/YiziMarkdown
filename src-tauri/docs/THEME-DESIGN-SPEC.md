@@ -28,7 +28,7 @@
 7. [明暗双模式规范](#7-明暗双模式规范)
 8. [校验门禁：check-themes 八项检查](#8-校验门禁check-themes-六项检查)
 9. [反模式与最佳实践](#9-反模式与最佳实践)
-10. [主题元数据 theme.json](#10-主题元数据-themejson)
+10. [主题元数据（builtin.json / themes.user.json）](#10-主题元数据builtinjson--themesuserjson)
 11. [演示模式的主题继承](#11-演示模式的主题继承)
 12. [从零写一个主题：完整示例](#12-从零写一个主题完整示例)
 13. [新增主题检查清单](#13-新增主题检查清单)
@@ -147,15 +147,19 @@
 }
 ```
 
-**注册元数据**（`src-tauri/themes/theme.json`，键 = 文件名去掉 `.css`）：
+**内置主题注册元数据**（`src-tauri/themes/builtin.json`，`themes` 数组；`id` = 文件名去掉 `.css`）：
 
 ```json
-"my-theme": {
+{
+  "id": "my-theme",
+  "file": "my-theme.css",
   "name": "我的主题",
   "swatch": ["#ffffff", "#7c3aed"],
   "desc": "一句话中文描述"
 }
 ```
+
+**用户自建主题不需要注册元数据**：把 CSS 放进 `~/Documents/yizimarkdown/themes/custom/<id>.css` 即自动出现在「用户主题」中；显示名默认是文件 id，可在设置里改名（写入 `themes.user.json` 的 `renames`）。
 
 **校验**：
 
@@ -173,7 +177,8 @@ node scripts/check-themes.mjs --strict # 发布前自查，告警也算失败
 | 路径 | 角色 |
 |------|------|
 | **`src-tauri/themes/*.css`** | **运行时唯一读取目录**。所有主题 CSS 放这里 |
-| `src-tauri/themes/theme.json` | 主题元数据注册表（显示名 / 色板 / 描述） |
+| `src-tauri/themes/builtin.json` | 内置主题元数据注册表（`id` / `file` / `name` / `desc` / `swatch`） |
+| `~/Documents/yizimarkdown/themes/themes.user.json` | 用户层元数据（改名 / 排序 / 隐藏 / override 基准） |
 | `src/styles/globals.css` | 基准令牌全集 + 组件消费点。**同时是校验器的变量白名单** |
 | `src/lib/themeLoader.ts` | 主题样式**唯一注入入口**（含「自定义主题」合成） |
 | `src/lib/userCss.ts` | 选择器归一 / 提权（主题文件归属 + 用户 CSS 覆盖） |
@@ -192,19 +197,19 @@ node scripts/check-themes.mjs --strict # 发布前自查，告警也算失败
 
 由 `check-themes.mjs` 第 4 项校验，**不一致直接构建失败**。
 
-### 3.3 主题清单（共 15 个）
+### 3.3 主题清单（共 16 个：15 个正式 + 1 个测试）
 
-`src-tauri/themes/` 下现有 15 个 CSS 文件。其中 14 个在 `theme.json` 注册，`academic`（学术蓝）是**代码内置的保底预设**（元数据在 `SettingsModal.tsx`，走 i18n，不在 `theme.json`）：
+`src-tauri/themes/` 下现有 16 个 CSS 文件，全部在 `builtin.json` 注册：
 
 ```
-academic  cyberpunk  facebook  liquidglass-prism  lychee  magazine
-matrix    minimal    mint      nature             sunset  tech
-typewriter vibrant   violet
+academic  brocade   cyberpunk  facebook  liquidglass-prism  lychee
+magazine  matrix    minimal    mint      nature             sunset
+tech      typewriter vibrant   violet
 ```
 
 **默认主题** = `liquidglass-prism`，由 `src/lib/themeOrder.ts` 的 `DEFAULT_THEME` 常量定义，并在工具栏 / 设置面板 / 演示主题菜单三个消费点统一排到列表**第一位**。
 
-> **开发用测试主题**：仓库里另有一个 `brocade.css`（织锦），是纹路 / 流光能力的**验证样本**（第一个使用 `--<region>-deco-*` / `--<region>-sheen-*` 与 `--texture-grid/dots/paper` 预设的主题），**不注册 `theme.json`、不随版本发布**。想看纹路效果可直接研究它；正式主题请勿模仿它的「测试定位」。
+> **开发用测试主题**：`brocade.css`（织锦）是纹路 / 流光能力的**验证样本**（第一个使用 `--<region>-deco-*` / `--<region>-sheen-*` 与 `--texture-grid/dots/paper` 预设的主题）。它同样在 `builtin.json` 注册并随包分发，但定位是测试主题；正式主题请勿模仿它的「测试定位」。
 
 ---
 
@@ -876,6 +881,36 @@ App.tsx
 | 字体排版细节 | `letter-spacing` / `font-weight` 组合 | 标题字重 |
 | 六级标题层级 | 字号 / 字重 / 间距逐级递减 | H1–H6 元素规则、H4–H6 默认基线 |
 
+#### TOC 目录块令牌
+
+`[toc]` 正文目录块的背景、边线、圆角与间距由独立令牌控制，主题可覆盖：
+
+| 令牌 | 默认值 | 说明 |
+|------|--------|------|
+| `--toc-bg` | `color-mix(in srgb, var(--editor-surface) 55%, transparent)` | 目录背景 |
+| `--toc-border` | `1px solid var(--editor-border)` | 完整 border 简写 |
+| `--toc-radius` | `6px` | 圆角 |
+| `--toc-padding` | `0.65em 1em` | 内边距 |
+| `--toc-margin` | `1em 0 1.6em` | 外边距 |
+
+取消目录背景与边线：
+
+```css
+:root.theme-my-theme {
+  --toc-bg: transparent;
+  --toc-border: none;
+}
+```
+
+自定义 CSS 同样生效：
+
+```css
+:root {
+  --toc-bg: transparent;
+  --toc-border: none;
+}
+```
+
 #### 写法规范
 
 ```css
@@ -986,46 +1021,102 @@ CSS 变量名写错**不报错、只静默失效**。历史踩坑：17 个主题
 
 ---
 
-## 10. 主题元数据 theme.json
+## 10. 主题元数据（builtin.json / themes.user.json）
 
-### 10.1 位置与结构
+### 10.1 两层结构
 
-`src-tauri/themes/theme.json`，键 = 文件名去掉 `.css`：
+```text
+src-tauri/themes/                       内置层（只读，随安装包升级）
+  builtin.json                          内置清单
+  <id>.css                              内置主题实现
+
+~/Documents/yizimarkdown/themes/        用户层（安装器永不触碰）
+  themes.user.json                      改名 / 排序 / 隐藏 / override 基准
+  custom/<id>.css                       用户自建主题（自动发现）
+  overrides/<builtin-id>.css            用户覆盖的内置主题
+  legacy-import/                        升级时的一次性迁移备份
+```
+
+内置 CSS 不会复制到用户层。「自建主题」与「覆盖内置」都只读取用户目录，因此升级不会覆盖用户文件。
+
+### 10.2 内置清单 `builtin.json`
 
 ```json
 {
-  "my-theme": {
-    "name": "我的主题",
-    "swatch": ["#ffffff", "#7c3aed"],
-    "desc": "一句话中文描述"
+  "schema": 1,
+  "themes": [
+    {
+      "id": "my-theme",
+      "file": "my-theme.css",
+      "name": "我的主题",
+      "desc": "一句话中文描述",
+      "swatch": ["#ffffff", "#7c3aed"]
+    }
+  ]
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | string | 主题 id；默认 CSS 文件名为 `<id>.css` |
+| `file` | string | CSS 文件名（可选；缺省按 `<id>.css`） |
+| `name` | string | 内置显示名 |
+| `desc` | string | 一句话描述 |
+| `swatch` | `[string, string]` | `[背景色, 强调色]`，用于设置面板的主题卡预览 |
+
+### 10.3 用户层 `themes.user.json`
+
+用户自建主题**不需要在 `builtin.json` 注册**。`custom/` 目录下的每个 `*.css` 会自动扫描成主题，id = 文件名去掉 `.css`；显示名默认就是 id，描述为空，色板使用默认值。
+
+如果你想改显示名、排序或隐藏主题，可以编辑 `themes.user.json`（设置面板的改名 / 排序操作也会写这里）：
+
+```json
+{
+  "schema": 1,
+  "renames": {
+    "my-theme": "我的主题"
+  },
+  "order": ["my-theme", "liquidglass-prism"],
+  "hidden": ["brocade"],
+  "overrides": {
+    "academic": { "baseSha256": "..." }
   }
 }
 ```
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `name` | string | 中文显示名（设置面板 / 工具栏展示） |
-| `swatch` | `[string, string]` | 两个 hex：`[背景色, 强调色]`。用于设置面板的主题色块预览 |
-| `desc` | string | 一句话中文描述 |
+| `schema` | number | 用户层数据格式版本，当前为 `1` |
+| `renames` | object | `id → 显示名`；改名不会修改内置 `builtin.json` |
+| `order` | string[] | 主题排序；未列出的保持原顺序 |
+| `hidden` | string[] | 隐藏的主题 id |
+| `overrides` | object | 内置主题 override 的基准哈希；由应用自动维护，用于判断内置主题是否有新版 |
 
-### 10.2 设计指引
+改内置主题样式时，把同名 CSS 放在 `overrides/<builtin-id>.css`；文件名 id 必须与内置主题一致。设置面板改名 / 覆盖不会写安装目录。
+
+### 10.4 设计指引
 
 - **`swatch` 决定主题在设置面板里的「第一眼」**：第一个色取主题的 `--editor-bg`（亮色），第二个取 `--editor-accent`。
-- **必须与主题文件同名**：`theme.json` 的键、CSS 文件名、`:root.theme-<name>` 三者一致。
-- **`academic` 是例外**：它是代码内置的保底预设，元数据在 `SettingsModal.tsx`（走 i18n），**不在 `theme.json`**。
-- **「自定义主题」不在 `theme.json`**：它是合成主题（id = `custom`，基底 + user.css），显示名走 i18n `settings.customTheme`，色板借用基底主题的 swatch。
+- **内置主题必须三处同名**：`builtin.json` 的 `id`、CSS 文件名（默认 `<id>.css`）、`:root.theme-<id>` 三者一致。
+- **用户自建主题没有注册步骤**：放进 `custom/<id>.css` 即可；id 冲突时导入器会自动加 `-2` 后缀，绝不覆盖已有主题。
+- **「自定义主题」不写入用户层**：它是运行时合成主题（id = `custom`，基底主题 + `user.css`），显示名走 i18n `settings.customTheme`。
 
-### 10.3 ⚠️ 删主题的连带清理
+### 10.5 ⚠️ 删主题的连带清理
 
-删除主题时必须同时清理：
+删除**内置主题**时必须同时清理：
 
-1. `src-tauri/themes/<name>.css`
-2. `theme.json` 中的条目
+1. `src-tauri/themes/<id>.css`
+2. `src-tauri/themes/builtin.json` 中的条目
 3. `target/**/themes/` 下的资源拷贝（dev 模式读这里，Tauri 资源拷贝**增量、不删已移除文件**）
 4. `settingsStore` 的 persist 迁移（若用户可能选过该主题，需把被删值迁移到默认主题 —— 否则 `read_theme_css` 取不到文件、**整块主题空白**）
 5. 任何 `.theme-swatch-<name>` 死 CSS
 
-> 回滚纪律：`git checkout -- <dir>` 会**整目录回退**，把同目录的非 `.css` 文件（如 `theme.json`）一并带走。回滚前先 `git ls-files <dir>` 列全受控文件。
+删除**用户主题**时清理：
+
+1. `~/Documents/yizimarkdown/themes/custom/<id>.css`（或 `overrides/<id>.css`）
+2. `themes.user.json` 中对应的 `renames` / `order` / `hidden` / `overrides` 条目
+
+> 回滚纪律：`git checkout -- <dir>` 会**整目录回退**，把同目录的非 `.css` 文件（如 `builtin.json`）一并带走。回滚前先 `git ls-files <dir>` 列全受控文件。
 
 ---
 
@@ -1094,6 +1185,8 @@ v0.3.3 起演示模式有一组自己的排版变量，默认值声明在 `globa
   --editor-text: #1c2b28;
   --editor-accent: #0f766e;
   --editor-border: #cfe0dc;
+  --toc-bg: color-mix(in srgb, var(--editor-surface) 55%, transparent);
+  --toc-border: 1px solid var(--editor-border);
   --editor-surface: #eaf2f0;
   --editor-hover: rgba(28, 43, 40, 0.04);
   --editor-selection-bg: rgba(15, 118, 110, 0.22);
@@ -1170,6 +1263,8 @@ v0.3.3 起演示模式有一组自己的排版变量，默认值声明在 `globa
   --editor-text: #cfe3df;
   --editor-accent: #2dd4bf;
   --editor-border: #23403a;
+  --toc-bg: color-mix(in srgb, var(--editor-surface) 55%, transparent);
+  --toc-border: 1px solid var(--editor-border);
   --editor-surface: #13201d;
   --editor-hover: rgba(255, 255, 255, 0.05);
   --editor-selection-bg: rgba(45, 212, 191, 0.24);
@@ -1239,12 +1334,14 @@ v0.3.3 起演示模式有一组自己的排版变量，默认值声明在 `globa
 .editor-content.theme-ink-jade p  { margin: 0 0 var(--paragraph-spacing); }
 ```
 
-**注册 + 校验**：
+**内置主题注册 + 校验**：
 
 ```jsonc
-// src-tauri/themes/theme.json
-"ink-jade": { "name": "墨玉", "swatch": ["#f4f8f7", "#0f766e"], "desc": "深青绿纸感，状态栏流光" }
+// src-tauri/themes/builtin.json → themes[]
+{ "id": "ink-jade", "file": "ink-jade.css", "name": "墨玉", "swatch": ["#f4f8f7", "#0f766e"], "desc": "深青绿纸感，状态栏流光" }
 ```
+
+> 如果只是用户自建主题：把 `ink-jade.css` 放进 `~/Documents/yizimarkdown/themes/custom/` 即可，无需编辑 `builtin.json`；显示名可在设置里改名，或写入 `themes.user.json` 的 `renames`。
 
 ```bash
 node scripts/check-themes.mjs --strict
@@ -1256,17 +1353,20 @@ node scripts/check-themes.mjs --strict
 
 ## 13. 新增主题检查清单
 
-- [ ] 文件放在 `src-tauri/themes/<name>.css`（**不要**放 `src/assets/themes/`）
-- [ ] 文件名 == `:root.theme-<name>` == `theme.json` 键，三者一致
+- [ ] 内置主题：文件放在 `src-tauri/themes/<id>.css`（**不要**放 `src/assets/themes/`）
+- [ ] 内置主题：文件名 == `:root.theme-<id>` == `builtin.json` 的 `id`，三者一致
+- [ ] 用户自建主题：放在 `~/Documents/yizimarkdown/themes/custom/<id>.css`，无需注册
+- [ ] 用户覆盖内置主题：放在 `~/Documents/yizimarkdown/themes/overrides/<id>.css`，id 与内置一致
 - [ ] 亮色块与暗色块**都**存在
 - [ ] 所有**颜色令牌**亮暗各声明一次（偶数次）
 - [ ] `--editor-h1..h6` 六个标题色令牌齐全，亮暗各一套
 - [ ] H4–H6 有显式元素规则；H6 字号不小于正文 `1em`
 - [ ] 标题色阶对比度达标：H1–H4 ≥ 3:1，H5/H6 ≥ 4.5:1
+- [ ] 若需要自定义目录块，覆盖 `--toc-bg` / `--toc-border`（设为 `transparent` / `none` 即取消背景与边线）
 - [ ] 未使用 `!important` / `[class*=]` / 裸 `z-index`
 - [ ] 未写未加作用域的选择器（必须 `.editor-content.theme-<name>` 或 `.theme-<name>`）
 - [ ] 未覆盖布局定位属性（`position` / `display` / `inset` / `height`）
-- [ ] `theme.json` 条目已添加（`name` / `swatch` / `desc`）
+- [ ] `builtin.json` 条目已添加（`id` / `file` / `name` / `swatch` / `desc`）；用户自建主题无需注册
 - [ ] `swatch` 取自 `--editor-bg` + `--editor-accent`
 - [ ] 若强调色偏亮，已设 `--on-accent`
 - [ ] `node scripts/check-themes.mjs --strict` **零失败、零告警**
@@ -1423,6 +1523,11 @@ node scripts/check-themes.mjs --strict
 | `--hr-color` | `var(--editor-border)` | ● |
 | `--table-border` | `var(--editor-border)` | ● |
 | `--table-head-bg` | `var(--editor-surface)` | ● |
+| `--toc-bg` | `color-mix(in srgb, var(--editor-surface) 55%, transparent)` | ● |
+| `--toc-border` | `1px solid var(--editor-border)` | ● |
+| `--toc-radius` | `6px` | ● |
+| `--toc-padding` | `0.65em 1em` | ● |
+| `--toc-margin` | `1em 0 1.6em` | ● |
 
 ### A.8 字体与语义色
 
@@ -1457,8 +1562,11 @@ node scripts/check-themes.mjs --strict
 
 | 文件 | 角色 |
 |------|------|
-| `src-tauri/themes/*.css` | 15 个正式主题实现（运行时唯一读取目录；另有测试主题 `brocade.css`，见 §3.3） |
-| `src-tauri/themes/theme.json` | 主题元数据注册表（14 条；`academic` 除外） |
+| `src-tauri/themes/*.css` | 16 个主题实现（15 个正式 + `brocade` 测试主题；运行时唯一读取目录） |
+| `src-tauri/themes/builtin.json` | 内置主题元数据注册表（16 条） |
+| `~/Documents/yizimarkdown/themes/themes.user.json` | 用户层元数据（改名 / 排序 / 隐藏 / override 基准） |
+| `~/Documents/yizimarkdown/themes/custom/` | 用户自建主题目录（自动发现，无需注册） |
+| `~/Documents/yizimarkdown/themes/overrides/` | 用户覆盖内置主题目录 |
 | `src/styles/globals.css` | 基准令牌全集 + 组件消费点 + 装饰 keyframes |
 | `src/styles/hljs-theme.css` | 代码高亮 → `--code-*` 的消费点 |
 | `src/styles/export-toc.css` | HTML 导出大纲侧栏（消费 `--menu-*` / `--radius-*`） |
@@ -1469,7 +1577,7 @@ node scripts/check-themes.mjs --strict
 | `src/lib/userCss.ts` | 选择器归一 / 提权（`normalizeUserCss` / `retargetThemeCss`） |
 | `src/lib/themeCursor.ts` | 主题色光标生成（注入 `--cursor-*`） |
 | `scripts/check-themes.mjs` | 八项一致性门禁 |
-| `src/components/SettingsModal.tsx` | 主题列表 UI（含「自定义主题」条目）+ `academic` 内置元数据 |
+| `src/components/SettingsModal.tsx` | 主题列表 UI（含用户主题 / 新增主题 / 改名 / override 提示） |
 | `src/components/Slideshow.tsx` | 主题选择器改写（`:root.theme-*` → `.yizi-slideshow.theme-*`）+ custom 支持 |
 | `tests/userCss.test.ts` | 归一 / 提权的 16 条单测 |
 | `docs/slideshow-style-mapping.md` | 演示模式：Markdown → 版式对照 |
