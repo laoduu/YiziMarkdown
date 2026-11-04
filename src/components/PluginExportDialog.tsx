@@ -189,7 +189,7 @@ export default function PluginExportDialog({ open, pluginId, format, source, def
         <div className="flex items-center justify-between px-4 h-11 border-b border-[var(--editor-border)] shrink-0">
           <span className="text-sm font-semibold text-[var(--editor-text)] flex items-center gap-2">
             <FileDown size={15} />
-            {t('pluginExport.title')}
+            {plugin.exportTitleKey ? t(plugin.exportTitleKey) : t('pluginExport.title')}
           </span>
           <button
             onClick={onClose}

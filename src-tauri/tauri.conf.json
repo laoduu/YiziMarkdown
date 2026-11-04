@@ -42,6 +42,7 @@
       "readme.md": "readme.md",
       "welcome.md": "welcome.md",
       "icons/md-icon.ico": "md-icon.ico",
+      "icons/icon.ico": "icon.ico",
       "help.md": "help.md",
       "skill-guide.md": "skill-guide.md"
     },
@@ -89,6 +90,18 @@
         ],
         "name": "Markdown File",
         "description": "Markdown Document"
+      },
+      {
+        "ext": [
+          "epub"
+        ],
+        "name": "EPUB Publication",
+        "description": "EPUB E-book",
+        "mimeType": "application/epub+zip",
+        "role": "Viewer",
+        "contentTypes": [
+          "org.idpf.epub-container"
+        ]
       }
     ]
   },

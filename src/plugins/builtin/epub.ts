@@ -19,6 +19,59 @@ const EPUB_NS = 'http://www.idpf.org/2007/opf'
 type ChapterSplit = 'auto' | 'h1' | 'h2' | 'single'
 type EpubTheme = 'follow' | 'light' | 'dark'
 
+/** 可选的电子书语言（与应用 15 种界面语言一一对应；值使用 BCP 47 标签）。 */
+const EPUB_LANGUAGES: Array<{ value: string; label: string }> = [
+  { value: 'zh-CN', label: '简体中文' },
+  { value: 'zh-TW', label: '繁體中文' },
+  { value: 'en', label: 'English' },
+  { value: 'ja', label: '日本語' },
+  { value: 'ko', label: '한국어' },
+  { value: 'de', label: 'Deutsch' },
+  { value: 'fr', label: 'Français' },
+  { value: 'es', label: 'Español' },
+  { value: 'pt', label: 'Português' },
+  { value: 'it', label: 'Italiano' },
+  { value: 'pl', label: 'Polski' },
+  { value: 'nl', label: 'Nederlands' },
+  { value: 'tr', label: 'Türkçe' },
+  { value: 'sv', label: 'Svenska' },
+  { value: 'uk', label: 'Українська' },
+]
+
+const LOCALE_TO_EPUB_LANGUAGE: Record<string, string> = {
+  en: 'en',
+  zh: 'zh-CN',
+  'zh-tw': 'zh-TW',
+  ja: 'ja',
+  ko: 'ko',
+  de: 'de',
+  fr: 'fr',
+  es: 'es',
+  pt: 'pt',
+  it: 'it',
+  pl: 'pl',
+  nl: 'nl',
+  tr: 'tr',
+  sv: 'sv',
+  uk: 'uk',
+}
+
+/** 把应用界面语言 / 旧版自由输入的标签规范成下拉项里的 BCP 47 值。 */
+function normalizeEpubLanguage(raw: string): string {
+  const value = raw.trim()
+  if (!value) return 'zh-CN'
+  const lower = value.toLowerCase()
+  const mapped = LOCALE_TO_EPUB_LANGUAGE[lower]
+  if (mapped) return mapped
+  if (lower === 'zh-cn' || lower === 'zh-hans') return 'zh-CN'
+  if (lower === 'zh-tw' || lower === 'zh-hant') return 'zh-TW'
+  if (EPUB_LANGUAGES.some((l) => l.value.toLowerCase() === lower)) {
+    return EPUB_LANGUAGES.find((l) => l.value.toLowerCase() === lower)!.value
+  }
+  // 允许合法的 BCP 47 标签（如 en-US、fr-CA）继续使用。
+  return /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(value) ? value : 'zh-CN'
+}
+
 interface EpubOptions {
   title: string
   author: string
@@ -51,7 +104,7 @@ function optionsOf(context: PluginExportContext): EpubOptions {
   return {
     title: String(raw.title ?? context.title ?? '').trim() || context.title || 'Untitled',
     author: String(raw.author ?? context.author ?? '').trim(),
-    language: String(raw.language ?? context.locale ?? 'zh').trim() || 'zh',
+    language: normalizeEpubLanguage(String(raw.language ?? context.locale ?? 'zh')),
     chapterSplit: split === 'h1' || split === 'h2' || split === 'single' ? split : 'auto',
     cover: raw.cover !== false,
     tocVisible: raw.tocVisible !== false,
@@ -451,6 +504,7 @@ export const epubPlugin: EditorPlugin = {
   nameKey: 'settings.pluginEpubName',
   description: '把当前文档导出为 EPUB 3 电子书（可选章节拆分/封面/目录）',
   descriptionKey: 'settings.pluginEpubDesc',
+  exportTitleKey: 'epubExport.dialogTitle',
 
   async load(): Promise<boolean> {
     return true
@@ -467,7 +521,9 @@ export const epubPlugin: EditorPlugin = {
     },
     {
       key: 'language', label: '语言', labelKey: 'epubExport.language',
-      type: 'text', defaultValue: 'zh',
+      type: 'select', defaultValue: 'zh-CN',
+      options: EPUB_LANGUAGES.map((l) => ({ value: l.value, label: l.label })),
+      hintKey: 'epubExport.languageHint',
     },
     {
       key: 'chapterSplit', label: '章节拆分', labelKey: 'epubExport.chapterSplit',
@@ -509,7 +565,7 @@ export const epubPlugin: EditorPlugin = {
     return {
       title: context.title,
       author: context.author || '',
-      language: context.locale || 'zh',
+      language: normalizeEpubLanguage(context.locale || 'zh'),
       chapterSplit: 'auto',
       cover: true,
       tocVisible: true,

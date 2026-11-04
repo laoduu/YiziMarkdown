@@ -1337,7 +1337,9 @@ mod macos_file_assoc {
 
     const APP_BUNDLE_ID: &str = "com.yizimarkdown.editor";
     const MARKDOWN_UTI: &str = "net.daringfireball.markdown";
+    const EPUB_UTI: &str = "org.idpf.epub-container";
     const TEXT_EDIT_BUNDLE_ID: &str = "com.apple.TextEdit";
+    const BOOKS_BUNDLE_ID: &str = "com.apple.iBooksX";
     const KCF_STRING_ENCODING_UTF8: u32 = 0x0800_0100;
     const KLS_ROLES_ALL: u32 = 0xFFFF_FFFF;
 
@@ -1366,6 +1368,12 @@ mod macos_file_assoc {
             content_type: *const std::ffi::c_void,
             role: u32,
         ) -> *const std::ffi::c_void;
+        fn LSCopyAllRoleHandlersForContentType(
+            content_type: *const std::ffi::c_void,
+            role: u32,
+        ) -> *const std::ffi::c_void;
+        fn CFArrayGetCount(array: *const std::ffi::c_void) -> isize;
+        fn CFArrayGetValueAtIndex(array: *const std::ffi::c_void, index: isize) -> *const std::ffi::c_void;
     }
 
     fn cfstring(s: &str) -> Result<*const std::ffi::c_void, String> {
@@ -1402,9 +1410,9 @@ mod macos_file_assoc {
         }
     }
 
-    pub fn set_default(yes: bool) -> Result<bool, String> {
-        let uti = cfstring(MARKDOWN_UTI)?;
-        let handler = cfstring(if yes { APP_BUNDLE_ID } else { TEXT_EDIT_BUNDLE_ID })?;
+    fn set_default_for(uti_str: &str, yes: bool, fallback: &str) -> Result<bool, String> {
+        let uti = cfstring(uti_str)?;
+        let handler = cfstring(if yes { APP_BUNDLE_ID } else { fallback })?;
         let status = unsafe { LSSetDefaultRoleHandlerForContentType(uti, KLS_ROLES_ALL, handler) };
         unsafe {
             CFRelease(uti);
@@ -1417,8 +1425,8 @@ mod macos_file_assoc {
         }
     }
 
-    pub fn is_default() -> Result<bool, String> {
-        let uti = cfstring(MARKDOWN_UTI)?;
+    fn is_default_for(uti_str: &str) -> Result<bool, String> {
+        let uti = cfstring(uti_str)?;
         let handler = unsafe { LSCopyDefaultRoleHandlerForContentType(uti, KLS_ROLES_ALL) };
         unsafe { CFRelease(uti) };
         if handler.is_null() {
@@ -1427,6 +1435,53 @@ mod macos_file_assoc {
         let bundle_id = cfstring_to_string(handler);
         unsafe { CFRelease(handler) };
         Ok(bundle_id == APP_BUNDLE_ID)
+    }
+
+    /// 找一个不是本应用的处理器，用于取消 EPUB 关联时恢复系统默认。
+    /// 优先恢复到关联到该 UTI 的其它应用（常见是 Apple Books）。
+    fn other_epub_handler() -> Option<String> {
+        let uti = cfstring(EPUB_UTI).ok()?;
+        let handlers = unsafe { LSCopyAllRoleHandlersForContentType(uti, KLS_ROLES_ALL) };
+        unsafe { CFRelease(uti) };
+        if handlers.is_null() {
+            return None;
+        }
+        let count = unsafe { CFArrayGetCount(handlers) };
+        let mut found = None;
+        for i in 0..count {
+            let item = unsafe { CFArrayGetValueAtIndex(handlers, i) };
+            if item.is_null() {
+                continue;
+            }
+            let bundle_id = cfstring_to_string(item);
+            if !bundle_id.is_empty() && bundle_id != APP_BUNDLE_ID {
+                found = Some(bundle_id);
+                break;
+            }
+        }
+        unsafe { CFRelease(handlers) };
+        found
+    }
+
+    pub fn set_default(yes: bool) -> Result<bool, String> {
+        set_default_for(MARKDOWN_UTI, yes, TEXT_EDIT_BUNDLE_ID)
+    }
+
+    pub fn is_default() -> Result<bool, String> {
+        is_default_for(MARKDOWN_UTI)
+    }
+
+    pub fn set_epub_default(yes: bool) -> Result<bool, String> {
+        let fallback = if yes {
+            BOOKS_BUNDLE_ID.to_string()
+        } else {
+            other_epub_handler().unwrap_or_else(|| BOOKS_BUNDLE_ID.to_string())
+        };
+        set_default_for(EPUB_UTI, yes, &fallback)
+    }
+
+    pub fn is_epub_default() -> Result<bool, String> {
+        is_default_for(EPUB_UTI)
     }
 }
 
@@ -1541,6 +1596,134 @@ fn is_md_associated() -> Result<bool, String> {
 
 
 
+
+/// 注册 .epub 文件关联到当前 exe（Windows 写注册表 / macOS 用 LaunchServices）
+#[tauri::command]
+fn associate_epub_files() -> Result<bool, String> {
+    #[cfg(target_os = "windows")]
+    {
+        use winreg::enums::*;
+        use winreg::RegKey;
+
+        let exe_path = std::env::current_exe()
+            .map_err(|e| format!("Failed to get exe path: {}", e))?;
+        let exe_dir = exe_path.parent().unwrap_or(Path::new(".")).to_string_lossy().to_string();
+
+        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+
+        // 先记住用户原有的 .epub 处理器，取消关联时原样恢复（不粗暴删除扩展名覆盖）
+        let previous = hkcu
+            .open_subkey(r"Software\Classes\.epub")
+            .and_then(|k| k.get_value::<String, _>(""))
+            .ok()
+            .filter(|v| v != "YiziMarkdown.epub");
+        if let Some(prev) = previous {
+            if let Ok((state_key, _)) = hkcu.create_subkey(r"Software\YiziMarkdown\FileAssoc") {
+                let _ = state_key.set_value("epubPrevious", &prev);
+            }
+        }
+
+        let (type_key, _) = hkcu.create_subkey(r"Software\Classes\YiziMarkdown.epub")
+            .map_err(|e| format!("Failed to create type key: {}", e))?;
+        type_key.set_value("", &"EPUB Book")
+            .map_err(|e| format!("Failed to set type default: {}", e))?;
+        type_key.set_value("DefaultIcon", &format!(r#"{}\icon.ico,0"#, exe_dir))
+            .map_err(|e| format!("Failed to set icon: {}", e))?;
+
+        let (cmd_key, _) = type_key.create_subkey(r"shell\open\command")
+            .map_err(|e| format!("Failed to create command key: {}", e))?;
+        cmd_key.set_value("", &format!(r#""{}" "%1""#, exe_path.to_string_lossy()))
+            .map_err(|e| format!("Failed to set command: {}", e))?;
+
+        let (ext_key, _) = hkcu.create_subkey(r"Software\Classes\.epub")
+            .map_err(|e| format!("Failed to create .epub key: {}", e))?;
+        ext_key.set_value("", &"YiziMarkdown.epub")
+            .map_err(|e| format!("Failed to set .epub handler: {}", e))?;
+
+        return Ok(true);
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        return macos_file_assoc::set_epub_default(true);
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        return Err("File association is only supported on Windows and macOS".to_string());
+    }
+}
+
+/// 取消 .epub 文件关联（恢复系统默认阅读器）
+#[tauri::command]
+fn disassociate_epub_files() -> Result<bool, String> {
+    #[cfg(target_os = "windows")]
+    {
+        use winreg::enums::*;
+        use winreg::RegKey;
+
+        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+
+        // 恢复关联前记录的原处理器；没有记录时才删除扩展名覆盖，回到系统默认
+        let previous = hkcu
+            .open_subkey(r"Software\YiziMarkdown\FileAssoc")
+            .and_then(|k| k.get_value::<String, _>("epubPrevious"))
+            .ok()
+            .filter(|v| v != "YiziMarkdown.epub");
+        match previous {
+            Some(prev) => {
+                if let Ok((ext_key, _)) = hkcu.create_subkey(r"Software\Classes\.epub") {
+                    let _ = ext_key.set_value("", &prev);
+                }
+            }
+            None => {
+                let _ = hkcu.delete_subkey(r"Software\Classes\.epub");
+            }
+        }
+
+        let _ = hkcu.delete_subkey_all(r"Software\Classes\YiziMarkdown.epub");
+        let _ = hkcu.delete_subkey(r"Software\YiziMarkdown\FileAssoc");
+        return Ok(true);
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        return macos_file_assoc::set_epub_default(false);
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        return Err("File association is only supported on Windows and macOS".to_string());
+    }
+}
+
+/// 检查当前是否已注册为 .epub 默认阅读器
+#[tauri::command]
+fn is_epub_associated() -> Result<bool, String> {
+    #[cfg(target_os = "windows")]
+    {
+        use winreg::enums::*;
+        use winreg::RegKey;
+
+        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+        if let Ok(ext_key) = hkcu.open_subkey(r"Software\Classes\.epub") {
+            if let Ok(handler) = ext_key.get_value::<String, _>("") {
+                return Ok(handler == "YiziMarkdown.epub");
+            }
+        }
+        return Ok(false);
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        return macos_file_assoc::is_epub_default();
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        return Ok(false);
+    }
+}
 
 // ===== 命令行参数 =====
 
@@ -1965,6 +2148,9 @@ fn main() {
             associate_md_files,
             disassociate_md_files,
             is_md_associated,
+            associate_epub_files,
+            disassociate_epub_files,
+            is_epub_associated,
             get_cli_open_file, get_file_meta, read_image_base64,
             take_install_language,
             export_docx, export_pdf,

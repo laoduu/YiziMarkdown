@@ -145,6 +145,8 @@ export interface EditorPlugin {
 
   /** 导出面板字段；当前用于 EPUB 的章节/封面/目录等选项 */
   exportOptions?: PluginConfigField[]
+  /** 导出面板标题的 i18n key（可选，缺省使用通用「导出」标题） */
+  exportTitleKey?: string
   /** 导出面板默认值（可结合当前文档标题/作者等动态生成） */
   getExportDefaults?(context: PluginExportContext): Record<string, unknown>
 

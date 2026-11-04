@@ -122,7 +122,9 @@ function GeneralSettings() {
   const [dirs, setDirs] = useState<{ appDir?: string; userConfigDir?: string }>({})
   const [templates, setTemplates] = useState<string[]>([])
   const [isDefaultEditor, setIsDefaultEditor] = useState(false)
+  const [isDefaultEpubReader, setIsDefaultEpubReader] = useState(false)
   const [associating, setAssociating] = useState(false)
+  const [associatingEpub, setAssociatingEpub] = useState(false)
 
   const currentLang = store.language
 
@@ -134,6 +136,7 @@ function GeneralSettings() {
       }
     })
     invokeTauri<boolean>('is_md_associated').then((v) => setIsDefaultEditor(v || false))
+    invokeTauri<boolean>('is_epub_associated').then((v) => setIsDefaultEpubReader(v || false))
   }, [])
 
   const handleRestore = () => {
@@ -152,6 +155,20 @@ function GeneralSettings() {
       }
     } catch (e) { console.error('File association failed:', e) }
     setAssociating(false)
+  }
+
+  const handleEpubAssociateChange = async (checked: boolean) => {
+    setAssociatingEpub(true)
+    try {
+      if (checked) {
+        const ok = await invokeTauri<boolean>('associate_epub_files')
+        if (ok) setIsDefaultEpubReader(true)
+      } else {
+        const ok = await invokeTauri<boolean>('disassociate_epub_files')
+        if (ok) setIsDefaultEpubReader(false)
+      }
+    } catch (e) { console.error('EPUB file association failed:', e) }
+    setAssociatingEpub(false)
   }
 
   return (
@@ -178,6 +195,14 @@ function GeneralSettings() {
                 <input type="checkbox" checked={isDefaultEditor} disabled={associating} onChange={(e) => handleAssociateChange(e.target.checked)} className="settings-checkbox" />
                 <span className="text-xs text-[var(--editor-text)]">
                   {associating ? t('settings.processing') : isDefaultEditor ? t('settings.isDefault') : t('settings.notAssociated')}
+                </span>
+              </label>
+            </Row>
+            <Row label={t('settings.setDefaultEpubReader')} hint={t('settings.setDefaultEpubReaderHint')}>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={isDefaultEpubReader} disabled={associatingEpub} onChange={(e) => handleEpubAssociateChange(e.target.checked)} className="settings-checkbox" />
+                <span className="text-xs text-[var(--editor-text)]">
+                  {associatingEpub ? t('settings.processing') : isDefaultEpubReader ? t('settings.isDefault') : t('settings.notAssociated')}
                 </span>
               </label>
             </Row>
