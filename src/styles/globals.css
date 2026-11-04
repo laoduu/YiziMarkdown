@@ -710,7 +710,9 @@ a {
 .brand-name.short .brand-full-wrap { grid-template-columns: 0fr; }
 .brand-full {
   min-width: 0;
+  max-width: 9em;
   overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
   opacity: 1;
   transition: opacity 140ms ease;

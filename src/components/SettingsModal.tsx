@@ -1,7 +1,7 @@
 import { invokeTauri, invokeTauriOrThrow } from '../lib/tauri'
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { X, Loader2, ChevronRight, FolderOpen, Palette, FileText, Keyboard, Settings2, Eye, EyeOff, Info, Github, History, BookOpen, ExternalLink, Zap, Globe, Puzzle, Bot, Cloud, Boxes, Download, RefreshCw, Presentation, Layers, Sparkles, Plus } from 'lucide-react'
-import { useSettingsStore, UI_TEXT_SCALE_DEFAULT, UI_TEXT_SCALE_MIN, UI_TEXT_SCALE_MAX } from '../stores/settingsStore'
+import { useSettingsStore, UI_TEXT_SCALE_DEFAULT, UI_TEXT_SCALE_MIN, UI_TEXT_SCALE_MAX, DEFAULT_BRAND_NAME, BRAND_NAME_MAX } from '../stores/settingsStore'
 import { useUpdateStore } from '../stores/updateStore'
 import type { UpdateBlocker } from '../lib/updateClient'
 import { isManualUpdateChannel } from '../lib/updateClient'
@@ -503,7 +503,7 @@ function AddThemeCard({
 
 function AppearanceSettings() {
   const { t } = useI18n()
-  const { currentTheme, isDark, customCssBase, setField } = useSettingsStore()
+  const { currentTheme, isDark, customCssBase, brandName, setField } = useSettingsStore()
   const [catalog, setCatalog] = useState<ThemeEntry[]>([])
   const [cssById, setCssById] = useState<Record<string, string>>({})
   const [hasUserCss, setHasUserCss] = useState(false)
@@ -634,6 +634,32 @@ function AppearanceSettings() {
       <style>{previewCss}</style>
       <div className="settings-content-scroll">
         <div className="space-y-4">
+          <Section title={t('settings.brandIdentity')}>
+            <Row label={t('settings.brandName')} hint={t('settings.brandNameHint')}>
+              <div className="flex items-center gap-2 w-full">
+                <input
+                  type="text"
+                  value={brandName}
+                  maxLength={BRAND_NAME_MAX}
+                  placeholder={DEFAULT_BRAND_NAME}
+                  onChange={(e) => setField('brandName', e.target.value)}
+                  onBlur={(e) => setField('brandName', e.target.value.trim())}
+                  className="settings-input flex-1 min-w-0"
+                  spellCheck={false}
+                />
+                <button
+                  type="button"
+                  onClick={() => setField('brandName', '')}
+                  disabled={!brandName.trim()}
+                  className="settings-btn-secondary shrink-0 disabled:opacity-50 disabled:cursor-default"
+                  style={{ padding: '6px 12px' }}
+                >
+                  {t('settings.brandNameReset')}
+                </button>
+              </div>
+            </Row>
+            <p className="text-[0.6875rem] text-[var(--sidebar-text)] mt-1">{t('settings.brandNameNote')}</p>
+          </Section>
           <Section title={t('settings.themePreset')}>
             <div className="settings-theme-grid">
               {presetThemes.map(renderThemeCard)}

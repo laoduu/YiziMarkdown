@@ -25,6 +25,18 @@ export const UI_TEXT_SCALE_MIN = 0.8
 export const UI_TEXT_SCALE_MAX = 1.2
 export const UI_TEXT_SCALE_DEFAULT = 1
 
+/** 默认品牌名；用户自定义品牌留空时回退到此值。 */
+export const DEFAULT_BRAND_NAME = 'YiziMarkdown'
+/** 自定义品牌名最大长度（界面只显示文字，限制长度避免撑破工具栏）。 */
+export const BRAND_NAME_MAX = 32
+
+/** 规范化用户输入的品牌名：去换行 / 首尾空白，超长截断，空值回退默认名。 */
+export function resolveBrandName(raw: unknown): string {
+  const text = typeof raw === 'string' ? raw : ''
+  const value = text.replace(/[\r\n\t]+/g, ' ').trim()
+  return Array.from(value).slice(0, BRAND_NAME_MAX).join('').trim() || DEFAULT_BRAND_NAME
+}
+
 export interface SettingsState {
   // 通用
   autoSave: boolean
@@ -33,6 +45,8 @@ export interface SettingsState {
   language: string
   /** 软件界面字号倍率（1 = 100%）；只影响 UI 文字与图标，不缩放文档内容 */
   uiTextScale: number
+  /** 自定义品牌名（左上角工具栏 + 底部状态栏）；空字符串 = 使用 YiziMarkdown，不写入用户文档目录 */
+  brandName: string
 
   // 编辑器
   fontFamily: string
@@ -171,6 +185,7 @@ export const useSettingsStore = create<SettingsState>()(
       defaultTemplate: '',
       language: 'zh',
       uiTextScale: UI_TEXT_SCALE_DEFAULT,
+      brandName: '',
 
       // 编辑器
       fontFamily: "'MiSans', 'Mi Sans', system-ui, -apple-system, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif",
@@ -329,6 +344,7 @@ export const useSettingsStore = create<SettingsState>()(
           if (typeof state.formatManuallyCollapsed !== 'boolean') state.formatManuallyCollapsed = false
           // 代码块换行偏好。旧存档没有 → false（默认横向滚动）
           if (typeof state.codeBlockWrap !== 'boolean') state.codeBlockWrap = false
+          if (typeof state.brandName !== 'string') state.brandName = ''
           // v11：演示模式分栏。存量存档没有这两个键 ⇒ 补默认值。
           // 注意升级观感：样式默认是 **card**（有意的默认升级，不是零变化）——
           // 存量用户升级后分栏页会直接出现卡片，这是产品决策而非疏漏（见 slideColumns.ts 顶部）。

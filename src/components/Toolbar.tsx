@@ -61,7 +61,7 @@ import WindowControls from './WindowControls'
 import { windowOps } from '../lib/windowOps'
 import { openContextMenu } from './ContextMenu'
 import { useWindowStateStore } from '../stores/windowStateStore'
-import { useSettingsStore } from '../stores/settingsStore'
+import { useSettingsStore, resolveBrandName, DEFAULT_BRAND_NAME } from '../stores/settingsStore'
 import { orderThemes } from '../lib/themeOrder'
 import { CUSTOM_THEME, readUserCss } from '../lib/themeLoader'
 import { loadThemeCatalog } from '../lib/themeCatalog'
@@ -136,7 +136,7 @@ export default function Toolbar({
   const tableHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mathHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showThemeMenu, setShowThemeMenu] = useState(false)
-  const { currentTheme, setField, formatManuallyCollapsed } = useSettingsStore()
+  const { currentTheme, setField, formatManuallyCollapsed, brandName } = useSettingsStore()
   const [themeFiles, setThemeFiles] = useState<string[]>([])
   const [themeMeta, setThemeMeta] = useState<Record<string, { name: string }>>({})
   // 「自定义主题」条目：user.css 非空时才出现在主题菜单末尾（与设置-外观同一逻辑）
@@ -155,6 +155,14 @@ export default function Toolbar({
   // 窗口物理宽度是否低于阈值（只随 resize 变化，手动展开不改动它）：
   // 驱动品牌名 YiziMarkdown ⇄ YiziMD —— 仅在「格式条展开 && 物理窄窗」（即压缩带）时缩名让位
   const [viewportNarrow, setViewportNarrow] = useState(window.innerWidth < AUTO_COLLAPSE_THRESHOLD)
+
+  // 自定义品牌名：默认名沿用 YiziMarkdown → YiziMD 的窄屏缩写；
+  // 自定义名取其前 6 个字符，超长加省略号，避免窄窗口把工具栏挤爆。
+  const brandFull = resolveBrandName(brandName)
+  const brandChars = Array.from(brandFull)
+  const brandShort = brandFull === DEFAULT_BRAND_NAME
+    ? 'YiziMD'
+    : brandChars.slice(0, 6).join('') + (brandChars.length > 6 ? '…' : '')
 
   // 动画序号：收折/展开任一状态变化都 +1，重挂载内容行以重放级联
   //（展开 = 依次浮现，收折 = 逆向依次退场，见 globals.css .fmt-cascade）。
@@ -313,8 +321,8 @@ export default function Toolbar({
         <span
           className={`brand-name text-[0.9375rem] font-extrabold tracking-tight text-[var(--editor-accent)] select-none mr-1.5 shrink-0 ${!isFormatCollapsed && viewportNarrow ? 'short' : ''}`}
         >
-          <span className="brand-full-wrap"><span className="brand-full">YiziMarkdown</span></span>
-          <span className="brand-short">YiziMD</span>
+          <span className="brand-full-wrap"><span className="brand-full">{brandFull}</span></span>
+          <span className="brand-short">{brandShort}</span>
         </span>
         <ToolbarButton icon={<FilePlus2 size={16} />} tooltip={t('toolbar.newFile')} onClick={onNew} accent />
         <div 

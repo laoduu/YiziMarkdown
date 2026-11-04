@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import type { CSSProperties } from 'react'
 import { FileText, Clock, Check, FolderOpen, Save, PanelLeftClose, Eye, Code, TriangleAlert, Download } from 'lucide-react'
 import { useI18n } from '../i18n'
+import { useSettingsStore, resolveBrandName } from '../stores/settingsStore'
 
 /**
  * 状态栏里「芯片」（更新提示、缓存警示）的统一样式：**文字色只能是 `--statusbar-text`**。
@@ -49,6 +50,8 @@ export default function StatusBar({
   onStorageWarningClick,
 }: StatusBarProps) {
   const { t } = useI18n()
+  const brandName = useSettingsStore((s) => s.brandName)
+  const brand = resolveBrandName(brandName)
   const [version, setVersion] = useState('')
 
   useEffect(() => {
@@ -94,7 +97,7 @@ export default function StatusBar({
       <div className="flex-1" />
 
       <div className="statusbar-item" onClick={onOpenAbout} style={{ cursor: onOpenAbout ? 'pointer' : 'default' }} title={t('statusbar.about')}>
-        <span>YiziMarkdown {version}</span>
+        <span>{brand} {version}</span>
       </div>
 
       {/* 有新版本：版本号右侧一行提示。点击进「版本与更新」——更新卡片在那里，
