@@ -10,8 +10,7 @@
   --editor-accent: #0066cc;
   --editor-border: #e5e5e5;
   --editor-surface: #f8f8f8;
-  --editor-hover: rgba(0, 0, 0, 0.03);
-  --editor-selection-bg: rgba(0, 102, 204, 0.35);
+  --editor-hover: rgba(0, 0, 0, 0.03);  --editor-selection-bg: rgba(0, 102, 204, 0.35);
   --editor-cursor: #0066cc;
   --sidebar-bg: #fafafa;
   --sidebar-text: #666666;
@@ -33,7 +32,7 @@
      --font-editor  源码模式「可编辑的源码内容」字体 ← 设置里的「编辑器字体」
      --font-preview 预览 / 实时 / 演示模式「内容」字体 ← 设置里的「预览字体」
      这两个由 App.tsx 从设置写入；默认回退到主题的内容字体 --font-sans。 */
-  --font-ui: 'MiSans', 'Mi Sans', system-ui, -apple-system, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --font-ui: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', sans-serif;
   --font-editor: var(--font-sans);
   --font-preview: var(--font-sans);
 
@@ -45,6 +44,14 @@
   --font-heading: var(--font-preview);
   --font-size-base: 16px;
   --line-height: 1.8;
+  /* 界面字号最终倍率：只作用于 UI 的 rem 字号/图标，不影响文档内容。
+     用户显示 100% = 这里的 1.1（历史观感基准）；设置范围 80%~120%。
+     UI 常规字号按 100%（即实际 1.1）收口为四档：
+       11px 辅助说明/路径/时间 · 12px 次要标签 · 13px 控件/正文 · 14px 标题/主菜单
+     特例：15px 品牌字；18px 快捷键面板标题；16px 仅 Tab 新建按钮。 */
+  --ui-text-scale: 1.1;
+  /* UI 的 rem 基准随设置放大；文档内容均使用显式 px/em，不跟这里走 */
+  font-size: calc(16px * var(--ui-text-scale));
 
   /* ===== 演示模式排版（HUD 可调，v0.3.3）=====
      这四个变量由演示 HUD 以**行内变量**挂在 .yizi-slideshow 根节点上
@@ -272,8 +279,7 @@
   --editor-accent: #569cd6;
   --editor-border: #3c3c3c;
   --editor-surface: #252526;
-  --editor-hover: rgba(255, 255, 255, 0.05);
-  --editor-selection-bg: rgba(86, 156, 214, 0.45);
+  --editor-hover: rgba(255, 255, 255, 0.05);  --editor-selection-bg: rgba(86, 156, 214, 0.45);
   --editor-cursor: #569cd6;
   --sidebar-bg: #252526;
   --sidebar-text: #858585;
@@ -303,9 +309,22 @@ body {
   background-color: var(--editor-bg);
   color: var(--editor-text);
   cursor: default;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
+
+/* 界面字号：Lucide 图标按原始 size 等比缩放（文档内容不使用 Lucide） */
+svg.lucide[width="10"] { width: calc(10px * var(--ui-text-scale)); height: calc(10px * var(--ui-text-scale)); }
+svg.lucide[width="11"] { width: calc(11px * var(--ui-text-scale)); height: calc(11px * var(--ui-text-scale)); }
+svg.lucide[width="12"] { width: calc(12px * var(--ui-text-scale)); height: calc(12px * var(--ui-text-scale)); }
+svg.lucide[width="13"] { width: calc(13px * var(--ui-text-scale)); height: calc(13px * var(--ui-text-scale)); }
+svg.lucide[width="14"] { width: calc(14px * var(--ui-text-scale)); height: calc(14px * var(--ui-text-scale)); }
+svg.lucide[width="15"] { width: calc(15px * var(--ui-text-scale)); height: calc(15px * var(--ui-text-scale)); }
+svg.lucide[width="16"] { width: calc(16px * var(--ui-text-scale)); height: calc(16px * var(--ui-text-scale)); }
+svg.lucide[width="18"] { width: calc(18px * var(--ui-text-scale)); height: calc(18px * var(--ui-text-scale)); }
+svg.lucide[width="20"] { width: calc(20px * var(--ui-text-scale)); height: calc(20px * var(--ui-text-scale)); }
+svg.lucide[width="24"] { width: calc(24px * var(--ui-text-scale)); height: calc(24px * var(--ui-text-scale)); }
+svg.lucide[width="28"] { width: calc(28px * var(--ui-text-scale)); height: calc(28px * var(--ui-text-scale)); }
+svg.lucide[width="48"] { width: calc(48px * var(--ui-text-scale)); height: calc(48px * var(--ui-text-scale)); }
+svg.format-badge-icon { width: calc(14px * var(--ui-text-scale)); height: calc(14px * var(--ui-text-scale)); }
 /* 加粗（高可见度）档才启用主题色自绘箭头 */
 body[data-cursor-style='bold'] {
   cursor: var(--cursor-arrow, default);
@@ -337,6 +356,8 @@ a {
   flex: 1;
   overflow: hidden;
 }
+
+
 
 /* ===== 侧边栏 ===== */
 .sidebar {
@@ -440,7 +461,7 @@ a {
   padding: 0 6px;
   margin: 0 2px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.6;
   background: color-mix(in srgb, var(--editor-accent) 12%, transparent);
   color: var(--editor-accent);
@@ -477,7 +498,7 @@ a {
   border-radius: var(--radius-md);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   padding: 8px 10px;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.6;
   color: var(--editor-text);
   white-space: pre-wrap;
@@ -714,7 +735,7 @@ a {
   max-height: 240px;
   overflow: auto;
   padding: 10px 14px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.65;
   color: var(--editor-text);
   background: var(--editor-surface);
@@ -785,7 +806,7 @@ a {
   display: flex;
   align-items: center;
   padding: 0 12px;
-  font-size: 12px;
+  font-size: 0.75rem;
   gap: 16px;
   flex-shrink: 0;
 }
@@ -799,7 +820,7 @@ a {
   background: none;
   cursor: pointer;
   color: var(--statusbar-text);
-  font-size: 12px;
+  font-size: 0.75rem;
   transition: opacity 0.15s;
 }
 .statusbar-item:hover {
@@ -1029,6 +1050,18 @@ a {
   overflow-x: auto;
 }
 
+/* 代码块换行偏好（持久化在 settings.codeBlockWrap）：
+   预览 / 实时 / 阅读模式共用 html 根类，切换文档或刷新都不重置。 */
+.editor-content pre,
+.cm-live-block--code pre {
+  white-space: pre;
+}
+:root.code-block-wrap .editor-content pre,
+:root.code-block-wrap .cm-live-block--code pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* 代码块悬浮控件：右上角「换行/复制」，右下角语言标签（Typora 风格，悬停显现，无背景条） */
 .code-block-actions {
   position: absolute;
@@ -1049,7 +1082,7 @@ a {
   z-index: 2;
   padding: 2px 10px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-family: var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1116,7 +1149,7 @@ a {
   color: var(--editor-text);
 }
 
-.code-block-wrap-btn.active {
+:root.code-block-wrap .code-block-wrap-btn {
   background: color-mix(in srgb, var(--editor-accent) 16%, transparent);
   color: var(--editor-accent);
 }
@@ -1414,7 +1447,7 @@ a {
   align-items: center;
   gap: 5px;
   padding: 5px 10px;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--tabbar-fg);
   border: none;
   border-left: 1px solid var(--tabbar-border);
@@ -1472,7 +1505,7 @@ a {
   align-items: center;
   gap: 5px;
   padding: 5px 10px;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--editor-text);
   background: color-mix(in srgb, var(--editor-bg) 65%, transparent);
   border: 1px solid var(--editor-accent);
@@ -1588,7 +1621,7 @@ a {
   gap: 6px;
   width: 100%;
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--sidebar-text);
   border: none;
   background: none;
@@ -1655,14 +1688,14 @@ a {
 }
 
 .tab-close-dialog-title {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--editor-text);
   margin: 0 0 8px;
 }
 
 .tab-close-dialog-msg {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--sidebar-text);
   margin: 0 0 20px;
   line-height: 1.5;
@@ -1677,7 +1710,7 @@ a {
 .tab-close-dialog-actions button {
   padding: 6px 16px;
   border-radius: var(--radius-sm);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
   border: 1px solid var(--editor-border);
@@ -1713,7 +1746,7 @@ a {
 }
 
 .tab-new-btn {
-  font-size: 16px;
+  font-size: 1rem;
   padding: 2px 8px;
   opacity: 0.5;
 }
@@ -1734,7 +1767,7 @@ a {
   align-items: center;
   gap: 4px;
   padding: 5px 10px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 500;
   color: var(--sidebar-text);
   border: none;
@@ -1782,14 +1815,15 @@ a {
   flex-shrink: 0;
   gap: 6px;
   height: 40px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--editor-text);
   letter-spacing: 0.01em;
 }
 
 .settings-modal-sidebar {
-  width: 180px;
+  /* 180px 在德语等长语言下会把「Version & Aktualisierungen」挤成两行；加宽到 260px */
+  width: 260px;
   border-right: 1px solid var(--editor-border);
   background: var(--editor-surface);
   flex-shrink: 0;
@@ -1816,7 +1850,7 @@ a {
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--editor-text);
   text-align: left;
   border: none;
@@ -1837,7 +1871,7 @@ a {
 
 /* Section 标题 */
 .settings-section-title {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--sidebar-text);
   letter-spacing: 0.04em;
@@ -1859,9 +1893,9 @@ a {
 .settings-row:last-child {
   border-bottom: none;
 }
-/* 左侧标签/提示列：固定宽度 + 顶部对齐，提示文字允许换行 */
+/* 左侧标签/提示列：与右列 1:1 平分宽度；提示文字允许换行 */
 .settings-row > div:first-child {
-  flex: 0 0 160px;
+  flex: 1 1 0;
   padding-top: 8px;
   min-width: 0;
 }
@@ -1871,6 +1905,7 @@ a {
 }
 /* 右列控件：允许收缩，长提示/错误文本换行不撑宽整行 */
 .settings-row > div:last-child {
+  flex: 1 1 0;
   min-width: 0;
   max-width: 100%;
 }
@@ -1883,7 +1918,7 @@ a {
 .settings-select {
   width: 100%;
   padding: 6px 10px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   background: var(--editor-surface);
   border: 1px solid var(--editor-border);
   border-radius: var(--radius-sm);
@@ -1902,7 +1937,7 @@ a {
 .settings-input {
   width: 100%;
   padding: 6px 10px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   background: var(--editor-surface);
   border: 1px solid var(--editor-border);
   border-radius: var(--radius-sm);
@@ -1962,7 +1997,7 @@ a {
 .settings-textarea {
   width: 100%;
   padding: 8px 10px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.5;
   background: var(--editor-surface);
   border: 1px solid var(--editor-border);
@@ -1979,7 +2014,7 @@ a {
 
 .settings-btn-primary {
   padding: 7px 18px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: #fff;
   background: var(--editor-accent);
@@ -1997,7 +2032,7 @@ a {
 
 .settings-btn-secondary {
   padding: 7px 18px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--editor-text);
   background: var(--editor-surface);
@@ -2026,7 +2061,7 @@ a {
 .settings-footer-bar .settings-btn-primary,
 .settings-footer-bar .settings-btn-secondary {
   padding: 6px 16px;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .settings-content-scroll {
@@ -2048,7 +2083,7 @@ a {
   margin: 6px 0 0;
   padding: 12px 14px;
   height: auto;
-  font-size: 12px;
+  font-size: 0.75rem;
   border: none;
   border-radius: 8px;
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--editor-border) 50%, transparent);
@@ -2272,7 +2307,7 @@ a {
   background: var(--editor-accent);
   color: var(--editor-bg);
   font-family: var(--font-sans);
-  font-size: 9px;
+  font-size: 0.6875rem;
   line-height: 1;
   cursor: pointer;
 }
@@ -2298,7 +2333,7 @@ a {
 
 .settings-theme-check {
   flex: none;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
   line-height: 1;
   color: var(--editor-accent);
@@ -2319,13 +2354,13 @@ a {
   -webkit-box-orient: vertical;
   overflow: hidden;
   margin-bottom: 7px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   line-height: 1.6;
   opacity: 0.92;
 }
 .settings-theme-line {
   display: block;
-  font-size: 11px;
+  font-size: 0.6875rem;
   line-height: 1.7;
   white-space: nowrap;
   overflow: hidden;
@@ -2343,7 +2378,7 @@ a {
   background: var(--editor-surface);
   color: var(--editor-text);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 0.6875rem;
 }
 .settings-theme-link {
   color: var(--editor-accent);
@@ -2411,16 +2446,16 @@ a {
   flex: 1;
 }
 .settings-product-name {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--editor-text);
 }
 .settings-product-desc {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--sidebar-text);
 }
 .settings-product-url {
-  font-size: 10px;
+  font-size: 0.6875rem;
   color: var(--sidebar-text);
   opacity: 0.75;
   flex-shrink: 0;
@@ -2515,7 +2550,7 @@ a {
 }
 
 .slash-menu-grid-label {
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.2;
   white-space: nowrap;
   text-align: center;
@@ -2524,7 +2559,7 @@ a {
 .slash-menu-empty {
   padding: 16px 14px;
   text-align: center;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--sidebar-text);
 }
 
@@ -2742,7 +2777,7 @@ a {
   animation: selection-toolbar-in 0.15s ease-out;
   height: 28px;
   box-sizing: border-box;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1;
 }
 @keyframes selection-toolbar-in {
@@ -2772,7 +2807,7 @@ a {
   border-radius: 5px;
   background: transparent;
   color: var(--sel-toolbar-text);
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1;
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
@@ -2843,7 +2878,7 @@ a {
   max-width: 200px;
   padding: 4px;
   font-family: var(--font-ui);
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--editor-text);
   background: var(--menu-bg);
   border: 1px solid var(--menu-border);
@@ -2857,7 +2892,7 @@ a {
   width: 100%;
   padding: 5px 8px;
   font: inherit;
-  font-size: 13px;
+  font-size: 0.8125rem;
   text-align: left;
   color: var(--editor-text);
   background: transparent;

@@ -83,7 +83,7 @@ export default function ImageModal({ open, onClose, onConfirm }: ImageModalProps
           <button
             type="button"
             onClick={() => setMode('local')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[12px] rounded-md transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[0.75rem] rounded-md transition-colors ${
               mode === 'local'
                 ? 'bg-[var(--editor-accent)] text-white'
                 : 'text-[var(--sidebar-text)] hover:bg-[var(--editor-hover)]'
@@ -95,7 +95,7 @@ export default function ImageModal({ open, onClose, onConfirm }: ImageModalProps
           <button
             type="button"
             onClick={() => setMode('network')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[12px] rounded-md transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[0.75rem] rounded-md transition-colors ${
               mode === 'network'
                 ? 'bg-[var(--editor-accent)] text-white'
                 : 'text-[var(--sidebar-text)] hover:bg-[var(--editor-hover)]'
@@ -116,12 +116,12 @@ export default function ImageModal({ open, onClose, onConfirm }: ImageModalProps
                 value={localPath}
                 readOnly
                 placeholder={t('dialog.imageLocalPlaceholder')}
-                className="flex-1 px-3 py-2 text-[13px] bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg text-[var(--editor-text)] placeholder:text-[var(--sidebar-text)]"
+                className="flex-1 px-3 py-2 text-[0.8125rem] bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg text-[var(--editor-text)] placeholder:text-[var(--sidebar-text)]"
               />
               <button
                 type="button"
                 onClick={handleBrowseFile}
-                className="flex items-center gap-1.5 px-3 py-2 text-[12px] rounded-lg border border-[var(--editor-border)] hover:bg-[var(--editor-hover)] text-[var(--editor-text)]"
+                className="flex items-center gap-1.5 px-3 py-2 text-[0.75rem] rounded-lg border border-[var(--editor-border)] hover:bg-[var(--editor-hover)] text-[var(--editor-text)]"
               >
                 <FileImage size={13} />
                 {t('dialog.browse')}
@@ -136,7 +136,7 @@ export default function ImageModal({ open, onClose, onConfirm }: ImageModalProps
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder={t('dialog.imageUrlPlaceholder')}
-              className="w-full px-3 py-2 text-[13px] bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg outline-none focus:border-[var(--editor-accent)] text-[var(--editor-text)]"
+              className="w-full px-3 py-2 text-[0.8125rem] bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg outline-none focus:border-[var(--editor-accent)] text-[var(--editor-text)]"
               autoFocus
             />
           </div>
@@ -150,7 +150,7 @@ export default function ImageModal({ open, onClose, onConfirm }: ImageModalProps
             value={alt}
             onChange={(e) => setAlt(e.target.value)}
             placeholder={t('dialog.imageAltPlaceholder')}
-            className="w-full px-3 py-2 text-[13px] bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg outline-none focus:border-[var(--editor-accent)] text-[var(--editor-text)]"
+            className="w-full px-3 py-2 text-[0.8125rem] bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg outline-none focus:border-[var(--editor-accent)] text-[var(--editor-text)]"
           />
         </div>
 
@@ -159,14 +159,14 @@ export default function ImageModal({ open, onClose, onConfirm }: ImageModalProps
           <button
             type="button"
             onClick={onClose}
-            className="px-3 py-1.5 text-[12px] rounded-lg border border-[var(--editor-border)] hover:bg-[var(--editor-hover)] text-[var(--editor-text)]"
+            className="px-3 py-1.5 text-[0.75rem] rounded-lg border border-[var(--editor-border)] hover:bg-[var(--editor-hover)] text-[var(--editor-text)]"
           >
             {t('common.cancel')}
           </button>
           <button
             type="submit"
             disabled={!isValid}
-            className="px-3 py-1.5 text-[12px] rounded-lg bg-[var(--editor-accent)] text-white hover:opacity-90 disabled:opacity-40"
+            className="px-3 py-1.5 text-[0.75rem] rounded-lg bg-[var(--editor-accent)] text-white hover:opacity-90 disabled:opacity-40"
           >
             {t('common.confirm')}
           </button>

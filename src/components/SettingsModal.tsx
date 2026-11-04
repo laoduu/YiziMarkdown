@@ -47,7 +47,7 @@ const webFonts = [
 ]
 
 /** 各面板的默认值（恢复默认时使用） */
-const DEFAULTS_GENERAL = { autoSave: true, autoSaveInterval: 60000, defaultTemplate: '' }
+const DEFAULTS_GENERAL = { autoSave: true, autoSaveInterval: 60000, defaultTemplate: '', uiTextScale: UI_TEXT_SCALE_DEFAULT }
 const DEFAULTS_APPEARANCE = { currentTheme: DEFAULT_THEME, isDark: false }
 const DEFAULTS_EDITOR = {
   liveAnimationMode: 'blur' as const,
@@ -93,9 +93,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Row({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="settings-row">
-      <div className="flex-shrink-0">
-        <span className="text-[12px] text-[var(--editor-text)]">{label}</span>
-        {hint && <p className="text-[10px] text-[var(--sidebar-text)] mt-0.5">{hint}</p>}
+      <div>
+        <span className="text-[0.75rem] text-[var(--editor-text)]">{label}</span>
+        {hint && <p className="text-[0.6875rem] text-[var(--sidebar-text)] mt-0.5">{hint}</p>}
       </div>
       <div className="flex-1 flex flex-col gap-1.5 items-end">{children}</div>
     </div>
@@ -174,9 +174,9 @@ function GeneralSettings() {
   return (
     <>
       <div className="settings-content-scroll">
-        <div className="px-5 py-2 text-[11px] text-[var(--sidebar-text)]">{t('settings.instantSaveHint')}</div>
+        <div className="px-5 py-2 text-[0.6875rem] text-[var(--sidebar-text)]">{t('settings.instantSaveHint')}</div>
         <div className="space-y-4">
-          <Section title={t('settings.language')}>
+          <Section title={t('settings.interfaceSettings')}>
             <Row label={t('settings.language')} hint={t('settings.languageHint')}>
               <select
                 value={currentLang}
@@ -187,6 +187,27 @@ function GeneralSettings() {
                   <option key={l.id} value={l.id}>{l.label}</option>
                 ))}
               </select>
+            </Row>
+            <Row label={t('settings.interfaceScale')} hint={t('settings.interfaceScaleHint')}>
+              <div className="w-full">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min={Math.round(UI_TEXT_SCALE_MIN * 100)}
+                    max={Math.round(UI_TEXT_SCALE_MAX * 100)}
+                    step="5"
+                    value={Math.round(store.uiTextScale * 100)}
+                    onChange={(e) => store.setField('uiTextScale', Number(e.target.value) / 100)}
+                    className="settings-range"
+                  />
+                  <span className="text-xs tabular-nums text-[var(--editor-text)] w-11 text-right">
+                    {Math.round(store.uiTextScale * 100)}%
+                  </span>
+                </div>
+                <div className="flex justify-between text-[0.6875rem] text-[var(--sidebar-text)] mt-0.5">
+                  <span>80%</span><span>120%</span>
+                </div>
+              </div>
             </Row>
           </Section>
           <Section title={t('settings.fileAssoc')}>
@@ -225,20 +246,20 @@ function GeneralSettings() {
             <Row label={t('settings.saveInterval', { n: store.autoSaveInterval / 1000 })}>
               <div className="w-full">
                 <input type="range" min="5000" max="180000" step="1000" value={store.autoSaveInterval} onChange={(e) => store.setField('autoSaveInterval', Number(e.target.value))} className="settings-range" />
-                <div className="flex justify-between text-[11px] text-[var(--sidebar-text)] mt-0.5"><span>{t('settings.secMin')}</span><span>{t('settings.secMax')}</span></div>
+                <div className="flex justify-between text-[0.6875rem] text-[var(--sidebar-text)] mt-0.5"><span>{t('settings.secMin')}</span><span>{t('settings.secMax')}</span></div>
               </div>
             </Row>
           </Section>
           <Section title={t('settings.configDir')}>
             {(dirs.appDir || dirs.userConfigDir) && (
               <div className="px-4 py-2 bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg space-y-2">
-                <p className="text-[11px] text-[var(--sidebar-text)]">{t('settings.configDirHint')}</p>
+                <p className="text-[0.6875rem] text-[var(--sidebar-text)]">{t('settings.configDirHint')}</p>
                 <div>
-                  <p className="text-[11px] text-[var(--sidebar-text)]">{t('settings.appRunDir')}</p>
+                  <p className="text-[0.6875rem] text-[var(--sidebar-text)]">{t('settings.appRunDir')}</p>
                   <p className="text-xs text-[var(--editor-text)] font-mono break-all">{dirs.appDir}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-[var(--sidebar-text)]">{t('settings.userConfigDirLabel')}</p>
+                  <p className="text-[0.6875rem] text-[var(--sidebar-text)]">{t('settings.userConfigDirLabel')}</p>
                   <p className="text-xs text-[var(--editor-text)] font-mono break-all">{dirs.userConfigDir}</p>
                 </div>
               </div>
@@ -303,7 +324,7 @@ function UserCssEditor({ onSaved }: { onSaved?: () => void }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-[11px] text-[var(--sidebar-text)]">{t('settings.customCssHint')}</p>
+      <p className="text-[0.6875rem] text-[var(--sidebar-text)]">{t('settings.customCssHint')}</p>
       <textarea value={cssContent} onChange={(e) => { setCssContent(e.target.value); setSaved(false) }}
         className="settings-textarea font-mono" rows={6} spellCheck={false} />
       <div className="flex items-center gap-2">
@@ -688,7 +709,7 @@ function LiveModeSettings() {
       <div className="settings-content-scroll">
         <div className="space-y-4">
           <Section title={t('settings.animScheme')}>
-            <p className="text-[11px] text-[var(--sidebar-text)] px-5 mb-3">
+            <p className="text-[0.6875rem] text-[var(--sidebar-text)] px-5 mb-3">
               {t('settings.animIntro')}
             </p>
             <div className="grid grid-cols-2 gap-3 px-5">
@@ -705,11 +726,11 @@ function LiveModeSettings() {
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium text-sm">{t(nameKey)}</span>
                     {liveAnimationMode === key && (
-                      <span className="text-[10px] px-1.5 py-0.5 bg-white/20 rounded">{t('common.current')}</span>
+                      <span className="text-[0.6875rem] px-1.5 py-0.5 bg-white/20 rounded">{t('common.current')}</span>
                     )}
                   </div>
-                  <p className={`text-[11px] ${liveAnimationMode === key ? 'opacity-80' : 'opacity-60'}`}>{t(descKey)}</p>
-                  <p className={`text-[10px] mt-2 font-mono ${liveAnimationMode === key ? 'opacity-60' : 'opacity-40'}`}>{t(cssKey)}</p>
+                  <p className={`text-[0.6875rem] ${liveAnimationMode === key ? 'opacity-80' : 'opacity-60'}`}>{t(descKey)}</p>
+                  <p className={`text-[0.6875rem] mt-2 font-mono ${liveAnimationMode === key ? 'opacity-60' : 'opacity-40'}`}>{t(cssKey)}</p>
                 </button>
               ))}
             </div>
@@ -718,7 +739,7 @@ function LiveModeSettings() {
           <Section title={t('settings.animPreview')}>
             <div className="px-5">
               <div className="p-4 bg-[var(--editor-bg)] rounded-xl border border-[var(--editor-border)]">
-                <div className="text-[11px] text-[var(--sidebar-text)] mb-3">{t('settings.animClickHint')}</div>
+                <div className="text-[0.6875rem] text-[var(--sidebar-text)] mb-3">{t('settings.animClickHint')}</div>
                 <AnimationDemo mode={liveAnimationMode} />
               </div>
             </div>
@@ -728,15 +749,15 @@ function LiveModeSettings() {
             <div className="px-5 space-y-2">
               <div className="flex items-start gap-2">
                 <span className="text-[var(--editor-accent)] mt-0.5">•</span>
-                <p className="text-[11px] text-[var(--sidebar-text)]">{t('settings.animNote1')}</p>
+                <p className="text-[0.6875rem] text-[var(--sidebar-text)]">{t('settings.animNote1')}</p>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-[var(--editor-accent)] mt-0.5">•</span>
-                <p className="text-[11px] text-[var(--sidebar-text)]">{t('settings.animNote2')}</p>
+                <p className="text-[0.6875rem] text-[var(--sidebar-text)]">{t('settings.animNote2')}</p>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-[var(--editor-accent)] mt-0.5">•</span>
-                <p className="text-[11px] text-[var(--sidebar-text)]">{t('settings.animNote3')}</p>
+                <p className="text-[0.6875rem] text-[var(--sidebar-text)]">{t('settings.animNote3')}</p>
               </div>
             </div>
           </Section>
@@ -807,7 +828,7 @@ function AnimationDemo({ mode }: { mode: string }) {
           <span className="demo-mark">**</span>
         </div>
       </div>
-      <p className="text-[10px] text-[var(--sidebar-text)] mt-3 text-center">{t('settings.animReplay')}</p>
+      <p className="text-[0.6875rem] text-[var(--sidebar-text)] mt-3 text-center">{t('settings.animReplay')}</p>
     </div>
   )
 }
@@ -873,19 +894,19 @@ function EditorSettings() {
   return (
     <>
       <div className="settings-content-scroll">
-        <div className="px-5 py-2 text-[11px] text-[var(--sidebar-text)]">{t('settings.instantSaveHint')}</div>
+        <div className="px-5 py-2 text-[0.6875rem] text-[var(--sidebar-text)]">{t('settings.instantSaveHint')}</div>
         <div className="space-y-4">
           <Section title={t('settings.sourceLayout')}>
             <Row label={t('settings.fontSize', { n: store.fontSize })}>
               <div className="w-full">
                 <input type="range" min="12" max="32" value={store.fontSize} onChange={(e) => store.setField('fontSize', Number(e.target.value))} className="settings-range" />
-                <div className="flex justify-between text-[11px] text-[var(--sidebar-text)] mt-0.5"><span>12px</span><span>32px</span></div>
+                <div className="flex justify-between text-[0.6875rem] text-[var(--sidebar-text)] mt-0.5"><span>12px</span><span>32px</span></div>
               </div>
             </Row>
             <Row label={t('settings.lineHeight', { n: store.lineHeight })}>
               <div className="w-full">
                 <input type="range" min="1.2" max="3.0" step="0.1" value={store.lineHeight} onChange={(e) => store.setField('lineHeight', Number(e.target.value))} className="settings-range" />
-                <div className="flex justify-between text-[11px] text-[var(--sidebar-text)] mt-0.5"><span>1.2</span><span>3.0</span></div>
+                <div className="flex justify-between text-[0.6875rem] text-[var(--sidebar-text)] mt-0.5"><span>1.2</span><span>3.0</span></div>
               </div>
             </Row>
           </Section>
@@ -908,13 +929,13 @@ function EditorSettings() {
             <Row label={t('settings.fontSize', { n: store.previewFontSize })}>
               <div className="w-full">
                 <input type="range" min="12" max="32" value={store.previewFontSize} onChange={(e) => store.setField('previewFontSize', Number(e.target.value))} className="settings-range" />
-                <div className="flex justify-between text-[11px] text-[var(--sidebar-text)] mt-0.5"><span>12px</span><span>32px</span></div>
+                <div className="flex justify-between text-[0.6875rem] text-[var(--sidebar-text)] mt-0.5"><span>12px</span><span>32px</span></div>
               </div>
             </Row>
             <Row label={t('settings.lineHeight', { n: store.previewLineHeight })}>
               <div className="w-full">
                 <input type="range" min="1.2" max="3.0" step="0.1" value={store.previewLineHeight} onChange={(e) => store.setField('previewLineHeight', Number(e.target.value))} className="settings-range" />
-                <div className="flex justify-between text-[11px] text-[var(--sidebar-text)] mt-0.5"><span>1.2</span><span>3.0</span></div>
+                <div className="flex justify-between text-[0.6875rem] text-[var(--sidebar-text)] mt-0.5"><span>1.2</span><span>3.0</span></div>
               </div>
             </Row>
           </Section>
@@ -935,7 +956,7 @@ function EditorSettings() {
             <div className="flex gap-2 mb-2">
               {(['edit', 'preview'] as const).map((m) => (
                 <button key={m} onClick={() => setMode(m)}
-                  className={`px-2.5 py-1 text-[12px] rounded-md transition-colors ${mode === m ? 'bg-[var(--editor-accent)] text-white' : 'bg-[var(--editor-surface)] text-[var(--sidebar-text)] hover:bg-[var(--editor-hover)]'}`}>
+                  className={`px-2.5 py-1 text-[0.75rem] rounded-md transition-colors ${mode === m ? 'bg-[var(--editor-accent)] text-white' : 'bg-[var(--editor-surface)] text-[var(--sidebar-text)] hover:bg-[var(--editor-hover)]'}`}>
                   {m === 'edit' ? t('settings.sourceMode') : t('settings.previewMode')}
                 </button>
               ))}
@@ -960,15 +981,15 @@ function EditorSettings() {
                         ? 'bg-[var(--editor-accent)] border-[var(--editor-accent)] text-white'
                         : 'bg-[var(--editor-surface)] border-[var(--editor-border)] text-[var(--editor-text)] hover:border-[var(--editor-accent)]'
                     }`}>
-                    <span className="text-[11px] font-medium block" style={{ fontFamily: wf.family }}>{t(wf.labelKey)}</span>
-                    <span className={`text-[9px] ${isActive ? 'text-white/70' : 'text-[var(--sidebar-text)]'}`}>{t(wf.descKey)}</span>
+                    <span className="text-[0.6875rem] font-medium block" style={{ fontFamily: wf.family }}>{t(wf.labelKey)}</span>
+                    <span className={`text-[0.6875rem] ${isActive ? 'text-white/70' : 'text-[var(--sidebar-text)]'}`}>{t(wf.descKey)}</span>
                   </button>
                 )
               })}
             </div>
             <div className="flex items-center gap-2 mb-1.5">
               {!fontsLoaded
-                ? <p className="flex-1 text-[11px] leading-snug text-[var(--sidebar-text)]">{t('settings.localFontsHint')}</p>
+                ? <p className="flex-1 text-[0.6875rem] leading-snug text-[var(--sidebar-text)]">{t('settings.localFontsHint')}</p>
                 : <span className="flex-1" />}
               <button onClick={loadLocalFonts} disabled={fontsLoading} className="settings-btn-secondary shrink-0" style={{ padding: '3px 9px', fontSize: 11 }}>
                 {fontsLoading ? <span className="inline-flex items-center gap-1"><Loader2 size={11} className="animate-spin" /> {t('common.loading')}</span> : t('settings.loadLocalFonts')}
@@ -985,12 +1006,12 @@ function EditorSettings() {
               {visibleFonts.map((f) => (
                 <button key={f} onClick={() => setFont(`'${f}', sans-serif`)}
                   className={`w-full px-3 py-1.5 text-left text-xs hover:bg-[var(--editor-hover)] flex items-center justify-between ${cur.includes(f) ? 'bg-[var(--editor-accent)] text-white' : 'text-[var(--editor-text)]'}`}>
-                  <span>{f}</span><span className="text-[11px] opacity-60" style={{ fontFamily: `'${f}', sans-serif` }}>Aa</span>
+                  <span>{f}</span><span className="text-[0.6875rem] opacity-60" style={{ fontFamily: `'${f}', sans-serif` }}>Aa</span>
                 </button>
               ))}
               {filtered.length === 0 && <div className="px-3 py-3 text-xs text-[var(--sidebar-text)] text-center">{t('common.noMatch')}</div>}
               {filtered.length > fontLimit && (
-                <button onClick={() => setFontLimit((n) => n + FONT_PAGE_SIZE)} className="w-full px-3 py-2 text-[11px] text-[var(--editor-accent)] hover:bg-[var(--editor-hover)]">
+                <button onClick={() => setFontLimit((n) => n + FONT_PAGE_SIZE)} className="w-full px-3 py-2 text-[0.6875rem] text-[var(--editor-accent)] hover:bg-[var(--editor-hover)]">
                   {t('settings.showMoreFonts')} ({filtered.length - fontLimit})
                 </button>
               )}
@@ -1001,7 +1022,7 @@ function EditorSettings() {
             {/* 左源码 / 右预览：本页的字体、字号、行距、行号、换行、鼠标指针样式全部按当前设置实时渲染 */}
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-lg border border-[var(--editor-border)] overflow-hidden">
-                <div className="px-3 py-1.5 text-[11px] text-[var(--sidebar-text)] bg-[var(--editor-surface)] border-b border-[var(--editor-border)]">{t('settings.sourceMode')}</div>
+                <div className="px-3 py-1.5 text-[0.6875rem] text-[var(--sidebar-text)] bg-[var(--editor-surface)] border-b border-[var(--editor-border)]">{t('settings.sourceMode')}</div>
                 <div
                   className="p-2.5 overflow-x-auto"
                   style={{
@@ -1029,7 +1050,7 @@ function EditorSettings() {
                 </div>
               </div>
               <div className="rounded-lg border border-[var(--editor-border)] overflow-hidden">
-                <div className="px-3 py-1.5 text-[11px] text-[var(--sidebar-text)] bg-[var(--editor-surface)] border-b border-[var(--editor-border)]">{t('settings.previewMode')}</div>
+                <div className="px-3 py-1.5 text-[0.6875rem] text-[var(--sidebar-text)] bg-[var(--editor-surface)] border-b border-[var(--editor-border)]">{t('settings.previewMode')}</div>
                 <div
                   className="p-2.5"
                   style={{
@@ -1133,12 +1154,12 @@ function ShortcutsSettings() {
       <div className="settings-content-scroll">
         <div className="space-y-4">
           <Section title={t('settings.shortcutConfig')}>
-            <p className="text-[10px] text-[var(--sidebar-text)] pb-2">{t('settings.shortcutHint')}</p>
+            <p className="text-[0.6875rem] text-[var(--sidebar-text)] pb-2">{t('settings.shortcutHint')}</p>
             {hasConflict && (
               <div className="px-4 py-2 bg-amber-50 border border-amber-300 rounded-lg">
-                <p className="text-[11px] text-amber-700 font-medium">{t('settings.shortcutConflict')}</p>
+                <p className="text-[0.6875rem] text-amber-700 font-medium">{t('settings.shortcutConflict')}</p>
                 {Object.entries(conflicts).map(([id, dupId]) => (
-                  <p key={id} className="text-[10px] text-amber-600 mt-0.5">
+                  <p key={id} className="text-[0.6875rem] text-amber-600 mt-0.5">
                     {t('settings.conflictMsg', { a: getActionLabel(id), k: formatKey(map[id]), b: getActionLabel(dupId) })}
                   </p>
                 ))}
@@ -1155,15 +1176,15 @@ function ShortcutsSettings() {
                   return (
                   <div key={action.id} className="settings-row">
                     <div className="flex-shrink-0">
-                      <span className="text-[12px] text-[var(--editor-text)]">{t(action.labelKey)}</span>
+                      <span className="text-[0.75rem] text-[var(--editor-text)]">{t(action.labelKey)}</span>
                       {action.id === 'viewCycle' && (
-                        <span className="text-[9px] text-[var(--sidebar-text)] ml-1">{t('settings.viewCycleOrder')}</span>
+                        <span className="text-[0.6875rem] text-[var(--sidebar-text)] ml-1">{t('settings.viewCycleOrder')}</span>
                       )}
                     </div>
                     <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => setRecordingId(action.id)}
-                        className={`min-w-[80px] px-2.5 py-1 text-[11px] font-mono rounded-md border transition-colors ${
+                        className={`min-w-[80px] px-2.5 py-1 text-[0.6875rem] font-mono rounded-md border transition-colors ${
                           isConflict
                             ? 'border-red-400 bg-red-50 text-red-600'
                             : recordingId === action.id
@@ -1229,8 +1250,8 @@ function TemplatesSettings() {
       <div className="space-y-4">
         <Section title={t('settings.docTemplates')}>
           <div className="flex items-center justify-between pb-2">
-            <p className="text-[11px] text-[var(--sidebar-text)]">{t('settings.templateHint')}</p>
-            <button onClick={handleNew} className="text-[11px] text-[var(--editor-accent)] hover:underline">{t('settings.newTemplate')}</button>
+            <p className="text-[0.6875rem] text-[var(--sidebar-text)]">{t('settings.templateHint')}</p>
+            <button onClick={handleNew} className="text-[0.6875rem] text-[var(--editor-accent)] hover:underline">{t('settings.newTemplate')}</button>
           </div>
           {editing ? (
             <div className="space-y-2">
@@ -1252,7 +1273,7 @@ function TemplatesSettings() {
                 {templates.length === 0 && <div className="px-3 py-3 text-xs text-[var(--sidebar-text)] text-center">{t('settings.noTemplates')}</div>}
               </div>
               <div className="flex-1 relative">
-                {selected && <div className="absolute top-1 right-1"><button onClick={handleEdit} className="text-[11px] text-[var(--editor-accent)] hover:underline px-2 py-1">{t('settings.edit')}</button></div>}
+                {selected && <div className="absolute top-1 right-1"><button onClick={handleEdit} className="text-[0.6875rem] text-[var(--editor-accent)] hover:underline px-2 py-1">{t('settings.edit')}</button></div>}
                 {selected ? <textarea value={tContent} readOnly className="settings-textarea font-mono opacity-80" rows={12} />
                   : <div className="flex items-center justify-center h-36 text-xs text-[var(--sidebar-text)] border border-[var(--editor-border)] rounded-lg bg-[var(--editor-surface)]">{t('settings.selectToPreview')}</div>}
               </div>
@@ -1314,7 +1335,7 @@ function PluginsSettings() {
     <div className="settings-content-scroll">
       <div className="space-y-4">
         <Section title={t('settings.pluginMgmt')}>
-          <p className="text-[11px] text-[var(--sidebar-text)] px-5 mb-3">
+          <p className="text-[0.6875rem] text-[var(--sidebar-text)] px-5 mb-3">
             {t('settings.pluginHint')}
           </p>
           <div className="px-5 space-y-2">
@@ -1338,12 +1359,12 @@ function PluginsSettings() {
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-[var(--editor-text)]">{plugin.nameKey ? t(plugin.nameKey) : plugin.name}</span>
                         {isEnabled && (
-                          <span className="text-[10px] px-1.5 py-0.5 bg-[var(--editor-accent)] text-white rounded">
+                          <span className="text-[0.6875rem] px-1.5 py-0.5 bg-[var(--editor-accent)] text-white rounded">
                             {t('common.enabled')}
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-[var(--sidebar-text)] mt-0.5">{plugin.descriptionKey ? t(plugin.descriptionKey) : plugin.description}</p>
+                      <p className="text-[0.6875rem] text-[var(--sidebar-text)] mt-0.5">{plugin.descriptionKey ? t(plugin.descriptionKey) : plugin.description}</p>
                     </div>
                     <label className="flex items-center gap-2 cursor-pointer ml-4 flex-shrink-0">
                       {isLoading ? (
@@ -1365,9 +1386,9 @@ function PluginsSettings() {
                       {plugin.configFields.map((field) => (
                         <div key={field.key} className="settings-row">
                           <div className="flex-shrink-0">
-                            <span className="text-[12px] text-[var(--editor-text)]">{field.labelKey ? t(field.labelKey) : field.label}</span>
+                            <span className="text-[0.75rem] text-[var(--editor-text)]">{field.labelKey ? t(field.labelKey) : field.label}</span>
                             {field.hint && (
-                              <p className="text-[10px] text-[var(--sidebar-text)] mt-0.5">{field.hintKey ? t(field.hintKey) : field.hint}</p>
+                              <p className="text-[0.6875rem] text-[var(--sidebar-text)] mt-0.5">{field.hintKey ? t(field.hintKey) : field.hint}</p>
                             )}
                           </div>
                           <div className="flex-1 flex flex-col items-end gap-1.5">
@@ -1637,7 +1658,7 @@ function DocumentationSettings() {
 
   return (
     <div className="settings-content-scroll">
-      <div className="px-5 py-2 text-[11px] text-[var(--sidebar-text)]">{t('settings.docsHint')}</div>
+      <div className="px-5 py-2 text-[0.6875rem] text-[var(--sidebar-text)]">{t('settings.docsHint')}</div>
       <div className="px-4 pb-4 space-y-1">
         {docs.map((doc) => (
           <button
@@ -1647,8 +1668,8 @@ function DocumentationSettings() {
             style={{ background: 'var(--editor-surface)', border: '1px solid var(--editor-border)' }}
           >
             <span style={{ color: 'var(--editor-accent)', flexShrink: 0 }}>{doc.icon}</span>
-            <span className="flex-1 text-[13px]">{doc.label}</span>
-            <span className="text-[10px] text-[var(--sidebar-text)] truncate" style={{ maxWidth: 170 }}>{doc.url.replace(/^https?:\/\//, '')}</span>
+            <span className="flex-1 text-[0.8125rem]">{doc.label}</span>
+            <span className="text-[0.6875rem] text-[var(--sidebar-text)] truncate" style={{ maxWidth: 170 }}>{doc.url.replace(/^https?:\/\//, '')}</span>
             <ExternalLink size={12} style={{ color: 'var(--sidebar-text)', opacity: 0.5, flexShrink: 0 }} />
           </button>
         ))}
@@ -2086,7 +2107,7 @@ function AISettings() {
 
           <Section title={t('settings.aiSectionKey')}>
             {isKeyless ? (
-              <p className="text-[11px] text-[var(--sidebar-text)] px-5">{t('settings.aiKeylessNote')}</p>
+              <p className="text-[0.6875rem] text-[var(--sidebar-text)] px-5">{t('settings.aiKeylessNote')}</p>
             ) : (
               <>
                 <Row label={t('settings.aiApiKey')} hint={provider?.id === 'custom' ? t('settings.aiKeyOptionalHint') : t('settings.aiApiKeyHint')}>
@@ -2112,21 +2133,21 @@ function AISettings() {
                     </div>
                     <div className="flex items-center gap-2 w-full justify-end">
                       <button onClick={handleSaveKey} disabled={!keyInput.trim()} className="settings-btn-primary"> {t('settings.aiSaveKey')}</button>
-                      <span className="text-[10px] text-[var(--sidebar-text)]">{signedIn ? `✓ ${t('settings.aiKeySaved')}` : t('settings.aiKeyNotSet')}</span>
+                      <span className="text-[0.6875rem] text-[var(--sidebar-text)]">{signedIn ? `✓ ${t('settings.aiKeySaved')}` : t('settings.aiKeyNotSet')}</span>
                       {signedIn && (
-                        <button onClick={handleClearKey} className="text-[10px] text-[var(--sidebar-text)] hover:text-[var(--editor-accent)] underline">{t('settings.aiClearKey')}</button>
+                        <button onClick={handleClearKey} className="text-[0.6875rem] text-[var(--sidebar-text)] hover:text-[var(--editor-accent)] underline">{t('settings.aiClearKey')}</button>
                       )}
-                      <button onClick={handleVerify} disabled={verifying} className="text-[10px] text-[var(--editor-accent)] hover:underline">
+                      <button onClick={handleVerify} disabled={verifying} className="text-[0.6875rem] text-[var(--editor-accent)] hover:underline">
                         {verifying ? t('settings.aiVerifying') : t('settings.aiVerify')}
                       </button>
                     </div>
                     {verifyMsg && (
-                      <p className={`text-[10px] break-all ${verifyMsg.ok ? 'text-emerald-500' : 'text-red-500'}`}>
+                      <p className={`text-[0.6875rem] break-all ${verifyMsg.ok ? 'text-emerald-500' : 'text-red-500'}`}>
                         {verifyMsg.ok ? t('settings.aiVerified', { msg: verifyMsg.text }) : t('settings.aiVerifyFailed', { msg: verifyMsg.text })}
                       </p>
                     )}
                     {provider?.signupUrl && (
-                      <button onClick={() => invokeTauri('open_url', { url: provider.signupUrl })} className="text-[10px] text-[var(--editor-accent)] hover:underline">
+                      <button onClick={() => invokeTauri('open_url', { url: provider.signupUrl })} className="text-[0.6875rem] text-[var(--editor-accent)] hover:underline">
                         {t('settings.aiSignup')} ↗
                       </button>
                     )}
@@ -2239,7 +2260,7 @@ function CloudSettings() {
                     // 必须阻止默认行为：否则按下瞬间输入框先失焦、按钮在 click 之前就被卸载
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => commitBaseUrl(WEBDAV_PRESET_BASE_URL)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[var(--editor-accent)] hover:underline"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[0.6875rem] text-[var(--editor-accent)] hover:underline"
                   >
                     {t('settings.cloudLoadPreset')}
                   </button>
@@ -2298,13 +2319,13 @@ function CloudSettings() {
                 >
                   {t('settings.cloudSaveCredentials')}
                 </button>
-                <span className="text-[10px] text-[var(--sidebar-text)]">
+                <span className="text-[0.6875rem] text-[var(--sidebar-text)]">
                   {hasCred ? `✓ ${t('settings.cloudPasswordSaved')}` : t('settings.cloudPasswordNotSet')}
                 </span>
                 {hasCred && (
                   <button
                     onClick={handleClearCredentials}
-                    className="text-[10px] text-[var(--sidebar-text)] hover:text-[var(--editor-accent)] underline"
+                    className="text-[0.6875rem] text-[var(--sidebar-text)] hover:text-[var(--editor-accent)] underline"
                   >
                     {t('settings.cloudClearCredentials')}
                   </button>
@@ -2312,19 +2333,19 @@ function CloudSettings() {
                 <button
                   onClick={handleTest}
                   disabled={testing || !baseUrl.trim()}
-                  className="text-[10px] text-[var(--editor-accent)] hover:underline disabled:opacity-50"
+                  className="text-[0.6875rem] text-[var(--editor-accent)] hover:underline disabled:opacity-50"
                 >
                   {testing ? t('settings.cloudTesting') : t('settings.cloudTest')}
                 </button>
               </div>
               {testMsg && (
-                <p className={`text-[10px] break-all ${testMsg.ok ? 'text-emerald-500' : 'text-red-500'}`}>
+                <p className={`text-[0.6875rem] break-all ${testMsg.ok ? 'text-emerald-500' : 'text-red-500'}`}>
                   {testMsg.ok
                     ? t('settings.cloudTestOk', { msg: testMsg.text })
                     : t('settings.cloudTestFailed', { msg: testMsg.text })}
                 </p>
               )}
-              <p className="text-[10px] text-[var(--sidebar-text)]">{t('settings.cloudCredentialsNote')}</p>
+              <p className="text-[0.6875rem] text-[var(--sidebar-text)]">{t('settings.cloudCredentialsNote')}</p>
             </Row>
           </Section>
         </div>

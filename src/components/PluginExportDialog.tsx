@@ -200,7 +200,7 @@ export default function PluginExportDialog({ open, pluginId, format, source, def
           </button>
         </div>
 
-        <div className="p-4 overflow-y-auto text-[12px] text-[var(--editor-text)] space-y-3">
+        <div className="p-4 overflow-y-auto text-[0.75rem] text-[var(--editor-text)] space-y-3">
           <p className="text-[var(--sidebar-text)] leading-relaxed">
             {plugin.descriptionKey ? t(plugin.descriptionKey) : plugin.description}
           </p>
@@ -208,9 +208,9 @@ export default function PluginExportDialog({ open, pluginId, format, source, def
           {fields.map((field) => (
             <div key={field.key} className="flex items-center gap-4">
               <div className="w-32 shrink-0">
-                <span className="text-[12px] text-[var(--editor-text)]">{fieldLabel(field)}</span>
+                <span className="text-[0.75rem] text-[var(--editor-text)]">{fieldLabel(field)}</span>
                 {fieldHint(field) && (
-                  <p className="text-[10px] text-[var(--sidebar-text)] mt-0.5 leading-relaxed">{fieldHint(field)}</p>
+                  <p className="text-[0.6875rem] text-[var(--sidebar-text)] mt-0.5 leading-relaxed">{fieldHint(field)}</p>
                 )}
               </div>
               <div className="flex-1 flex justify-end">
@@ -285,7 +285,7 @@ export default function PluginExportDialog({ open, pluginId, format, source, def
                 <CheckCircle2 size={14} style={{ color: 'var(--editor-success,#16a34a)' }} />
                 {t('pluginExport.done')}
               </div>
-              <div className="mt-1 break-all text-[11px] text-[var(--sidebar-text)]">{result.path}</div>
+              <div className="mt-1 break-all text-[0.6875rem] text-[var(--sidebar-text)]">{result.path}</div>
             </div>
           )}
 
@@ -297,7 +297,7 @@ export default function PluginExportDialog({ open, pluginId, format, source, def
               </div>
               <ul className="space-y-0.5 max-h-32 overflow-y-auto">
                 {warnings.map((w, i) => (
-                  <li key={`${w.messageKey || w.message}-${i}`} className="text-[11px] text-[var(--sidebar-text)] leading-relaxed">
+                  <li key={`${w.messageKey || w.message}-${i}`} className="text-[0.6875rem] text-[var(--sidebar-text)] leading-relaxed">
                     {w.messageKey ? t(w.messageKey, w.messageArgs) : w.message}
                   </li>
                 ))}

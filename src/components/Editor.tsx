@@ -442,13 +442,11 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
         }
       })
 
-      // 换行控制按钮功能
+      // 换行控制按钮：持久化到全局设置，预览 / 实时 / 下次启动都沿用同一次选择
       const wrapBtn = actions.querySelector('.code-block-wrap-btn')
       wrapBtn?.addEventListener('click', () => {
-        const preEl = pre as HTMLElement
-        const isWrapped = preEl.style.whiteSpace === 'pre-wrap'
-        preEl.style.whiteSpace = isWrapped ? 'pre' : 'pre-wrap'
-        wrapBtn.classList.toggle('active', !isWrapped)
+        const next = !useSettingsStore.getState().codeBlockWrap
+        useSettingsStore.getState().setField('codeBlockWrap', next)
       })
 
       // 右下角语言标签：悬停显现，点击进入行内编辑

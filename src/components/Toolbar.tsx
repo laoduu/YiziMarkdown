@@ -95,6 +95,8 @@ interface ToolbarProps {
   isDark: boolean
   onUndo?: () => void
   onRedo?: () => void
+  /** 预览模式：格式工具栏强制收起且不可展开（退出后按用户/宽度策略还原）。 */
+  previewMode?: boolean
 }
 
 /** 格式工具栏自动收折阈值：窗口内宽低于此值自动收起。
@@ -107,7 +109,7 @@ const AUTO_COLLAPSE_THRESHOLD = 1380
 export default function Toolbar({
   onNew, onNewFromTemplate, onOpen, onSave, onSaveAs, onSaveToCloud, onToggleSidebar, onToggleDark, onUndo, onRedo,
   onInsertMarkdown, onInsertFootnote, onExport, pluginExports = [], onSearch, onSettings, onPresent, onRead, onAIChat,
-  isDark,
+  isDark, previewMode = false,
 }: ToolbarProps) {
   const { t } = useI18n()
   const [showExportMenu, setShowExportMenu] = useState(false)
@@ -142,12 +144,13 @@ export default function Toolbar({
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [showImageModal, setShowImageModal] = useState(false)
 
-  // 格式工具栏收折状态：两个来源任一为真即收起 ——
+  // 格式工具栏收折状态：三个来源任一为真即收起 ——
   // - widthCollapsed：宽度自动策略，只随窗口 resize 变化（防 icon 挤压）
   // - formatManuallyCollapsed：用户主动收折，持久化于 settingsStore，无视宽窄保持收起，
   //   直到用户主动展开时清除 —— 此后回到宽度自动策略
+  // - previewMode：预览模式临时锁定收折，退出后自动回落到上面两个来源
   const [widthCollapsed, setWidthCollapsed] = useState(window.innerWidth < AUTO_COLLAPSE_THRESHOLD)
-  const isFormatCollapsed = formatManuallyCollapsed || widthCollapsed
+  const isFormatCollapsed = formatManuallyCollapsed || widthCollapsed || previewMode
 
   // 窗口物理宽度是否低于阈值（只随 resize 变化，手动展开不改动它）：
   // 驱动品牌名 YiziMarkdown ⇄ YiziMD —— 仅在「格式条展开 && 物理窄窗」（即压缩带）时缩名让位
@@ -308,7 +311,7 @@ export default function Toolbar({
       <div className="flex items-center gap-px overflow-hidden min-w-0 flex-1">
         {/* 品牌名：压缩带（格式条展开 && 物理窄窗）时 YiziMarkdown ⇄ YiziMD，见 globals.css .brand-name */}
         <span
-          className={`brand-name text-[15px] font-extrabold tracking-tight text-[var(--editor-accent)] select-none mr-1.5 shrink-0 ${!isFormatCollapsed && viewportNarrow ? 'short' : ''}`}
+          className={`brand-name text-[0.9375rem] font-extrabold tracking-tight text-[var(--editor-accent)] select-none mr-1.5 shrink-0 ${!isFormatCollapsed && viewportNarrow ? 'short' : ''}`}
         >
           <span className="brand-full-wrap"><span className="brand-full">YiziMarkdown</span></span>
           <span className="brand-short">YiziMD</span>
@@ -467,8 +470,10 @@ export default function Toolbar({
               <ChevronsRight size={16} className="chev-close" />
             </span>
           }
-          tooltip={isFormatCollapsed ? t('toolbar.expandFormat') : t('toolbar.collapseFormat')}
+          tooltip={previewMode ? t('toolbar.formatLockedPreview') : isFormatCollapsed ? t('toolbar.expandFormat') : t('toolbar.collapseFormat')}
+          disabled={previewMode}
           onClick={() => {
+            if (previewMode) return
             if (isFormatCollapsed) {
               // 主动展开：清手动标记并当下展开（widthCollapsed 一并清，否则窄窗下会被宽度策略立刻压回）；此后宽度策略随 resize 重新接管
               setField('formatManuallyCollapsed', false)
@@ -534,14 +539,14 @@ export default function Toolbar({
               }}
             >
               <button
-                className="w-full px-3 py-1.5 text-left text-[13px] hover:bg-[var(--editor-hover)] flex items-center gap-2"
+                className="w-full px-3 py-1.5 text-left text-[0.8125rem] hover:bg-[var(--editor-hover)] flex items-center gap-2"
                 onClick={() => { onInsertMarkdown('`', 'wrap'); setShowCodeMenu(false); }}
               >
                 <Code size={14} />
                 <span>{t('toolbar.inlineCode')}</span>
               </button>
               <button
-                className="w-full px-3 py-1.5 text-left text-[13px] hover:bg-[var(--editor-hover)] flex items-center gap-2"
+                className="w-full px-3 py-1.5 text-left text-[0.8125rem] hover:bg-[var(--editor-hover)] flex items-center gap-2"
                 onClick={() => { onInsertMarkdown('\n```\n\n```\n'); setShowCodeMenu(false); }}
               >
                 <Code2 size={14} />
@@ -856,22 +861,26 @@ interface ToolbarButtonProps {
   onClick: (e: React.MouseEvent) => void
   active?: boolean
   accent?: boolean
+  disabled?: boolean
 }
 
-function ToolbarButton({ icon, tooltip, onClick, active, accent }: ToolbarButtonProps) {
+function ToolbarButton({ icon, tooltip, onClick, active, accent, disabled = false }: ToolbarButtonProps) {
   return (
     <button
       onMouseDown={(e) => e.stopPropagation()}
       onClick={onClick}
       title={tooltip}
+      disabled={disabled}
       className={`
         w-7 h-7 flex items-center justify-center rounded-ui
         transition-colors duration-150
-        ${active 
-          ? 'bg-[var(--toolbar-accent)] text-[var(--on-accent)]' 
-          : accent
-            ? 'hover:bg-[var(--toolbar-hover)] text-[var(--toolbar-accent)] opacity-80 hover:opacity-100'
-            : 'hover:bg-[var(--toolbar-hover)] text-[var(--toolbar-fg)] opacity-80 hover:opacity-100'
+        ${disabled
+          ? 'opacity-35 cursor-not-allowed'
+          : active
+            ? 'bg-[var(--toolbar-accent)] text-[var(--on-accent)]'
+            : accent
+              ? 'hover:bg-[var(--toolbar-hover)] text-[var(--toolbar-accent)] opacity-80 hover:opacity-100'
+              : 'hover:bg-[var(--toolbar-hover)] text-[var(--toolbar-fg)] opacity-80 hover:opacity-100'
         }
       `}
     >
@@ -896,7 +905,7 @@ function generateTableMd(rows: number, cols: number, t: (key: string, params?: R
 /** 导出格式字母徽标：无衬线大字（SVG text），标准字形、大字号小尺寸清晰；currentColor 跟随主题 */
 function FormatBadge({ letter }: { letter: string }) {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+    <svg className="format-badge-icon" width="14" height="14" viewBox="0 0 24 24" fill="none">
       <text
         x="12" y="12" textAnchor="middle" dominantBaseline="central"
         fontFamily="'Arial','Helvetica','Segoe UI',system-ui,sans-serif"

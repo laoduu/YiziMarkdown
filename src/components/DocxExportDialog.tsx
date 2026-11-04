@@ -68,7 +68,7 @@ export default function DocxExportDialog({ open, onClose, onExport }: Props) {
           </button>
         </div>
 
-        <div className="px-4 py-3 text-[13px] space-y-3">
+        <div className="px-4 py-3 text-[0.8125rem] space-y-3">
           <label className="flex items-start gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -78,7 +78,7 @@ export default function DocxExportDialog({ open, onClose, onExport }: Props) {
             />
             <span>
               <span className="font-medium">{t('docxExport.themeColors')}</span>
-              <span className="block text-[11px] text-[var(--sidebar-text)] leading-relaxed">
+              <span className="block text-[0.6875rem] text-[var(--sidebar-text)] leading-relaxed">
                 {t('docxExport.themeColorsHint')}
               </span>
             </span>
@@ -93,7 +93,7 @@ export default function DocxExportDialog({ open, onClose, onExport }: Props) {
             />
             <span>
               <span className="font-medium">{t('docxExport.followPreview')}</span>
-              <span className="block text-[11px] text-[var(--sidebar-text)] leading-relaxed">
+              <span className="block text-[0.6875rem] text-[var(--sidebar-text)] leading-relaxed">
                 {t('docxExport.followPreviewHint')}
               </span>
             </span>
@@ -108,7 +108,7 @@ export default function DocxExportDialog({ open, onClose, onExport }: Props) {
             />
             <span>
               <span className="font-medium">{t('docxExport.followPreviewFont')}</span>
-              <span className="block text-[11px] text-[var(--sidebar-text)] leading-relaxed">
+              <span className="block text-[0.6875rem] text-[var(--sidebar-text)] leading-relaxed">
                 {t('docxExport.followPreviewFontHint')}
               </span>
             </span>

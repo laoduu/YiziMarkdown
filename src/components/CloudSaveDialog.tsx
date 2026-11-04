@@ -96,7 +96,7 @@ export default function CloudSaveDialog({ open, initialPath, busy, error, onClos
     }
   }
 
-  const rowBase = 'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[12px] text-left'
+  const rowBase = 'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[0.75rem] text-left'
   const rowHover = 'hover:bg-[var(--editor-hover)] cursor-pointer'
 
   return (
@@ -114,7 +114,7 @@ export default function CloudSaveDialog({ open, initialPath, busy, error, onClos
         <button onClick={() => setDir('/')} title={t('cloud.root')} className="p-1 rounded hover:bg-[var(--editor-hover)] hover:text-[var(--editor-text)] shrink-0">
           <Cloud size={13} />
         </button>
-        <div className="flex-1 flex items-center gap-0.5 min-w-0 overflow-hidden text-[12px]">
+        <div className="flex-1 flex items-center gap-0.5 min-w-0 overflow-hidden text-[0.75rem]">
           {crumbs.map((seg, i) => (
             <span key={i} className="flex items-center gap-0.5 min-w-0 shrink">
               {i > 0 && <span className="opacity-40 shrink-0">/</span>}
@@ -157,16 +157,16 @@ export default function CloudSaveDialog({ open, initialPath, busy, error, onClos
           </div>
         )}
         {loading && !entries.length ? (
-          <div className="flex items-center justify-center h-full gap-2 text-[12px] text-[var(--sidebar-text)]">
+          <div className="flex items-center justify-center h-full gap-2 text-[0.75rem] text-[var(--sidebar-text)]">
             <Loader2 size={14} className="animate-spin" />{t('cloud.loading')}
           </div>
         ) : listError ? (
-          <div className="flex flex-col items-center justify-center h-full gap-2 text-[12px] text-red-500">
+          <div className="flex flex-col items-center justify-center h-full gap-2 text-[0.75rem] text-red-500">
             <span className="break-all px-4 text-center">{listError}</span>
-            <button onClick={() => load(dir)} className="settings-btn-secondary h-7 text-[12px]">{t('cloud.retry')}</button>
+            <button onClick={() => load(dir)} className="settings-btn-secondary h-7 text-[0.75rem]">{t('cloud.retry')}</button>
           </div>
         ) : !dirs.length && !files.length && !creating ? (
-          <div className="flex items-center justify-center h-full text-[12px] text-[var(--sidebar-text)]">{t('cloud.empty')}</div>
+          <div className="flex items-center justify-center h-full text-[0.75rem] text-[var(--sidebar-text)]">{t('cloud.empty')}</div>
         ) : (
           <>
             {dirs.map((e) => (
@@ -186,7 +186,7 @@ export default function CloudSaveDialog({ open, initialPath, busy, error, onClos
       </div>
 
       {/* 文件名 */}
-      <label className="text-[12px] text-[var(--editor-text)] block mb-1">{t('cloud.fileNameLabel')}</label>
+      <label className="text-[0.75rem] text-[var(--editor-text)] block mb-1">{t('cloud.fileNameLabel')}</label>
       <input
         autoFocus
         value={name}
@@ -195,8 +195,8 @@ export default function CloudSaveDialog({ open, initialPath, busy, error, onClos
         className="settings-input w-full mb-2"
         style={{ fontFamily: 'var(--font-mono)' }}
       />
-      <p className="text-[11px] text-[var(--sidebar-text)] mb-2">{t('cloud.saveToCloudHint')}</p>
-      {error && <p className="text-[11px] text-red-500 mb-2 break-words">{error}</p>}
+      <p className="text-[0.6875rem] text-[var(--sidebar-text)] mb-2">{t('cloud.saveToCloudHint')}</p>
+      {error && <p className="text-[0.6875rem] text-red-500 mb-2 break-words">{error}</p>}
       <div className="flex justify-end gap-2">
         <button onClick={onClose} className="settings-btn-secondary">{t('cloud.cancel')}</button>
         <button

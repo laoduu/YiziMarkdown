@@ -594,7 +594,7 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
       <div className="flex items-center gap-2 px-4 h-11 border-b border-[var(--editor-border)] shrink-0">
         <Bot size={15} className="text-[var(--editor-accent)] shrink-0" />
         <span className="text-sm font-semibold shrink-0">{t('ai.chatTitle')}</span>
-        <span className="text-[10px] text-[var(--sidebar-text)] truncate min-w-0">
+        <span className="text-[0.6875rem] text-[var(--sidebar-text)] truncate min-w-0">
           {provider?.id === 'custom' ? t('ai.customLabel') : (provider?.i18nKey ? t(`settings.${provider.i18nKey}`) : provider?.label || aiProvider)} · {aiModel || provider?.defaultModel || ''}
         </span>
         <div className="flex-1" />
@@ -619,10 +619,10 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
             {/* 思考内容：有思考内容时显示；流式传输中无正文内容时也显示（思考阶段） */}
             {m.role === 'assistant' && (m.thinking || (streamingId && i === messages.length - 1 && !m.content)) && (
               <details open={!!streamingId && i === messages.length - 1 && !m.content} className="max-w-[85%] w-fit mb-1.5 rounded-lg border border-[var(--editor-border)] bg-[var(--editor-surface)] px-3 py-1.5">
-                <summary className="text-[10px] text-[var(--sidebar-text)] cursor-pointer select-none">
+                <summary className="text-[0.6875rem] text-[var(--sidebar-text)] cursor-pointer select-none">
                   {t('ai.thinkingSection')}
                 </summary>
-                <div className={`mt-1.5 text-[11px] leading-relaxed text-[var(--sidebar-text)] whitespace-pre-wrap break-all ${!(streamingId && i === messages.length - 1 && !m.content) ? 'max-h-48 overflow-y-auto' : ''}`}>
+                <div className={`mt-1.5 text-[0.6875rem] leading-relaxed text-[var(--sidebar-text)] whitespace-pre-wrap break-all ${!(streamingId && i === messages.length - 1 && !m.content) ? 'max-h-48 overflow-y-auto' : ''}`}>
                   {m.thinking}
                   {streamingId && i === messages.length - 1 && !m.content && (
                     <span className="inline-block w-1.5 h-3 ml-0.5 align-middle animate-pulse bg-[var(--editor-accent)]" />
@@ -632,13 +632,13 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
             )}
             {/* 正文气泡 */}
             {m.role === 'user' && (
-              <div className="max-w-[85%] px-3 py-2 rounded-lg text-[13px] leading-relaxed whitespace-pre-wrap break-words bg-[var(--editor-accent)] text-white rounded-br-sm">
+              <div className="max-w-[85%] px-3 py-2 rounded-lg text-[0.8125rem] leading-relaxed whitespace-pre-wrap break-words bg-[var(--editor-accent)] text-white rounded-br-sm">
                 {m.content}
               </div>
             )}
             {m.role === 'assistant' && (m.content || (!m.thinking && !(streamingId && i === messages.length - 1))) && (
               <div
-                className={`max-w-[85%] px-3 py-2 rounded-lg text-[13px] leading-relaxed whitespace-pre-wrap break-words ${
+                className={`max-w-[85%] px-3 py-2 rounded-lg text-[0.8125rem] leading-relaxed whitespace-pre-wrap break-words ${
                   m.error
                     ? 'bg-red-500/10 text-red-500 border border-red-500/30 rounded-bl-sm'
                     : 'bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-bl-sm'
@@ -659,7 +659,7 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
                   title={t('ai.copy')}
                 >
                   {copiedIndex === i ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
-                  <span className="text-[10px] hidden group-hover:inline">{copiedIndex === i ? t('ai.copied') : t('ai.copy')}</span>
+                  <span className="text-[0.6875rem] hidden group-hover:inline">{copiedIndex === i ? t('ai.copied') : t('ai.copy')}</span>
                 </button>
                 <button
                   onClick={() => handleInsert(m.content)}
@@ -667,7 +667,7 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
                   title={t('ai.insertToDoc')}
                 >
                   <FileDown size={12} />
-                  <span className="text-[10px] hidden group-hover:inline">{t('ai.insertToDoc')}</span>
+                  <span className="text-[0.6875rem] hidden group-hover:inline">{t('ai.insertToDoc')}</span>
                 </button>
                 <button
                   onClick={() => onNewDoc(m.content)}
@@ -675,7 +675,7 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
                   title={t('ai.newDoc')}
                 >
                   <FilePlus2 size={12} />
-                  <span className="text-[10px] hidden group-hover:inline">{t('ai.newDoc')}</span>
+                  <span className="text-[0.6875rem] hidden group-hover:inline">{t('ai.newDoc')}</span>
                 </button>
               </div>
             )}
@@ -700,7 +700,7 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
             className="absolute bottom-full left-2 mb-1 w-[300px] max-h-[280px] overflow-y-auto rounded-lg border border-[var(--editor-border)] bg-[var(--editor-surface)] shadow-xl z-10"
           >
             {skills.length === 0 ? (
-              <p className="px-3 py-3 text-[12px] text-[var(--sidebar-text)]">{t('ai.skillEmpty')}</p>
+              <p className="px-3 py-3 text-[0.75rem] text-[var(--sidebar-text)]">{t('ai.skillEmpty')}</p>
             ) : (
               skills.map((s) => (
                 <button
@@ -723,12 +723,12 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
                     <Zap size={12} className="text-[var(--editor-accent)] shrink-0" />
-                    <span className="text-[13px] font-medium text-[var(--sidebar-text)] shrink-0">{s.name}</span>
-                    <span className="text-[12px] text-[var(--editor-text)] truncate">{s.summary}</span>
+                    <span className="text-[0.8125rem] font-medium text-[var(--sidebar-text)] shrink-0">{s.name}</span>
+                    <span className="text-[0.75rem] text-[var(--editor-text)] truncate">{s.summary}</span>
                   </div>
                   {s.description && (
                     <div className="skill-desc hidden fixed w-[220px] bg-[var(--editor-surface)] border border-[var(--editor-border)] shadow-xl p-3 z-50 rounded-lg">
-                      <p className="text-[13px] text-[var(--editor-text)] leading-relaxed">{s.description}</p>
+                      <p className="text-[0.8125rem] text-[var(--editor-text)] leading-relaxed">{s.description}</p>
                     </div>
                   )}
                 </button>
@@ -744,7 +744,7 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
                 }
                 setSkillMenuOpen(false)
               }}
-              className="flex items-center gap-1.5 w-full text-left px-3 py-1.5 text-[12px] text-[var(--sidebar-text)] hover:bg-[var(--editor-hover)] border-t border-[var(--editor-border)]"
+              className="flex items-center gap-1.5 w-full text-left px-3 py-1.5 text-[0.75rem] text-[var(--sidebar-text)] hover:bg-[var(--editor-hover)] border-t border-[var(--editor-border)]"
             >
               <Settings size={12} />
               <span>{t('ai.manageSkills')}</span>
@@ -752,7 +752,7 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
           </div>
         )}
         {!fromSelection && (
-          <label className={`flex items-center gap-1.5 text-[11px] ${activeSkill?.needsDoc ? 'opacity-70' : 'cursor-pointer text-[var(--sidebar-text)]'}`}>
+          <label className={`flex items-center gap-1.5 text-[0.6875rem] ${activeSkill?.needsDoc ? 'opacity-70' : 'cursor-pointer text-[var(--sidebar-text)]'}`}>
             <input
               type="checkbox"
               checked={useDoc || !!activeSkill?.needsDoc}
@@ -787,10 +787,10 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
             document.execCommand('insertText', false, text)
             syncFromDom()
           }}
-          className="ai-chat-editor w-full px-3 py-2 bg-[var(--editor-surface)] rounded-lg text-[13px] text-[var(--editor-text)] outline-none resize-none"
+          className="ai-chat-editor w-full px-3 py-2 bg-[var(--editor-surface)] rounded-lg text-[0.8125rem] text-[var(--editor-text)] outline-none resize-none"
         />
         <div className="flex items-center justify-between mt-1.5">
-          <span className="text-[10px] text-[var(--sidebar-text)]">{t('ai.hint')}</span>
+          <span className="text-[0.6875rem] text-[var(--sidebar-text)]">{t('ai.hint')}</span>
           {streamingId ? (
             <button onClick={handleStop} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white bg-red-500/90 hover:bg-red-500">
               <Square size={11} /> {t('ai.stop')}

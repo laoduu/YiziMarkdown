@@ -457,7 +457,7 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
             : dialog?.kind === 'newFile' ? t('sidebar.namePlaceholder') : t('cloud.folderNamePlaceholder')}
           className="settings-input w-full mb-3"
         />
-        {dialogError && <p className="text-[11px] text-red-500 mb-2 break-words">{dialogError}</p>}
+        {dialogError && <p className="text-[0.6875rem] text-red-500 mb-2 break-words">{dialogError}</p>}
         <div className="flex justify-end gap-2">
           <button onClick={() => setDialog(null)} className="settings-btn-secondary">{t('cloud.cancel')}</button>
           <button
@@ -478,15 +478,15 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
         title={t('cloud.deleteConfirmTitle')}
         width={340}
       >
-        <p className="text-[13px] text-[var(--editor-text)] mb-1">
+        <p className="text-[0.8125rem] text-[var(--editor-text)] mb-1">
           {t('cloud.deleteConfirmBody', { name: dialog?.entry?.name ?? '' })}
         </p>
         {dialog?.entry?.isDir && (
-          <p className="text-[12px] text-red-500 mb-1">
+          <p className="text-[0.75rem] text-red-500 mb-1">
             {t('cloud.deleteConfirmFolder', { name: dialog.entry.name })}
           </p>
         )}
-        {dialogError && <p className="text-[11px] text-red-500 mb-2 break-words">{dialogError}</p>}
+        {dialogError && <p className="text-[0.6875rem] text-red-500 mb-2 break-words">{dialogError}</p>}
         <div className="flex justify-end gap-2 mt-3">
           <button onClick={() => setDialog(null)} className="settings-btn-secondary">{t('cloud.cancel')}</button>
           <button

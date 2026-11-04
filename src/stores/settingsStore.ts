@@ -18,12 +18,21 @@ export const CONTENT_WIDTH_MIN = 400
 export const CONTENT_WIDTH_MAX = 1600
 export const CONTENT_WIDTH_DEFAULT = 900
 
+/** 界面字号倍率（只影响 UI 文字与图标）。
+ *  用户看到的 100% = 当前实际观感（绝对倍率 1.1）；设置范围 80% ~ 120%，默认 100%。 */
+export const UI_TEXT_SCALE_BASE = 1.1
+export const UI_TEXT_SCALE_MIN = 0.8
+export const UI_TEXT_SCALE_MAX = 1.2
+export const UI_TEXT_SCALE_DEFAULT = 1
+
 export interface SettingsState {
   // 通用
   autoSave: boolean
   autoSaveInterval: number
   defaultTemplate: string
   language: string
+  /** 软件界面字号倍率（1 = 100%）；只影响 UI 文字与图标，不缩放文档内容 */
+  uiTextScale: number
 
   // 编辑器
   fontFamily: string
@@ -32,6 +41,8 @@ export interface SettingsState {
   lineHeight: number
   showLineNumbers: boolean
   wordWrap: boolean
+  /** 代码块自动换行：全局持久化，切换文档 / 刷新后保持上次选择（默认横向滚动） */
+  codeBlockWrap: boolean
   spellCheck: boolean
   /** 内容区（正文列）最大宽度 px —— 源码 / 实时 / 预览**共用**这一个值。
    *  由正文列边缘的拖拽手柄改写；它只是 max-width 的**上限**，
@@ -159,6 +170,7 @@ export const useSettingsStore = create<SettingsState>()(
       autoSaveInterval: 60000,
       defaultTemplate: '',
       language: 'zh',
+      uiTextScale: UI_TEXT_SCALE_DEFAULT,
 
       // 编辑器
       fontFamily: "'MiSans', 'Mi Sans', system-ui, -apple-system, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif",
@@ -169,6 +181,7 @@ export const useSettingsStore = create<SettingsState>()(
       previewLineHeight: 2.0,
       showLineNumbers: true,
       wordWrap: true,
+      codeBlockWrap: false,
       spellCheck: false,
       // 默认 900：与源码模式改动前一致。注意预览模式里部分主题原本自带 800/700px 的固定宽度，
       // 统一到这个值后会跟随 900 —— 这是「三处共用同一个宽度」的必然结果，属于有意的统一。
@@ -266,7 +279,10 @@ export const useSettingsStore = create<SettingsState>()(
       // v14: PPTX 导出 —— 新增首次提示标记 / 备注 / 页脚 / 超页策略
       // v15: 数学公式 / Mermaid 提升为核心渲染器 —— 从插件列表与插件配置移除
       // v16: 鼠标光标默认改为原生；旧存档的 bold 是旧默认，统一重置一次
-      version: 16,
+      // v17: 通用设置新增界面字号 uiTextScale（默认 1.1）
+      // v18: 界面字号从全局缩放改为字号/图标缩放，旧实验值 1.0 迁移到新默认 1.1
+      // v19: 用户显示值改为相对新基准（100% = 绝对 1.1）；旧实验值统一回默认 100%
+      version: 19,
       migrate: (persisted: unknown) => {
         // 自动迁移旧字体栈到 MiSans 方案
         const oldFont = "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
@@ -311,6 +327,8 @@ export const useSettingsStore = create<SettingsState>()(
           if (typeof state.webdavSaveLastDir !== 'string') state.webdavSaveLastDir = ''
           // v10：格式工具栏手动收折标记。存量存档没有它 ⇒ 补 false（维持宽度自动策略）
           if (typeof state.formatManuallyCollapsed !== 'boolean') state.formatManuallyCollapsed = false
+          // 代码块换行偏好。旧存档没有 → false（默认横向滚动）
+          if (typeof state.codeBlockWrap !== 'boolean') state.codeBlockWrap = false
           // v11：演示模式分栏。存量存档没有这两个键 ⇒ 补默认值。
           // 注意升级观感：样式默认是 **card**（有意的默认升级，不是零变化）——
           // 存量用户升级后分栏页会直接出现卡片，这是产品决策而非疏漏（见 slideColumns.ts 顶部）。
@@ -327,6 +345,9 @@ export const useSettingsStore = create<SettingsState>()(
           state.contentMaxWidth = clampNumber(
             state.contentMaxWidth, CONTENT_WIDTH_MIN, CONTENT_WIDTH_MAX, CONTENT_WIDTH_DEFAULT
           )
+          // v19：旧实验值使用绝对倍率，统一重置为新基准下的 100%（之后再按用户设置保存）
+          state.uiTextScale = UI_TEXT_SCALE_DEFAULT
+          state.uiTextScale = clampNumber(state.uiTextScale, UI_TEXT_SCALE_MIN, UI_TEXT_SCALE_MAX, UI_TEXT_SCALE_DEFAULT)
           // v14：PPTX 导出。存量存档没有这四个键 ⇒ 补默认值。
           // 超页策略只认枚举值（手改 localStorage 写入非法值会让分段按钮全灭）。
           if (typeof state.pptxExportHintSeen !== 'boolean') state.pptxExportHintSeen = false

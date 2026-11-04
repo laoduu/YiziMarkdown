@@ -18,7 +18,7 @@ import { openRemote, save as saveToCloud, notifyRemoteDirChanged } from './lib/w
 import { parentPath, joinPath, baseName, canonicalRemotePath } from './lib/remotePath'
 import { saveActiveTab, markConflictResolved, dirOf } from './lib/saveRouter'
 import Dialog from './components/Dialog'
-import { useSettingsStore } from './stores/settingsStore'
+import { useSettingsStore, UI_TEXT_SCALE_BASE, UI_TEXT_SCALE_DEFAULT } from './stores/settingsStore'
 import { useUpdateStore } from './stores/updateStore'
 import { loadKeybindings, resolveAction, getKeybindingsMap, formatKey, SHORTCUT_ACTIONS } from './lib/keybindings'
 import { useEditorStore, editorStorage } from './stores/editorStore'
@@ -155,7 +155,7 @@ interface EpubSession {
 
 function App() {
   const { t } = useI18n()
-  const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, contentMaxWidth, enabledPlugins, pluginConfigs, setField, aiPanelOpen, updateSettings, userThemeEnabled, userThemeName, customCssBase, slideColStyle, slideColAlign, cursorStyle } = useSettingsStore()
+  const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, contentMaxWidth, uiTextScale, codeBlockWrap, enabledPlugins, pluginConfigs, setField, aiPanelOpen, updateSettings, userThemeEnabled, userThemeName, customCssBase, slideColStyle, slideColAlign, cursorStyle } = useSettingsStore()
   const {
     activeTabId, currentTab,
     openFile, openRemoteFile, openNewFile, closeTab, switchTab,
@@ -254,6 +254,22 @@ function App() {
     // 只写"上限"，窗口更窄时各面板仍按 flex 自适应收窄，所以这里不需要关心窗口尺寸。
     if (contentMaxWidth) document.documentElement.style.setProperty('--content-max-width', `${contentMaxWidth}px`)
   }, [fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, contentMaxWidth])
+
+  // 界面字号：只影响 UI 的 rem 字号/图标，不改变面板尺寸和文档内容。
+  // 字号变化后触发 resize，让 CodeMirror / 阅读布局重新测量。
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      '--ui-text-scale',
+      String((uiTextScale || UI_TEXT_SCALE_DEFAULT) * UI_TEXT_SCALE_BASE),
+    )
+    const id = requestAnimationFrame(() => window.dispatchEvent(new Event('resize')))
+    return () => cancelAnimationFrame(id)
+  }, [uiTextScale])
+
+  // 代码块自动换行：全局 class 让预览 / 实时 / 阅读模式共用同一持久化偏好
+  useEffect(() => {
+    document.documentElement.classList.toggle('code-block-wrap', codeBlockWrap)
+  }, [codeBlockWrap])
 
   // 自动保存（仅已保存过的文件）
   const activeTab = useEditorStore(s => s.tabs.find(t => t.id === s.activeTabId) ?? null)
@@ -1452,6 +1468,7 @@ function App() {
         onRead={startReader}
         onAIChat={() => updateSettings({ aiPanelOpen: !aiPanelOpen })}
         isDark={isDark}
+        previewMode={viewMode === 'preview'}
         onUndo={() => editorRef.current?.undo()}
         onRedo={() => editorRef.current?.redo()}
       />
@@ -1564,10 +1581,10 @@ function App() {
         title={t('cloud.conflictTitle')}
         width={380}
       >
-        <p className="text-[13px] text-[var(--editor-text)] mb-2">
+        <p className="text-[0.8125rem] text-[var(--editor-text)] mb-2">
           {t('cloud.conflictBody', { name: conflict?.name ?? '' })}
         </p>
-        <p className="text-[11px] text-[var(--sidebar-text)] mb-3">{t('cloud.conflictHint')}</p>
+        <p className="text-[0.6875rem] text-[var(--sidebar-text)] mb-3">{t('cloud.conflictHint')}</p>
         <div className="flex flex-col gap-2">
           <button onClick={handleConflictOverwrite} className="settings-btn-primary">
             {t('cloud.conflictOverwrite')}
@@ -1587,9 +1604,9 @@ function App() {
         width={400}
       >
         {storageCleanup?.reason && (
-          <p className="text-[12px] mb-2" style={{ color: 'var(--danger)' }}>{storageCleanup.reason}</p>
+          <p className="text-[0.75rem] mb-2" style={{ color: 'var(--danger)' }}>{storageCleanup.reason}</p>
         )}
-        <p className="text-[13px] text-[var(--editor-text)] mb-3">
+        <p className="text-[0.8125rem] text-[var(--editor-text)] mb-3">
           {t('app.storageUsage', {
             chars: (storageCleanup?.usage?.chars ?? 0).toLocaleString(),
             limit: WEBVIEW2_QUOTA_CHARS.toLocaleString(),
@@ -1599,7 +1616,7 @@ function App() {
           <button onClick={() => runStorageCleanup('safe')} className="settings-btn-primary">
             {t('app.storageCleanupSafe')}
           </button>
-          <p className="text-[11px] text-[var(--sidebar-text)]">{t('app.storageCleanupSafeHint')}</p>
+          <p className="text-[0.6875rem] text-[var(--sidebar-text)]">{t('app.storageCleanupSafeHint')}</p>
 
           {!storageCleanup?.confirmingAll ? (
             <button
@@ -1610,7 +1627,7 @@ function App() {
             </button>
           ) : (
             <div className="mt-2 flex flex-col gap-1.5">
-              <p className="text-[11px]" style={{ color: 'var(--danger)' }}>{t('app.storageCleanupAllHint')}</p>
+              <p className="text-[0.6875rem]" style={{ color: 'var(--danger)' }}>{t('app.storageCleanupAllHint')}</p>
               <div className="flex gap-2">
                 <button onClick={() => runStorageCleanup('all')} className="settings-btn-primary">
                   {t('common.confirm')}
@@ -1626,7 +1643,7 @@ function App() {
           )}
 
           {storageCleanup?.result && (
-            <p className="mt-2 text-[11px] text-[var(--sidebar-text)]">
+            <p className="mt-2 text-[0.6875rem] text-[var(--sidebar-text)]">
               {storageCleanup.result.removed === 0
                 ? t('app.storageCleanupNothing')
                 : t('app.storageCleanupDone', { chars: storageCleanup.result.freedChars.toLocaleString() })}
@@ -1798,7 +1815,7 @@ function ShortcutsPanel() {
     <div className="mt-4 space-y-5">
       {categories.map(cat => (
         <div key={cat}>
-          <h3 className="text-[11px] font-semibold uppercase tracking-widest mb-2.5" style={{ color: 'var(--editor-accent)' }}>{t(cat)}</h3>
+          <h3 className="text-[0.6875rem] font-semibold uppercase tracking-widest mb-2.5" style={{ color: 'var(--editor-accent)' }}>{t(cat)}</h3>
           <div className="grid grid-cols-3 gap-2">
             {SHORTCUT_ACTIONS.filter(a => a.categoryKey === cat && a.defaultKey).map(action => {
               const key = formatKey(map[action.id] || action.defaultKey)
@@ -1815,14 +1832,14 @@ function ShortcutsPanel() {
                   onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--editor-surface)' }}
                 >
                   <kbd
-                    className="text-[11px] font-mono font-medium px-2 py-0.5 rounded shrink-0"
+                    className="text-[0.6875rem] font-mono font-medium px-2 py-0.5 rounded shrink-0"
                     style={{
                       color: 'var(--editor-text)',
                       background: 'var(--editor-bg)',
                       border: '1px solid var(--editor-border)'
                     }}
                   >{key}</kbd>
-                  <span className="text-[13px] truncate" style={{ color: 'var(--editor-text)' }}>{t(action.labelKey)}</span>
+                  <span className="text-[0.8125rem] truncate" style={{ color: 'var(--editor-text)' }}>{t(action.labelKey)}</span>
                 </div>
               )
             })}

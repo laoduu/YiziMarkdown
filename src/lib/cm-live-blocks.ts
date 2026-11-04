@@ -393,9 +393,8 @@ class CodeBlockWidget extends WidgetType {
     wrapBtn.addEventListener('click', (e) => {
       e.preventDefault()
       e.stopPropagation()
-      const isWrapped = pre.style.whiteSpace === 'pre-wrap'
-      pre.style.whiteSpace = isWrapped ? 'pre' : 'pre-wrap'
-      wrapBtn.classList.toggle('active', !isWrapped)
+      const next = !useSettingsStore.getState().codeBlockWrap
+      useSettingsStore.getState().setField('codeBlockWrap', next)
     })
     const copyBtn = document.createElement('button')
     copyBtn.className = 'code-block-copy-btn'

@@ -39,7 +39,7 @@ export default function LinkModal({ open, onClose, onConfirm, initialText = '' }
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder={t('dialog.linkTextPlaceholder')}
-            className="w-full px-3 py-2 text-[13px] bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg outline-none focus:border-[var(--editor-accent)] text-[var(--editor-text)]"
+            className="w-full px-3 py-2 text-[0.8125rem] bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg outline-none focus:border-[var(--editor-accent)] text-[var(--editor-text)]"
             autoFocus
           />
         </div>
@@ -50,7 +50,7 @@ export default function LinkModal({ open, onClose, onConfirm, initialText = '' }
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder={t('dialog.linkUrlPlaceholder')}
-            className="w-full px-3 py-2 text-[13px] bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg outline-none focus:border-[var(--editor-accent)] text-[var(--editor-text)]"
+            className="w-full px-3 py-2 text-[0.8125rem] bg-[var(--editor-surface)] border border-[var(--editor-border)] rounded-lg outline-none focus:border-[var(--editor-accent)] text-[var(--editor-text)]"
             required
           />
         </div>
@@ -58,13 +58,13 @@ export default function LinkModal({ open, onClose, onConfirm, initialText = '' }
           <button
             type="button"
             onClick={onClose}
-            className="px-3 py-1.5 text-[12px] rounded-lg border border-[var(--editor-border)] hover:bg-[var(--editor-hover)] text-[var(--editor-text)]"
+            className="px-3 py-1.5 text-[0.75rem] rounded-lg border border-[var(--editor-border)] hover:bg-[var(--editor-hover)] text-[var(--editor-text)]"
           >
             {t('common.cancel')}
           </button>
           <button
             type="submit"
-            className="px-3 py-1.5 text-[12px] rounded-lg bg-[var(--editor-accent)] text-white hover:opacity-90"
+            className="px-3 py-1.5 text-[0.75rem] rounded-lg bg-[var(--editor-accent)] text-white hover:opacity-90"
           >
             {t('common.confirm')}
           </button>

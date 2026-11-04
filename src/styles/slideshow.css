@@ -2416,13 +2416,15 @@
   background: var(--editor-surface, #fff);
   border-right: 1px solid var(--editor-border, rgba(128,128,128,.3));
   box-shadow: 12px 0 40px rgba(0,0,0,.25);
+  /* 抽屉是界面控件，不跟幻灯片内容字体走 */
+  font-family: var(--font-ui);
 }
 .ys-drawer-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
   border-bottom: 1px solid var(--editor-border, rgba(128,128,128,.25));
 }
@@ -2442,7 +2444,7 @@
   background: transparent;
   color: var(--editor-text, #222);
   font: inherit;
-  font-size: 13px;
+  font-size: 0.8125rem;
   text-align: left;
   cursor: pointer;
 }
@@ -2456,7 +2458,7 @@
   flex: none;
   width: 2.2em;
   text-align: right;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--code-comment, color-mix(in srgb, var(--editor-text, #222) 55%, transparent));
   font-variant-numeric: tabular-nums;
 }
@@ -2476,7 +2478,7 @@
   background: var(--editor-bg, #fff);
   color: var(--editor-text, #222);
   font: inherit;
-  font-size: 13px;
+  font-size: 0.8125rem;
   outline: none;
 }
 .ys-drawer-foot input:focus { border-color: var(--editor-accent, #4a9eff); }
@@ -2488,6 +2490,6 @@
   background: var(--editor-accent, #4a9eff);
   color: #fff;
   font: inherit;
-  font-size: 13px;
+  font-size: 0.8125rem;
   cursor: pointer;
 }

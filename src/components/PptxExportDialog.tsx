@@ -278,7 +278,7 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
           </button>
         </div>
 
-        <div className="p-4 overflow-y-auto text-[12px] text-[var(--editor-text)]">
+        <div className="p-4 overflow-y-auto text-[0.75rem] text-[var(--editor-text)]">
           {!hintSeen && (
             <div
               className="mb-3 rounded-lg border px-3 py-2.5"
@@ -386,7 +386,7 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
                 {t('pptxExport.overflowShrink')}
               </label>
             </div>
-            <div className="text-[11px] text-[var(--sidebar-text)] mt-1">{t('pptxExport.overflowHint')}</div>
+            <div className="text-[0.6875rem] text-[var(--sidebar-text)] mt-1">{t('pptxExport.overflowHint')}</div>
           </div>
 
           {onPreview && !hasCurrent && (
@@ -398,7 +398,7 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
                 <Play size={13} />
                 {t('pptxExport.preview')}
               </button>
-              <span className="text-[11px] text-[var(--sidebar-text)]">{t('pptxExport.previewHint')}</span>
+              <span className="text-[0.6875rem] text-[var(--sidebar-text)]">{t('pptxExport.previewHint')}</span>
             </div>
           )}
 
@@ -431,7 +431,7 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
                 <CheckCircle2 size={14} style={{ color: 'var(--editor-success,#16a34a)' }} />
                 {t('pptxExport.success', { n: result.count })}
               </div>
-              <div className="mt-1 break-all text-[11px] text-[var(--sidebar-text)]">{result.path}</div>
+              <div className="mt-1 break-all text-[0.6875rem] text-[var(--sidebar-text)]">{result.path}</div>
             </div>
           )}
 
@@ -458,7 +458,7 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
               )}
               <ul className="space-y-0.5 max-h-40 overflow-y-auto">
                 {warnings.map((w, i) => (
-                  <li key={i} className="text-[11px] text-[var(--sidebar-text)] leading-relaxed flex flex-wrap items-center gap-1">
+                  <li key={i} className="text-[0.6875rem] text-[var(--sidebar-text)] leading-relaxed flex flex-wrap items-center gap-1">
                     {w.slide && (
                       <button
                         onClick={() => jump(w.slide!)}

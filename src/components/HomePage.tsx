@@ -56,12 +56,12 @@ export default function HomePage({ onOpenFile }: { onOpenFile: (filePath: string
                 <FileText size={16} className="text-[var(--editor-accent)] shrink-0" />
                 <div className="min-w-0 flex-1 text-left">
                   <p className="text-sm text-[var(--editor-text)] truncate">{info.name}</p>
-                  <p className="text-[11px] text-[var(--sidebar-text)] truncate">{info.path}</p>
+                  <p className="text-[0.6875rem] text-[var(--sidebar-text)] truncate">{info.path}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4 shrink-0">
-                <span className="text-[11px] text-[var(--sidebar-text)]">{info.size}</span>
-                <span className="text-[11px] text-[var(--sidebar-text)] flex items-center gap-1"><Clock size={10} />{info.modified}</span>
+                <span className="text-[0.6875rem] text-[var(--sidebar-text)]">{info.size}</span>
+                <span className="text-[0.6875rem] text-[var(--sidebar-text)] flex items-center gap-1"><Clock size={10} />{info.modified}</span>
                 <span
                   className="home-file-remove"
                   onClick={(e) => { e.stopPropagation(); removeRecentFile(info.path) }}
