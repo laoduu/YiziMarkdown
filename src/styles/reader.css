@@ -233,7 +233,9 @@
   height: auto;
   border-radius: 4px;
 }
-.reader-content .katex-display { overflow: hidden; margin: 0.6em 0; }
+.reader-content .katex-display { overflow-x: auto; overflow-y: hidden; margin: 0.6em 0; text-indent: 0; }
+.reader-content p:has(.katex),
+.reader-content p:has(.katex-display) { text-indent: 0; }
 .reader-content .markdown-toc { font-size: 0.95em; }
 
 /* 脚注（markdown-it-footnote） */

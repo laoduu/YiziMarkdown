@@ -112,16 +112,25 @@ function isTransparent(color: string): boolean {
   return !c || c.a <= 0.01
 }
 
-function findDark(el: Element): boolean {
-  const doc = el.ownerDocument
-  return !!el.closest('.dark') || doc.documentElement.classList.contains('dark')
+function findDark(el: Element, boundary?: Element | null): boolean {
+  let cur: Element | null = el
+  while (cur) {
+    if (cur.classList.contains('dark')) return true
+    if (boundary && cur === boundary) return false
+    cur = cur.parentElement
+  }
+  // 没有边界时回退到文档根（预览/演示使用 :root.theme-x.dark）。
+  // 阅读模式传入 .yizi-reader 边界，避免把应用根 .dark 误当成阅读页暗色。
+  return !!boundary ? false : el.ownerDocument.documentElement.classList.contains('dark')
 }
 
 /**
  * 读取当前元素继承到的主题。必须传入真正带主题 class 的容器：
  * 预览是 `.editor-content`、演示是 `.ys-slide`、阅读是 `.yizi-reader`。
+ * `boundary` 可选：阅读模式传 `.yizi-reader`，暗色只认该根节点上的 `.dark`，
+ * 不继承应用根主题的 `.dark`。
  */
-export function readThemePalette(el: Element | null): ThemePalette {
+export function readThemePalette(el: Element | null, boundary?: Element | null): ThemePalette {
   if (!el || typeof document === 'undefined') return FALLBACK
   const doc = el.ownerDocument
   const win = doc.defaultView
@@ -146,7 +155,7 @@ export function readThemePalette(el: Element | null): ThemePalette {
     return win.getComputedStyle(probe).fontFamily || fallback
   }
   try {
-    const dark = findDark(el)
+    const dark = findDark(el, boundary)
     const bgFallback = dark ? '#0a0f1e' : '#ffffff'
     const bg = color('--editor-bg', bgFallback)
     const text = color('--editor-text', dark ? '#e5e7eb' : FALLBACK.text)

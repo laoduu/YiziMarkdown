@@ -10,8 +10,6 @@
 
 import JSZip from 'jszip'
 import type { ReaderOutlineEntry } from './readerPagination'
-import { postRenderMermaid } from '../renderers/mermaid.ts'
-import { readThemePalette } from './themePalette.ts'
 
 const EPUB_NS = 'http://www.idpf.org/2007/ops'
 const XLINK_NS = 'http://www.w3.org/1999/xlink'
@@ -296,6 +294,14 @@ function flattenNodes(
     const name = localName(el)
     if (name === 'nav') continue
 
+    // `.mermaid` 即使已经预渲染出 <svg> 也必须保留外层 div：
+    // 里面有 data-source，阅读器要据此按当前阅读主题重渲染；
+    // 若按普通 div 展开，class/data-source 会丢失，旧 SVG 就会原样留在浅色书页上。
+    if (name === 'div' && el.classList.contains('mermaid')) {
+      out.push(el)
+      continue
+    }
+
     const unwrap = name === 'section' || name === 'article' || name === 'header'
       || name === 'footer' || name === 'main' || name === 'aside'
       || (name === 'div' && canUnwrapDiv(el))
@@ -345,6 +351,10 @@ function sanitizeElement(el: Element, docPath: string, assetUrl: (path: string) 
   }
 
   const inSvg = !!el.closest('svg')
+  // KaTeX 的排版依赖每个 span 上的内联定位样式（height / vertical-align / margin 等）。
+  // EPUB 清洗原本会删除所有非 SVG 的 style，公式因此塌陷、错位、看起来像黑块。
+  // 只对 KaTeX 子树放行 style，并继续挡掉 url()/expression/javascript:。
+  const inKatex = !!el.closest('.katex, .katex-display, .katex-inline')
   for (const a of Array.from(el.attributes)) {
     const key = a.name.toLowerCase()
     if (key.startsWith('on') || key === 'srcdoc' || key === 'formaction' || key === 'xml:base' || key === 'base') {
@@ -352,6 +362,7 @@ function sanitizeElement(el: Element, docPath: string, assetUrl: (path: string) 
       continue
     }
     if (key === 'style' && !inSvg) {
+      if (inKatex && !/url\s*\(|expression|javascript:/i.test(a.value)) continue
       el.removeAttribute(a.name)
       continue
     }
@@ -750,17 +761,7 @@ export async function parseEpub(
   outline = completeOutline(outline, chapters)
 
   const coverImage = coverPath ? await preloadAsset(coverPath) : undefined
-  let html = chapters.map((c) => c.box.innerHTML).join('\n')
-
-  // 我们导出的 EPUB 会把预览里已经渲染好的 Mermaid SVG 带进阅读包。
-  // 预览默认 htmlLabels=true，SVG 里是 <foreignObject>；Chromium 在 3D 翻页层里
-  // 会把 foreignObject 渲染成黑色。阅读前用 htmlLabels=false 重渲染一次。
-  if (/class="[^"]*mermaid/i.test(html)) {
-    const mermaidHost = htmlDoc.createElement('div')
-    mermaidHost.innerHTML = html
-    await postRenderMermaid(mermaidHost, readThemePalette(document.documentElement), false)
-    html = mermaidHost.innerHTML
-  }
+  const html = chapters.map((c) => c.box.innerHTML).join('\n')
 
   return {
     html,

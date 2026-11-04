@@ -21,6 +21,8 @@ import { computeOutlineItems } from '../lib/headingId'
 import { splitFrontMatter } from '../lib/frontMatter'
 import { stripInlineMarkers } from '../lib/liveSyntax'
 import { paginateReader, type ReaderOutlineEntry } from '../lib/readerPagination'
+import { postRenderMermaid } from '../renderers/mermaid'
+import { readThemePalette } from '../lib/themePalette'
 import { loadThemeCatalog } from '../lib/themeCatalog'
 import { orderThemes } from '../lib/themeOrder'
 import { CUSTOM_THEME, readUserCss } from '../lib/themeLoader'
@@ -393,8 +395,12 @@ export default function Reader({
 
       host.style.width = `${contentW}px`
       if (book) {
-        // EPUB 已在解析阶段完成清洗、图片注入和链接改写，直接分页。
+        // EPUB 已在解析阶段完成清洗、图片注入和链接改写；Mermaid 需要按
+        // 当前阅读主题重渲染，避免把预览主题（或暗色）的图表带进浅色书页。
         host.innerHTML = book.html
+        if (host.querySelector('.mermaid')) {
+          await postRenderMermaid(host, readThemePalette(measureRef.current, rootRef.current), false).catch(() => {})
+        }
       } else {
         const markdownPluginIds = getMarkdownPluginIds(enabledPlugins)
         const pluginExtenders = markdownPluginIds.length
@@ -491,7 +497,7 @@ export default function Reader({
     })
 
     return () => { cancelled = true }
-  }, [content, book, contentW, contentH, layout.pageW, layout.pageH, layout.spread, themeReady, fontChoice, fontSize, lineHeight, enabledPlugins, pluginConfigs, filePath])
+  }, [content, book, contentW, contentH, layout.pageW, layout.pageH, layout.spread, theme, dark, themeReady, fontChoice, fontSize, lineHeight, enabledPlugins, pluginConfigs, filePath])
 
   /* ---------------- 当前章节 / 页码保存 ---------------- */
 
