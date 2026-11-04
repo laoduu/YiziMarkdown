@@ -97,6 +97,96 @@ export async function renderMermaidInto(el: HTMLElement, code: string, palette?:
   })
 }
 
+const SVG_GEOMETRY_PROPS = [
+  'fill', 'fill-opacity', 'stroke', 'stroke-opacity', 'stroke-width',
+  'stroke-dasharray', 'stroke-dashoffset', 'stroke-linecap', 'stroke-linejoin',
+  'stroke-miterlimit', 'paint-order', 'opacity',
+] as const
+
+const SVG_TEXT_PROPS = [
+  'font-family', 'font-size', 'font-weight', 'font-style',
+  'text-anchor', 'dominant-baseline', 'letter-spacing', 'word-spacing',
+] as const
+
+/** 默认值 / 无效果值不要写进内联样式，避免消费方误解。 */
+function isNoopStyle(prop: string, value: string): boolean {
+  const v = value.trim().toLowerCase()
+  if (v === '') return true
+  switch (prop) {
+    case 'stroke-dashoffset':
+      return v === '0' || v === '0px'
+    case 'opacity':
+    case 'fill-opacity':
+    case 'stroke-opacity':
+      return v === '1'
+    case 'paint-order':
+      return v === 'normal'
+    case 'stroke-linecap':
+      return v === 'butt'
+    case 'stroke-linejoin':
+      return v === 'miter'
+    case 'stroke-miterlimit':
+      return v === '4'
+    case 'font-style':
+      return v === 'normal'
+    case 'dominant-baseline':
+      return v === 'auto'
+    case 'letter-spacing':
+    case 'word-spacing':
+      return v === 'normal' || v === '0px'
+    default:
+      return false
+  }
+}
+
+/** Mermaid 的实线用 `stroke-dasharray: 0`；部分渲染器会把它当成「零长度虚线」而整线消失。 */
+function isSolidDashArray(value: string): boolean {
+  const v = value.trim().toLowerCase()
+  return v === 'none' || v === '0' || v === '0px' || v === '0px, 0px' || v === '0px 0px'
+}
+
+/**
+ * 把 Mermaid 依赖 CSS class 的样式固化成元素内联 style。
+ *
+ * Mermaid 的连线只有 `class="flowchart-link"`，描边来自 `<style>` 里的
+ * `#id .flowchart-link { stroke: ... }`。部分消费方（WPS、LibreOffice、
+ * 旧版 Word）在解析 SVG 图片时不执行 `<style>`，线段因此消失，只剩
+ * 自带内联样式的箭头。DOCX/PPTX 导出前先把计算样式写进每个元素。
+ */
+function inlineSvgStyles(svg: string): string {
+  if (typeof document === 'undefined') return svg
+  const host = document.createElement('div')
+  host.style.cssText = 'position:fixed;left:-10000px;top:0;width:1px;height:1px;overflow:hidden;pointer-events:none'
+  host.innerHTML = svg
+  document.body.appendChild(host)
+  try {
+    const root = host.querySelector('svg')
+    if (!root) return svg
+    const els: Array<HTMLElement | SVGElement> = [root, ...Array.from(root.querySelectorAll<HTMLElement | SVGElement>('*'))]
+    for (const el of els) {
+      const tag = el.tagName.toLowerCase()
+      if (tag === 'style') continue
+      const cs = window.getComputedStyle(el)
+      const props: readonly string[] = tag === 'text' || tag === 'tspan'
+        ? [...SVG_GEOMETRY_PROPS, ...SVG_TEXT_PROPS]
+        : SVG_GEOMETRY_PROPS
+      for (const prop of props) {
+        const value = cs.getPropertyValue(prop)
+        if (!value) continue
+        if (prop === 'stroke-dasharray') {
+          // 显式写 none 覆盖 Mermaid `<style>` 里的 `stroke-dasharray: 0`
+          el.style.setProperty(prop, isSolidDashArray(value) ? 'none' : value)
+          continue
+        }
+        if (!isNoopStyle(prop, value)) el.style.setProperty(prop, value)
+      }
+    }
+    return host.innerHTML
+  } finally {
+    host.remove()
+  }
+}
+
 /**
  * 导出专用：htmlLabels=false（Rust resvg 不支持 foreignObject），
  * 主题由调用方按导出目标（DOCX 白底 / PPTX 幻灯片）传入。
@@ -114,7 +204,7 @@ export async function renderMermaidSvgForExport(
       `mmd-export-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
       code,
     )
-    return svg as string
+    return inlineSvgStyles(svg as string)
   })
 }
 

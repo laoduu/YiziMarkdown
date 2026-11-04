@@ -4,6 +4,14 @@
 
 > **未发布**（截至 2026-11-04）：合并社区 PR #7（Word 版式与上下标/高亮）及后续修复。`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已同步到 `0.4.2`，尚未打包、未打 tag。
 
+### DOCX / PPTX 导出：Mermaid 连线丢失修复（2026-11-04）
+
+**修复**：
+- Mermaid 的连线描边来自 SVG `<style>` 里的类选择器，部分消费方（WPS、LibreOffice、旧版 Word）解析图片时不执行该 CSS，导致只显示节点和箭头、连线消失。
+- 导出前把 Mermaid SVG 的计算样式固化为元素内联 `style`（fill / stroke / stroke-width / font 等）；即使消费方忽略 `<style>`，节点、连线和文字也能完整显示。
+- 实线的 `stroke-dasharray: 0` 改为显式 `none`：部分渲染器会把零长度虚线当成整线不可见，这是「节点和箭头在、连线没了」的直接原因。
+- 该修复同时覆盖 DOCX 与 PPTX 的 Mermaid 导出。
+
 ### EPUB 阅读：公式样式保留与图表主题修复（2026-11-04）
 
 **修复**：
