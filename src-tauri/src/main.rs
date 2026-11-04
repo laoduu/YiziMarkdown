@@ -32,7 +32,7 @@ use theme_layer::{
     resolve_theme_update,
 };
 
-use ai_proxy::{ai_cancel, ai_chat, ai_clear_key, ai_has_key, ai_set_key, ai_verify_key};
+use ai_proxy::{ai_cancel, ai_chat, ai_clear_key, ai_has_key, ai_list_models, ai_set_key, ai_verify_key};
 use remote_cache::{webdav_open, webdav_save};
 use webdav::{
     webdav_clear_credentials, webdav_delete, webdav_get_username, webdav_has_credentials,
@@ -1950,6 +1950,7 @@ fn main() {
             ai_has_key,
             ai_clear_key,
             ai_verify_key,
+            ai_list_models,
             ai_chat,
             ai_cancel,
             // WebDAV 云端存储（v0.3.0）

@@ -51,6 +51,16 @@ fn wire_format(format: &str) -> String {
 }
 
 /// 只有确实有密钥时才附加 `Authorization: Bearer …`。
+/// 供应商特定的认证头：MiMo 的 OpenAI 兼容端点要求 `api-key`（也兼容 Bearer）。
+fn with_provider_auth(rb: reqwest::RequestBuilder, provider: &str, key: &str) -> reqwest::RequestBuilder {
+    let rb = with_optional_bearer(rb, key);
+    if !key.is_empty() && resolve_provider(provider) == "mimo" {
+        rb.header("api-key", key)
+    } else {
+        rb
+    }
+}
+
 fn with_optional_bearer(rb: reqwest::RequestBuilder, key: &str) -> reqwest::RequestBuilder {
     if key.trim().is_empty() {
         rb
@@ -118,6 +128,8 @@ fn default_base_url(provider: &str, format: &str) -> String {
         ("volcengine", _) => "https://ark.cn-beijing.volces.com/api/v3".to_string(),
         ("siliconflow", _) => "https://api.siliconflow.cn/v1".to_string(),
         ("minimax", _) => "https://api.minimax.io/v1".to_string(),
+        ("mimo", _) => "https://api.xiaomimimo.com/v1".to_string(),
+        ("longcat", _) => "https://api.longcat.chat/openai".to_string(),
         ("openrouter", _) => "https://openrouter.ai/api/v1".to_string(),
         ("opencode-go", _) => "https://opencode.ai/zen/go/v1".to_string(),
         ("ollama", _) => "http://localhost:11434".to_string(),
@@ -297,7 +309,7 @@ pub async fn ai_verify_key(
         "openai" => {
             let base = openai_base(&provider, base_url.as_deref());
             let url = format!("{base}/models");
-            let res = with_optional_bearer(client.get(&url), &key_str)
+            let res = with_provider_auth(client.get(&url), &provider, &key_str)
                 .send()
                 .await
                 .map_err(|e| format!("network: {e}"))?;
@@ -375,6 +387,144 @@ pub async fn ai_verify_key(
             } else {
                 Err(format!("HTTP {}: ollama not reachable", res.status()))
             }
+        }
+        other => Err(format!("unknown api_format: {other}")),
+    }
+}
+
+fn model_ids_from_body(body: &Value) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for key in ["data", "models"] {
+        if let Some(items) = body.get(key).and_then(|v| v.as_array()) {
+            for item in items {
+                let id = item
+                    .get("id")
+                    .or_else(|| item.get("name"))
+                    .or_else(|| item.get("model"))
+                    .and_then(|v| v.as_str());
+                if let Some(id) = id {
+                    let id = id.trim();
+                    if !id.is_empty() {
+                        out.push(id.to_string());
+                    }
+                }
+            }
+        }
+    }
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// 获取供应商可用模型列表（设置页的「获取模型」下拉）。
+///
+/// OpenAI 兼容端点 GET `{base}/models`；Ollama GET `{base}/api/tags`；
+/// Anthropic GET `{base}/v1/models`。与 `ai_verify_key` 使用同一套 key / base 解析。
+#[tauri::command]
+pub async fn ai_list_models(
+    provider: String,
+    key: Option<String>,
+    api_format: Option<String>,
+    base_url: Option<String>,
+) -> Result<Vec<String>, String> {
+    let format = wire_format(&api_format.unwrap_or_else(|| provider.clone()));
+    let key_str = match key {
+        Some(k) if !k.trim().is_empty() => k.trim().to_string(),
+        _ if resolve_provider(&provider) == "custom" => read_key(&provider).unwrap_or_default(),
+        _ if is_keyless_provider(&provider) => String::new(),
+        _ => match read_key(&provider) {
+            Ok(k) => k,
+            Err(e) if e.contains("no API key set") => return Err("no_api_key".to_string()),
+            Err(e) => return Err(e),
+        },
+    };
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(30))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    match format.as_str() {
+        "openai" => {
+            let base = openai_base(&provider, base_url.as_deref());
+            let base = base.trim_end_matches('/');
+            // 多数 OpenAI 兼容端点用 `{base}/models`；LongCat 的 base 是 `/openai`，
+            // 官方模型列表在 `/openai/v1/models`，因此 base 不以 `/v1` 结尾时再试一次。
+            let mut candidates = vec![format!("{base}/models")];
+            if !base.ends_with("/v1") {
+                candidates.push(format!("{base}/v1/models"));
+            }
+            let mut last_err = String::new();
+            for url in candidates {
+                let res = match with_provider_auth(client.get(&url), &provider, &key_str)
+                    .send()
+                    .await
+                {
+                    Ok(r) => r,
+                    Err(e) => {
+                        last_err = format!("network: {e}");
+                        continue;
+                    }
+                };
+                let status = res.status();
+                if !status.is_success() {
+                    let txt = res.text().await.unwrap_or_default();
+                    last_err = format!("HTTP {status} (GET {url}): {}", truncate(&txt, 300));
+                    continue;
+                }
+                let body: Value = res.json().await.map_err(|e| e.to_string())?;
+                let ids = model_ids_from_body(&body);
+                if !ids.is_empty() {
+                    return Ok(ids);
+                }
+                last_err = format!("{url} returned no models");
+            }
+            Err(last_err)
+        }
+        "anthropic" => {
+            let base = base_url
+                .as_deref()
+                .map(|s| s.trim_end_matches('/').to_string())
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| "https://api.anthropic.com".to_string());
+            let url = if base.ends_with("/v1") {
+                format!("{base}/models")
+            } else {
+                format!("{base}/v1/models")
+            };
+            let mut rb = client
+                .get(&url)
+                .header("x-api-key", &key_str)
+                .header("anthropic-version", "2023-06-01");
+            if !key_str.is_empty() {
+                rb = rb.bearer_auth(&key_str);
+            }
+            let res = rb.send().await.map_err(|e| format!("network: {e}"))?;
+            let status = res.status();
+            if !status.is_success() {
+                let txt = res.text().await.unwrap_or_default();
+                return Err(format!("HTTP {status} (GET {url}): {}", truncate(&txt, 300)));
+            }
+            let body: Value = res.json().await.map_err(|e| e.to_string())?;
+            Ok(model_ids_from_body(&body))
+        }
+        "ollama" => {
+            let base = base_url
+                .as_deref()
+                .map(|s| s.trim_end_matches('/').to_string())
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| "http://localhost:11434".to_string());
+            let url = format!("{base}/api/tags");
+            let res = client
+                .get(&url)
+                .send()
+                .await
+                .map_err(|e| format!("network: {e} (is Ollama running?)"))?;
+            let status = res.status();
+            if !status.is_success() {
+                return Err(format!("HTTP {status}: ollama not reachable"));
+            }
+            let body: Value = res.json().await.map_err(|e| e.to_string())?;
+            Ok(model_ids_from_body(&body))
         }
         other => Err(format!("unknown api_format: {other}")),
     }
@@ -576,7 +726,7 @@ async fn run_openai(
     });
 
     let client = http_client()?;
-    let resp = with_optional_bearer(client.post(&url), api_key)
+    let resp = with_provider_auth(client.post(&url), &req.provider, api_key)
         .header("content-type", "application/json")
         .json(&body)
         .send()
@@ -898,4 +1048,55 @@ async fn run_ollama(
         }
     }
     Ok((full, thinking))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 前端的 `PROVIDERS` 默认 base URL 必须与 Rust 侧保持一致；
+    /// 缺失时 chat / list-models 会静默回退到 OpenAI 端点并返回 401。
+    #[test]
+    fn default_base_urls_cover_all_frontend_providers() {
+        let expected = [
+            ("openai", "https://api.openai.com/v1"),
+            ("gemini", "https://generativelanguage.googleapis.com/v1beta/openai"),
+            ("xai", "https://api.x.ai/v1"),
+            ("mistral", "https://api.mistral.ai/v1"),
+            ("groq", "https://api.groq.com/openai/v1"),
+            ("deepseek", "https://api.deepseek.com/v1"),
+            ("qwen", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+            ("glm", "https://open.bigmodel.cn/api/paas/v4"),
+            ("kimi", "https://api.moonshot.cn/v1"),
+            ("volcengine", "https://ark.cn-beijing.volces.com/api/v3"),
+            ("siliconflow", "https://api.siliconflow.cn/v1"),
+            ("minimax", "https://api.minimax.io/v1"),
+            ("mimo", "https://api.xiaomimimo.com/v1"),
+            ("longcat", "https://api.longcat.chat/openai"),
+            ("openrouter", "https://openrouter.ai/api/v1"),
+            ("opencode-go", "https://opencode.ai/zen/go/v1"),
+            ("ollama", "http://localhost:11434"),
+        ];
+        for (provider, url) in expected {
+            assert_eq!(default_base_url(provider, "openai"), url, "{provider}");
+        }
+        assert_eq!(
+            default_base_url("anthropic", "anthropic"),
+            "https://api.anthropic.com"
+        );
+    }
+
+    #[test]
+    fn model_ids_from_body_reads_and_dedupes() {
+        let body = serde_json::json!({
+            "data": [
+                {"id": "b"},
+                {"id": "a"},
+                {"id": "a"},
+                {"id": ""},
+                {"name": "c"}
+            ]
+        });
+        assert_eq!(model_ids_from_body(&body), vec!["a", "b", "c"]);
+    }
 }

@@ -1720,6 +1720,9 @@ function AISettings() {
   const [hasKey, setHasKey] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [verifyMsg, setVerifyMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [models, setModels] = useState<string[]>([])
+  const [fetchingModels, setFetchingModels] = useState(false)
+  const [modelFetchMsg, setModelFetchMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
   // 切换供应商时：保存当前供应商配置，加载目标供应商配置
   const handleProviderChange = (pid: string) => {
@@ -1749,6 +1752,8 @@ function AISettings() {
     setModel(savedCfg?.model || targetCfg?.defaultModel || '')
     setBaseUrl(savedCfg?.baseUrl || '')
     setVerifyMsg(null)
+    setModels([])
+    setModelFetchMsg(null)
   }
 
   useEffect(() => {
@@ -1767,6 +1772,56 @@ function AISettings() {
       apiFormat: store.aiApiFormat,
     }
     store.setField('aiProviderConfigs', newConfigs)
+  }
+
+  const handleFetchModels = async () => {
+    setFetchingModels(true)
+    setModelFetchMsg(null)
+    try {
+      // 未填写输入框时，先确认 keychain 里确实没有密钥；
+      // 否则后端会回退 keychain，错误信息可能只显示“未获取到模型”。
+      const typedKey = keyInput.trim()
+      const keyOptional = provider?.keyless || provider?.id === 'custom'
+      if (!typedKey && !keyOptional) {
+        const stored = await invokeTauri<boolean>('ai_has_key', {
+          provider: store.aiProvider,
+        }).catch(() => null)
+        if (stored === true) setHasKey(true)
+        if (stored === false) {
+          setModels([])
+          setModelFetchMsg({ ok: false, text: t('settings.aiFetchModelsNoKey') })
+          return
+        }
+      }
+
+      const list = await invokeTauri<string[]>('ai_list_models', {
+        provider: store.aiProvider,
+        key: typedKey || null,
+        apiFormat: provider?.id === 'custom' ? store.aiApiFormat : provider?.apiFormat,
+        baseUrl: baseUrl.trim() || null,
+      })
+      const sorted = (list || []).filter((m) => typeof m === 'string' && m.trim()).map((m) => m.trim())
+      setModels(sorted)
+      if (sorted.length === 0) {
+        setModelFetchMsg({ ok: false, text: t('settings.aiFetchModelsEmpty') })
+      }
+    } catch (e) {
+      setModels([])
+      const msg = String(e)
+      if (msg.includes('no_api_key')) {
+        setModelFetchMsg({ ok: false, text: t('settings.aiFetchModelsNoKey') })
+      } else {
+        setModelFetchMsg({ ok: false, text: t('settings.aiFetchModelsFailed', { msg }) })
+      }
+    } finally {
+      setFetchingModels(false)
+    }
+  }
+
+  const handleSelectModel = (m: string) => {
+    setModel(m)
+    saveModel(m, baseUrl, systemPrompt)
+    setModelFetchMsg(null)
   }
 
   // 清理粘贴时常见的多余字符：首尾空白 + 包裹引号 + 尾随引号
@@ -1844,16 +1899,49 @@ function AISettings() {
             )}
             <Row label={t('settings.aiModel')}>
               <div className="flex flex-col items-end gap-1 w-full">
-                <input
-                  type="text"
-                  value={model}
-                  onChange={(e) => { setModel(e.target.value); saveModel(e.target.value, baseUrl, systemPrompt) }}
-                  placeholder={t('settings.aiModelPlaceholder')}
-                  className="settings-input"
-                  style={{ width: '100%' }}
-                />
+                <div className="flex items-center gap-1.5 w-full">
+                  <input
+                    type="text"
+                    value={model}
+                    onChange={(e) => { setModel(e.target.value); saveModel(e.target.value, baseUrl, systemPrompt) }}
+                    placeholder={t('settings.aiModelPlaceholder')}
+                    className="settings-input flex-1 min-w-0"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleFetchModels}
+                    disabled={fetchingModels}
+                    className="settings-btn-secondary shrink-0 disabled:opacity-50 disabled:cursor-default"
+                    style={{ padding: '7px 12px' }}
+                    title={t('settings.aiFetchModels')}
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      {fetchingModels
+                        ? <Loader2 size={13} className="animate-spin" />
+                        : <RefreshCw size={13} />}
+                      {fetchingModels ? t('settings.aiFetchingModels') : t('settings.aiFetchModels')}
+                    </span>
+                  </button>
+                </div>
+                {models.length > 0 && (
+                  <select
+                    value={models.includes(model) ? model : ''}
+                    onChange={(e) => handleSelectModel(e.target.value)}
+                    className="settings-select"
+                  >
+                    <option value="" disabled>{t('settings.aiSelectModel')}</option>
+                    {models.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                )}
+                {modelFetchMsg && (
+                  <p className={`text-[0.6875rem] break-all ${modelFetchMsg.ok ? 'text-emerald-500' : 'text-red-500'}`}>
+                    {modelFetchMsg.text}
+                  </p>
+                )}
                 {provider?.modelHint && (
-                  <p className="text-[10px] text-[var(--sidebar-text)]">{t('settings.aiModelHint', { hint: provider.modelHint })}</p>
+                  <p className="text-[0.6875rem] text-[var(--sidebar-text)]">{t('settings.aiModelHint', { hint: provider.modelHint })}</p>
                 )}
               </div>
             </Row>
