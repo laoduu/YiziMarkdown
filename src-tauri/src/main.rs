@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use tauri::Manager;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -741,15 +742,18 @@ fn sync_builtin_skills() -> Result<(), String> {
 }
 
 /// 递归复制：只写目标中不存在的文件，绝不覆盖用户已有/已修改的内容
-fn copy_missing(src: &Path, dst: &Path) -> Result<(), String> {
+/// 递归复制内置模板；**同名文件覆盖**。
+/// 策略变更（2026-11-04）：内置模板随应用更新覆盖用户目录中的同名副本，
+/// 避免旧版示例长期残留；用户自建的其他文件名不受影响。
+fn copy_builtin_templates(src: &Path, dst: &Path) -> Result<(), String> {
     fs::create_dir_all(dst).map_err(|e| format!("Failed to create {}: {}", dst.display(), e))?;
     let entries = fs::read_dir(src).map_err(|e| format!("Failed to read {}: {}", src.display(), e))?;
     for entry in entries.flatten() {
         let path = entry.path();
         let target = dst.join(entry.file_name());
         if path.is_dir() {
-            copy_missing(&path, &target)?;
-        } else if !target.exists() {
+            copy_builtin_templates(&path, &target)?;
+        } else {
             fs::copy(&path, &target)
                 .map_err(|e| format!("Failed to copy {}: {}", path.display(), e))?;
         }
@@ -757,11 +761,46 @@ fn copy_missing(src: &Path, dst: &Path) -> Result<(), String> {
     Ok(())
 }
 
+/// 内置模板树指纹：文件相对路径 + 内容一起哈希。
+/// 版本号不变但模板内容更新时也能触发同步（例如本版 Slide-Template 改名重写）。
+fn template_tree_fingerprint(dir: &Path) -> Result<String, String> {
+    fn walk(dir: &Path, base: &Path, hasher: &mut Sha256) -> Result<(), String> {
+        let mut entries: Vec<_> = fs::read_dir(dir)
+            .map_err(|e| format!("Failed to read {}: {}", dir.display(), e))?
+            .flatten()
+            .collect();
+        entries.sort_by_key(|e| e.file_name());
+        for entry in entries {
+            let path = entry.path();
+            let rel = path.strip_prefix(base).unwrap_or(&path);
+            if path.is_dir() {
+                walk(&path, base, hasher)?;
+            } else {
+                hasher.update(b"F");
+                hasher.update(rel.to_string_lossy().as_bytes());
+                let bytes = fs::read(&path)
+                    .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+                hasher.update((bytes.len() as u64).to_le_bytes());
+                hasher.update(bytes);
+            }
+        }
+        Ok(())
+    }
+
+    let mut hasher = Sha256::new();
+    walk(dir, dir, &mut hasher)?;
+    Ok(hasher
+        .finalize()
+        .iter()
+        .map(|b| format!("{:02x}", b))
+        .collect())
+}
+
 /// 将内置模板同步到用户文档目录（~/Documents/yizimarkdown/templates/），
 /// 使模板与 skills 一样不受卸载/重装影响。
-/// - 仅在「首次运行」或「应用版本变化」时同步（用 templates.json 记录已同步的版本）
-/// - 同步只补齐缺失文件，不覆盖用户已有模板（用户改过的内置模板也保留）
-/// - 用户主动删除的内置模板，在下一次版本更新前不会被重新塞回
+/// - 首次运行、应用版本变化、或**内置模板内容变化**时同步（用 templates.json 记录版本 + 指纹）
+/// - 同名内置模板**覆盖**用户副本；用户自建的其他文件名保留
+/// - 旧版内置模板（`Slide-Template-new.md`）在同步时删除
 fn sync_builtin_templates() -> Result<(), String> {
     let builtin_dir = get_builtin_templates_dir()?;
     if !builtin_dir.is_dir() {
@@ -772,21 +811,34 @@ fn sync_builtin_templates() -> Result<(), String> {
         .map_err(|e| format!("Failed to create user templates dir: {}", e))?;
 
     let current = env!("CARGO_PKG_VERSION");
+    let fingerprint = template_tree_fingerprint(&builtin_dir)?;
     let marker = user_dir.join("templates.json");
-    let synced = fs::read_to_string(&marker)
+    let saved = fs::read_to_string(&marker)
         .ok()
-        .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
-        .and_then(|v| v["syncedVersion"].as_str().map(|s| s.to_string()));
-    if synced.as_deref() == Some(current) {
-        return Ok(()); // 本版本已同步过
+        .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok());
+    let synced_version = saved
+        .as_ref()
+        .and_then(|v| v["syncedVersion"].as_str());
+    let synced_hash = saved.as_ref().and_then(|v| v["templateHash"].as_str());
+    if synced_version == Some(current) && synced_hash == Some(fingerprint.as_str()) {
+        return Ok(()); // 本版本且模板未变化
     }
 
-    copy_missing(&builtin_dir, &user_dir)?;
+    copy_builtin_templates(&builtin_dir, &user_dir)?;
+
+    // 旧版内置模板：改名前的 `Slide-Template-new.md`，不再随包发布。
+    let legacy = user_dir.join("Slide-Template-new.md");
+    if legacy.is_file() {
+        let _ = fs::remove_file(&legacy);
+    }
 
     let _ = fs::write(
         &marker,
-        serde_json::to_string_pretty(&serde_json::json!({ "syncedVersion": current }))
-            .unwrap_or_default(),
+        serde_json::to_string_pretty(&serde_json::json!({
+            "syncedVersion": current,
+            "templateHash": fingerprint,
+        }))
+        .unwrap_or_default(),
     );
     Ok(())
 }
@@ -2430,7 +2482,7 @@ mod tests {
     }
 
     #[test]
-    fn sync_builtin_templates_seeds_user_dir_without_overwriting() {
+    fn sync_builtin_templates_overwrites_builtins_and_keeps_user_files() {
         // 用临时 USERPROFILE 重定向用户目录，避免污染真实的 ~/Documents
         let tmp = std::env::temp_dir().join("yizimd-templates-sync-test");
         let _ = fs::remove_dir_all(&tmp);
@@ -2439,12 +2491,17 @@ mod tests {
 
         let user_dir = get_user_templates_dir().unwrap();
         assert!(user_dir.starts_with(&tmp), "用户模板目录未指向临时目录: {:?}", user_dir);
+        fs::create_dir_all(&user_dir).unwrap();
 
-        // 首次同步：内置模板被复制到用户文档目录
+        // 模拟旧版内置模板残留：同步时应删除 `Slide-Template-new.md`
+        write_template("Slide-Template-new.md".to_string(), "旧模板\n".to_string()).unwrap();
+
+        // 首次同步：内置模板被复制到用户文档目录，旧 `-new` 文件被清理
         sync_builtin_templates().unwrap();
         let seeded = list_templates().unwrap();
         assert!(seeded.contains(&"default.md".to_string()), "内置模板未同步: {:?}", seeded);
-        assert!(seeded.contains(&"Slide-Template-new.md".to_string()), "内置模板未同步: {:?}", seeded);
+        assert!(seeded.contains(&"Slide-Template.md".to_string()), "内置模板未同步: {:?}", seeded);
+        assert!(!user_dir.join("Slide-Template-new.md").exists(), "旧版 -new 模板未被清理");
         // 子目录（模板内的相对图片 images/）也要一并复制，否则模板里的图渲染不出来
         let img_dir = user_dir.join("images");
         assert!(img_dir.is_dir(), "模板 images/ 子目录未复制");
@@ -2453,19 +2510,35 @@ mod tests {
             "模板 images/ 为空"
         );
 
-        // 用户改过的内置模板：本版本内不再触碰
+        // 同一版本、同一模板指纹：不重复覆盖用户改过的内置模板
         let edited = "我的自定义内容\n";
         write_template("default.md".to_string(), edited.to_string()).unwrap();
         sync_builtin_templates().unwrap();
-        assert_eq!(read_template("default.md".to_string()).unwrap(), edited, "用户模板被覆盖");
+        assert_eq!(read_template("default.md".to_string()).unwrap(), edited, "未变化时覆盖了用户模板");
 
-        // 模拟版本升级强制重新同步：仍不得覆盖用户已有文件
+        // 模拟版本升级 / 模板内容变化：同名内置模板被新版覆盖
         fs::write(user_dir.join("templates.json"), r#"{"syncedVersion":"0.0.0"}"#).unwrap();
         sync_builtin_templates().unwrap();
-        assert_eq!(read_template("default.md".to_string()).unwrap(), edited, "版本升级时覆盖了用户模板");
+        let builtin_default = fs::read_to_string(
+            get_builtin_templates_dir().unwrap().join("default.md"),
+        ).unwrap();
+        assert_eq!(
+            read_template("default.md".to_string()).unwrap(),
+            builtin_default,
+            "版本/模板变化后没有覆盖内置模板"
+        );
+        let builtin_slide = fs::read_to_string(
+            get_builtin_templates_dir().unwrap().join("Slide-Template.md"),
+        ).unwrap();
+        assert_eq!(
+            read_template("Slide-Template.md".to_string()).unwrap(),
+            builtin_slide,
+            "新版 Slide-Template 未覆盖旧文件"
+        );
 
         // 用户自建模板始终保留
         write_template("mine.md".to_string(), "自定义\n".to_string()).unwrap();
+        fs::write(user_dir.join("templates.json"), r#"{"syncedVersion":"0.0.0"}"#).unwrap();
         sync_builtin_templates().unwrap();
         assert_eq!(read_template("mine.md".to_string()).unwrap(), "自定义\n");
 
