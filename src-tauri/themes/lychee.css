@@ -25,6 +25,8 @@
 
   /* 边框色：淡红，用于分割线、表格边框、代码块边框、行号分隔线 */
   --editor-border: #ffd6d8;
+  --toc-bg: color-mix(in srgb, var(--editor-surface) 55%, transparent);
+  --toc-border: 1px solid var(--editor-border);
 
   /* 表面色/卡片色：比主背景略深的红白
      用于：代码块背景、表格表头、侧栏背景、搜索匹配底色 */
@@ -93,6 +95,8 @@
 
   /* 边框：暗红灰，微妙的分隔线 */
   --editor-border: #3a2023;
+  --toc-bg: color-mix(in srgb, var(--editor-surface) 55%, transparent);
+  --toc-border: 1px solid var(--editor-border);
 
   /* 表面色：比主背景略深，用于代码块、表头等需要区分的区域 */
   --editor-surface: #241819;

@@ -16,6 +16,8 @@
   --sel-toolbar-hover: #e8eef6;
   --sel-toolbar-accent: #0077b6;
   --editor-border: #c0c8d8;
+  --toc-bg: color-mix(in srgb, var(--editor-surface) 55%, transparent);
+  --toc-border: 1px solid var(--editor-border);
   --editor-surface: #ffffff;
   --editor-hover: #e8eef6;  --editor-selection-bg: rgba(0, 119, 182, 0.15);
   --editor-cursor: #0077b6;
@@ -44,6 +46,8 @@
   --editor-text: #d0d0e0;
   --editor-accent: #00d4ff;
   --editor-border: #151530;
+  --toc-bg: color-mix(in srgb, var(--editor-surface) 55%, transparent);
+  --toc-border: 1px solid var(--editor-border);
   --editor-surface: #0a0a20;
   --editor-hover: #151535;  --editor-selection-bg: rgba(238, 0, 238, 0.2);
   --editor-cursor: #00d4ff;

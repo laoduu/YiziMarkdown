@@ -20,6 +20,8 @@
   --sel-toolbar-accent: #7209B7;
   /* 边框色：浅淡紫，用于分割线、表格边框、代码块边框、行号分隔线 */
   --editor-border: #e4d0f5;
+  --toc-bg: color-mix(in srgb, var(--editor-surface) 55%, transparent);
+  --toc-border: 1px solid var(--editor-border);
   /* 表面色/卡片色：比主背景略深的淡紫
      用于：代码块背景、表格表头、侧栏背景、搜索匹配底色 */
   --editor-surface: #f4eafb;
@@ -68,6 +70,8 @@
   --editor-accent: #a75cf0;
   /* 边框：深紫灰，微妙的分隔线 */
   --editor-border: #2e1f42;
+  --toc-bg: color-mix(in srgb, var(--editor-surface) 55%, transparent);
+  --toc-border: 1px solid var(--editor-border);
   /* 表面色：比主背景略深，用于代码块、表头等需要区分的区域 */
   --editor-surface: #1e152c;
   /* 悬停态：比表面色略亮 */
