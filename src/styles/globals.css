@@ -2794,30 +2794,24 @@ a {
    再加一行标题纯属噪音，也省掉了一次 i18n 桥接（toc.ts 是纯模块，
    不能 import i18n，之前只能靠 `--toc-title` 变量转一道）。 */
 
-/* 目录条目默认没有列表装饰，视觉上会与普通正文混淆。
-   这里恢复无序列表的圆点/空心圆/方块三级装饰，并统一用主题强调色。 */
+/* 目录条目不显示列表装饰：圆点/序号的视觉重量会压过标题文字，
+   层级只靠嵌套 ul 的缩进牵引（社区反馈：目录应当像大纲，而不是第二份列表）。
+   这里显式写 list-style: none —— 正文的 `.editor-content ul` 默认带浏览器圆点，
+   不置空的话目录会退回普通无序列表的外观。 */
 .markdown-toc ul {
   margin: 0;
   padding-left: 1.1em;
-  list-style: disc;
+  list-style: none;
 }
 
 .markdown-toc ul ul {
   padding-left: 1.1em;
-  list-style: circle;
-}
-
-.markdown-toc ul ul ul {
-  list-style: square;
+  list-style: none;
 }
 
 .markdown-toc li {
   margin: 0.22em 0;
   line-height: inherit;
-}
-
-.markdown-toc li::marker {
-  color: var(--editor-accent);
 }
 
 /* 目录链接自成一套：nav + 3 个类的特异性压过主题的 `.editor-content.theme-x a`，

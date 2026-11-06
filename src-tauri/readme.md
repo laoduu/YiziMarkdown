@@ -3,7 +3,7 @@
 
 ![image](https://github.com/laoduu/YiziMarkdown/raw/main/docs/index.png)
 
-[简体中文](./readme.md) | [繁體中文](./docs/i18n/readme-zh-TW.md) | [English](./docs/i18n/readme-en.md) | [日本語](./docs/i18n/readme-ja.md) | [한국어](./docs/i18n/readme-ko.md) | [Deutsch](./docs/i18n/readme-de.md) | [Français](./docs/i18n/readme-fr.md) | [Español](./docs/i18n/readme-es.md) | [Português](./docs/i18n/readme-pt.md) | [Italiano](./docs/i18n/readme-it.md) | [Polski](./docs/i18n/readme-pl.md) | [Nederlands](./docs/i18n/readme-nl.md) | [Türkçe](./docs/i18n/readme-tr.md) | [Svenska](./docs/i18n/readme-sv.md) | [Українська](./docs/i18n/readme-uk.md)
+[简体中文](./readme.md) | [繁體中文](./docs/i18n/readme-zh-TW.md) | [English](./docs/i18n/readme-en.md) | [日本語](./docs/i18n/readme-ja.md) | [한국어](./docs/i18n/readme-ko.md) | [Deutsch](./docs/i18n/readme-de.md) | [Français](./docs/i18n/readme-fr.md) | [Español](./docs/i18n/readme-es.md) | [Português](./docs/i18n/readme-pt.md) | [Italiano](./docs/i18n/readme-it.md) | [Polski](./docs/i18n/readme-pl.md) | [Nederlands](./docs/i18n/readme-nl.md) | [Türkçe](./docs/i18n/readme-tr.md) | [Svenska](./docs/i18n/readme-sv.md) | [Українська](./docs/i18n/readme-uk.md) | [Русский](./docs/i18n/readme-ru.md)
 
 **官方网站：** https://md.yizigpt.com
 
@@ -23,8 +23,9 @@
 
 ### 多语言界面
 
-- **15 种界面语言**：简体中文（默认）、繁體中文、English、日本語、한국어、Deutsch、Français、Español、Português、Italiano、Polski、Nederlands、Türkçe、Svenska、Українська
+- **16 种界面语言**：简体中文（默认）、繁體中文、English、日本語、한국어、Deutsch、Français、Español、Português、Italiano、Polski、Nederlands、Türkçe、Svenska、Українська、Русский
 - 设置 → 通用 → 界面设置 → 界面语言一键切换，即时生效；全部界面文案、快捷键面板、插件说明随语言联动
+- **首次启动自适应**：没有安装器语言时按系统语言自动选择界面；系统语言不在支持列表内则回退 English；语言项附带英文 `Language` 标识，中文界面下也能快速定位
 - **界面字号**：80%–120%（默认 100%），只缩放界面文字与图标；面板尺寸和文档编辑 / 预览内容不受影响
 
 ### AI 助手（侧边聊天面板）

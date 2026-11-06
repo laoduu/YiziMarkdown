@@ -56,7 +56,6 @@ const DEFAULTS_EDITOR = {
   fontSize: 20, lineHeight: 2.0, previewFontSize: 20, previewLineHeight: 2.0,
   showLineNumbers: true, wordWrap: true,
   cursorStyle: 'text' as const, mouseSpotlight: true,
-  imageSaveMode: 'doc' as const,
 }
 
 interface SettingsModalProps {
@@ -186,7 +185,10 @@ function GeneralSettings() {
         <div className="px-5 py-2 text-[0.6875rem] text-[var(--sidebar-text)]">{t('settings.instantSaveHint')}</div>
         <div className="space-y-4">
           <Section title={t('settings.interfaceSettings')}>
-            <Row label={t('settings.language')} hint={t('settings.languageHint')}>
+            <Row
+              label={currentLang === 'en' ? t('settings.language') : `${t('settings.language')} · Language`}
+              hint={t('settings.languageHint')}
+            >
               <select
                 value={currentLang}
                 onChange={(e) => store.setField('language', e.target.value)}
@@ -958,15 +960,6 @@ function EditorSettings() {
                 <input type="checkbox" checked={store.mouseSpotlight}
                   onChange={(e) => store.setField('mouseSpotlight', e.target.checked)} className="settings-checkbox" />
               </label>
-            </Row>
-          </Section>
-          <Section title={t('settings.images')}>
-            <Row label={t('settings.imageSaveLocation')} help={t('settings.imageSaveLocationHint')}>
-              <select className="settings-select" value={store.imageSaveMode}
-                onChange={(e) => store.setField('imageSaveMode', e.target.value as 'doc' | 'assets')}>
-                <option value="doc">{t('settings.imageSaveDoc')}</option>
-                <option value="assets">{t('settings.imageSaveAssets')}</option>
-              </select>
             </Row>
           </Section>
           <Section title={t('settings.previewLayout')}>

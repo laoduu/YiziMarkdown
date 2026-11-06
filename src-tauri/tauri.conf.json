@@ -69,7 +69,8 @@
           "Dutch",
           "Turkish",
           "Swedish",
-          "Ukrainian"
+          "Ukrainian",
+          "Russian"
         ],
         "customLanguageFiles": {
           "Polish": "installer-lang/Polish.nsh"

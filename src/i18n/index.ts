@@ -25,10 +25,11 @@ import { nl } from './nl.ts'
 import { tr } from './tr.ts'
 import { sv } from './sv.ts'
 import { uk } from './uk.ts'
+import { ru } from './ru.ts'
 
 export type Language = keyof typeof dicts
 
-const dicts = { en, zh, 'zh-tw': zhTW, ja, ko, de, fr, es, pt, it, pl, nl, tr, sv, uk } as const
+const dicts = { en, zh, 'zh-tw': zhTW, ja, ko, de, fr, es, pt, it, pl, nl, tr, sv, uk, ru } as const
 
 export const LANGUAGES: Array<{ id: Language; label: string }> = [
   { id: 'zh', label: '简体中文' },
@@ -46,6 +47,7 @@ export const LANGUAGES: Array<{ id: Language; label: string }> = [
   { id: 'tr', label: 'Türkçe' },
   { id: 'sv', label: 'Svenska' },
   { id: 'uk', label: 'Українська' },
+  { id: 'ru', label: 'Русский' },
 ]
 
 type Dict = Record<string, unknown>

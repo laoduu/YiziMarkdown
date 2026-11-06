@@ -170,7 +170,7 @@ export interface PastedImageDeps {
  * 把粘贴内容里的图片落盘成文件，返回替换后的 Markdown。
  *
  * 覆盖两种来源：
- *   1. Word / WPS 的 `file://` 临时图（占位 token）→ 复制进文档 images/；
+ *   1. Word / WPS 的 `file://` 临时图（占位 token）→ 复制进图片资产目录；
  *   2. 网页 / HTML 里的 `data:image/...` 内嵌图 → 写出文件，避免文档里塞巨大 base64。
  *
  * 任何一张失败都只退回 alt 文本，不影响其余内容插入。

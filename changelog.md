@@ -4,18 +4,36 @@
 
 > **未发布**（截至 2026-11-06）：新一轮开发已启动。`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已升至 `0.4.3`，尚未打包、未打 tag。用户向说明见 `docs/changelog/CHANGELOG-V0.4.3.md`。
 
+### 首次启动语言自适应（2026-11-07）
+
+- 没有安装器语言时（便携版 / macOS / Linux / 浏览器预览），首次启动按 `navigator.languages` 自动选择受支持的界面语言；系统语言不受支持时回退 English，避免不懂中文的用户面对中文界面。
+- 设置里的语言项在非英文界面下附带英文 `Language` 标识（如「界面语言 · Language」），即使当前界面是中文也能凭这个单词找到入口。
+- 已有设置存档的用户不受影响：系统检测只在从未写过设置时执行，绝不覆盖用户手动选择的语言。
+
+### 新增俄语界面（2026-11-07）
+
+- 新增 `src/i18n/ru.ts`：845 个文案键全部提供俄语翻译；设置 → 通用 → 界面设置 → 界面语言新增「Русский」，切换后即时生效。
+- 安装器语言列表新增 Russian（LCID 1049），首次启动自动带入应用语言；EPUB 导出语言下拉同步新增「Русский」。
+- 顺手修正 `en.ts` 及 15 个语言文件中 3 个 EPUB 相关键的缩进（原先顶格导致 `check-i18n` 基准漏计），现在严格校验能正确核对全部 845 个键。
+
+### 演示模式：多语言致谢页（2026-11-07）
+
+- 结尾页（`thanks`）不再只认中文「谢谢 / 感谢」和英文「Thanks」：补齐简繁中文、英、日、韩、德、法、西、意、葡、荷、波、瑞、土、乌克兰、俄语的常见致谢 / 结束词（含「谢谢观看」「感谢聆听」「Merci」「Danke」「Gracias」「ありがとうございました」「감사합니다」「Дякую」等），并忽略大小写、结尾标点与多余空格；Q&A 兼容 `Q&A`、`Q & A`、`Q＆A`。
+- 仍要求 H1 整串匹配，`# 感谢参与本次评审的同事` 这类正文标题不会误判；完整词表在 `src/lib/slides.ts` 的 `THANKS_TITLES`。
+- 同步更新演示模板、演示语法文档与官网生成页，并补多语言单测。
+
 ### 粘贴图片与图片资产治理（2026-11-06）
 
 **新增**：
-- 剪贴板里的原始图片（截图、网页图片、从资源管理器复制的图片文件）可直接 `Ctrl+V`：图片落盘成文件，Markdown 插入 `![…]`。本地文档默认写 `<文档目录>/images/` + 相对路径；也可在 设置 → 编辑器 → 图片 切换为「应用资源目录」（`~/Documents/yizimarkdown/assets/`，绝对路径，不在项目目录里创建文件夹）。
-- 未命名文档：图片先暂存到 `~/Documents/yizimarkdown/images/pending/<tabId>/`，正文暂写绝对路径；首次「另存为」或「保存到云端」时自动迁移到目标 `images/` 并重写引用。
-- 富文本粘贴里的图片也改为落盘：Word 的 `file://` 临时图复制进文档 `images/`；`data:image/…` 内嵌图写成文件，不再把大段 base64 塞进文档。
+- 剪贴板里的原始图片（截图、网页图片、从资源管理器复制的图片文件）可直接 `Ctrl+V`：图片落盘成文件，Markdown 插入 `![…]`。本地文档（含未命名文档）一律写用户目录 `~/Documents/yizimarkdown/assets/` + 绝对路径：不在项目目录创建任何文件夹，也不随应用缓存清理丢失。
+- 云端文档的图片统一存放在 WebDAV「根目录」下的 `assets/`（默认 `/yizimarkdown/assets/`，整个云端空间共用一个目录）；正文按文档层级写 `assets/` 或 `../assets/` 相对路径。本地文档首次「保存到云端」时自动把图片转存过去。
+- 富文本粘贴里的图片也改为落盘：Word 的 `file://` 临时图复制进图片资产目录（本地文档为 `assets/`）；`data:image/…` 内嵌图写成文件，不再把大段 base64 塞进文档。
 
 **实现**：
 - 新增 `src-tauri/src/doc_assets.rs`：`save_pasted_image` / `import_image_file` / `save_file_with_assets` / `stage_pending_assets` / `adopt_staged_assets` / `cleanup_pasted_assets`。内容哈希命名（sha256 前 16 位）天然去重；复用 `sniff_image_mime` 校验真实格式；单图上限 8MB（与 WebDAV 单图上限一致）。
-- 目录约定：`imageSaveMode=doc`（默认）写 `<文档目录>/images/` + 相对路径；`imageSaveMode=assets` 写应用资源目录 + 绝对路径，项目目录零改动。云端文档强制 `doc` 模式；本地 assets 模式首次「保存到云端」时 `stage_assets_in` 把图片复制进 staging、重写到远端 `images/`，保存后再补进本地缓存镜像。
+- 目录约定：本地文档（含未命名）→ 用户目录 `~/Documents/yizimarkdown/assets/` + 绝对路径，项目目录零改动；云端文档 → WebDAV 根目录下的 `assets/` + 相对引用（`assets/` 或 `../assets/`），所有云端文档共享一个图片目录。首次「保存到云端」时 `stage_assets_in` 把本地 assets 图片复制进 staging、按文档层级重写引用，上传后再补进本地缓存镜像。
 - 前端：paste 捕获阶段先检查 `clipboardData.items` 的图片项，命中即落盘；`materializePastedImages` 统一处理 `file://` 占位与 `data:image`；`EditorRef.replaceContent` 保证保存时路径被重写后编辑器与 store 同步；另存为顺带复制相对引用图片（同时修掉旧缺口）。
-- 15 种语言补 `editor.imagePasteFailed` / `editor.imageTooLarge` 与设置项文案（「粘贴图片保存位置」标题后的 ? 悬停显示完整规则）；`help.md` 与 `website/help.html` 同步说明（含「项目目录不想多出 images/ 怎么办」）。
+- 15 种语言补 `editor.imagePasteFailed` / `editor.imageTooLarge`；`help.md` 与 `website/help.html` 同步说明（图片统一存放位置、项目目录零改动与云端转存规则）。
 
 **改动文件**：`src-tauri/src/doc_assets.rs`（新）、`main.rs`、`remote_cache.rs`、`src/lib/docAssets.ts`（新）、`src/lib/clipboardImages.ts`（新）、`src/lib/clipboardMarkdown.ts`、`src/components/Editor.tsx`、`src/App.tsx`、`src/components/SettingsModal.tsx`、`src/stores/settingsStore.ts`、15 个 i18n 文件、`help.md`（含 `src-tauri/help.md` 副本）、`website/help.html`、`package.json` 及新增测试。
 
@@ -65,7 +83,7 @@
 ### TOC 导出样式（2026-11-06）
 
 **修复 / 改进**：
-- **HTML / PDF**：正文目录与预览一致，保留三级无序列表装饰；边框/背景跟随目录右上角开关（导出文档带上 `toc-frame-off`），静态导出隐藏不可用的开关按钮。
+- **HTML / PDF**：正文目录与预览一致，**不显示无序列表装饰**（层级只靠缩进）；边框/背景跟随目录右上角开关（导出文档带上 `toc-frame-off`），静态导出隐藏不可用的开关按钮。
 - **DOCX**：目录仍使用 Word TOC 域 + TOC1–6 样式，不导出无序列表编号；开启目录边框/背景时用单格表格包裹（主题边框色 + surface 底色），关闭「导出主题色」或关闭目录开关时一律无边框、无背景。
 - 带框 DOCX 的页码制表位会按单元格内边距收窄，避免页码顶到边框外；分页估算也计入表格上下内边距。
 - 新增前端导出测试（`toc-frame-off`、静态导出隐藏开关）与 Rust 测试（带框/无框目录、无 `numPr`）。

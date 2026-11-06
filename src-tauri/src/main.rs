@@ -1849,8 +1849,8 @@ const INSTALL_LANG_REGVALUE: &str = "Language";
 /// 应用支持的界面语言 —— 必须与 src/i18n/index.ts 的 LANGUAGES 逐个对齐。
 /// 白名单不是多余的：注册表/命令行都是外部可写的，写进非法值会让设置面板
 /// 语言下拉框选不中，不如直接忽略。
-const APP_LANGUAGES: [&str; 15] = [
-    "en", "zh", "zh-tw", "ja", "ko", "de", "fr", "es", "pt", "it", "pl", "nl", "tr", "sv", "uk",
+const APP_LANGUAGES: [&str; 16] = [
+    "en", "zh", "zh-tw", "ja", "ko", "de", "fr", "es", "pt", "it", "pl", "nl", "tr", "sv", "uk", "ru",
 ];
 
 /// 归一化到应用语言 id：忽略大小写，接受下划线与地区后缀（zh_CN / pt-BR 这类）
@@ -1861,6 +1861,8 @@ fn normalize_language(code: &str) -> Option<String> {
         "zh-tw" | "zh-hk" | "zh-mo" | "zh-hant" => "zh-tw",
         // 应用只有一种葡萄牙语；巴西/欧洲/无地区后缀都落到 pt
         "pt" | "pt-br" | "pt-pt" => "pt",
+        // 俄语：命令行/外部脚本可能带地区后缀
+        "ru" | "ru-ru" => "ru",
         // 简体中文是应用默认语言，系统语言给不出更具体信息时用它
         other => other,
     };
@@ -2445,8 +2447,9 @@ mod tests {
         assert_eq!(normalize_language("zh-Hant"), Some("zh-tw".into()));
         assert_eq!(normalize_language("pt-BR"), Some("pt".into()));
         assert_eq!(normalize_language("ja"), Some("ja".into()));
+        assert_eq!(normalize_language("ru-RU"), Some("ru".into()));
         // 白名单之外一律忽略：写进非法值设置面板语言下拉框会选不中
-        assert_eq!(normalize_language("ru"), None);
+        assert_eq!(normalize_language("ar"), None);
         assert_eq!(normalize_language(""), None);
         assert_eq!(normalize_language("zh-cn-x"), None);
     }

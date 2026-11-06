@@ -203,6 +203,25 @@ test('detectLayout: thanks 结尾页（语义匹配优先于 cover）', () => {
   assert.equal(detectLayout('# Q & A').kind, 'thanks')
 })
 
+test('detectLayout: thanks 支持各语言结尾词与结尾标点', () => {
+  const cases = [
+    '# 谢谢观看', '# 感谢聆听', '# 謝謝觀看', '# 感謝聆聽',
+    '# Thank you!', '# Thanks for watching', '# The End.',
+    '# Merci à tous', '# Vielen Dank', '# Danke für die Aufmerksamkeit',
+    '# Gracias', '# Grazie', '# Obrigado', '# Bedankt', '# Dziękuję',
+    '# Tack', '# Teşekkürler', '# Дякую', '# 감사합니다',
+    '# ありがとうございました', '# Fin', '# Ende', '# Q＆A', '# FAQ',
+  ]
+  for (const src of cases) {
+    assert.equal(detectLayout(src).kind, 'thanks', src)
+  }
+
+  // 仍然只做「整行精确匹配」，避免误伤正文标题
+  assert.notEqual(detectLayout('# 谢谢大家辛苦啦').kind, 'thanks')
+  assert.notEqual(detectLayout('# Thanks for reading').kind, 'thanks')
+  assert.notEqual(detectLayout('# 感谢参与本次评审的同事').kind, 'thanks')
+})
+
 test('detectLayout: section 章节页（仅标题无正文）', () => {
   assert.equal(detectLayout('## 第一章').kind, 'section')
   // 标题下有正文 → 不是章节页

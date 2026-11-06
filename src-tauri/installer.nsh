@@ -34,6 +34,7 @@ LangString yzLangTitle 1043 "Installatielanguage kiezen"
 LangString yzLangTitle 1055 "Kurulum dilini seçin"
 LangString yzLangTitle 1053 "Välj installationsspråk"
 LangString yzLangTitle 1058 "Вибір мови встановлення"
+LangString yzLangTitle 1049 "Выбор языка установки"
 
 LangString yzLangInfo 2052 "安装向导与应用将使用该语言。"
 LangString yzLangInfo 1028 "安裝精靈與應用程式將使用此語言。"
@@ -50,6 +51,7 @@ LangString yzLangInfo 1043 "Setup en app gebruiken deze taal."
 LangString yzLangInfo 1055 "Kurulum ve uygulama bu dili kullanacak."
 LangString yzLangInfo 1053 "Installeraren och appen använder detta språk."
 LangString yzLangInfo 1058 "Майстер і застосунок використовуватимуть цю мову."
+LangString yzLangInfo 1049 "Установщик и приложение будут использовать этот язык."
 
 ; 覆盖 MUI 的英文默认文案（在 .onInit 插入 MUI_LANGDLL_DISPLAY 之前生效即可）
 !define MUI_LANGDLL_WINDOWTITLE "$(yzLangTitle)"
@@ -135,6 +137,8 @@ Var YzFreshInstall
       WriteRegStr HKCU "${YZ_LANG_REGKEY}" "${YZ_LANG_REGVALUE}" "sv"
     ${ElseIf} $LANGUAGE == 1058
       WriteRegStr HKCU "${YZ_LANG_REGKEY}" "${YZ_LANG_REGVALUE}" "uk"
+    ${ElseIf} $LANGUAGE == 1049
+      WriteRegStr HKCU "${YZ_LANG_REGKEY}" "${YZ_LANG_REGVALUE}" "ru"
     ${Else}
       ; 语言列表里没有的语言（理论上进不来）：留空标记，应用侧会忽略
     ${EndIf}

@@ -22,6 +22,8 @@ export const LOCALE_ALIASES: Record<string, string> = {
   pt: 'pt',
   'pt-br': 'pt',
   'pt-pt': 'pt',
+  ru: 'ru',
+  'ru-ru': 'ru',
 }
 
 /** 归一化到支持列表里的语言 id；不在列表里返回 null（调用方忽略） */
@@ -30,5 +32,29 @@ export function normalizeLocaleId(code: string | null | undefined, supported: re
   const lowered = code.trim().toLowerCase().replace(/_/g, '-')
   if (!lowered) return null
   const mapped = LOCALE_ALIASES[lowered] ?? lowered
-  return supported.includes(mapped) ? mapped : null
+  if (supported.includes(mapped)) return mapped
+
+  // 通用地区后缀折叠：fr-FR / en-GB / de-AT → fr / en / de。
+  // 只接受「语言-地区」两段，避免把 zh-CN-x 这类多段扩展当成合法语言。
+  const parts = lowered.split('-')
+  if (parts.length === 2 && parts[0]) {
+    const base = LOCALE_ALIASES[parts[0]] ?? parts[0]
+    if (supported.includes(base)) return base
+  }
+  return null
+}
+
+/**
+ * 从浏览器的语言列表（`navigator.languages`）挑出第一个受支持的语言。
+ * 找不到时返回 null，由调用方决定回退（首次启动建议回退英文）。
+ */
+export function detectSystemLanguage(
+  codes: readonly (string | null | undefined)[],
+  supported: readonly string[],
+): string | null {
+  for (const code of codes) {
+    const matched = normalizeLocaleId(code, supported)
+    if (matched) return matched
+  }
+  return null
 }

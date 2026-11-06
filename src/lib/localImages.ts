@@ -21,7 +21,7 @@ function joinDir(dir: string, fileUrl: string): string {
 
 /**
  * @param baseDir 当前文档所在目录；传入时相对路径按它解析。
- *   云端文档传本地镜像目录，使 `./images/a.png` 指向镜像里已下载的图片。
+ *   云端文档传本地镜像目录，使 `./assets/a.png` / `../assets/a.png` 指向镜像里已下载的图片。
  */
 export async function resolveLocalImageSrc(src: string, baseDir?: string | null): Promise<string | null> {
   // markdown-it 会把 Windows 路径的反斜杠编码成 %5C（如 D:%5CUsers%5C...），先还原

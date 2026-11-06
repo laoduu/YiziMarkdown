@@ -35,7 +35,7 @@
 
 ## 多语言界面
 
-支持 15 种界面语言，在 设置 → 通用 → 界面语言 切换（简体中文 / 繁體中文 / English / 日本語 / 한국어 / Deutsch / Français / Español / Português / Italiano / Polski / Nederlands / Türkçe / Svenska / Українська），即时生效。
+支持 16 种界面语言，在 设置 → 通用 → 界面语言 切换（简体中文 / 繁體中文 / English / 日本語 / 한국어 / Deutsch / Français / Español / Português / Italiano / Polski / Nederlands / Türkçe / Svenska / Українська / Русский），即时生效。
 
 ## 多文件 Tab
 

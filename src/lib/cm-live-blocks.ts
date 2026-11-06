@@ -2333,23 +2333,18 @@ const liveBlocksTheme = EditorView.theme({
     background: 'var(--toc-bg)',
     lineHeight: '1.6',
   },
+  // 目录条目不显示列表装饰（与预览一致）：层级只靠 padding 缩进。
   '.cm-live-block--toc ul': {
     margin: '0',
     paddingLeft: '1.1em',
-    listStyle: 'disc',
+    listStyle: 'none',
   },
   '.cm-live-block--toc ul ul': {
     paddingLeft: '1.1em',
-    listStyle: 'circle',
-  },
-  '.cm-live-block--toc ul ul ul': {
-    listStyle: 'square',
+    listStyle: 'none',
   },
   '.cm-live-block--toc li': {
     margin: '0.22em 0',
-  },
-  '.cm-live-block--toc li::marker': {
-    color: 'var(--editor-accent)',
   },
   '.cm-live-block--toc a': {
     color: 'var(--editor-text)',

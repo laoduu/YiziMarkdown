@@ -465,16 +465,78 @@ const restHas = (ctx: LayoutContext, types: BlockType[]): boolean =>
   rest(ctx).some((b) => types.includes(b.type))
 
 /**
+ * 致谢 / 结尾页标题词表（大小写不敏感，忽略结尾标点与多余空格）。
+ *
+ * slides.ts 是纯模块（测试直接加载），不能 import i18n；因此把各界面语言的
+ * 常见「谢谢 / 结束 / Q&A」写法集中在这里。新增语言时同步补词 + 补单测。
+ * 只有 H1 精确等于这些词才命中，避免正文里出现「谢谢」就整页变致谢页。
+ */
+export const THANKS_TITLES: readonly string[] = [
+  // 中文（简体 / 繁體）
+  '谢谢', '感谢', '多谢', '谢谢观看', '感谢观看', '谢谢聆听', '感谢聆听',
+  '谢谢大家', '谢谢各位', '谢谢观赏', '感谢观赏',
+  '謝謝', '感謝', '多謝', '謝謝觀看', '感謝觀看', '謝謝聆聽', '感謝聆聽',
+  '謝謝大家', '謝謝各位', '謝謝觀賞', '感謝觀賞',
+  // English
+  'thanks', 'thank you', 'thanks for watching', 'thank you for watching',
+  'thanks for your attention', 'thank you for your attention',
+  'the end', 'questions', 'questions and answers',
+  // 日本語
+  'ありがとう', 'ありがとうございます', 'ありがとうございました',
+  'ご清聴ありがとうございました', '終わり', 'おわり',
+  // 한국어
+  '감사합니다', '고맙습니다', '감사', '끝',
+  // Deutsch
+  'danke', 'vielen dank', 'danke für die aufmerksamkeit',
+  'danke für ihre aufmerksamkeit', 'ende',
+  // Français
+  'merci', 'merci à tous', 'merci à vous', 'merci pour votre attention', 'fin',
+  // Español
+  'gracias', 'muchas gracias', 'gracias por su atención', 'fin',
+  // Italiano
+  'grazie', 'grazie a tutti', "grazie per l'attenzione",
+  // Português
+  'obrigado', 'obrigada', 'obrigado a todos', 'obrigada a todos', 'fim',
+  // Nederlands
+  'bedankt', 'dank je', 'dank u', 'dank jullie wel', 'einde',
+  // Polski
+  'dziękuję', 'dziekuje', 'dziękuję bardzo', 'koniec',
+  // Svenska
+  'tack', 'tack alla', 'tack för att ni lyssnade', 'slut',
+  // Türkçe
+  'teşekkürler', 'tesekkurler', 'teşekkür ederim', 'tesekkur ederim', 'son',
+  // Українська
+  'дякую', 'дякую всім', 'кінець',
+  // Русский（虽非界面语言，但演示文稿常被中文用户使用）
+  'спасибо',
+]
+
+/** 归一化结尾标题：小写、压空格、去结尾标点。 */
+function normalizeThanksTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[\s。！？!?：:、，,.;；…—–\-"'“”‘’]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/** 是否为致谢 / 结尾页标题（Q&A 允许 `Q&A`、`Q & A`、全角 `＆`）。 */
+export function isThanksTitle(title: string): boolean {
+  const normalized = normalizeThanksTitle(title)
+  if (/^q\s*[&＆]\s*a$/.test(normalized) || normalized === 'faq') return true
+  return THANKS_TITLES.includes(normalized)
+}
+
+/**
  * 版式注册表（有序，按优先级排列；detectLayout 按序折叠取首个命中）。
  * 新增版式：在此注册一条规则 + slideshow.css 加 .ys-layout-{kind} 样式
  * + LAYOUT_KINDS 登记（校验与文档自动跟随）。
  */
 export const LAYOUT_RULES: LayoutRule[] = [
-  // 结尾页：H1 且文本为 谢谢/感谢/Thanks/Q&A
+  // 结尾页：H1 且文本为各语言的谢谢 / 结束 / Q&A（见 THANKS_TITLES）
   {
     kind: 'thanks',
-    match: (ctx) => first(ctx)?.type === 'h1'
-      && /^(谢谢|感谢|thanks|thank you|q\s*&\s*a|the end)$/i.test(ctx.title),
+    match: (ctx) => first(ctx)?.type === 'h1' && isThanksTitle(ctx.title),
   },
   // 封面页：H1 开头
   { kind: 'cover', match: (ctx) => first(ctx)?.type === 'h1' },

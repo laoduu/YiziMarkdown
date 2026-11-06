@@ -19,7 +19,7 @@ const EPUB_NS = 'http://www.idpf.org/2007/opf'
 type ChapterSplit = 'auto' | 'h1' | 'h2' | 'single'
 type EpubTheme = 'follow' | 'light' | 'dark'
 
-/** 可选的电子书语言（与应用 15 种界面语言一一对应；值使用 BCP 47 标签）。 */
+/** 可选的电子书语言（与应用 16 种界面语言一一对应；值使用 BCP 47 标签）。 */
 const EPUB_LANGUAGES: Array<{ value: string; label: string }> = [
   { value: 'zh-CN', label: '简体中文' },
   { value: 'zh-TW', label: '繁體中文' },
@@ -36,6 +36,7 @@ const EPUB_LANGUAGES: Array<{ value: string; label: string }> = [
   { value: 'tr', label: 'Türkçe' },
   { value: 'sv', label: 'Svenska' },
   { value: 'uk', label: 'Українська' },
+  { value: 'ru', label: 'Русский' },
 ]
 
 const LOCALE_TO_EPUB_LANGUAGE: Record<string, string> = {
@@ -54,6 +55,7 @@ const LOCALE_TO_EPUB_LANGUAGE: Record<string, string> = {
   tr: 'tr',
   sv: 'sv',
   uk: 'uk',
+  ru: 'ru',
 }
 
 /** 把应用界面语言 / 旧版自由输入的标签规范成下拉项里的 BCP 47 值。 */

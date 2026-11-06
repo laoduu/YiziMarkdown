@@ -887,7 +887,7 @@ function App() {
       const defaultName = (deriveDocumentTitle(tab.content) || 'untitled') + '.md'
       const filePath = await tauri.invoke('save_file_dialog', { fileName: defaultName }) as string | null
       if (!filePath) return  // 用户取消
-      // 图片资产：pending 暂存图迁移到目标 images/，相对引用的图片一并复制；
+      // 图片资产：pending 暂存图迁移到目标 assets/，相对引用的图片一并复制；
       // 命令会把重写后的正文写盘，并返回它（调用方必须同步编辑器与 store）。
       const savedContent = await saveFileWithAssets(tab.filePath, filePath, tab.content, tab.id)
       if (savedContent !== tab.content) {
@@ -1028,14 +1028,16 @@ function App() {
     setCloudSaveBusy(true)
     setCloudSaveError(null)
     try {
-      // 未命名文档的粘贴图在 pending 里（正文暂时是绝对路径）：先复制到 staging
-      // 并重写成相对路径，webdav_save 才能按相对引用上传。已有路径的文档没有 pending，
+      // 本地文档的粘贴图在 ~/Documents/yizimarkdown/assets/（正文为绝对路径）：
+      // 保存到云端前先复制到 staging，并把引用重写成 assets/ 相对路径，
+      // webdav_save 才能按相对引用上传到远端。已是云端文档时没有本地绝对引用，
       // 这里返回 changed=false，继续用原正文 / 原本地目录。
       let putContent = tab.content
       let localDir = tab.filePath ? dirOf(tab.filePath) : null
       let staged: StagedAssets | null = null
       try {
-        staged = await stagePendingAssets(tab.id, tab.content)
+        const root = useSettingsStore.getState().webdavRootPath
+        staged = await stagePendingAssets(tab.id, tab.content, remotePath, root)
         if (staged.changed) {
           putContent = staged.content
           if (staged.localDir) localDir = staged.localDir
@@ -1068,11 +1070,12 @@ function App() {
       // 下载镜像以取得 cachePath 与最新 ETag（相对引用的图片也一并镜像到本地缓存）
       const opened = await openRemote(baseUrl, remotePath)
 
-      // 未命名文档的暂存图补进本地缓存：个别图片上传失败时，下一次保存还能按相对引用重试，
+      // 本地文档的暂存图补进本地缓存：个别图片上传失败时，下一次保存还能按相对引用重试，
       // 预览也不会裂图（staging 随后会被清理）。
       if (staged?.changed) {
         try {
-          await adoptStagedAssets(tab.id, opened.cachePath)
+          const root = useSettingsStore.getState().webdavRootPath
+          await adoptStagedAssets(tab.id, opened.cachePath, baseUrl, root)
         } catch (e) {
           console.error('[cloud-save] adopt staged assets failed:', e)
         }
@@ -1085,7 +1088,7 @@ function App() {
       store.setTabRemote(tab.id, { path: remotePath, etag: opened.etag })
       store.markTabSaved(tab.id)
 
-      // 正文里的图片引用被重写过（绝对路径 → images/xxx.png）：同步 store 与编辑器，
+      // 正文里的图片引用被重写过（绝对路径 → assets/xxx.png）：同步 store 与编辑器，
       // 否则下一次自动保存会把旧内容（绝对路径）又写回镜像 / 云端。
       if (staged?.changed) {
         store.setTabContent(tab.id, putContent)

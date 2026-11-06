@@ -24,7 +24,7 @@ function usedKeys(): string[] {
   return Array.from(keys).sort()
 }
 
-test('PPTX 告警：源码用到的每个 messageKey 都在 15 种语言里有定义', () => {
+test('PPTX 告警：源码用到的每个 messageKey 都在全部语言里有定义', () => {
   const keys = usedKeys()
   assert.ok(keys.length >= 10, `只找到 ${keys.length} 个 messageKey，抽取逻辑可能失效`)
   for (const key of keys) {

@@ -39,7 +39,7 @@ const RESERVED_NAMES: &[&str] = &[
 ///   - 结尾的点或空格（Windows 会静默丢弃）
 ///   - 保留设备名（转义首字符，保持可逆）
 /// 非 ASCII（中文等）原样保留 —— NTFS 用 UTF-16，中文文件名完全合法。
-fn sanitize_segment(seg: &str) -> String {
+pub(crate) fn sanitize_segment(seg: &str) -> String {
     let mut out = String::with_capacity(seg.len());
     for c in seg.chars() {
         let escaped = c.is_ascii()
@@ -95,12 +95,12 @@ fn cache_dir_name(base_url: &str) -> Result<String, String> {
 }
 
 /// 缓存根目录：`<用户配置目录>/webdav/<host>-<hash8>/`
-fn cache_root_in(config_dir: &Path, base_url: &str) -> Result<PathBuf, String> {
+pub(crate) fn cache_root_in(config_dir: &Path, base_url: &str) -> Result<PathBuf, String> {
     Ok(config_dir.join("webdav").join(cache_dir_name(base_url)?))
 }
 
 /// 远程路径（`/Notes/foo.md`）→ 本地镜像路径。
-fn remote_to_cache_in(root: &Path, remote_path: &str) -> PathBuf {
+pub(crate) fn remote_to_cache_in(root: &Path, remote_path: &str) -> PathBuf {
     let mut p = root.to_path_buf();
     for seg in remote_path.split('/').filter(|s| !s.is_empty()) {
         p.push(sanitize_segment(seg));
@@ -460,7 +460,7 @@ async fn upload_images_up(
             failed += 1;
             continue;
         }
-        // 图片可能落在尚不存在的子目录（如 doc 目录下的 images/），必须先建目录否则 409
+        // 图片可能落在尚不存在的子目录（如 doc 目录下的 assets/），必须先建目录否则 409
         let parent = dir_of(&remote);
         if !ensured.contains(&parent) {
             if let Err(e) = conn.mkdir_all(&parent).await {

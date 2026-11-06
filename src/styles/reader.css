@@ -237,6 +237,14 @@
 .reader-content p:has(.katex),
 .reader-content p:has(.katex-display) { text-indent: 0; }
 .reader-content .markdown-toc { font-size: 0.95em; }
+/* 目录条目不显示列表装饰，层级只靠缩进牵引。
+   阅读模式的 `.reader-content ul` 默认带圆点，且 reader.css 后于 globals.css 加载，
+   必须在这里显式关掉，否则预览 / 实时已去掉的圆点会在阅读模式漏回来。 */
+.reader-content .markdown-toc ul,
+.reader-content .markdown-toc ul ul {
+  list-style: none;
+  padding-left: 1.1em;
+}
 
 /* 脚注（markdown-it-footnote） */
 .reader-content .footnote-ref {

@@ -963,7 +963,7 @@
                     <table>
                         <thead><tr><th>分类</th><th>主要能力</th></tr></thead>
                         <tbody>
-                            <tr><td>通用</td><td>界面设置（语言 15 种、界面字号 80%–120%）、自动保存间隔、Markdown / EPUB 文件关联、默认模板</td></tr>
+                            <tr><td>通用</td><td>界面设置（语言 16 种、界面字号 80%–120%）、自动保存间隔、Markdown / EPUB 文件关联、默认模板</td></tr>
                             <tr><td>外观</td><td>品牌标识（左上角与状态栏名称）、主题选择与管理、用户主题导入、深色模式、自定义 CSS（保存即生成「自定义主题」）</td></tr>
                             <tr><td>编辑器</td><td>源码 / 预览字体字号行高、实时模式动画、拼写检查、鼠标光标样式（原生 / 加粗）</td></tr>
                             <tr><td>AI 助手</td><td>供应商与模型、API 密钥、上下文轮数、引用上限</td></tr>
@@ -981,7 +981,8 @@
 
             <div class="help-sub" id="settings-lang">
                 <h3>界面设置</h3>
-                <p>界面语言支持 15 种：简体中文（默认）、繁體中文、English、日本語、한국어、Deutsch、Français、Español、Português、Italiano、Polski、Nederlands、Türkçe、Svenska、Українська。在「设置 → 通用 → 界面设置 → 界面语言」切换，即时生效，无需重启。</p>
+                <p>界面语言支持 16 种：简体中文（默认）、繁體中文、English、日本語、한국어、Deutsch、Français、Español、Português、Italiano、Polski、Nederlands、Türkçe、Svenska、Українська、Русский。在「设置 → 通用 → 界面设置 → 界面语言」切换，即时生效，无需重启。语言项旁边附带英文 <code>Language</code> 标识，中文界面下也能按这个单词找到入口。</p>
+                <p>首次启动（便携版 / macOS / Linux，或安装器没有传递语言时）会自动按系统语言选择界面；系统语言不在支持列表内则回退 English，避免不懂中文的用户卡在中文界面。</p>
                 <p>界面字号支持 80%–120%（步进 5%，默认 100%），只放大或缩小界面文字与图标；设置面板尺寸、工具栏布局以及文档编辑与预览的字号、行距都不受影响。常规 UI 字号按 11 / 12 / 13 / 14px 四档收口（100% 基准），品牌字与大标题作为特例保留。</p>
                 <p>品牌名称在「设置 → 外观 → 品牌标识」中修改，只影响左上角工具栏与底部状态栏；留空恢复 <code>YiziMarkdown</code>，不会改动「关于」页面。</p>
             </div>
@@ -1100,7 +1101,7 @@
 
             <div class="help-sub" id="faq-img-project">
                 <h3>在代码仓库 / 项目目录里粘贴图片，会不会多出一个 images 文件夹？</h3>
-                <p>默认会（图片写在文档旁 <code>images/</code>，便于随文档搬迁与上传云端）。如果不想改动项目结构，到 <strong>设置 → 编辑器 → 图片</strong> 把「粘贴图片保存位置」改为「应用资源目录」：图片会写到 <code>~/Documents/yizimarkdown/assets/</code>，Markdown 使用绝对路径，项目目录保持原样。云端文档始终使用相对路径；本地用绝对路径的图片在「保存到云端」时会自动迁移到远端 <code>images/</code> 并重写引用。</p>
+                <p>不会。本地文档粘贴的图片统一写到用户目录 <code>~/Documents/yizimarkdown/assets/</code>，Markdown 使用绝对路径，项目目录保持原样，不需要额外设置。保存到云端时会自动把图片转存到 WebDAV「根目录」下的 <code>assets/</code>（默认 <code>/yizimarkdown/assets/</code>）并重写为相对路径。</p>
             </div>
 
             <div class="help-sub" id="faq-icon">
@@ -1149,7 +1150,7 @@
 
             <div class="help-sub" id="faq-cloud-images">
                 <h3>为什么云端文档里的图片没有一起上传？</h3>
-                <p>只有<strong>相对路径</strong>的图片（如 <code>images/a.png</code>、<code>../assets/x.png</code>）会随文档同步，并保持目录结构。绝对路径（<code>D:\pics\a.png</code>、<code>/home/me/a.png</code>）、<code>file://</code>、网络图片与 <code>data:</code> 都不会上传——这是为了避免把你本机其他位置的文件传到服务器。粘贴的图片默认写相对路径；若本地「粘贴图片保存位置」设为应用资源目录（绝对路径），保存到云端时会自动迁移成相对路径并上传。</p>
+                <p>只有<strong>相对路径</strong>的图片（如 <code>assets/a.png</code>、<code>../assets/x.png</code>）会随文档同步，并保持目录结构。绝对路径（<code>D:\pics\a.png</code>、<code>/home/me/a.png</code>）、<code>file://</code>、网络图片与 <code>data:</code> 都不会上传——这是为了避免把你本机其他位置的文件传到服务器。本地文档的粘贴图保存在 <code>~/Documents/yizimarkdown/assets/</code>（绝对路径），保存到云端时会自动转存到 WebDAV「根目录」下的 <code>assets/</code> 并重写为相对路径。</p>
             </div>
 
             <div class="help-sub" id="faq-cloud-auth">
