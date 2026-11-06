@@ -157,10 +157,10 @@ EPUB 控制面板的章节拆分支持「自动（优先 H2，其次 H1）/ 按 
 
 ### 智能粘贴
 
-从网页、Word/DOCX、Google Docs、Notion、飞书等来源复制富文本，直接粘贴即可得到规范的 Markdown：
+从网页、Word/DOCX、Google Docs、Notion、飞书等来源复制富文本，直接粘贴（Windows/Linux：`Ctrl+V`，macOS：`Command+V`）即可得到规范的 Markdown：
 
 - 标题、段落、列表（含嵌套与任务列表）、引用、表格、代码块、链接与图片都会按结构还原；文本转换在内存中完成。
-- **剪贴板里的图片（截图、网页图片、资源管理器里复制的图片文件）会直接存成文件**：默认写入文档所在目录的 `images/`，Markdown 自动填相对路径（如 `images/image-xxxx.png`）；同一张图按内容哈希自动去重。也可以在 设置 → 编辑器 → 图片 中选择「应用资源目录」（`~/Documents/yizimarkdown/assets/`，绝对路径），这样不会在项目目录里创建任何文件夹。未命名文档先暂存到 `~/Documents/yizimarkdown/images/pending/`，首次「另存为 / 保存到云端」时自动迁移成相对路径。
+- **剪贴板里的图片（截图、网页图片、文件管理器（Windows 资源管理器 / macOS Finder）里复制的图片文件）会直接存成文件**：默认写入文档所在目录的 `images/`，Markdown 自动填相对路径（如 `images/image-xxxx.png`）；同一张图按内容哈希自动去重。也可以在 设置 → 编辑器 → 图片 中选择「应用资源目录」（`~/Documents/yizimarkdown/assets/`，绝对路径），这样不会在项目目录里创建任何文件夹。未命名文档先暂存到 `~/Documents/yizimarkdown/images/pending/`，首次「另存为 / 保存到云端」时自动迁移成相对路径。
 - **富文本里的内嵌图片也会落盘**：网页 / Word HTML 里的 `data:image/...` 会写成 `images/` 文件，不再把巨大 base64 塞进 Markdown。
 - 从 Word 复制时，`MsoHeading` 标题、`mso-list` 多级列表、表格、`&nbsp;` 会自动处理；Word 临时目录里的 `file://` 图片会复制进 `images/`，读不到才退回图片说明文字。
 - 上标、下标（含 Word 脚注/尾注引用）保留为 `<sup>…</sup>` / `<sub>…</sub>`，不会再留下 `[2]` 这样的字面量；Word 复制通常不带脚注正文，因此不会生成没有定义的 `[^1]`。
