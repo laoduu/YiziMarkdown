@@ -27,21 +27,26 @@ export interface StagedAssets {
   changed: boolean
 }
 
+/** 本地文档的图片保存位置（云端文档始终用 doc / 相对路径） */
+export type ImageSaveMode = 'doc' | 'assets'
+
 export function savePastedImage(
   docPath: string | null,
   tabId: string,
   base64: string,
+  saveMode: ImageSaveMode = 'doc',
 ): Promise<SavedImage> {
-  return invokeTauriOrThrow<SavedImage>('save_pasted_image', { docPath, tabId, base64 })
+  return invokeTauriOrThrow<SavedImage>('save_pasted_image', { docPath, tabId, base64, saveMode })
 }
 
-/** Word / WPS 剪贴板的临时 file:// 图片：读取后复制进文档 images/ */
+/** Word / WPS 剪贴板的临时 file:// 图片：读取后复制进文档 images/（或应用资源目录） */
 export function importImageFile(
   docPath: string | null,
   tabId: string,
   path: string,
+  saveMode: ImageSaveMode = 'doc',
 ): Promise<SavedImage> {
-  return invokeTauriOrThrow<SavedImage>('import_image_file', { docPath, tabId, path })
+  return invokeTauriOrThrow<SavedImage>('import_image_file', { docPath, tabId, path, saveMode })
 }
 
 /**

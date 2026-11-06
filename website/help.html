@@ -1095,7 +1095,12 @@
 
             <div class="help-sub" id="faq-img">
                 <h3>预览中的图片不显示怎么办？</h3>
-                <p>本地图片支持 jpg / png / gif / webp / svg / bmp：<strong>相对路径</strong>（如 <code>images/photo.png</code>）按文档所在目录解析，绝对路径（如 <code>C:\images\photo.png</code>）也可直接使用；网络图片以 <code>http</code> / <code>https</code> 开头即可正常显示。粘贴图片时程序会自动在文档旁创建 <code>images/</code> 并写入相对路径。</p>
+                <p>本地图片支持 jpg / png / gif / webp / svg / bmp：<strong>相对路径</strong>（如 <code>images/photo.png</code>）按文档所在目录解析，绝对路径（如 <code>C:\images\photo.png</code>）也可直接使用；网络图片以 <code>http</code> / <code>https</code> 开头即可正常显示。粘贴图片时程序会自动保存并写入对应路径。</p>
+            </div>
+
+            <div class="help-sub" id="faq-img-project">
+                <h3>在代码仓库 / 项目目录里粘贴图片，会不会多出一个 images 文件夹？</h3>
+                <p>默认会（图片写在文档旁 <code>images/</code>，便于随文档搬迁与上传云端）。如果不想改动项目结构，到 <strong>设置 → 编辑器 → 图片</strong> 把「粘贴图片保存位置」改为「应用资源目录」：图片会写到 <code>~/Documents/yizimarkdown/assets/</code>，Markdown 使用绝对路径，项目目录保持原样。云端文档始终使用相对路径；本地用绝对路径的图片在「保存到云端」时会自动迁移到远端 <code>images/</code> 并重写引用。</p>
             </div>
 
             <div class="help-sub" id="faq-icon">
@@ -1144,7 +1149,7 @@
 
             <div class="help-sub" id="faq-cloud-images">
                 <h3>为什么云端文档里的图片没有一起上传？</h3>
-                <p>只有<strong>相对路径</strong>的图片（如 <code>images/a.png</code>、<code>../assets/x.png</code>）会随文档同步，并保持目录结构。绝对路径（<code>D:\pics\a.png</code>、<code>/home/me/a.png</code>）、<code>file://</code>、网络图片与 <code>data:</code> 都不会上传——这是为了避免把你本机其他位置的文件传到服务器。粘贴 / 插入的图片会自动写成相对路径，因此会随文档一起上传。</p>
+                <p>只有<strong>相对路径</strong>的图片（如 <code>images/a.png</code>、<code>../assets/x.png</code>）会随文档同步，并保持目录结构。绝对路径（<code>D:\pics\a.png</code>、<code>/home/me/a.png</code>）、<code>file://</code>、网络图片与 <code>data:</code> 都不会上传——这是为了避免把你本机其他位置的文件传到服务器。粘贴的图片默认写相对路径；若本地「粘贴图片保存位置」设为应用资源目录（绝对路径），保存到云端时会自动迁移成相对路径并上传。</p>
             </div>
 
             <div class="help-sub" id="faq-cloud-auth">

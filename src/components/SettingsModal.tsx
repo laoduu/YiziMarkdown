@@ -1,6 +1,6 @@
 import { invokeTauri, invokeTauriOrThrow } from '../lib/tauri'
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { X, Loader2, ChevronRight, FolderOpen, Palette, FileText, Keyboard, Settings2, Eye, EyeOff, Info, Github, History, BookOpen, ExternalLink, Zap, Globe, Puzzle, Bot, Cloud, Boxes, Download, RefreshCw, Presentation, Layers, Sparkles, Plus } from 'lucide-react'
+import { X, Loader2, ChevronRight, FolderOpen, Palette, FileText, Keyboard, Settings2, Eye, EyeOff, Info, Github, History, BookOpen, ExternalLink, Zap, Globe, Puzzle, Bot, Cloud, Boxes, Download, RefreshCw, Presentation, Layers, Sparkles, Plus, HelpCircle } from 'lucide-react'
 import { useSettingsStore, UI_TEXT_SCALE_DEFAULT, UI_TEXT_SCALE_MIN, UI_TEXT_SCALE_MAX, DEFAULT_BRAND_NAME, BRAND_NAME_MAX } from '../stores/settingsStore'
 import { useUpdateStore } from '../stores/updateStore'
 import type { UpdateBlocker } from '../lib/updateClient'
@@ -56,6 +56,7 @@ const DEFAULTS_EDITOR = {
   fontSize: 20, lineHeight: 2.0, previewFontSize: 20, previewLineHeight: 2.0,
   showLineNumbers: true, wordWrap: true,
   cursorStyle: 'text' as const, mouseSpotlight: true,
+  imageSaveMode: 'doc' as const,
 }
 
 interface SettingsModalProps {
@@ -90,11 +91,19 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-function Row({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Row({ label, hint, help, children }: { label: string; hint?: string; help?: string; children: React.ReactNode }) {
   return (
     <div className="settings-row">
       <div>
-        <span className="text-[0.75rem] text-[var(--editor-text)]">{label}</span>
+        <div className="flex items-center gap-1 min-w-0">
+          <span className="text-[0.75rem] text-[var(--editor-text)]">{label}</span>
+          {help && (
+            <span className="settings-help" tabIndex={0} aria-label={help}>
+              <HelpCircle size={12} className="settings-help-icon" aria-hidden="true" />
+              <span className="settings-help-tip" role="note">{help}</span>
+            </span>
+          )}
+        </div>
         {hint && <p className="text-[0.6875rem] text-[var(--sidebar-text)] mt-0.5">{hint}</p>}
       </div>
       <div className="flex-1 flex flex-col gap-1.5 items-end">{children}</div>
@@ -949,6 +958,15 @@ function EditorSettings() {
                 <input type="checkbox" checked={store.mouseSpotlight}
                   onChange={(e) => store.setField('mouseSpotlight', e.target.checked)} className="settings-checkbox" />
               </label>
+            </Row>
+          </Section>
+          <Section title={t('settings.images')}>
+            <Row label={t('settings.imageSaveLocation')} help={t('settings.imageSaveLocationHint')}>
+              <select className="settings-select" value={store.imageSaveMode}
+                onChange={(e) => store.setField('imageSaveMode', e.target.value as 'doc' | 'assets')}>
+                <option value="doc">{t('settings.imageSaveDoc')}</option>
+                <option value="assets">{t('settings.imageSaveAssets')}</option>
+              </select>
             </Row>
           </Section>
           <Section title={t('settings.previewLayout')}>

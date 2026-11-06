@@ -2,10 +2,14 @@
 //!
 //! 目录约定（与 WebDAV 图片同步保持一致）：
 //!
-//! - **已保存文档**：图片写到 `<文档目录>/images/`，Markdown 写**相对路径**
-//!   `images/xxx.png`。云端同步只认相对引用（`remote_cache::classify_image_ref`
-//!   会跳过绝对路径 / `file://`，避免把用户本地任意文件上传到服务器），
-//!   所以这里刻意不用绝对路径。
+//! - **已保存文档**：
+//!   - 默认（`imageSaveMode = doc`）：写到 `<文档目录>/images/`，Markdown 写**相对路径**
+//!     `images/xxx.png`；云端同步只认相对引用（`remote_cache::classify_image_ref`
+//!     会跳过绝对路径 / `file://`，避免把用户本地任意文件上传到服务器）。
+//!   - 可选（`imageSaveMode = assets`）：写到 `<配置目录>/assets/`，Markdown 写绝对路径，
+//!     **不在项目目录里创建任何文件夹**。保存到云端时由 `stage_assets_in` 复制进
+//!     远端 `images/` 并重写引用，因此本地不污染项目、云端仍能同步。
+//! - **云端文档**：前端强制 `doc` 模式（相对路径是同步的硬要求）。
 //! - **未保存文档**（没有路径可依附）：先落到
 //!   `<配置目录>/images/pending/<tabId>/`，Markdown 暂写绝对路径；
 //!   首次「另存为」走 `save_file_with_assets`、「保存到云端」走
@@ -31,6 +35,8 @@ pub(crate) const MAX_PASTED_IMAGE_BYTES: usize = crate::remote_cache::MAX_IMAGE_
 
 /// 文档旁的图片子目录名。与模板、WebDAV 测试里的既有约定一致。
 const IMAGES_DIR: &str = "images";
+/// 应用资源目录（"图片保存位置 = 应用资源目录" 时使用）
+const ASSETS_DIR: &str = "assets";
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -90,6 +96,11 @@ pub(crate) fn staging_dir_in(config_dir: &Path, tab_id: &str) -> PathBuf {
         .join(sanitize_key(tab_id))
 }
 
+/// 应用资源目录：`<配置目录>/assets/`（全局共享，哈希命名自动去重）。
+pub(crate) fn assets_dir_in(config_dir: &Path) -> PathBuf {
+    config_dir.join(ASSETS_DIR)
+}
+
 fn slash(p: &Path) -> String {
     p.to_string_lossy().replace('\\', "/")
 }
@@ -135,12 +146,25 @@ fn write_image(dir: &Path, bytes: &[u8], mime: &str) -> Result<(PathBuf, String)
 }
 
 fn save_image_in(
+    config_dir: &Path,
     doc_path: Option<&str>,
     tab_id: &str,
     bytes: &[u8],
     mime: &str,
+    save_mode: Option<&str>,
 ) -> Result<SavedImage, String> {
     if let Some(doc) = doc_path.filter(|s| !s.trim().is_empty()) {
+        // 本地文档 + 「应用资源目录」：绝对路径，不创建任何项目文件夹。
+        // 云端文档由前端强制传 doc 模式（相对引用是 WebDAV 同步的硬要求）。
+        if save_mode == Some("assets") {
+            let (path, name) = write_image(&assets_dir_in(config_dir), bytes, mime)?;
+            return Ok(SavedImage {
+                absolute_path: slash(&path),
+                markdown_ref: slash(&path),
+                relative: false,
+                file_name: name,
+            });
+        }
         let doc_dir = Path::new(doc)
             .parent()
             .filter(|p| !p.as_os_str().is_empty())
@@ -154,8 +178,8 @@ fn save_image_in(
         });
     }
 
-    // 未保存文档：暂存到配置目录，Markdown 先写绝对路径，首次保存时迁移
-    let dir = pending_dir_in(&get_user_config_dir()?, tab_id);
+    // 未保存文档：暂时没有可依附的目录，先落 pending（保存时再按设置迁移）
+    let dir = pending_dir_in(config_dir, tab_id);
     let (path, name) = write_image(&dir, bytes, mime)?;
     Ok(SavedImage {
         absolute_path: slash(&path),
@@ -174,12 +198,20 @@ pub fn save_pasted_image(
     doc_path: Option<String>,
     tab_id: String,
     base64: String,
+    save_mode: Option<String>,
 ) -> Result<SavedImage, String> {
     let bytes = base64::engine::general_purpose::STANDARD
         .decode(base64.trim())
         .map_err(|_| "INVALID_IMAGE_DATA".to_string())?;
     let mime = validate_image(&bytes)?;
-    save_image_in(doc_path.as_deref(), &tab_id, &bytes, mime)
+    save_image_in(
+        &get_user_config_dir()?,
+        doc_path.as_deref(),
+        &tab_id,
+        &bytes,
+        mime,
+        save_mode.as_deref(),
+    )
 }
 
 /// Word / WPS 剪贴板里的图片是临时目录下的 `file://` 路径：读出字节后**复制**进
@@ -189,11 +221,19 @@ pub fn import_image_file(
     doc_path: Option<String>,
     tab_id: String,
     path: String,
+    save_mode: Option<String>,
 ) -> Result<SavedImage, String> {
     let local = normalize_local_path(&path)?;
     let bytes = fs::read(&local).map_err(|e| format!("读取图片失败：{e}"))?;
     let mime = validate_image(&bytes)?;
-    save_image_in(doc_path.as_deref(), &tab_id, &bytes, mime)
+    save_image_in(
+        &get_user_config_dir()?,
+        doc_path.as_deref(),
+        &tab_id,
+        &bytes,
+        mime,
+        save_mode.as_deref(),
+    )
 }
 
 /// `file:///C:/tmp/a.png` / `C:/tmp/a.png` / `file:///Users/x/a.png` → 本地路径。
@@ -279,7 +319,7 @@ pub(crate) fn migrate_pending_refs(
         if !seen.insert(src.clone()) {
             continue;
         }
-        let Some((path, name)) = pending_ref_path(pending, &src) else {
+        let Some((path, name)) = asset_ref_path(pending, &src) else {
             continue;
         };
         if !path.is_file() {
@@ -296,8 +336,8 @@ pub(crate) fn migrate_pending_refs(
     Ok(out)
 }
 
-/// 绝对引用是否正好落在该 tab 的 pending 目录里。
-fn pending_ref_path(pending: &Path, src: &str) -> Option<(PathBuf, String)> {
+/// 绝对引用是否正好落在给定的应用托管目录里（pending / assets）。
+fn asset_ref_path(dir: &Path, src: &str) -> Option<(PathBuf, String)> {
     let lower = src.trim().to_ascii_lowercase();
     if lower.starts_with("http:") || lower.starts_with("https:") || lower.starts_with("data:") {
         return None;
@@ -310,7 +350,7 @@ fn pending_ref_path(pending: &Path, src: &str) -> Option<(PathBuf, String)> {
         return None;
     }
     let parent = path.parent()?;
-    if !same_path(parent, pending) {
+    if !same_path(parent, dir) {
         return None;
     }
     let name = path.file_name()?.to_str()?.to_string();
@@ -411,22 +451,23 @@ fn same_path(a: &Path, b: &Path) -> bool {
 // 保存到云端：暂存图上传前重写
 // ---------------------------------------------------------------------------
 
-/// 未命名文档「保存到云端」时调用：把 pending 图复制到 staging 目录，
-/// 引用重写为 `images/<name>`。返回的 `local_dir` 直接交给 `webdav_save`
-/// 作为图片上传来源（远端仍保持相对结构）。
+/// 保存到云端前调用：把 **pending（未命名文档）** 与 **应用资源目录（本地 assets 模式）**
+/// 里的图片复制到 staging，引用重写为 `images/<name>`。返回的 `local_dir` 直接交给
+/// `webdav_save` 作为图片上传来源（远端仍保持相对结构）。
 #[tauri::command]
 pub fn stage_pending_assets(tab_id: String, content: String) -> Result<StagedAssets, String> {
     let config = get_user_config_dir()?;
-    let pending = pending_dir_in(&config, &tab_id);
-    if !pending.is_dir() {
-        return Ok(StagedAssets {
-            content,
-            local_dir: None,
-            changed: false,
-        });
-    }
+    stage_assets_in(&config, &tab_id, content)
+}
 
-    let staging = staging_dir_in(&config, &tab_id);
+pub(crate) fn stage_assets_in(
+    config_dir: &Path,
+    tab_id: &str,
+    content: String,
+) -> Result<StagedAssets, String> {
+    let pending = pending_dir_in(config_dir, tab_id);
+    let assets = assets_dir_in(config_dir);
+    let staging = staging_dir_in(config_dir, tab_id);
     // 每次重新暂存：旧 staging 可能残留已删除/改名的图片
     let _ = fs::remove_dir_all(&staging);
     let images = staging.join(IMAGES_DIR);
@@ -438,7 +479,9 @@ pub fn stage_pending_assets(tab_id: String, content: String) -> Result<StagedAss
         if !seen.insert(src.clone()) {
             continue;
         }
-        let Some((path, name)) = pending_ref_path(&pending, &src) else {
+        // 两个托管目录都可能是绝对引用来源：未命名文档的 pending、本地 assets 模式
+        let found = asset_ref_path(&pending, &src).or_else(|| asset_ref_path(&assets, &src));
+        let Some((path, name)) = found else {
             continue;
         };
         if !path.is_file() {
@@ -623,32 +666,87 @@ mod tests {
     }
 
     #[test]
-    fn stages_pending_images_for_cloud_upload() {
-        let _config = temp_dir("config-stage"); // 命令使用真实配置目录，这里只测纯函数
-        let pending = temp_dir("pending-stage");
-        let src = pending.join("image-abc.png");
-        fs::write(&src, PNG).unwrap();
-        let md = format!("![图]({})", slash(&src));
-        // 通过 migrate 的等价路径验证 staging 的重写规则
-        let staging = temp_dir("staging");
-        let out = migrate_pending_refs(&pending, &staging, &md).unwrap();
-        assert_eq!(out, "![图](images/image-abc.png)");
-        assert!(staging.join("images/image-abc.png").is_file());
+    fn stages_pending_and_asset_images_for_cloud_upload() {
+        let config = temp_dir("config-stage");
+        let pending = pending_dir_in(&config, "tab");
+        fs::create_dir_all(&pending).unwrap();
+        let pending_img = pending.join("image-aaa.png");
+        fs::write(&pending_img, PNG).unwrap();
+
+        let assets = assets_dir_in(&config);
+        fs::create_dir_all(&assets).unwrap();
+        let asset_img = assets.join("image-bbb.png");
+        fs::write(&asset_img, PNG).unwrap();
+
+        let md = format!(
+            "![未命名]({})\n\n![资源]({})",
+            slash(&pending_img),
+            slash(&asset_img)
+        );
+        let staged = stage_assets_in(&config, "tab", md).unwrap();
+        assert!(staged.changed);
+        assert_eq!(
+            staged.content,
+            "![未命名](images/image-aaa.png)\n\n![资源](images/image-bbb.png)"
+        );
+        let staging_images = staging_dir_in(&config, "tab").join(IMAGES_DIR);
+        assert!(staging_images.join("image-aaa.png").is_file());
+        assert!(staging_images.join("image-bbb.png").is_file());
+        assert!(staged.local_dir.is_some());
     }
 
     #[test]
     fn writes_images_next_to_document_as_relative_ref() {
+        let config = temp_dir("config-doc");
         let doc_dir = temp_dir("doc-dir");
         let doc = doc_dir.join("note.md");
         fs::write(&doc, "").unwrap();
-        let first = save_image_in(Some(doc.to_str().unwrap()), "tab", PNG, "image/png").unwrap();
+        let first = save_image_in(
+            &config,
+            Some(doc.to_str().unwrap()),
+            "tab",
+            PNG,
+            "image/png",
+            Some("doc"),
+        )
+        .unwrap();
         assert!(first.relative);
         assert_eq!(first.markdown_ref, format!("images/{}", first.file_name));
         assert!(doc_dir.join("images").join(&first.file_name).is_file());
 
         // 同内容重复粘贴：文件名相同、不重复写盘
-        let again = save_image_in(Some(doc.to_str().unwrap()), "tab", PNG, "image/png").unwrap();
+        let again = save_image_in(
+            &config,
+            Some(doc.to_str().unwrap()),
+            "tab",
+            PNG,
+            "image/png",
+            Some("doc"),
+        )
+        .unwrap();
         assert_eq!(again.file_name, first.file_name);
+    }
+
+    #[test]
+    fn saves_into_app_assets_dir_without_touching_project_folder() {
+        let config = temp_dir("config-assets");
+        let doc_dir = temp_dir("doc-assets");
+        let doc = doc_dir.join("note.md");
+        fs::write(&doc, "").unwrap();
+        let saved = save_image_in(
+            &config,
+            Some(doc.to_str().unwrap()),
+            "tab",
+            PNG,
+            "image/png",
+            Some("assets"),
+        )
+        .unwrap();
+
+        assert!(!saved.relative);
+        assert!(saved.markdown_ref.starts_with(&slash(&assets_dir_in(&config))));
+        assert!(assets_dir_in(&config).join(&saved.file_name).is_file());
+        assert!(!doc_dir.join("images").exists(), "assets 模式不应创建项目 images/");
     }
 
     #[test]

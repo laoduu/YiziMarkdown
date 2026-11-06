@@ -7,19 +7,19 @@
 ### 粘贴图片与图片资产治理（2026-11-06）
 
 **新增**：
-- 剪贴板里的原始图片（截图、网页图片、从资源管理器复制的图片文件）可直接 `Ctrl+V`：图片落盘成文件，Markdown 插入 `![…](images/…)`。
+- 剪贴板里的原始图片（截图、网页图片、从资源管理器复制的图片文件）可直接 `Ctrl+V`：图片落盘成文件，Markdown 插入 `![…]`。本地文档默认写 `<文档目录>/images/` + 相对路径；也可在 设置 → 编辑器 → 图片 切换为「应用资源目录」（`~/Documents/yizimarkdown/assets/`，绝对路径，不在项目目录里创建文件夹）。
 - 未命名文档：图片先暂存到 `~/Documents/yizimarkdown/images/pending/<tabId>/`，正文暂写绝对路径；首次「另存为」或「保存到云端」时自动迁移到目标 `images/` 并重写引用。
 - 富文本粘贴里的图片也改为落盘：Word 的 `file://` 临时图复制进文档 `images/`；`data:image/…` 内嵌图写成文件，不再把大段 base64 塞进文档。
 
 **实现**：
-- 新增 `src-tauri/src/doc_assets.rs`：`save_pasted_image` / `import_image_file` / `save_file_with_assets` / `stage_pending_assets` / `cleanup_pasted_assets`。内容哈希命名（sha256 前 16 位）天然去重；复用 `sniff_image_mime` 校验真实格式；单图上限 8MB（与 WebDAV 单图上限一致）。
-- 目录约定：已保存文档写 `<文档目录>/images/` + 相对路径；云端文档的 `filePath` 本来就是本地镜像，保存时既有 `upload_images_up` 会把图上传到远端同级 `images/`，重新打开 `mirror_images_down` 自动拉回。绝对路径仍按安全边界跳过（不上传本机任意文件）。
+- 新增 `src-tauri/src/doc_assets.rs`：`save_pasted_image` / `import_image_file` / `save_file_with_assets` / `stage_pending_assets` / `adopt_staged_assets` / `cleanup_pasted_assets`。内容哈希命名（sha256 前 16 位）天然去重；复用 `sniff_image_mime` 校验真实格式；单图上限 8MB（与 WebDAV 单图上限一致）。
+- 目录约定：`imageSaveMode=doc`（默认）写 `<文档目录>/images/` + 相对路径；`imageSaveMode=assets` 写应用资源目录 + 绝对路径，项目目录零改动。云端文档强制 `doc` 模式；本地 assets 模式首次「保存到云端」时 `stage_assets_in` 把图片复制进 staging、重写到远端 `images/`，保存后再补进本地缓存镜像。
 - 前端：paste 捕获阶段先检查 `clipboardData.items` 的图片项，命中即落盘；`materializePastedImages` 统一处理 `file://` 占位与 `data:image`；`EditorRef.replaceContent` 保证保存时路径被重写后编辑器与 store 同步；另存为顺带复制相对引用图片（同时修掉旧缺口）。
-- 15 种语言补 `editor.imagePasteFailed` / `editor.imageTooLarge`；`help.md` 与 `website/help.html` 同步说明。
+- 15 种语言补 `editor.imagePasteFailed` / `editor.imageTooLarge` 与设置项文案（「粘贴图片保存位置」标题后的 ? 悬停显示完整规则）；`help.md` 与 `website/help.html` 同步说明（含「项目目录不想多出 images/ 怎么办」）。
 
-**改动文件**：`src-tauri/src/doc_assets.rs`（新）、`main.rs`、`remote_cache.rs`、`src/lib/docAssets.ts`（新）、`src/lib/clipboardImages.ts`（新）、`src/lib/clipboardMarkdown.ts`、`src/components/Editor.tsx`、`src/App.tsx`、15 个 i18n 文件、`help.md`（含 `src-tauri/help.md` 副本）、`website/help.html`、`package.json` 及新增测试。
+**改动文件**：`src-tauri/src/doc_assets.rs`（新）、`main.rs`、`remote_cache.rs`、`src/lib/docAssets.ts`（新）、`src/lib/clipboardImages.ts`（新）、`src/lib/clipboardMarkdown.ts`、`src/components/Editor.tsx`、`src/App.tsx`、`src/components/SettingsModal.tsx`、`src/stores/settingsStore.ts`、15 个 i18n 文件、`help.md`（含 `src-tauri/help.md` 副本）、`website/help.html`、`package.json` 及新增测试。
 
-**验证**：`npm test` 458 项全过；`cargo test doc_assets` 12 项全过；`npm run build`（含 tsc / 全部门禁 / vite build）通过。
+**验证**：`npm test` 459 项全过；`cargo test doc_assets` 13 项全过；`npm run build`（含 tsc / 全部门禁 / vite build）通过。
 
 ### 鼠标 I 型光标偶发变白（2026-11-06）
 

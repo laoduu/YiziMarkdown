@@ -2013,6 +2013,47 @@ a {
   min-width: 0;
   max-width: 100%;
 }
+
+/* 设置项标题后的「?」：hover / 键盘聚焦显示详细规则。
+   长文本用 pre-line 保留 i18n 里的 \n 分段，避免挤成一大段。 */
+.settings-help {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.settings-help-icon {
+  color: var(--sidebar-text);
+  cursor: help;
+}
+.settings-help-tip {
+  position: absolute;
+  left: -6px;
+  top: calc(100% + 6px);
+  z-index: 40;
+  width: 360px;
+  max-width: min(360px, calc(100vw - 48px));
+  padding: 8px 10px;
+  border: 1px solid var(--editor-border);
+  border-radius: var(--radius-sm);
+  background: var(--editor-surface);
+  color: var(--sidebar-text);
+  font-size: 0.6875rem;
+  font-weight: normal;
+  line-height: 1.55;
+  white-space: pre-line;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+.settings-help:hover .settings-help-tip,
+.settings-help:focus-within .settings-help-tip {
+  opacity: 1;
+  visibility: visible;
+}
 .ai-settings .settings-row > div:last-child p,
 .cloud-settings .settings-row > div:last-child p {
   max-width: 100%;

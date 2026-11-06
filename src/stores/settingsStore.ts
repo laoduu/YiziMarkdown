@@ -71,6 +71,12 @@ export interface SettingsState {
   cursorStyle: 'text' | 'bold'
   mouseSpotlight: boolean
 
+  /** 本地文档的粘贴图片保存位置：
+   *  - `doc`：文档旁 `images/`，Markdown 写相对路径（默认，便于搬迁 / 上传云端）
+   *  - `assets`：应用资源目录 `~/Documents/yizimarkdown/assets/`，Markdown 写绝对路径
+   *  云端文档不受此设置影响，始终使用相对路径（WebDAV 同步的硬要求）。 */
+  imageSaveMode: 'doc' | 'assets'
+
   // 预览模式排版
   previewFontSize: number
   previewLineHeight: number
@@ -212,6 +218,9 @@ export const useSettingsStore = create<SettingsState>()(
       cursorStyle: 'text',
       mouseSpotlight: true,
 
+      // 粘贴图片保存位置：默认跟随文档（相对路径）；可切到应用资源目录（绝对路径）
+      imageSaveMode: 'doc',
+
       // 外观
       currentTheme: DEFAULT_THEME,
       isDark: false,
@@ -303,7 +312,8 @@ export const useSettingsStore = create<SettingsState>()(
       // v17: 通用设置新增界面字号 uiTextScale（默认 1.1）
       // v18: 界面字号从全局缩放改为字号/图标缩放，旧实验值 1.0 迁移到新默认 1.1
       // v19: 用户显示值改为相对新基准（100% = 绝对 1.1）；旧实验值统一回默认 100%
-      version: 19,
+      // v20: 粘贴图片保存位置 —— 新增 imageSaveMode（local 文档默认文档旁 images/）
+      version: 20,
       migrate: (persisted: unknown) => {
         // 自动迁移旧字体栈到 MiSans 方案
         const oldFont = "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
@@ -374,6 +384,9 @@ export const useSettingsStore = create<SettingsState>()(
           // v19：旧实验值使用绝对倍率，统一重置为新基准下的 100%（之后再按用户设置保存）
           state.uiTextScale = UI_TEXT_SCALE_DEFAULT
           state.uiTextScale = clampNumber(state.uiTextScale, UI_TEXT_SCALE_MIN, UI_TEXT_SCALE_MAX, UI_TEXT_SCALE_DEFAULT)
+          // v20：粘贴图片保存位置。旧存档没有它 ⇒ `doc`（文档旁 images/，与加入设置前的行为一致）；
+          // 非法值同样回落到默认，避免手改 localStorage 后写入未知目录。
+          if (state.imageSaveMode !== 'assets') state.imageSaveMode = 'doc'
           // v14：PPTX 导出。存量存档没有这四个键 ⇒ 补默认值。
           // 超页策略只认枚举值（手改 localStorage 写入非法值会让分段按钮全灭）。
           if (typeof state.pptxExportHintSeen !== 'boolean') state.pptxExportHintSeen = false

@@ -1395,11 +1395,13 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       view.focus()
     }
 
-    /** 剪贴板原始图片 → 文档 images/（未命名文档先落暂存目录），插入 Markdown */
+    /** 剪贴板原始图片 → 文档 images/（或应用资源目录；未命名文档先落暂存），插入 Markdown */
     const pasteImageFiles = async (files: File[]) => {
       const tab = useEditorStore.getState().currentTab()
       const docPath = tab?.filePath ?? null
       const tabId = tab?.id ?? 'clipboard'
+      // 云端文档强制相对路径（WebDAV 只同步相对引用）；本地文档按设置
+      const saveMode = tab?.remote ? 'doc' : useSettingsStore.getState().imageSaveMode
       const parts: string[] = []
       let failed = 0
       let tooLarge = false
@@ -1411,7 +1413,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         }
         try {
           const base64 = await readFileAsBase64(file)
-          const saved = await savePastedImage(docPath, tabId, base64)
+          const saved = await savePastedImage(docPath, tabId, base64, saveMode)
           parts.push(imageMarkdownRef(saved.markdownRef, imageAltFromFile(file)))
         } catch (err) {
           if (isImageTooLargeError(err)) tooLarge = true
@@ -1469,9 +1471,10 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
           const tab = useEditorStore.getState().currentTab()
           const docPath = tab?.filePath ?? null
           const tabId = tab?.id ?? 'clipboard'
+          const saveMode = tab?.remote ? 'doc' : useSettingsStore.getState().imageSaveMode
           md = await materializePastedImages(md, {
-            importLocalFile: async (fileUrl) => (await importImageFile(docPath, tabId, fileUrl)).markdownRef,
-            saveDataImage: async (base64) => (await savePastedImage(docPath, tabId, base64)).markdownRef,
+            importLocalFile: async (fileUrl) => (await importImageFile(docPath, tabId, fileUrl, saveMode)).markdownRef,
+            saveDataImage: async (base64) => (await savePastedImage(docPath, tabId, base64, saveMode)).markdownRef,
           })
         }
         insertAtCursor(md)
