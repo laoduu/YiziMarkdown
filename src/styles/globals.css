@@ -1062,6 +1062,50 @@ a {
   word-break: break-word;
 }
 
+/* 代码块行：每行 = 行号 + 内容。逻辑行由 withCodeLineNumbers 预先拆好，
+   所以开启换行时一个逻辑行可以占多行，但后续视觉行不会重复出现行号。 */
+.code-line {
+  display: flex;
+  align-items: stretch;
+}
+
+.code-line-number {
+  display: none;
+  flex: 0 0 auto;
+  min-width: 2.8em;
+  padding-right: 0.8em;
+  margin-right: 0.8em;
+  justify-content: flex-end;
+  align-items: flex-start;
+  text-align: right;
+  color: var(--sidebar-text);
+  opacity: 0.5;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+  /* 行号与代码之间的细分隔线；每行一段，连续行看起来就是一条竖线 */
+  border-right: 1px solid var(--editor-border);
+}
+
+:root.code-block-line-numbers .code-line-number {
+  display: flex;
+}
+
+.code-line-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* 实时代码块补上与预览一致的代码内边距，行号列才有呼吸空间 */
+.cm-live-block--code pre {
+  margin: 0;
+}
+
+.cm-live-block--code pre code {
+  display: block;
+  padding: 1em;
+  overflow-x: auto;
+}
+
 /* 代码块 / 目录块的悬浮控件：右上角图标，悬停显现，无背景条 */
 .code-block-actions {
   position: absolute;
@@ -1129,6 +1173,7 @@ a {
 }
 
 .code-block-wrap-btn,
+.code-block-lines-btn,
 .code-block-copy-btn,
 .toc-frame-btn {
   display: flex;
@@ -1146,6 +1191,7 @@ a {
 }
 
 .code-block-wrap-btn:hover,
+.code-block-lines-btn:hover,
 .code-block-copy-btn:hover,
 .toc-frame-btn:hover {
   background: color-mix(in srgb, var(--editor-surface) 92%, transparent);
@@ -1153,6 +1199,11 @@ a {
 }
 
 :root.code-block-wrap .code-block-wrap-btn {
+  background: color-mix(in srgb, var(--editor-accent) 16%, transparent);
+  color: var(--editor-accent);
+}
+
+:root.code-block-line-numbers .code-block-lines-btn {
   background: color-mix(in srgb, var(--editor-accent) 16%, transparent);
   color: var(--editor-accent);
 }
@@ -1261,13 +1312,49 @@ a {
   width: 100%;
   border-collapse: collapse;
   margin: 1em 0;
+  /* prose 把 table 缩到 .875em / line-height 1.714（prose-lg 是 .888em / 1.5），
+     实时表格却沿用正文的 1em / 2.0。两边的空单元格高度会差一倍。 */
+  font-size: 1em;
+  line-height: inherit;
 }
 
+/* 与实时模式的表格对齐：prose 会把 th/td 缩小到 0.888em、行高压到 1.5，
+   实时表格却继承正文的 1em / line-height。这里显式拉回正文排版，
+   否则空表格在预览里会比实时模式矮一截。 */
 .editor-content th,
 .editor-content td {
-  padding: 0.5em 1em;
+  padding: 0.6em 1em;
   border: 1px solid var(--editor-border);
   text-align: left;
+  font-size: 1em;
+  line-height: inherit;
+  min-width: 2em;
+}
+
+/* 空单元格没有行盒，预览里会塌成一条细线；实时模式的 contenteditable
+   单元格天然有一行高度。塞一个不可见的 1em 行盒，让两边的空表格一致。 */
+.editor-content th:empty::before,
+.editor-content td:empty::before {
+  content: '';
+  display: inline-block;
+  width: 0;
+  height: 1em;
+}
+
+/* 部分主题（GitHub：width:max-content；Forest：width:auto + min-width:80%）
+   会把「全空表格」缩成几个字的宽度，实时模式却是满宽。预览渲染后会
+   给全空表格挂 .markdown-empty-table（见 PreviewPane），这里只对它们
+   强制回到实时的排版：满宽、正文基准字体、相同内边距。 */
+.editor-content table.markdown-empty-table {
+  display: table !important;
+  width: 100% !important;
+  font-size: 1em !important;
+  line-height: inherit !important;
+}
+
+.editor-content table.markdown-empty-table th,
+.editor-content table.markdown-empty-table td {
+  padding: 0.6em 1em !important;
 }
 
 .editor-content th {

@@ -53,6 +53,14 @@ test('目录边框开关关闭时，导出文档带上 toc-frame-off', () => {
   assert.doesNotMatch(on, /toc-frame-off/)
 })
 
+test('代码块行号开关会带到导出文档的根类', () => {
+  const html = buildExportHtml({ ...base, codeBlockLineNumbers: true })
+  assert.match(html, /<html class="theme-tech dark code-block-line-numbers"/)
+  assert.match(html, /<body class="theme-tech dark code-block-line-numbers">/)
+  const off = buildExportHtml({ ...base, codeBlockLineNumbers: false })
+  assert.doesNotMatch(off, /code-block-line-numbers/)
+})
+
 test('静态 HTML 导出隐藏目录右上角开关（没有可用的点击处理器）', () => {
   const html = buildExportHtml({ ...base })
   assert.match(html, /\.toc-frame-actions\{display:none!important\}/)

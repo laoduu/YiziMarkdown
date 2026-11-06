@@ -207,6 +207,15 @@ fn delete_to_trash(path: String) -> Result<(), String> {
     trash::delete(&path).map_err(|e| format!("Failed to move to trash: {}", e))
 }
 
+/// 用系统默认程序打开文件（导出完成后点「打开」）
+#[tauri::command]
+fn open_path(path: String) -> Result<(), String> {
+    if !Path::new(&path).is_file() {
+        return Err(format!("File not found: {}", path));
+    }
+    open::that(&path).map_err(|e| format!("Failed to open file: {}", e))
+}
+
 /// 在系统文件管理器中显示并选中该文件（Windows 资源管理器 / macOS Finder）
 #[tauri::command]
 fn reveal_in_explorer(path: String) -> Result<(), String> {
@@ -1282,6 +1291,19 @@ fn write_template(name: String, content: String) -> Result<(), String> {
     fs::write(dir.join(&clean), content).map_err(|e| format!("Failed to write template: {}", e))
 }
 
+/// 删除用户模板。只作用于用户文档目录，内置模板资源本身不动；
+/// 若同名内置模板仍存在，下次同步可能重新生成用户副本（避免改坏安装目录）。
+#[tauri::command]
+fn delete_template(name: String) -> Result<(), String> {
+    let clean = safe_file_name(&name)?;
+    let dir = get_user_templates_dir()?;
+    let path = dir.join(&clean);
+    if !path.is_file() {
+        return Err(format!("Template not found: {}", clean));
+    }
+    fs::remove_file(&path).map_err(|e| format!("Failed to delete template: {}", e))
+}
+
 // ===== AI Skills 技能 =====
 
 /// 读取 skills/skills.json（技能清单），原样返回 JSON 字符串。
@@ -2164,6 +2186,7 @@ fn main() {
             create_directory,
             rename_path,
             delete_to_trash,
+            open_path,
             reveal_in_explorer,
             get_system_fonts,
             pick_and_read_file,
@@ -2192,6 +2215,7 @@ fn main() {
             list_templates,
             read_template,
             write_template,
+            delete_template,
             list_skills,
             read_skill_file,
             get_skill_guide_path,

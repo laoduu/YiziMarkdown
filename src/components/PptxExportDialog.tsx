@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { AlertTriangle, CheckCircle2, FileDown, Loader2, Play, X } from 'lucide-react'
+import ExportResultActions from './ExportResultActions'
 import { useI18n } from '../i18n'
 import { useSettingsStore } from '../stores/settingsStore'
 import { invokeTauri, invokeTauriOrThrow } from '../lib/tauri'
@@ -484,23 +485,34 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
             >
               {t('pptxExport.cancelExport')}
             </button>
+          ) : result ? (
+            <>
+              <button
+                onClick={onClose}
+                className="px-3 py-1.5 rounded border border-[var(--editor-border)] hover:bg-[var(--editor-hover)]"
+              >
+                {t('common.close')}
+              </button>
+              <ExportResultActions path={result.path} onDone={onClose} />
+            </>
           ) : (
-            <button
-              onClick={onClose}
-              className="px-3 py-1.5 rounded border border-[var(--editor-border)] hover:bg-[var(--editor-hover)]"
-            >
-              {result ? t('common.close') : t('common.cancel')}
-            </button>
+            <>
+              <button
+                onClick={onClose}
+                className="px-3 py-1.5 rounded border border-[var(--editor-border)] hover:bg-[var(--editor-hover)]"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={startExport}
+                className="px-3 py-1.5 rounded text-white flex items-center gap-1.5"
+                style={{ background: 'var(--editor-accent)' }}
+              >
+                <FileDown size={14} />
+                {t('pptxExport.export')}
+              </button>
+            </>
           )}
-          <button
-            onClick={startExport}
-            disabled={busy}
-            className="px-3 py-1.5 rounded text-white disabled:opacity-50 flex items-center gap-1.5"
-            style={{ background: 'var(--editor-accent)' }}
-          >
-            <FileDown size={14} />
-            {busy ? t('pptxExport.exporting') : t('pptxExport.export')}
-          </button>
         </div>
       </div>
     </div>

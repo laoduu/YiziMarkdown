@@ -14,6 +14,7 @@ import { useEditorStore } from '../stores/editorStore.ts'
 import { getCurrentLang, translate } from '../i18n/index.ts'
 import { resolveLocalImageSrc } from './localImages.ts'
 import { addTocFrameButton } from './tocFrame.ts'
+import { LINE_NUMBERS_ICON, withCodeLineNumbers } from './codeBlockLines.ts'
 import { invokeTauri } from './tauri.ts'
 import { getMarkdownIt } from './markdownRenderer.ts'
 import { useSettingsStore } from '../stores/settingsStore.ts'
@@ -379,7 +380,8 @@ class CodeBlockWidget extends WidgetType {
     pre.className = 'hljs'
     if (this.lang) pre.dataset.lang = this.lang
     const codeEl = document.createElement('code')
-    codeEl.innerHTML = highlightCode(this.code, this.lang)
+    // 预生成逻辑行 + 行号；显隐由根类 code-block-line-numbers 控制
+    codeEl.innerHTML = withCodeLineNumbers(highlightCode(this.code, this.lang))
     pre.appendChild(codeEl)
     wrap.appendChild(pre)
     revealSourceOnClick(wrap, view, this.contentPos)
@@ -397,6 +399,16 @@ class CodeBlockWidget extends WidgetType {
       const next = !useSettingsStore.getState().codeBlockWrap
       useSettingsStore.getState().setField('codeBlockWrap', next)
     })
+    const linesBtn = document.createElement('button')
+    linesBtn.className = 'code-block-lines-btn'
+    linesBtn.title = tLive('toggleLineNumbers')
+    linesBtn.innerHTML = LINE_NUMBERS_ICON
+    linesBtn.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      const next = !useSettingsStore.getState().codeBlockLineNumbers
+      useSettingsStore.getState().setField('codeBlockLineNumbers', next)
+    })
     const copyBtn = document.createElement('button')
     copyBtn.className = 'code-block-copy-btn'
     copyBtn.title = tLive('copyCode')
@@ -413,6 +425,7 @@ class CodeBlockWidget extends WidgetType {
       }
     })
     actions.appendChild(wrapBtn)
+    actions.appendChild(linesBtn)
     actions.appendChild(copyBtn)
     wrap.appendChild(actions)
 

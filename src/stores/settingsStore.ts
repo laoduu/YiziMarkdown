@@ -57,6 +57,8 @@ export interface SettingsState {
   wordWrap: boolean
   /** 代码块自动换行：全局持久化，切换文档 / 刷新后保持上次选择（默认横向滚动） */
   codeBlockWrap: boolean
+  /** 代码块行号开关：预览 / 实时共用，持久化；默认关闭 */
+  codeBlockLineNumbers: boolean
   spellCheck: boolean
   /** [toc] 目录块的边框与背景开关：全局偏好，预览 / 实时 / 阅读共用；默认开启（样式由主题令牌提供） */
   tocFrame: boolean
@@ -199,6 +201,7 @@ export const useSettingsStore = create<SettingsState>()(
       showLineNumbers: true,
       wordWrap: true,
       codeBlockWrap: false,
+      codeBlockLineNumbers: false,
       tocFrame: true,
       spellCheck: false,
       // 默认 900：与源码模式改动前一致。注意预览模式里部分主题原本自带 800/700px 的固定宽度，
@@ -347,6 +350,8 @@ export const useSettingsStore = create<SettingsState>()(
           if (typeof state.formatManuallyCollapsed !== 'boolean') state.formatManuallyCollapsed = false
           // 代码块换行偏好。旧存档没有 → false（默认横向滚动）
           if (typeof state.codeBlockWrap !== 'boolean') state.codeBlockWrap = false
+          // 代码块行号开关。旧存档没有 → false（默认不显示行号）
+          if (typeof state.codeBlockLineNumbers !== 'boolean') state.codeBlockLineNumbers = false
           // 目录边框/背景开关。旧存档没有 → true（预设主题默认带框）
           if (typeof state.tocFrame !== 'boolean') state.tocFrame = true
           if (typeof state.brandName !== 'string') state.brandName = ''

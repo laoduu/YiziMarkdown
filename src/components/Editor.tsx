@@ -23,6 +23,7 @@ import { slashMenuExtension, slashMenuState, showSlashMenu, hideSlashMenu, slash
 import { COLUMN_REGION_SNIPPET, COLUMN_REGION_CURSOR } from '../lib/slides'
 import { selectionToolbarExtension, type SelectionToolbarInfo } from '../lib/cm-selection-toolbar'
 import { addTocFrameButton } from '../lib/tocFrame'
+import { LINE_NUMBERS_ICON, withCodeLineNumbers } from '../lib/codeBlockLines'
 import SlashMenu from './SlashMenu'
 import SelectionToolbar from './SelectionToolbar'
 import ContentWidthHandles from './ContentWidthHandles'
@@ -400,6 +401,8 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
       // fence 令牌注入的源码行号（1 基），用于把语言修改写回源文档
       const sourceLine = Number(pre.getAttribute('data-source-line') || '0')
       const codeText = code?.textContent || ''
+      // 先拆成逻辑行并写行号；行号显隐由根类控制，无需重新渲染
+      if (code) code.innerHTML = withCodeLineNumbers(code.innerHTML)
 
       // 右上角操作区：悬浮显示，不占文档布局
       const actions = document.createElement('div')
@@ -410,6 +413,7 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
             <path d="M3 6h18M3 12h12M3 18h6"/>
           </svg>
         </button>
+        <button class="code-block-lines-btn" title="${t('live.toggleLineNumbers')}">${LINE_NUMBERS_ICON}</button>
         <button class="code-block-copy-btn" title="${t('live.copyCode')}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
@@ -448,6 +452,13 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
       wrapBtn?.addEventListener('click', () => {
         const next = !useSettingsStore.getState().codeBlockWrap
         useSettingsStore.getState().setField('codeBlockWrap', next)
+      })
+
+      // 行号控制按钮：同样持久化，显隐由根类控制（DOM 已预生成行号）
+      const linesBtn = actions.querySelector('.code-block-lines-btn')
+      linesBtn?.addEventListener('click', () => {
+        const next = !useSettingsStore.getState().codeBlockLineNumbers
+        useSettingsStore.getState().setField('codeBlockLineNumbers', next)
       })
 
       // 右下角语言标签：悬停显现，点击进入行内编辑
@@ -500,6 +511,18 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
       addTocFrameButton(nav, t('live.toggleTocFrame'))
     })
   }, [renderedHtml, t])
+
+  // 标记全空表格：部分主题会把 max-content / auto 的空表格缩成几个字的宽度，
+  // 实时模式却是满宽。标在 DOM 上比 CSS :has 更兼容旧 WebKit（同时会带进 HTML/PDF 导出）。
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    container.querySelectorAll<HTMLTableElement>('table').forEach((table) => {
+      const hasContent = Array.from(table.querySelectorAll('th, td'))
+        .some((cell) => (cell.innerHTML || '').trim() !== '')
+      table.classList.toggle('markdown-empty-table', !hasContent)
+    })
+  }, [renderedHtml])
 
   // ===== 脚注引用悬浮预览：hover 上标 → 浮窗显示文末定义（免跳转）；点击仍走锚点跳转 =====
   // 取材：直接克隆文末定义 <li>（预览 DOM 里必然存在），去掉返回链与 id 后注入浮窗。
@@ -1667,8 +1690,8 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       case 'heading2': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '## ' }, selection: { anchor: newFrom + 3, head: newFrom + 3 } }); break
       case 'heading3': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '### ' }, selection: { anchor: newFrom + 4, head: newFrom + 4 } }); break
       case 'table': {
-        const col = t('toolbar.column')
-        view.dispatch({ changes: { from: newFrom, to: newTo, insert: `| ${col}1 | ${col}2 | ${col}3 |\n| --- | --- | --- |\n|  |  |  |\n` }, selection: { anchor: newFrom + 2, head: newFrom + 2 } }); break
+        // 只给表格骨架，不预填「列1/列2/列3」等占位内容
+        view.dispatch({ changes: { from: newFrom, to: newTo, insert: '|  |  |  |\n| --- | --- | --- |\n|  |  |  |\n' }, selection: { anchor: newFrom + 2, head: newFrom + 2 } }); break
       }
       case 'link': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '[]()' }, selection: { anchor: newFrom + 1, head: newFrom + 1 } }); break
       case 'image': view.dispatch({ changes: { from: newFrom, to: newTo, insert: '![]()' }, selection: { anchor: newFrom + 2, head: newFrom + 2 } }); break

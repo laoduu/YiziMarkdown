@@ -50,7 +50,7 @@ import {
   Bot,
   ChevronsLeft,
   ChevronsRight,
-  Download,
+  Upload,
   LayoutTemplate,
   CloudUpload,
   Square,
@@ -404,7 +404,7 @@ export default function Toolbar({
           }}
         >
           <ToolbarButton 
-            icon={<Download size={16} />} 
+            icon={<Upload size={16} />} 
             tooltip={t('toolbar.export')} 
             onClick={() => {}}
             accent
@@ -704,7 +704,7 @@ export default function Toolbar({
                       onMouseEnter={() => setTablePickerSize({rows: row, cols: col})}
                       onClick={() => {
                         if (row > 0 && col > 0) {
-                          const md = generateTableMd(row, col, t)
+                          const md = generateTableMd(row, col)
                           onInsertMarkdown(md)
                           setShowTablePicker(false)
                         }
@@ -901,13 +901,13 @@ function ToolbarDivider() {
   return <div className="w-px h-5 bg-[var(--toolbar-border)] mx-px shrink-0" />
 }
 
-function generateTableMd(rows: number, cols: number, t: (key: string, params?: Record<string, string | number>) => string): string {
-  const header = '| ' + Array.from({length: cols}, (_, i) => `${t('toolbar.column')}${i + 1}`).join(' | ') + ' |'
+function generateTableMd(rows: number, cols: number): string {
+  // 只生成空白表格骨架：表头与正文单元格都留空，不预填「列1 / 内容」
+  const emptyRow = (n: number) => '| ' + Array.from({length: n}, () => '').join(' | ') + ' |'
+  const header = emptyRow(cols)
   const sep = '| ' + Array.from({length: cols}, () => '------').join(' | ') + ' |'
-  const bodyRows = Array.from({length: rows - 1}, () => 
-    '| ' + Array.from({length: cols}, () => t('toolbar.content')).join(' | ') + ' |'
-  ).join('\n')
-  return '\n' + header + '\n' + sep + '\n' + bodyRows + '\n'
+  const bodyRows = Array.from({length: Math.max(0, rows - 1)}, () => emptyRow(cols)).join('\n')
+  return '\n' + header + '\n' + sep + '\n' + (bodyRows ? bodyRows + '\n' : '')
 }
 
 /** 导出格式字母徽标：无衬线大字（SVG text），标准字形、大字号小尺寸清晰；currentColor 跟随主题 */

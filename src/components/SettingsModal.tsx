@@ -1254,14 +1254,25 @@ function TemplatesSettings() {
   const [editing, setEditing] = useState(false)
   const [editContent, setEditContent] = useState('')
   const [editName, setEditName] = useState('')
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteBusy, setDeleteBusy] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const defaultTemplate = useSettingsStore((s) => s.defaultTemplate)
+  const setField = useSettingsStore((s) => s.setField)
 
   const refresh = useCallback(async () => { const l = await invokeTauri<string[]>('list_templates'); setTemplates(l || []) }, [])
 
   useEffect(() => { refresh() }, [refresh])
 
-  const load = async (name: string) => { const c = await invokeTauri<string>('read_template', { name }); if (c) { setTContent(c); setSelected(name); setEditing(false) } }
-  const handleNew = () => { setEditContent('# 新模板\n\n'); setEditName('new-template.md'); setEditing(true) }
-  const handleEdit = () => { setEditContent(tContent); setEditName(selected || ''); setEditing(true) }
+  const load = async (name: string) => {
+    const c = await invokeTauri<string>('read_template', { name })
+    if (c) {
+      setTContent(c); setSelected(name); setEditing(false)
+      setDeleteOpen(false); setDeleteError(null)
+    }
+  }
+  const handleNew = () => { setEditContent('# 新模板\n\n'); setEditName('new-template.md'); setEditing(true); setDeleteOpen(false) }
+  const handleEdit = () => { setEditContent(tContent); setEditName(selected || ''); setEditing(true); setDeleteOpen(false) }
   const handleSave = async () => {
     const name = editName.trim()
     if (!name) return
@@ -1269,6 +1280,28 @@ function TemplatesSettings() {
     // 写入用户文档目录（~/Documents/yizimarkdown/templates/），卸载重装不丢
     await invokeTauri('write_template', { name: n, content: editContent })
     await refresh(); setSelected(n); setTContent(editContent); setEditing(false)
+  }
+  const openDelete = () => {
+    setDeleteError(null)
+    setDeleteOpen(true)
+  }
+  const handleDelete = async () => {
+    if (!selected || deleteBusy) return
+    setDeleteBusy(true)
+    setDeleteError(null)
+    try {
+      await invokeTauriOrThrow('delete_template', { name: selected })
+      // 默认模板被删后清空设置，避免新建文件时读一个不存在的模板
+      if (defaultTemplate === selected) setField('defaultTemplate', '')
+      setDeleteOpen(false)
+      setSelected(null)
+      setTContent('')
+      setEditing(false)
+      await refresh()
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : String(e))
+    }
+    setDeleteBusy(false)
   }
 
   return (
@@ -1298,10 +1331,37 @@ function TemplatesSettings() {
                 ))}
                 {templates.length === 0 && <div className="px-3 py-3 text-xs text-[var(--sidebar-text)] text-center">{t('settings.noTemplates')}</div>}
               </div>
-              <div className="flex-1 relative">
-                {selected && <div className="absolute top-1 right-1"><button onClick={handleEdit} className="text-[0.6875rem] text-[var(--editor-accent)] hover:underline px-2 py-1">{t('settings.edit')}</button></div>}
+              <div className="flex-1 flex flex-col min-w-0">
+                {selected && (
+                  <div className="flex items-center justify-end gap-1 mb-1 -mt-1">
+                    <button onClick={handleEdit} className="text-[0.6875rem] text-[var(--editor-accent)] hover:underline px-2 py-1">{t('settings.edit')}</button>
+                    <button onClick={openDelete} className="text-[0.6875rem] text-red-500 hover:underline px-2 py-1">{t('settings.deleteTemplate')}</button>
+                  </div>
+                )}
                 {selected ? <textarea value={tContent} readOnly className="settings-textarea font-mono opacity-80" rows={12} />
                   : <div className="flex items-center justify-center h-36 text-xs text-[var(--sidebar-text)] border border-[var(--editor-border)] rounded-lg bg-[var(--editor-surface)]">{t('settings.selectToPreview')}</div>}
+                {selected && deleteOpen && (
+                  <div
+                    className="mt-2 rounded-lg border border-red-400/50 p-2.5"
+                    style={{ background: 'color-mix(in srgb, var(--editor-surface) 80%, transparent)' }}
+                  >
+                    <p className="text-[0.75rem] text-[var(--editor-text)] mb-1">
+                      {t('settings.deleteTemplateConfirm', { name: selected })}
+                    </p>
+                    {deleteError && <p className="text-[0.6875rem] text-red-500 mb-1 break-words">{deleteError}</p>}
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => setDeleteOpen(false)} disabled={deleteBusy} className="settings-btn-secondary">{t('common.cancel')}</button>
+                      <button
+                        onClick={handleDelete}
+                        disabled={deleteBusy}
+                        className="settings-btn-primary"
+                        style={{ background: '#dc2626', ...(deleteBusy ? { opacity: 0.5 } : {}) }}
+                      >
+                        {t('common.delete')}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

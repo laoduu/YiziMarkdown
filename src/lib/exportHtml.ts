@@ -55,6 +55,8 @@ export interface ExportDocInput {
   print?: boolean
   /** [toc] 边框/背景开关；false 时导出文档沿用 toc-frame-off，强制无框 */
   tocFrame?: boolean
+  /** 代码块行号开关；true 时导出文档带上 code-block-line-numbers 根类 */
+  codeBlockLineNumbers?: boolean
 }
 
 /** 属性值转义：内联样式里可能带引号（字体名、url(...)），拼进 style="…" 必须转义 */
@@ -107,7 +109,7 @@ export function buildExportHtml(input: ExportDocInput): string {
   // 打印**不带 dark 类**：PDF 一律按亮色纸面导出（与 Word 一致，用户要求「暗色也按亮色导出」）。
   // 主题 CSS 里亮色变量是 `:root.theme-x`、暗色是 `:root.theme-x.dark`，去掉 dark 就自动落到亮色配色，
   // 不需要另做一套「白底等效色」换算。独立 HTML 仍按预览原样带 dark。
-  const themeClass = `theme-${input.theme}${input.isDark && !print ? ' dark' : ''}${input.tocFrame === false ? ' toc-frame-off' : ''}`
+  const themeClass = `theme-${input.theme}${input.isDark && !print ? ' dark' : ''}${input.tocFrame === false ? ' toc-frame-off' : ''}${input.codeBlockLineNumbers ? ' code-block-line-numbers' : ''}`
 
   const tocHtml = wantToc
     ? `<nav class="export-toc"><div class="export-toc-title">${text(input.outline!.title)}</div>${

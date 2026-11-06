@@ -10,6 +10,7 @@ import Slideshow from './components/Slideshow'
 import Reader from './components/Reader'
 import PptxExportDialog from './components/PptxExportDialog'
 import DocxExportDialog, { type DocxExportOptions } from './components/DocxExportDialog'
+import ExportResultDialog from './components/ExportResultDialog'
 import PluginExportDialog, { type PluginExportSource } from './components/PluginExportDialog'
 import AIChatPanel from './components/AIChatPanel'
 import { PanelLeftClose, PanelLeft, Loader2 } from 'lucide-react'
@@ -155,7 +156,7 @@ interface EpubSession {
 
 function App() {
   const { t } = useI18n()
-  const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, contentMaxWidth, uiTextScale, codeBlockWrap, tocFrame, enabledPlugins, pluginConfigs, setField, aiPanelOpen, updateSettings, userThemeEnabled, userThemeName, customCssBase, slideColStyle, slideColAlign, cursorStyle } = useSettingsStore()
+  const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, contentMaxWidth, uiTextScale, codeBlockWrap, codeBlockLineNumbers, tocFrame, enabledPlugins, pluginConfigs, setField, aiPanelOpen, updateSettings, userThemeEnabled, userThemeName, customCssBase, slideColStyle, slideColAlign, cursorStyle } = useSettingsStore()
   const {
     activeTabId, currentTab,
     openFile, openRemoteFile, openNewFile, closeTab, switchTab,
@@ -189,6 +190,7 @@ function App() {
   const [pluginExportDialog, setPluginExportDialog] = useState<{ pluginId: string; format: string } | null>(null)
   /** DOCX 导出弹窗：先选「主题色 / 跟随预览」，确认后再走保存对话框 */
   const [docxDialogOpen, setDocxDialogOpen] = useState(false)
+  const [exportResultPath, setExportResultPath] = useState<string | null>(null)
   /** 从工具栏「先看演示效果 / 告警跳页」启动演示时的首屏页码（0-based） */
   const [slideshowStart, setSlideshowStart] = useState<number | undefined>(undefined)
   /** 演示已打开时外部请求翻页：token 递增，保证同一页连续点两次也各跳一次 */
@@ -270,6 +272,11 @@ function App() {
   useEffect(() => {
     document.documentElement.classList.toggle('code-block-wrap', codeBlockWrap)
   }, [codeBlockWrap])
+
+  // 代码块行号：与换行一样用全局 class，预览 / 实时 / 导出共用同一偏好
+  useEffect(() => {
+    document.documentElement.classList.toggle('code-block-line-numbers', codeBlockLineNumbers)
+  }, [codeBlockLineNumbers])
 
   // 目录边框/背景开关：同一份持久化偏好驱动预览与实时模式的右上角按钮。
   // 只在关闭时加 toc-frame-off —— 导出 / 阅读模式没有 App 外壳，默认按主题令牌显示。
@@ -402,7 +409,8 @@ function App() {
         case 'link': editorRef.current?.insertMarkdown('[', 'link'); break
         case 'image': editorRef.current?.insertMarkdown('![', 'link'); break
         case 'codeBlock': editorRef.current?.insertCodeBlock(); break
-        case 'table': editorRef.current?.insertMarkdown('| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n|  |  |  |\n'); break
+        // 只给表格骨架，不预填「列1/列2/列3」等占位内容
+        case 'table': editorRef.current?.insertMarkdown('|  |  |  |\n| --- | --- | --- |\n|  |  |  |\n'); break
         case 'horizontalRule': editorRef.current?.insertHorizontalRule(); break
         // 视图循环切换：源代码 → 并排 → 实时 → 预览 → 源代码
         case 'viewCycle': {
@@ -1169,8 +1177,9 @@ function App() {
       outline: opts?.print ? undefined : { title: t('sidebar.outline'), items: outlineItems },
       print: !!opts?.print,
       tocFrame,
+      codeBlockLineNumbers,
     })
-  }, [currentTheme, isDark, t, tocFrame])
+  }, [currentTheme, isDark, t, tocFrame, codeBlockLineNumbers])
 
   /** 构建插件导出上下文：预览现场 + 主题 CSS + 文档元信息。 */
   const buildPluginExportSource = useCallback((tab: ReturnType<typeof currentTab>): PluginExportSource | null => {
@@ -1201,6 +1210,8 @@ function App() {
   const handleExport = useCallback(async (format: string, docxOptions?: DocxExportOptions) => {
     const tab = currentTab()
     if (!tab) return
+    // 新一次导出开始时先收起上一次的完成弹窗
+    setExportResultPath(null)
 
     // PPTX 不是「立即写盘」：先开弹窗（范围/备注/页脚/超页策略），由弹窗自己选路径再生成。
     // 这里只把「入口主题/明暗」传进去（工具栏入口 = 应用当前设置）。
@@ -1418,6 +1429,8 @@ function App() {
         tocIncluded ? `${exported} · ${t('docx.tocHint')}` : exported,
         tocIncluded ? 6000 : 2000,
       )
+      // 保存对话框型导出（docx / pdf / html / md / txt）：成功后提供打开文件/目录
+      setExportResultPath(savedPath)
     } catch (e) {
       console.error('[export] failed:', e)
       showToast(t('app.exportFailed'))
@@ -1766,6 +1779,9 @@ function App() {
         onClose={() => setDocxDialogOpen(false)}
         onExport={(options) => { handleExport('docx', options) }}
       />
+
+      {/* 保存对话框型导出（DOCX / PDF / HTML / Markdown / TXT）的完成弹窗 */}
+      <ExportResultDialog path={exportResultPath} onClose={() => setExportResultPath(null)} />
 
       {/* 导出 PPTX：工具栏 / 演示 HUD 共用同一个弹窗（弹窗内部先选路径再生成） */}
       {pptxDialog && tab && (
