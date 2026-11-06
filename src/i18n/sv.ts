@@ -158,6 +158,8 @@ exportEpub: 'Exportera till EPUB',
     emptyHint: 'Tryck Ctrl+O för att öppna en fil — den visas här',
   },
   editor: {
+    imagePasteFailed: "Det inklistrade bilden kunde inte sparas",
+    imageTooLarge: "Bilden är större än {mb} MB och infogades inte",
     copied: 'Kopierad',
     searchPlaceholder: 'Sök...',
     replace: 'Ersätt',

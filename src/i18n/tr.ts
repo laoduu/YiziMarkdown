@@ -158,6 +158,8 @@ exportEpub: 'EPUB olarak dışa aktar',
     emptyHint: 'Bir dosya açmak için Ctrl+O — burada görünecek',
   },
   editor: {
+    imagePasteFailed: "Yapıştırılan görsel kaydedilemedi",
+    imageTooLarge: "Görsel {mb} MB sınırını aşıyor, eklenmedi",
     copied: 'Kopyalandı',
     searchPlaceholder: 'Ara...',
     replace: 'Değiştir',

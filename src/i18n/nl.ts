@@ -158,6 +158,8 @@ exportEpub: 'Naar EPUB exporteren',
     emptyHint: 'Druk op Ctrl+O om een bestand te openen — het verschijnt hier',
   },
   editor: {
+    imagePasteFailed: "De geplakte afbeelding kon niet worden opgeslagen",
+    imageTooLarge: "Afbeelding is groter dan {mb} MB en is niet ingevoegd",
     copied: 'Gekopieerd',
     searchPlaceholder: 'Zoeken...',
     replace: 'Vervangen',

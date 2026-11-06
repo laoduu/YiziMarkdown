@@ -158,6 +158,8 @@ exportEpub: 'Exporter en EPUB',
     emptyHint: 'Appuyez sur Ctrl+O pour ouvrir un fichier — il apparaîtra ici',
   },
   editor: {
+    imagePasteFailed: "Échec de l'enregistrement de l'image collée",
+    imageTooLarge: "L'image dépasse {mb} Mo et n'a pas été insérée",
     copied: 'Copié',
     searchPlaceholder: 'Rechercher...',
     replace: 'Remplacer',

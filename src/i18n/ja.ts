@@ -158,6 +158,8 @@ exportEpub: 'EPUB にエクスポート',
     emptyHint: 'Ctrl+O でファイルを開くとここに表示されます',
   },
   editor: {
+    imagePasteFailed: "画像の保存に失敗したため、挿入しませんでした",
+    imageTooLarge: "画像が {mb} MB を超えるため、挿入しませんでした",
     copied: 'コピーしました',
     searchPlaceholder: '検索...',
     replace: '置換',

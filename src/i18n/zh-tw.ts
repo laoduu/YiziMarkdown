@@ -157,6 +157,8 @@ exportEpub: '匯出為 EPUB 電子書',
     emptyHint: '使用 Ctrl+O 開啟檔案，檔案會出現在這裡',
   },
   editor: {
+    imagePasteFailed: "圖片儲存失敗，未插入",
+    imageTooLarge: "圖片超過 {mb} MB，未插入",
     copied: '已複製',
     searchPlaceholder: '搜尋...',
     replace: '替換',

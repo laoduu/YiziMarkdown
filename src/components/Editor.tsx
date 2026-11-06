@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react'
 import { EditorView, keymap, lineNumbers, drawSelection, highlightActiveLine } from '@codemirror/view'
-import { EditorState, Compartment, Extension } from '@codemirror/state'
+import { EditorState, Compartment, Extension, Transaction } from '@codemirror/state'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { defaultHighlightStyle, syntaxHighlighting, indentOnInput, bracketMatching, codeFolding, foldKeymap } from '@codemirror/language'
 import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo } from '@codemirror/commands'
@@ -13,7 +13,14 @@ import { useEditorStore, type ViewMode } from '../stores/editorStore'
 import { findOutlineByLine, computeOutlineItems } from '../lib/headingId'
 import { numberOrderedLines } from '../lib/listFormat'
 import { isTaskLine, toggleTaskAtLine } from '../lib/taskList'
-import { decideClipboardPaste, materializeLocalImages, planPasteInsert } from '../lib/clipboardMarkdown'
+import { decideClipboardPaste, imageMarkdownRef, LOCAL_IMAGE_PREFIX, materializePastedImages, planPasteInsert } from '../lib/clipboardMarkdown'
+import { collectClipboardImages, imageAltFromFile, readFileAsBase64 } from '../lib/clipboardImages'
+import {
+  importImageFile,
+  isImageTooLargeError,
+  PASTED_IMAGE_MAX_BYTES,
+  savePastedImage,
+} from '../lib/docAssets'
 import { planHorizontalRule } from '../lib/horizontalRule'
 import { liveEditExtension } from '../lib/cm-live-render'
 import { liveThemeChanged } from '../lib/cm-live-blocks'
@@ -129,6 +136,8 @@ export function insertFootnoteAtView(view: EditorView): void {
 
 export interface EditorRef {
   insertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'ordered' | 'link' | 'tag' | 'block') => void
+  /** 整体替换正文（聚焦时也强制生效）：保存时图片路径被重写后需要立刻同步视图 */
+  replaceContent: (markdown: string) => void
   /** 按行插入分割线（见 lib/horizontalRule.ts）：不制造多余空段、不把上一行变成标题 */
   insertHorizontalRule: () => void
   insertCodeBlock: () => void
@@ -1035,6 +1044,22 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   }, [viewMode, getPreviewLines, findNearestLine])
 
   useImperativeHandle(ref, () => ({
+    replaceContent: (markdown: string) => {
+      const view = viewRef.current
+      if (!view) return
+      const current = view.state.doc.toString()
+      if (current === markdown) return
+      const head = Math.min(view.state.selection.main.head, markdown.length)
+      lastSyncedFromEditorRef.current = markdown
+      syncingFromExternalRef.current = true
+      view.dispatch({
+        changes: { from: 0, to: current.length, insert: markdown },
+        selection: { anchor: head },
+        // 路径重写是保存流程的副作用，不应进入撤销历史（否则撤销后会退回绝对路径）
+        annotations: Transaction.addToHistory.of(false),
+      })
+      syncingFromExternalRef.current = false
+    },
     insertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'ordered' | 'link' | 'tag' | 'block') => {
       const view = viewRef.current
       if (!view) return
@@ -1351,12 +1376,73 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     // DOM paste（**捕获阶段**）：富文本来源（网页 / Word / Google Docs…）统一在内存里转成 Markdown。
     // 必须是捕获阶段：CodeMirror 的 paste 观察器绑在 contentDOM 上，先执行会先把 text/plain
     // 原样插进去；在冒泡阶段再 preventDefault 已经晚了，结果就是「纯文本 + Markdown」两段粘连。
-    // 纯文本本身是 Markdown 源（Obsidian / VS Code）或 HTML 只有装饰标签时，交回原生粘贴。
+    // 原始图片（截图 / 资源管理器复制的图片文件）优先级最高：落盘成文件后插入相对路径。
+    const insertAtCursor = (markdown: string) => {
+      const { from, to } = view.state.selection.main
+      const insertAt = Math.min(from, view.state.doc.length)
+      const removeTo = Math.min(to, view.state.doc.length)
+      const insert = planPasteInsert(view.state.doc.toString(), insertAt, removeTo, markdown)
+      if (!insert) return
+      // 光标落在插入内容的末尾，但不越过末尾自动补出的空行
+      const trailingNewlines = insert.length - insert.replace(/\n+$/g, '').length
+      const caret = insertAt + insert.length - trailingNewlines
+      view.dispatch({
+        changes: { from: insertAt, to: removeTo, insert },
+        selection: { anchor: caret },
+        userEvent: 'input.paste',
+        scrollIntoView: true,
+      })
+      view.focus()
+    }
+
+    /** 剪贴板原始图片 → 文档 images/（未命名文档先落暂存目录），插入 Markdown */
+    const pasteImageFiles = async (files: File[]) => {
+      const tab = useEditorStore.getState().currentTab()
+      const docPath = tab?.filePath ?? null
+      const tabId = tab?.id ?? 'clipboard'
+      const parts: string[] = []
+      let failed = 0
+      let tooLarge = false
+
+      for (const file of files.slice(0, 20)) {
+        if (file.size > PASTED_IMAGE_MAX_BYTES) {
+          tooLarge = true
+          continue
+        }
+        try {
+          const base64 = await readFileAsBase64(file)
+          const saved = await savePastedImage(docPath, tabId, base64)
+          parts.push(imageMarkdownRef(saved.markdownRef, imageAltFromFile(file)))
+        } catch (err) {
+          if (isImageTooLargeError(err)) tooLarge = true
+          else failed++
+          console.error('[paste-image] failed:', err)
+        }
+      }
+
+      if (parts.length) insertAtCursor(parts.join('\n\n'))
+      if (tooLarge) {
+        onToast?.(translate(getCurrentLang(), 'editor.imageTooLarge', { mb: PASTED_IMAGE_MAX_BYTES / 1024 / 1024 }))
+      } else if (failed) {
+        onToast?.(translate(getCurrentLang(), 'editor.imagePasteFailed'))
+      }
+    }
+
     const onPaste = (e: ClipboardEvent) => {
       const cd = e.clipboardData
       if (!cd) return
       const target = e.target as Node | null
       if (target && !view.contentDOM.contains(target)) return
+
+      // 原始图片优先：截图 / 复制的图片文件。此时 HTML/纯文本里通常只有临时 blob，
+      // 先落盘才能保证文档里是可长期访问的本地文件。
+      const imageFiles = collectClipboardImages(cd)
+      if (imageFiles.length) {
+        e.preventDefault()
+        e.stopPropagation()
+        void pasteImageFiles(imageFiles)
+        return
+      }
 
       let html = ''
       let plain = ''
@@ -1374,28 +1460,21 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       e.preventDefault()
       e.stopPropagation()
 
-      const { from, to } = view.state.selection.main
-      const insertAt = Math.min(from, view.state.doc.length)
-      const removeTo = Math.min(to, view.state.doc.length)
-
       const run = async (text: string) => {
         let md = text
-        // Word / WPS 剪贴板图片是临时 file:// 路径：读成 data URL；失败则退回 alt 文本
-        if (md.includes('yizi-local-image:')) {
-          md = await materializeLocalImages(md, (path) => invokeTauri<string>('read_image_base64', { path }))
+        // 富文本里的图片也要落盘：
+        //   · Word / WPS 的 file:// 临时图
+        //   · 网页 / HTML 里的 data:image 内嵌图（避免文档里塞巨大 base64）
+        if (md.includes(LOCAL_IMAGE_PREFIX) || /data:image\//i.test(md)) {
+          const tab = useEditorStore.getState().currentTab()
+          const docPath = tab?.filePath ?? null
+          const tabId = tab?.id ?? 'clipboard'
+          md = await materializePastedImages(md, {
+            importLocalFile: async (fileUrl) => (await importImageFile(docPath, tabId, fileUrl)).markdownRef,
+            saveDataImage: async (base64) => (await savePastedImage(docPath, tabId, base64)).markdownRef,
+          })
         }
-        const insert = planPasteInsert(view.state.doc.toString(), insertAt, removeTo, md)
-        if (!insert) return
-        // 光标落在插入内容的末尾，但不越过末尾自动补出的空行
-        const trailingNewlines = insert.length - insert.replace(/\n+$/g, '').length
-        const caret = insertAt + insert.length - trailingNewlines
-        view.dispatch({
-          changes: { from: insertAt, to: removeTo, insert },
-          selection: { anchor: caret },
-          userEvent: 'input.paste',
-          scrollIntoView: true,
-        })
-        view.focus()
+        insertAtCursor(md)
       }
 
       void run(decision.text).catch(() => {

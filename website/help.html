@@ -1095,7 +1095,7 @@
 
             <div class="help-sub" id="faq-img">
                 <h3>预览中的图片不显示怎么办？</h3>
-                <p>本地图片支持 jpg / png / gif / webp / svg / bmp，路径需为<strong>绝对路径</strong>；网络图片以 <code>http</code> / <code>https</code> 开头即可正常显示。</p>
+                <p>本地图片支持 jpg / png / gif / webp / svg / bmp：<strong>相对路径</strong>（如 <code>images/photo.png</code>）按文档所在目录解析，绝对路径（如 <code>C:\images\photo.png</code>）也可直接使用；网络图片以 <code>http</code> / <code>https</code> 开头即可正常显示。粘贴图片时程序会自动在文档旁创建 <code>images/</code> 并写入相对路径。</p>
             </div>
 
             <div class="help-sub" id="faq-icon">
@@ -1144,7 +1144,7 @@
 
             <div class="help-sub" id="faq-cloud-images">
                 <h3>为什么云端文档里的图片没有一起上传？</h3>
-                <p>只有<strong>相对路径</strong>的图片（如 <code>images/a.png</code>、<code>../assets/x.png</code>）会随文档同步，并保持目录结构。绝对路径（<code>D:\pics\a.png</code>、<code>/home/me/a.png</code>）、<code>file://</code>、网络图片与 <code>data:</code> 都不会上传——这是为了避免把你本机其他位置的文件传到服务器。</p>
+                <p>只有<strong>相对路径</strong>的图片（如 <code>images/a.png</code>、<code>../assets/x.png</code>）会随文档同步，并保持目录结构。绝对路径（<code>D:\pics\a.png</code>、<code>/home/me/a.png</code>）、<code>file://</code>、网络图片与 <code>data:</code> 都不会上传——这是为了避免把你本机其他位置的文件传到服务器。粘贴 / 插入的图片会自动写成相对路径，因此会随文档一起上传。</p>
             </div>
 
             <div class="help-sub" id="faq-cloud-auth">

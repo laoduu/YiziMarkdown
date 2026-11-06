@@ -157,6 +157,8 @@ exportEpub: 'Export EPUB',
     emptyHint: 'Press Ctrl+O to open a file — it will appear here',
   },
   editor: {
+    imagePasteFailed: "Failed to save the pasted image",
+    imageTooLarge: "Image is larger than {mb} MB and was not inserted",
     copied: 'Copied',
     searchPlaceholder: 'Search...',
     replace: 'Replace',

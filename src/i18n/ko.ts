@@ -158,6 +158,8 @@ exportEpub: 'EPUB로 내보내기',
     emptyHint: 'Ctrl+O로 파일을 열면 여기에 표시됩니다',
   },
   editor: {
+    imagePasteFailed: "이미지를 저장하지 못해 삽입하지 않았습니다",
+    imageTooLarge: "이미지가 {mb} MB를 초과하여 삽입하지 않았습니다",
     copied: '복사됨',
     searchPlaceholder: '검색...',
     replace: '바꾸기',

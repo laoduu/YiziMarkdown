@@ -214,7 +214,7 @@ fn write_mirror(path: &Path, bytes: &[u8]) -> Result<(), String> {
 // ---------------------------------------------------------------------------
 
 /// 单张图片上限：超过则跳过，避免一张巨图拖垮打开流程。
-const MAX_IMAGE_BYTES: usize = 8 * 1024 * 1024;
+pub(crate) const MAX_IMAGE_BYTES: usize = 8 * 1024 * 1024;
 /// 单个文档引用的图片总量上限。
 const MAX_TOTAL_IMAGE_BYTES: usize = 32 * 1024 * 1024;
 

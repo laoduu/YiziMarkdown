@@ -12,8 +12,9 @@ import {
   convertHtmlToMarkdown,
   decideClipboardPaste,
   extractHtmlFragment,
+  imageMarkdownRef,
   looksLikeMarkdownSource,
-  materializeLocalImages,
+  materializePastedImages,
   normalizeMarkdown,
   planPasteInsert,
 } from '../src/lib/clipboardMarkdown.ts'
@@ -96,16 +97,47 @@ test('Word：file:// 图片写成占位 token，可由调用方读成 data URL',
   assert.match(md, /!\[本地图\]\(<yizi-local-image:[^>]+>\)/)
   assert.match(md, /!\[网络图\]\(https:\/\/example\.com\/b\.png\)/)
 
-  const ok = await materializeLocalImages(md, async () => 'data:image/png;base64,AAAA')
-  assert.match(ok, /!\[本地图\]\(data:image\/png;base64,AAAA\)/)
+  const ok = await materializePastedImages(md, {
+    importLocalFile: async () => 'images/image-abc.png',
+    saveDataImage: async () => null,
+  })
+  assert.match(ok, /!\[本地图\]\(images\/image-abc\.png\)/)
   assert.match(ok, /!\[网络图\]\(https:\/\/example\.com\/b\.png\)/)
 
-  // 读不到（临时文件已被清理）时退回 alt 文本，不留坏链接
-  const fail = await materializeLocalImages(md, async () => {
-    throw new Error('missing')
+  // 拿不到（临时文件已被清理）时退回 alt 文本，不留坏链接
+  const fail = await materializePastedImages(md, {
+    importLocalFile: async () => null,
+    saveDataImage: async () => null,
   })
   assert.equal((fail.match(/yizi-local-image/g) || []).length, 0)
   assert.match(fail, /本地图/)
+})
+
+test('网页/HTML 内嵌 data:image 落盘为相对引用，失败时小图保留原 data URL', async () => {
+  const md = '![内嵌图](data:image/png;base64,AAAA)'
+  const out = await materializePastedImages(md, {
+    importLocalFile: async () => null,
+    saveDataImage: async (b64) => (b64 === 'AAAA' ? 'images/image-x.png' : null),
+  })
+  assert.equal(out, '![内嵌图](images/image-x.png)')
+
+  const kept = await materializePastedImages(md, {
+    importLocalFile: async () => null,
+    saveDataImage: async () => null,
+  })
+  assert.equal(kept, md)
+})
+
+test('imageMarkdownRef：含空白的本地路径用尖括号包住', () => {
+  assert.equal(imageMarkdownRef('images/image-a.png', '图'), '![图](images/image-a.png)')
+  assert.equal(
+    imageMarkdownRef('C:/Users/John Doe/images/a.png', '图'),
+    '![图](<C:/Users/John Doe/images/a.png>)',
+  )
+})
+
+test('planPasteInsert：图片按块级内容粘贴时前后补空行', () => {
+  assert.equal(planPasteInsert('正文', 2, 2, '![x](images/a.png)'), '\n\n![x](images/a.png)')
 })
 
 test('Word/WPS：没有 thead 的表格不再多出空表头', () => {

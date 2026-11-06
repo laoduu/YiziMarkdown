@@ -158,6 +158,8 @@ exportEpub: 'Експортувати в EPUB',
     emptyHint: 'Натисніть Ctrl+O, щоб відкрити файл — він з\'явиться тут',
   },
   editor: {
+    imagePasteFailed: "Не вдалося зберегти вставлене зображення",
+    imageTooLarge: "Зображення перевищує {mb} MB, його не вставлено",
     copied: 'Скопійовано',
     searchPlaceholder: 'Пошук...',
     replace: 'Замінити',

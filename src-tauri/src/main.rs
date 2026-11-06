@@ -26,6 +26,13 @@ mod omml;
 mod remote_cache;
 mod webdav;
 
+// 文档图片资产：粘贴图片落盘 / 未命名暂存 / 保存迁移（v0.4.3）
+mod doc_assets;
+use doc_assets::{
+    adopt_staged_assets, cleanup_pasted_assets, import_image_file, save_file_with_assets,
+    save_pasted_image, stage_pending_assets,
+};
+
 // 主题资产分层：内置只读 + 用户层（见 theme_layer.rs 模块头）
 mod theme_layer;
 use theme_layer::{
@@ -2003,7 +2010,7 @@ fn set_window_border_color(window: tauri::WebviewWindow, color: String) -> Resul
 }
 
 /// 从图片二进制头部识别图片类型（与 docx_export::image_dimensions 支持的格式一致）
-fn sniff_image_mime(b: &[u8]) -> Option<&'static str> {
+pub(crate) fn sniff_image_mime(b: &[u8]) -> Option<&'static str> {
     if b.starts_with(b"\x89PNG\r\n\x1a\n") {
         Some("image/png")
     } else if b.starts_with(b"\xFF\xD8\xFF") {
@@ -2228,6 +2235,9 @@ fn main() {
             disassociate_epub_files,
             is_epub_associated,
             get_cli_open_file, get_file_meta, read_image_base64,
+            // 粘贴图片落盘 / 未命名暂存 / 保存迁移（v0.4.3）
+            save_pasted_image, import_image_file, save_file_with_assets,
+            stage_pending_assets, adopt_staged_assets, cleanup_pasted_assets,
             take_install_language,
             export_docx, export_pdf,
             set_window_border_color,

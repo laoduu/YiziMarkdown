@@ -145,68 +145,111 @@ export const LOCAL_IMAGE_PREFIX = 'yizi-local-image:'
 
 const LOCAL_IMAGE_RE = /!\[([^\]]*)\]\((?:<)?yizi-local-image:([^)>]+)(?:>)?\)/g
 
-/** 把 file:// 图片占位符换成真实 data URL；读失败的退回 alt 文本。 */
-export async function materializeLocalImages(
-  markdown: string,
-  readImage: (path: string) => Promise<string | null>,
-): Promise<string> {
-  if (!markdown.includes(LOCAL_IMAGE_PREFIX)) return markdown
-  const paths = new Set<string>()
-  LOCAL_IMAGE_RE.lastIndex = 0
-  let m: RegExpExecArray | null
-  while ((m = LOCAL_IMAGE_RE.exec(markdown))) {
-    try {
-      paths.add(decodeURIComponent(m[2]))
-    } catch {
-      /* 非法编码，忽略 */
-    }
-  }
-  if (!paths.size) return markdown
+/** `data:image/...;base64,` 图片引用（Turndown 从网页 / Word HTML 里带出来的内嵌图） */
+const DATA_IMAGE_RE = /!\[([^\]]*)\]\((data:image\/(?:png|jpe?g|gif|webp|bmp);base64,[A-Za-z0-9+/=]+)\)/gi
 
-  const data = new Map<string, string | null>()
-  await Promise.all(
-    [...paths].slice(0, 50).map(async (src) => {
-      const path = localFilePath(src)
-      if (!path) {
-        data.set(src, null)
-        return
-      }
-      try {
-        data.set(src, await readImage(path))
-      } catch {
-        data.set(src, null)
-      }
-    }),
-  )
-
-  LOCAL_IMAGE_RE.lastIndex = 0
-  return markdown.replace(LOCAL_IMAGE_RE, (_full, alt: string, enc: string) => {
-    let src = ''
-    try {
-      src = decodeURIComponent(enc)
-    } catch {
-      return alt
-    }
-    const resolved = data.get(src)
-    return resolved ? `![${alt}](${resolved})` : alt
-  })
+/** 生成图片 Markdown；路径含空白 / 括号时用尖括号包住（否则链接会被截断） */
+export function imageMarkdownRef(src: string, alt = 'image'): string {
+  const cleanAlt = (alt || '')
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/\[/g, '\\[')
+    .replace(/\]/g, '\\]')
+    .trim() || 'image'
+  const safeSrc = /[\s()<>]/.test(src) ? `<${src.replace(/>/g, '%3E')}>` : src
+  return `![${cleanAlt}](${safeSrc})`
 }
 
-/** file:///C:/x → C:/x；file:///Users/x → /Users/x（macOS 保留绝对路径） */
-function localFilePath(src: string): string | null {
-  let raw = src
-  try {
-    raw = decodeURIComponent(src)
-  } catch {
-    /* 保持原样 */
+export interface PastedImageDeps {
+  /** `data:image/...` 的纯 base64 → 落盘后的 Markdown 引用；失败返回 null */
+  saveDataImage: (base64: string) => Promise<string | null>
+  /** 本地 `file://` 图片 → 落盘后的 Markdown 引用；失败返回 null */
+  importLocalFile: (fileUrl: string) => Promise<string | null>
+}
+
+/**
+ * 把粘贴内容里的图片落盘成文件，返回替换后的 Markdown。
+ *
+ * 覆盖两种来源：
+ *   1. Word / WPS 的 `file://` 临时图（占位 token）→ 复制进文档 images/；
+ *   2. 网页 / HTML 里的 `data:image/...` 内嵌图 → 写出文件，避免文档里塞巨大 base64。
+ *
+ * 任何一张失败都只退回 alt 文本，不影响其余内容插入。
+ */
+export async function materializePastedImages(
+  markdown: string,
+  deps: PastedImageDeps,
+): Promise<string> {
+  let out = markdown
+
+  if (out.includes(LOCAL_IMAGE_PREFIX)) {
+    const paths = new Set<string>()
+    LOCAL_IMAGE_RE.lastIndex = 0
+    let m: RegExpExecArray | null
+    while ((m = LOCAL_IMAGE_RE.exec(out))) {
+      try {
+        paths.add(decodeURIComponent(m[2]))
+      } catch {
+        /* 非法编码，忽略 */
+      }
+    }
+    if (paths.size) {
+      const refs = new Map<string, string | null>()
+      await Promise.all(
+        [...paths].slice(0, 50).map(async (src) => {
+          try {
+            refs.set(src, await deps.importLocalFile(src))
+          } catch {
+            refs.set(src, null)
+          }
+        }),
+      )
+      LOCAL_IMAGE_RE.lastIndex = 0
+      out = out.replace(LOCAL_IMAGE_RE, (_full, alt: string, enc: string) => {
+        let src = ''
+        try {
+          src = decodeURIComponent(enc)
+        } catch {
+          return alt
+        }
+        const ref = refs.get(src)
+        return ref ? imageMarkdownRef(ref, alt) : alt
+      })
+    }
   }
-  const win = /^file:\/\/\/?([A-Za-z]:[\\/].*)$/.exec(raw)
-  if (win) return win[1].replace(/\//g, '\\')
-  if (/^file:\/\//i.test(raw)) {
-    const rest = raw.replace(/^file:\/\/localhost/i, '').replace(/^file:\/\//i, '')
-    return rest.startsWith('/') ? rest : `/${rest}`
+
+  if (/data:image\//i.test(out)) {
+    const decoded = new Map<string, string | null>()
+    const re = new RegExp(DATA_IMAGE_RE.source, 'gi')
+    let m: RegExpExecArray | null
+    const pending: string[] = []
+    while ((m = re.exec(out))) {
+      if (pending.length >= 50) break
+      if (pending.includes(m[2])) continue
+      pending.push(m[2])
+    }
+    await Promise.all(
+      pending.map(async (src) => {
+        const idx = src.indexOf('base64,')
+        if (idx < 0) {
+          decoded.set(src, null)
+          return
+        }
+        try {
+          decoded.set(src, await deps.saveDataImage(src.slice(idx + 7)))
+        } catch {
+          decoded.set(src, null)
+        }
+      }),
+    )
+    out = out.replace(DATA_IMAGE_RE, (_full, alt: string, src: string) => {
+      const ref = decoded.get(src)
+      if (ref) return imageMarkdownRef(ref, alt)
+      // 落盘失败：小图保留原 data URL（与旧行为一致），大图退回 alt，避免撑爆文档
+      return src.length <= MAX_DATA_IMAGE_BYTES ? _full : alt
+    })
   }
-  return raw || null
+
+  return out
 }
 
 /**
@@ -521,7 +564,7 @@ export function decideClipboardPaste(htmlRaw: string, plain: string): ClipboardP
 }
 
 const BLOCK_START_RE =
-  /^(?:#{1,6}[ \t]|>[ \t]?|[-*+][ \t]|\d{1,3}[.)][ \t]|\|(?:[^|\n]*\|)+|```|~~~|---[ \t]*$)/
+  /^(?:#{1,6}[ \t]|>[ \t]?|[-*+][ \t]|\d{1,3}[.)][ \t]|\|(?:[^|\n]*\|)+|```|~~~|!\[|---[ \t]*$)/
 
 /**
  * 粘贴落点整理：
