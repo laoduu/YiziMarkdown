@@ -40,6 +40,7 @@ const JS_INJECTED = new Map([
   ['--cursor-arrow', 'themeCursor.ts'],
   ['--cursor-standard', 'themeCursor.ts'],
   ['--cursor-bold', 'themeCursor.ts'],
+  ['--cursor-text', 'themeCursor.ts'],
   ['--preview-font-size', 'App.tsx'],
   ['--preview-line-height', 'App.tsx'],
   ['--font-mono', 'App.tsx（编辑器字体设置）'],

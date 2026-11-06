@@ -4,6 +4,24 @@
 
 > **未发布**（截至 2026-11-06）：新一轮开发已启动。`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已升至 `0.4.3`，尚未打包、未打 tag。用户向说明见 `docs/changelog/CHANGELOG-V0.4.3.md`。
 
+### 鼠标 I 型光标偶发变白（2026-11-06）
+
+**现象**：源码模式、亮色主题、光标设为「原生（默认）」时，鼠标移到正文上的 I 型指针会间歇变成白色，白底上几乎不可见；滚动、点选、切换文件都可能触发，与主题明暗无关。
+
+**根因**：不是应用 CSS。原生档的 I-beam 是 Windows 系统「文本选择」指针，WebView2/Chromium 只按 `cursor: text` 选择形状，颜色和位图由系统提供；Windows 11 + WebView2 在硬件光标合成时会偶发丢失 alpha 通道（AMD/Intel 核显 + MPO 高发），把指针整块渲染成白色。Chromium/Edge 有多起同类报告，微软问答给出的处理也是换系统指针位图（`beam_r`），而非改网页样式。
+
+**修复**：
+- `themeCursor.ts` 新增 `--cursor-text`：自绘 12×26 细 I 型光标，亮色主题 `#111`、暗色主题 `#f5f5f5`，0.5px 明暗描边；形状对齐原生 I-beam，颜色由应用锁死。
+- 消费点共 5 处 `cursor: text` 改为 `var(--cursor-text, text)`：编辑器 `.cm-content`（源码 / 实时 / 分屏）、实时模式 `.cm-live-block` 与行内注释 chip、`textarea` / `input` / `[contenteditable]` / AI 输入区；「加粗」档的 `--cursor-bold` / `--cursor-arrow` 不变。
+- `:root` / `.dark` 补 `color-scheme: light / dark`，让 WebView2 的原生 UI（滚动条、表单控件、原生插入光标）跟随应用明暗，避免系统深色主题污染浅色界面。
+- 规范同步：`check-themes.mjs` 的 `JS_INJECTED` 登记 `--cursor-text`；`docs/THEME-DESIGN-SPEC.md` → `src-tauri/docs/` 镜像 → 重新生成 `website/theme-spec.html`。
+
+**改动文件**：`src/lib/themeCursor.ts`、`src/styles/globals.css`、`src/lib/cm-live-render.ts`、`src/lib/cm-live-blocks.ts`、`scripts/check-themes.mjs`、`docs/THEME-DESIGN-SPEC.md`（含镜像与生成页）。
+
+**验证**：`npx tsc --noEmit`、`npm run check:themes` / `check:docs` / `check:docs-site`、`npm test`（450 项）全部通过；dev 手动核对：亮色主题细黑、暗色主题浅灰，滚动 / 点选 / 切换文件不再变白。
+
+**后备**：若极个别情况下仍变白，说明硬件光标层连自绘位图也会被腐蚀，只能系统侧处理：更新 AMD 驱动，或在 `main.cpl → 指针 → 文本选择` 改用 `beam_r`。
+
 ### 云端文件树优化（2026-11-06）
 
 **新增**：

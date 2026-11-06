@@ -9,7 +9,7 @@
     <meta name="author" content="YiziPaper">
     <meta name="robots" content="index, follow">
     <meta name="docs-src" content="docs/THEME-DESIGN-SPEC.md">
-    <meta name="docs-hash" content="28549e68699cd64a4d544123ac0db7503682b8b3b8725f7b45939391ce68692c">
+    <meta name="docs-hash" content="0fc28586294d5806d1f7f7a91b6825bbf8fe23cd294bc58c650463dd0db82726">
     <link rel="canonical" href="https://md.yizigpt.com/theme-spec.html">
 
     <!-- Open Graph -->
@@ -359,7 +359,7 @@ tech      typewriter vibrant   violet
 <li><strong>Vite 文件监视器可能漏掉 <code>globals.css</code> 的写入通知</strong> ⇒ HMR 不推送，测试无效。改动 <code>globals.css</code> 后若「看起来没生效」，重启 dev 进程树再验证。</li>
 </ul>
 </div>
-<div class="help-sub" id="44-js-运行时注入的变量" data-kw="4.4 JS 运行时注入的变量 以下变量由 JavaScript 在运行时写入， 因此不在 globals.css 里声明 （校验器的 JS_INJECTED 豁免清单）： 令牌 注入点 来源 --cursor-arrow / --cursor-standard / --cursor-bold themeCursor.ts 由当前主题 --editor-cursor 动态生成（明暗适配描边） --preview-font-size / --preview-line-height App.tsx 设置里的预览字号 /">
+<div class="help-sub" id="44-js-运行时注入的变量" data-kw="4.4 JS 运行时注入的变量 以下变量由 JavaScript 在运行时写入， 因此不在 globals.css 里声明 （校验器的 JS_INJECTED 豁免清单）： 令牌 注入点 来源 --cursor-arrow / --cursor-standard / --cursor-bold / --cursor-text themeCursor.ts --cursor-arrow / --cursor-bold 跟随当前主题 --editor-cursor 生成（明暗适配描边）； --cursor-text 是">
 <h3>4.4 JS 运行时注入的变量</h3>
 <p>以下变量由 JavaScript 在运行时写入，<strong>因此不在 <code>globals.css</code> 里声明</strong>（校验器的 <code>JS_INJECTED</code> 豁免清单）：</p>
 <div class="help-table-wrap"><table class="docs-table">
@@ -372,9 +372,9 @@ tech      typewriter vibrant   violet
 </thead>
 <tbody>
 <tr>
-<td><code>--cursor-arrow</code> / <code>--cursor-standard</code> / <code>--cursor-bold</code></td>
+<td><code>--cursor-arrow</code> / <code>--cursor-standard</code> / <code>--cursor-bold</code> / <code>--cursor-text</code></td>
 <td><code>themeCursor.ts</code></td>
-<td>由当前主题 <code>--editor-cursor</code> 动态生成（明暗适配描边）</td>
+<td><code>--cursor-arrow</code> / <code>--cursor-bold</code> 跟随当前主题 <code>--editor-cursor</code> 生成（明暗适配描边）；<code>--cursor-text</code> 是原生档固定明暗两色的细 I-beam（不依赖系统指针位图，避免 Windows 11 上偶发变白）</td>
 </tr>
 <tr>
 <td><code>--preview-font-size</code> / <code>--preview-line-height</code></td>

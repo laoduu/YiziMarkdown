@@ -1005,7 +1005,7 @@ export const liveEditTheme = EditorView.theme({
     borderRadius: '4px',
     opacity: '0.85',
     whiteSpace: 'nowrap',
-    cursor: 'text',
+    cursor: 'var(--cursor-text, text)',
   },
   // 行内图片：限制高度，避免撑破行高与 CodeMirror 的高度测量
   '.cm-md-inline-image': { display: 'inline-block', verticalAlign: 'middle', maxWidth: '100%' },

@@ -4,6 +4,9 @@
 
 /* ===== 主题变量定义 ===== */
 :root {
+  /* 让 WebView2 的原生 UI（滚动条、表单控件、原生插入光标）跟随应用明暗，
+     而不是跟随 Windows/Edge 的系统主题，避免浅色界面里出现深色原生元素 */
+  color-scheme: light;
   /* 默认主题 - 极简风 */
   --editor-bg: #ffffff;
   --editor-text: #333333;
@@ -272,6 +275,7 @@
 
 /* 暗色主题 */
 .dark {
+  color-scheme: dark;
   --editor-bg: #1e1e1e;
   --editor-text: #d4d4d4;
   --editor-accent: #569cd6;
@@ -328,14 +332,15 @@ body[data-cursor-style='bold'] {
   cursor: var(--cursor-arrow, default);
 }
 
-/* 主题箭头只作用于基础/默认光标；文本输入区保持 I-beam、链接保持手型 */
+/* 主题箭头只作用于基础/默认光标；文本输入区保持 I-beam，链接保持手型 */
 input[type='text'],
 input[type='number'],
 input[type='search'],
 input[type='password'],
 textarea,
 [contenteditable='true'] {
-  cursor: text;
+  /* 原生档的 I-beam 用 themeCursor.ts 自绘固定色版本（见 --cursor-text） */
+  cursor: var(--cursor-text, text);
 }
 a {
   cursor: pointer;
@@ -400,7 +405,7 @@ a {
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.5;
-  cursor: text;
+  cursor: var(--cursor-text, text);
   border: 1px solid var(--editor-border);
   transition: border-color 0.3s ease;
   position: relative;
@@ -830,16 +835,19 @@ a {
 /* ===== 编辑器核心 ===== */
 
 /* ===== 鼠标光标可见性 ===== */
-/* 默认原生：系统 default / text。只有「加粗（高可见度）」档才启用主题色
-   I-beam（--cursor-bold）与自绘箭头（--cursor-arrow）；两者由 JS 读取当前主题
-   --editor-cursor 动态生成（明暗适配描边色），跟随主题变化刷新。 */
+/* 默认原生：系统 default + themeCursor.ts 自绘的固定色细 I-beam（--cursor-text）。
+   自绘 I-beam 的原因：Windows 11 + WebView2 的系统文本指针在硬件光标合成时
+   会偶发丢失 alpha、整块渲染成白色（白底上不可见）。颜色不再依赖系统位图。
+   只有「加粗（高可见度）」档才启用主题色 I-beam（--cursor-bold）与自绘箭头
+   （--cursor-arrow）；两者由 JS 读取当前主题 --editor-cursor 动态生成
+   （明暗适配描边色），跟随主题变化刷新。 */
 .cm-editor-container[data-cursor='bold'],
 .cm-editor-container[data-cursor='bold'] .cm-content {
   cursor: var(--cursor-bold, text);
 }
 .cm-editor-container[data-cursor='text'],
 .cm-editor-container[data-cursor='text'] .cm-content {
-  cursor: text;
+  cursor: var(--cursor-text, text);
 }
 /* 源码/实时的滚动条（以及行号 gutter、正文下方的空白区）不是输入区：
    native 档回系统箭头，bold 档才用主题自绘箭头；

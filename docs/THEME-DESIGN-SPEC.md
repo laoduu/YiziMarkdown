@@ -258,7 +258,7 @@ App.tsx
 
 | 令牌 | 注入点 | 来源 |
 |------|--------|------|
-| `--cursor-arrow` / `--cursor-standard` / `--cursor-bold` | `themeCursor.ts` | 由当前主题 `--editor-cursor` 动态生成（明暗适配描边） |
+| `--cursor-arrow` / `--cursor-standard` / `--cursor-bold` / `--cursor-text` | `themeCursor.ts` | `--cursor-arrow` / `--cursor-bold` 跟随当前主题 `--editor-cursor` 生成（明暗适配描边）；`--cursor-text` 是原生档固定明暗两色的细 I-beam（不依赖系统指针位图，避免 Windows 11 上偶发变白） |
 | `--preview-font-size` / `--preview-line-height` | `App.tsx` | 设置里的预览字号 / 行高 |
 | `--font-mono` | `App.tsx` | 编辑器字体设置 |
 

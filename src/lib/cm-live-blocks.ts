@@ -2128,7 +2128,7 @@ const liveBlocksTheme = EditorView.theme({
   '.cm-live-block': {
     margin: '0',
     padding: '0.6em 0',
-    cursor: 'text',
+    cursor: 'var(--cursor-text, text)',
   },
   // 元信息属性面板（widget 本体在 cm-properties.ts，内部样式走 Shadow DOM）。
   // 宿主做成"属性面板"观感，与源码模式里元信息块的样式保持一致。
