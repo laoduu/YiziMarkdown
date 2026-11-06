@@ -883,33 +883,26 @@ App.tsx
 
 #### TOC 目录块令牌
 
-`[toc]` 正文目录块的背景、边线、圆角与间距由独立令牌控制，主题可覆盖：
+`[toc]` 正文目录块的背景、边线、圆角与间距由独立令牌控制。**全局默认不带边框与背景**，预设主题需要在自己的 `:root.theme-<name>` 中显式声明 `--toc-bg` / `--toc-border` 才会显示：
 
-| 令牌 | 默认值 | 说明 |
-|------|--------|------|
-| `--toc-bg` | `color-mix(in srgb, var(--editor-surface) 55%, transparent)` | 目录背景 |
-| `--toc-border` | `1px solid var(--editor-border)` | 完整 border 简写 |
+| 令牌 | 全局默认值 | 说明 |
+|------|------------|------|
+| `--toc-bg` | `transparent` | 目录背景 |
+| `--toc-border` | `none` | 完整 border 简写 |
 | `--toc-radius` | `6px` | 圆角 |
 | `--toc-padding` | `0.65em 1em` | 内边距 |
 | `--toc-margin` | `1em 0 1.6em` | 外边距 |
 
-取消目录背景与边线：
+主题显式开启目录边框与背景：
 
 ```css
 :root.theme-my-theme {
-  --toc-bg: transparent;
-  --toc-border: none;
+  --toc-bg: color-mix(in srgb, var(--editor-surface) 55%, transparent);
+  --toc-border: 1px solid var(--editor-border);
 }
 ```
 
-自定义 CSS 同样生效：
-
-```css
-:root {
-  --toc-bg: transparent;
-  --toc-border: none;
-}
-```
+用户自定义 CSS 同样可以覆盖。目录块右上角另有 hover 显示的边框/背景开关，关闭时强制透明无边框（预览与实时模式同步）。
 
 #### 写法规范
 
@@ -1362,7 +1355,7 @@ node scripts/check-themes.mjs --strict
 - [ ] `--editor-h1..h6` 六个标题色令牌齐全，亮暗各一套
 - [ ] H4–H6 有显式元素规则；H6 字号不小于正文 `1em`
 - [ ] 标题色阶对比度达标：H1–H4 ≥ 3:1，H5/H6 ≥ 4.5:1
-- [ ] 若需要自定义目录块，覆盖 `--toc-bg` / `--toc-border`（设为 `transparent` / `none` 即取消背景与边线）
+- [ ] 若需要目录块边框/背景，显式声明 `--toc-bg` / `--toc-border`（全局默认是 `transparent` / `none`）；用户也可用目录右上角开关临时关闭
 - [ ] 未使用 `!important` / `[class*=]` / 裸 `z-index`
 - [ ] 未写未加作用域的选择器（必须 `.editor-content.theme-<name>` 或 `.theme-<name>`）
 - [ ] 未覆盖布局定位属性（`position` / `display` / `inset` / `height`）
@@ -1523,8 +1516,8 @@ node scripts/check-themes.mjs --strict
 | `--hr-color` | `var(--editor-border)` | ● |
 | `--table-border` | `var(--editor-border)` | ● |
 | `--table-head-bg` | `var(--editor-surface)` | ● |
-| `--toc-bg` | `color-mix(in srgb, var(--editor-surface) 55%, transparent)` | ● |
-| `--toc-border` | `1px solid var(--editor-border)` | ● |
+| `--toc-bg` | `transparent` | ● |
+| `--toc-border` | `none` | ● |
 | `--toc-radius` | `6px` | ● |
 | `--toc-padding` | `0.65em 1em` | ● |
 | `--toc-margin` | `1em 0 1.6em` | ● |

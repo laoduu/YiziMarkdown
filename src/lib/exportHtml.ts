@@ -53,6 +53,8 @@ export interface ExportDocInput {
   outline?: { title: string; items: ExportOutlineItem[] }
   /** true = PDF 用的打印样式 */
   print?: boolean
+  /** [toc] 边框/背景开关；false 时导出文档沿用 toc-frame-off，强制无框 */
+  tocFrame?: boolean
 }
 
 /** 属性值转义：内联样式里可能带引号（字体名、url(...)），拼进 style="…" 必须转义 */
@@ -93,8 +95,9 @@ const PRINT_CSS = [
   '.editor-content thead{display:table-header-group}',
 ].join('')
 
-/** 独立 HTML 的额外样式：只解开应用 UI 的视口锁定，其余排版照预览 */
-const SCREEN_CSS = 'html,body{height:auto!important;overflow:visible!important}'
+/** 独立 HTML 的额外样式：只解开应用 UI 的视口锁定，其余排版照预览。
+    目录右上角的边框/背景开关是编辑辅助，静态导出里没有可用的点击处理器，必须隐藏。 */
+const SCREEN_CSS = 'html,body{height:auto!important;overflow:visible!important}.toc-frame-actions{display:none!important}'
 
 export function buildExportHtml(input: ExportDocInput): string {
   const { css, print } = input
@@ -104,7 +107,7 @@ export function buildExportHtml(input: ExportDocInput): string {
   // 打印**不带 dark 类**：PDF 一律按亮色纸面导出（与 Word 一致，用户要求「暗色也按亮色导出」）。
   // 主题 CSS 里亮色变量是 `:root.theme-x`、暗色是 `:root.theme-x.dark`，去掉 dark 就自动落到亮色配色，
   // 不需要另做一套「白底等效色」换算。独立 HTML 仍按预览原样带 dark。
-  const themeClass = `theme-${input.theme}${input.isDark && !print ? ' dark' : ''}`
+  const themeClass = `theme-${input.theme}${input.isDark && !print ? ' dark' : ''}${input.tocFrame === false ? ' toc-frame-off' : ''}`
 
   const tocHtml = wantToc
     ? `<nav class="export-toc"><div class="export-toc-title">${text(input.outline!.title)}</div>${

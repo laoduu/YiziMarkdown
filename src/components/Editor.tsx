@@ -22,6 +22,7 @@ import { headingFoldExtension } from '../lib/cm-heading-fold'
 import { slashMenuExtension, slashMenuState, showSlashMenu, hideSlashMenu, slashMenuAction } from '../lib/cm-slash-menu'
 import { COLUMN_REGION_SNIPPET, COLUMN_REGION_CURSOR } from '../lib/slides'
 import { selectionToolbarExtension, type SelectionToolbarInfo } from '../lib/cm-selection-toolbar'
+import { addTocFrameButton } from '../lib/tocFrame'
 import SlashMenu from './SlashMenu'
 import SelectionToolbar from './SelectionToolbar'
 import ContentWidthHandles from './ContentWidthHandles'
@@ -491,6 +492,15 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
     })
   }, [renderedHtml, content, onContentChange])
 
+  // 目录块右上角：边框/背景显示开关（hover 显现，与实时模式共用同一偏好）
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    container.querySelectorAll<HTMLElement>('nav.markdown-toc').forEach((nav) => {
+      addTocFrameButton(nav, t('live.toggleTocFrame'))
+    })
+  }, [renderedHtml, t])
+
   // ===== 脚注引用悬浮预览：hover 上标 → 浮窗显示文末定义（免跳转）；点击仍走锚点跳转 =====
   // 取材：直接克隆文末定义 <li>（预览 DOM 里必然存在），去掉返回链与 id 后注入浮窗。
   const [fnPreview, setFnPreview] = useState<null | { x: number; y: number; html: string; placeAbove: boolean }>(null)
@@ -616,8 +626,14 @@ function buildEditorTheme(fontFamily: string, fontSize: string, lineHeight: stri
     '&.cm-focused': {
       outline: 'none',
     },
+    // 选区层只负责绘制，不能拦截鼠标：点击选区内应让正文收到 mousedown，
+    // 从而由 CodeMirror 收拢选区并把光标放到点击处。
+    '.cm-selectionLayer': {
+      pointerEvents: 'none',
+    },
     '.cm-selectionBackground': {
       backgroundColor: 'var(--code-selection-bg) !important',
+      pointerEvents: 'none',
     },
     '.cm-activeLine': {
       backgroundColor: 'var(--code-active-line)',

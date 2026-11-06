@@ -1050,8 +1050,12 @@ export const liveEditTheme = EditorView.theme({
   // 动画结束后也不会自动重新测量 ⇒ 高度图整篇偏移，点击落点错到别的行。
   // 标题的入场动画交给 liveAnimKeyframes（只动颜色/背景等不影响布局的属性）。
   '.cm-md-heading-line': {},
-  '.cm-selectionLayer': { zIndex: '2 !important' },
-  '.cm-selectionBackground': { backgroundColor: 'var(--code-selection-bg) !important' },
+  // z-index 必须在正文之上（否则会被实时模式的块级 widget 背景盖住），
+  // 但选区层是纯视觉覆盖层，必须把鼠标事件透传给正文：
+  // 否则点击「已选中的文字」会命中 .cm-selectionBackground，CodeMirror 收不到 mousedown，
+  // 选区就永远收不回去，光标也无法定位到点击处。
+  '.cm-selectionLayer': { zIndex: '2 !important', pointerEvents: 'none' },
+  '.cm-selectionBackground': { backgroundColor: 'var(--code-selection-bg) !important', pointerEvents: 'none' },
 })
 
 export function liveEditExtension() {

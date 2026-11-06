@@ -44,6 +44,20 @@ test('主题类同时落在 html 与 body 上（主题选择器两种写法都�
   assert.match(html, /<body class="theme-tech dark">/)
 })
 
+test('目录边框开关关闭时，导出文档带上 toc-frame-off', () => {
+  const html = buildExportHtml({ ...base, tocFrame: false })
+  assert.match(html, /<html class="theme-tech dark toc-frame-off"/)
+  assert.match(html, /<body class="theme-tech dark toc-frame-off">/)
+  // 不传 / true 时保持主题默认带框
+  const on = buildExportHtml({ ...base, tocFrame: true })
+  assert.doesNotMatch(on, /toc-frame-off/)
+})
+
+test('静态 HTML 导出隐藏目录右上角开关（没有可用的点击处理器）', () => {
+  const html = buildExportHtml({ ...base })
+  assert.match(html, /\.toc-frame-actions\{display:none!important\}/)
+})
+
 test('打印时去掉 dark 类：暗色主题按主题自己的亮色配色导出（与 Word 一致）', () => {
   const html = buildExportHtml({ ...base, print: true })
   assert.match(html, /<html class="theme-tech"/)

@@ -269,7 +269,9 @@ export default function ContentWidthHandles({ visible, getContentEl, getScrollEl
           />
           <span
             data-cw-hint
-            className={`absolute top-1/2 -translate-y-1/2 whitespace-nowrap rounded-ui border px-2 py-1 text-xs leading-none shadow-sm ${hintSideClass}`}
+            // 只认文案里的 \n 换行，不在空格处自动折行：
+            // 提示框挂在 w-0 的跟随容器上，pre-line 会按「可用宽度 0」把每句话拆成单字竖排。
+            className={`absolute top-1/2 -translate-y-1/2 whitespace-pre text-center rounded-ui border px-2 py-1 text-xs leading-tight shadow-sm ${hintSideClass}`}
             style={{
               background: 'var(--editor-surface)',
               borderColor: 'var(--editor-border)',

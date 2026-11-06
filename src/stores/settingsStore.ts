@@ -58,6 +58,8 @@ export interface SettingsState {
   /** 代码块自动换行：全局持久化，切换文档 / 刷新后保持上次选择（默认横向滚动） */
   codeBlockWrap: boolean
   spellCheck: boolean
+  /** [toc] 目录块的边框与背景开关：全局偏好，预览 / 实时 / 阅读共用；默认开启（样式由主题令牌提供） */
+  tocFrame: boolean
   /** 内容区（正文列）最大宽度 px —— 源码 / 实时 / 预览**共用**这一个值。
    *  由正文列边缘的拖拽手柄改写；它只是 max-width 的**上限**，
    *  窗口更窄时正文仍按原有 flex 逻辑自适应收窄（实际宽度 = min(该值, 可用宽度)）。 */
@@ -197,6 +199,7 @@ export const useSettingsStore = create<SettingsState>()(
       showLineNumbers: true,
       wordWrap: true,
       codeBlockWrap: false,
+      tocFrame: true,
       spellCheck: false,
       // 默认 900：与源码模式改动前一致。注意预览模式里部分主题原本自带 800/700px 的固定宽度，
       // 统一到这个值后会跟随 900 —— 这是「三处共用同一个宽度」的必然结果，属于有意的统一。
@@ -344,6 +347,8 @@ export const useSettingsStore = create<SettingsState>()(
           if (typeof state.formatManuallyCollapsed !== 'boolean') state.formatManuallyCollapsed = false
           // 代码块换行偏好。旧存档没有 → false（默认横向滚动）
           if (typeof state.codeBlockWrap !== 'boolean') state.codeBlockWrap = false
+          // 目录边框/背景开关。旧存档没有 → true（预设主题默认带框）
+          if (typeof state.tocFrame !== 'boolean') state.tocFrame = true
           if (typeof state.brandName !== 'string') state.brandName = ''
           // v11：演示模式分栏。存量存档没有这两个键 ⇒ 补默认值。
           // 注意升级观感：样式默认是 **card**（有意的默认升级，不是零变化）——

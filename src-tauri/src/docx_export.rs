@@ -94,6 +94,11 @@ fn alert_icon_svg(kind: BlockQuoteKind) -> String {
 const PAGE_CONTENT_H: f64 = 13958.0;
 /// 正文区宽度（11906 - 2×1440），也正好是 TOC 条目右对齐制表位的位置（9026）。
 const PAGE_CONTENT_W: f64 = 9026.0;
+/// 带边框/背景的 TOC 用单格表格包裹：左右内边距（twips），约 10pt。
+/// 制表位要从正文宽度里扣掉这两段，否则页码会顶到单元格边框外。
+const TOC_FRAME_PAD_X: u32 = 200;
+/// 单格表格的上下内边距（twips），约 6pt。
+const TOC_FRAME_PAD_Y: u32 = 120;
 
 /// 目录条目：级别、纯文字、**估算**页码。
 #[derive(Clone)]
@@ -440,13 +445,16 @@ fn collect_toc_headings(md: &str, opts: &Options, m: &Metrics) -> Vec<(u32, Stri
 
 /// 目录块自身的高度（twips）：标题行 + 标题后距 + 条目行 + 条目间距。
 /// 它必须计入页码估算，否则 `[toc]` 放在开头时，第一个正文标题会被算成第 1 页。
-fn toc_block_height(m: &Metrics, entries: usize) -> f64 {
+fn toc_block_height(m: &Metrics, entries: usize, framed: bool) -> f64 {
     let toc = &m.layout.toc;
     let heading_line = m.body_pt * toc.heading_scale * 1.3 * 20.0;
     let entry_line = m.body_pt * toc.line_height * 20.0;
     let heading_after = m.em_twips(toc.heading_after_em) as f64;
     let entry_gap = m.em_twips(toc.entry_gap_em) as f64;
-    heading_line
+    // 带框目录被单格表格包住：上下 cell margin 与两条边框也要计入分页估算
+    let frame_height = if framed { (TOC_FRAME_PAD_Y * 2 + 40) as f64 } else { 0.0 };
+    frame_height
+        + heading_line
         + heading_after
         + entries as f64 * entry_line
         + entries.saturating_sub(1) as f64 * entry_gap
@@ -456,9 +464,9 @@ fn toc_block_height(m: &Metrics, entries: usize) -> f64 {
 ///
 /// 两遍扫描：第一遍只数标题，得到目录块自身高度；第二遍按块高累加页码。
 /// 页码只是「打开即可见」的初值，用户按 F9 后 Word 会用真实排版覆盖。
-fn collect_toc(md: &str, opts: &Options, m: &Metrics) -> Vec<TocEntry> {
+fn collect_toc(md: &str, opts: &Options, m: &Metrics, toc_frame: bool) -> Vec<TocEntry> {
     let headings = collect_toc_headings(md, opts, m);
-    let toc_height = toc_block_height(m, headings.len());
+    let toc_height = toc_block_height(m, headings.len(), toc_frame);
     let max = m.layout.toc_max_level();
     let em = m.body_pt * 20.0; // 1em = 正文字号（twips）
     let body_line = em * m.line_em(m.line); // CSS 行高（w:line/200，不是 /240）
@@ -917,6 +925,9 @@ pub struct DocxTheme {
     /// 前端用 `reader.toc` 词条传入；缺省回退「目录」，兼容旧的调用方。
     #[serde(default)]
     pub toc_title: Option<String>,
+    /// 目录块是否带边框与背景（跟随预览右上角开关）。关闭「导出主题色」时前端传 false。
+    #[serde(default)]
+    pub toc_frame: bool,
     /// Word 版式规范；缺省使用内置默认值（见 `DocxLayout`），兼容旧调用方。
     #[serde(default)]
     pub layout: Option<DocxLayout>,
@@ -2918,9 +2929,46 @@ impl DocxBuilder {
         // 目录块本身也是一个块：先取它相对前文的段前（表格后的 gap 已经承担时为 0），
         // 再记录到段距状态里，后面的标题不会把它当成开头。
         let heading_before = self.paragraph_before();
+        let framed = self.theme.toc_frame;
+        // 带框时用一个单格表格包住「目录标题 + TOC 域」：
+        // 段落级 pBdr 只能画在每个段落外沿，无法保证多条目录合成一个外框；
+        // 表格是唯一能稳定给整块加边框/背景的 OOXML 容器，也能在 Word 按 F9 更新域后保留。
+        if framed {
+            // 表格没有 space-before，用零高段落保留前文间距，避免目录贴住上一段
+            if heading_before > 0 {
+                self.body.push_str(&format!(
+                    "<w:p><w:pPr><w:spacing w:before=\"{}\" w:after=\"0\" w:line=\"1\" w:lineRule=\"exact\"/></w:pPr></w:p>",
+                    heading_before
+                ));
+            }
+            let w = self.metrics.text_width_twips();
+            let border = if self.theme.border.trim().is_empty() { "BFBFBF" } else { self.theme.border.as_str() };
+            let fill = if self.theme.surface.trim().is_empty() { "F5F5F5" } else { self.theme.surface.as_str() };
+            self.body.push_str(&format!(
+                "<w:tbl><w:tblPr><w:tblW w:w=\"{w}\" w:type=\"dxa\"/>\
+                 <w:tblBorders>\
+                   <w:top w:val=\"single\" w:sz=\"6\" w:space=\"0\" w:color=\"{border}\"/>\
+                   <w:left w:val=\"single\" w:sz=\"6\" w:space=\"0\" w:color=\"{border}\"/>\
+                   <w:bottom w:val=\"single\" w:sz=\"6\" w:space=\"0\" w:color=\"{border}\"/>\
+                   <w:right w:val=\"single\" w:sz=\"6\" w:space=\"0\" w:color=\"{border}\"/>\
+                 </w:tblBorders>\
+                 <w:tblLayout w:type=\"fixed\"/>\
+                 <w:tblCellMar>\
+                   <w:top w:w=\"{py}\" w:type=\"dxa\"/>\
+                   <w:left w:w=\"{px}\" w:type=\"dxa\"/>\
+                   <w:bottom w:w=\"{py}\" w:type=\"dxa\"/>\
+                   <w:right w:w=\"{px}\" w:type=\"dxa\"/>\
+                 </w:tblCellMar></w:tblPr>\
+                 <w:tblGrid><w:gridCol w:w=\"{w}\"/></w:tblGrid>\
+                 <w:tr><w:tc><w:tcPr><w:tcW w:w=\"{w}\" w:type=\"dxa\"/>\
+                 <w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"{fill}\"/></w:tcPr>",
+                w = w, border = border, fill = fill, px = TOC_FRAME_PAD_X, py = TOC_FRAME_PAD_Y
+            ));
+        }
+        let title_before = if framed { 0 } else { heading_before };
         self.body.push_str(&format!(
             "<w:p><w:pPr><w:pStyle w:val=\"TocHeading\"/><w:spacing w:before=\"{}\" w:after=\"0\"/></w:pPr>",
-            heading_before
+            title_before
         ));
         self.body.push_str(&self.run(&title, InlineState::default(), false, None));
         self.body.push_str("</w:p>");
@@ -2944,6 +2992,9 @@ impl DocxBuilder {
                  <w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>",
                 heading_after, instr
             ));
+            if framed {
+                self.body.push_str("</w:tc></w:tr></w:tbl>");
+            }
             return;
         }
 
@@ -2990,6 +3041,9 @@ impl DocxBuilder {
                 self.body.push_str("<w:r><w:fldChar w:fldCharType=\"end\"/></w:r>");
             }
             self.body.push_str("</w:p>");
+        }
+        if framed {
+            self.body.push_str("</w:tc></w:tr></w:tbl>");
         }
     }
 
@@ -3549,6 +3603,12 @@ fn styles_xml(theme: &DocxTheme, m: &Metrics) -> String {
     };
     let toc_max = layout.toc_max_level();
     let toc_h_sz = m.sz_scale(layout.toc.heading_scale);
+    // 目录带框时被单格表格包住，页码右对齐制表位要收进单元格内边距之内
+    let toc_tab = if theme.toc_frame {
+        m.text_width_twips().saturating_sub(TOC_FRAME_PAD_X * 2)
+    } else {
+        m.text_width_twips()
+    };
     let body_jc = if layout.body.align.eq_ignore_ascii_case("both") { "both" } else { "left" };
 
     let mut s = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">".to_string();
@@ -3584,7 +3644,7 @@ fn styles_xml(theme: &DocxTheme, m: &Metrics) -> String {
         };
         s.push_str(&format!(
             "<w:style w:type=\"paragraph\" w:styleId=\"TOC{lv}\"><w:name w:val=\"toc {lv}\"/><w:basedOn w:val=\"Normal\"/><w:next w:val=\"Normal\"/><w:uiPriority w:val=\"39\"/><w:pPr><w:tabs><w:tab w:val=\"right\" w:leader=\"dot\" w:pos=\"{tab}\"/></w:tabs><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"{toc_line}\" w:lineRule=\"auto\"/>{ind}<w:jc w:val=\"left\"/></w:pPr><w:rPr><w:rFonts w:ascii=\"{font_latin}\" w:hAnsi=\"{font_latin}\" w:eastAsia=\"{font_east_asia}\" w:cs=\"{font_latin}\"/><w:color w:val=\"{text}\"/><w:sz w:val=\"{sz}\"/><w:szCs w:val=\"{sz}\"/></w:rPr></w:style>",
-            tab = m.text_width_twips()
+            tab = toc_tab
         ));
     }
     // 列表段落：段前由 Item 处理器写入，段后恒为 0。
@@ -3739,6 +3799,7 @@ pub fn markdown_to_docx(md: &str, theme: DocxTheme, base_dir: Option<std::path::
         line_height: theme.line_height,
         code_highlights: theme.code_highlights,
         toc_title: theme.toc_title,
+        toc_frame: theme.toc_frame,
         layout: theme.layout,
     };
 
@@ -3762,7 +3823,7 @@ pub fn markdown_to_docx(md: &str, theme: DocxTheme, base_dir: Option<std::path::
     // `==高亮==` / `^上标^` / `~下标~` 统一预处理，标题扫描与正文解析走同一份文本
     let md = inline_markers_to_html(md);
     // 预扫描标题 + 估算页码：目录域的「域结果」在导出时就直接写好（见 `toc_field`），打开即可见
-    let toc_items = collect_toc(&md, &opts, &builder.metrics);
+    let toc_items = collect_toc(&md, &opts, &builder.metrics, builder.theme.toc_frame);
     builder.toc_items = toc_items;
     let mut iter = Parser::new_ext(&md, opts).peekable();
     while let Some(ev) = iter.next() {
@@ -4348,6 +4409,7 @@ mod tests {
             line_height: Some(1.8),
             code_highlights: CodeHighlights::default(),
             toc_title: None,
+            toc_frame: false,
             layout: None,
         }
     }
@@ -5145,6 +5207,33 @@ mod tests {
     }
 
     #[test]
+    fn toc_frame_uses_theme_colors_and_has_no_list_numbering() {
+        let md = "# A\n\n<!--yizi:toc-->\n\n## B\n";
+        let framed = docx_part(
+            md,
+            DocxTheme { toc_frame: true, ..test_theme() },
+            "word/document.xml",
+        );
+        assert!(framed.contains("<w:tbl><w:tblPr><w:tblW w:w=\"9026\""), "带框目录未用单格表格包裹: {}", framed);
+        assert!(framed.contains("<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"F0F7FF\"/>"), "目录背景缺失: {}", framed);
+        assert!(framed.contains("w:color=\"D5E2FF\""), "目录边框颜色缺失: {}", framed);
+        // DOCX 的目录是 TOC 域 + TOC1-6 样式，不能额外套一层无序列表编号
+        assert!(!framed.contains("<w:numPr>"), "DOCX 目录不应带无序列表编号: {}", framed);
+
+        let framed_styles = docx_part(
+            md,
+            DocxTheme { toc_frame: true, ..test_theme() },
+            "word/styles.xml",
+        );
+        assert!(framed_styles.contains("w:pos=\"8626\""), "带框目录的页码制表位未收进单元格: {}", framed_styles);
+
+        let plain = docx_part(md, test_theme(), "word/document.xml");
+        assert!(!plain.contains("w:fill=\"F0F7FF\""), "关闭目录边框后仍导出了背景: {}", plain);
+        let plain_styles = docx_part(md, test_theme(), "word/styles.xml");
+        assert!(plain_styles.contains("w:pos=\"9026\""), "无框目录的页码制表位不应收窄: {}", plain_styles);
+    }
+
+    #[test]
     fn center_html_block_is_centered() {
         let doc = xml_of("<center>居中的文字</center>\n");
         assert!(doc.contains("<w:jc w:val=\"center\"/>"), "center 块没有居中: {}", doc);
@@ -5208,7 +5297,7 @@ mod tests {
         }
         let theme = test_theme();
         let m = metrics_of(&theme);
-        let entries = collect_toc(&md, &Options::all(), &m);
+        let entries = collect_toc(&md, &Options::all(), &m, false);
         let before = entries.iter().find(|e| e.text == "Before").expect("Before");
         let h0 = entries.iter().find(|e| e.text == "H0").expect("H0");
         assert_eq!(before.page, 1, "目录前的标题应在第 1 页");

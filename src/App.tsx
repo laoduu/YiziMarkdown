@@ -29,7 +29,7 @@ import {
 } from './lib/editorStorage'
 import { loadPlugin, unloadPlugin, getEnabledExporters, getStartupPluginIds } from './plugins/registry'
 import { ensureCoreRenderers } from './renderers/index'
-import { useI18n, translate, getCurrentLang } from './i18n'
+import { useI18n, translate, getCurrentLang, type Language } from './i18n'
 import { refreshThemeCursorVars } from './lib/themeCursor'
 import { applyThemeStyles } from './lib/themeLoader'
 import { deriveDocumentTitle } from './lib/docTitle'
@@ -155,7 +155,7 @@ interface EpubSession {
 
 function App() {
   const { t } = useI18n()
-  const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, contentMaxWidth, uiTextScale, codeBlockWrap, enabledPlugins, pluginConfigs, setField, aiPanelOpen, updateSettings, userThemeEnabled, userThemeName, customCssBase, slideColStyle, slideColAlign, cursorStyle } = useSettingsStore()
+  const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, contentMaxWidth, uiTextScale, codeBlockWrap, tocFrame, enabledPlugins, pluginConfigs, setField, aiPanelOpen, updateSettings, userThemeEnabled, userThemeName, customCssBase, slideColStyle, slideColAlign, cursorStyle } = useSettingsStore()
   const {
     activeTabId, currentTab,
     openFile, openRemoteFile, openNewFile, closeTab, switchTab,
@@ -270,6 +270,12 @@ function App() {
   useEffect(() => {
     document.documentElement.classList.toggle('code-block-wrap', codeBlockWrap)
   }, [codeBlockWrap])
+
+  // 目录边框/背景开关：同一份持久化偏好驱动预览与实时模式的右上角按钮。
+  // 只在关闭时加 toc-frame-off —— 导出 / 阅读模式没有 App 外壳，默认按主题令牌显示。
+  useEffect(() => {
+    document.documentElement.classList.toggle('toc-frame-off', !tocFrame)
+  }, [tocFrame])
 
   // 自动保存（仅已保存过的文件）
   const activeTab = useEditorStore(s => s.tabs.find(t => t.id === s.activeTabId) ?? null)
@@ -605,6 +611,15 @@ function App() {
   const uiLang = useSettingsStore((s) => s.language)
   useEffect(() => {
     document.documentElement.lang = uiLang || 'zh'
+  }, [uiLang])
+
+  // 实时模式的目录按钮由 CM widget 在创建时写入 title，切换语言不会重建 widget，
+  // 这里统一刷新所有已存在的目录开关文案，避免中文界面显示英文 tooltip。
+  useEffect(() => {
+    const title = translate((uiLang || 'zh') as Language, 'live.toggleTocFrame')
+    document.querySelectorAll<HTMLButtonElement>('.toc-frame-btn').forEach((btn) => {
+      btn.title = title
+    })
   }, [uiLang])
 
   const handleNewFile = useCallback(async () => {
@@ -1153,8 +1168,9 @@ function App() {
       isDark,
       outline: opts?.print ? undefined : { title: t('sidebar.outline'), items: outlineItems },
       print: !!opts?.print,
+      tocFrame,
     })
-  }, [currentTheme, isDark, t])
+  }, [currentTheme, isDark, t, tocFrame])
 
   /** 构建插件导出上下文：预览现场 + 主题 CSS + 文档元信息。 */
   const buildPluginExportSource = useCallback((tab: ReturnType<typeof currentTab>): PluginExportSource | null => {
@@ -1324,6 +1340,8 @@ function App() {
             // 目录标题同理跟随界面语言：Word 里 TOC 域上方那行字由 Rust 侧写出，
             // 它看不到前端 i18n，只能由这里把词条传过去（`reader.toc`，与预览那块同一个键）
             tocTitle: translate(getCurrentLang(), 'reader.toc'),
+            // 目录边框/背景：跟随右上角开关；关闭「导出主题色」时一律无框无背景
+            tocFrame: docxOptions?.themeColors !== false && tocFrame,
             layout: docxLayout,
           },
         })
@@ -1404,7 +1422,7 @@ function App() {
       console.error('[export] failed:', e)
       showToast(t('app.exportFailed'))
     }
-  }, [currentTab, showToast, buildExportHtml, previewFontFamily, isDark, previewFontSize, previewLineHeight, enabledPlugins, pluginConfigs, currentTheme])
+  }, [currentTab, showToast, buildExportHtml, previewFontFamily, isDark, previewFontSize, previewLineHeight, enabledPlugins, pluginConfigs, currentTheme, tocFrame])
 
   const handleFolderChange = useCallback((folderPath: string) => {
     setCurrentFolder(folderPath)

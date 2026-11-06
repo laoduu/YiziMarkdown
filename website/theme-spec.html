@@ -9,7 +9,7 @@
     <meta name="author" content="YiziPaper">
     <meta name="robots" content="index, follow">
     <meta name="docs-src" content="docs/THEME-DESIGN-SPEC.md">
-    <meta name="docs-hash" content="2a7ea79877c6bb09342b2c598cbab831e45f88b042d9bebd4bc7e962ce0fa371">
+    <meta name="docs-hash" content="28549e68699cd64a4d544123ac0db7503682b8b3b8725f7b45939391ce68692c">
     <link rel="canonical" href="https://md.yizigpt.com/theme-spec.html">
 
     <!-- Open Graph -->
@@ -1945,24 +1945,24 @@ tech      typewriter vibrant   violet
 </tbody>
 </table></div>
 <h4 id="toc-目录块令牌">TOC 目录块令牌</h4>
-<p><code>[toc]</code> 正文目录块的背景、边线、圆角与间距由独立令牌控制，主题可覆盖：</p>
+<p><code>[toc]</code> 正文目录块的背景、边线、圆角与间距由独立令牌控制。<strong>全局默认不带边框与背景</strong>，预设主题需要在自己的 <code>:root.theme-&lt;name&gt;</code> 中显式声明 <code>--toc-bg</code> / <code>--toc-border</code> 才会显示：</p>
 <div class="help-table-wrap"><table class="docs-table">
 <thead>
 <tr>
 <th>令牌</th>
-<th>默认值</th>
+<th>全局默认值</th>
 <th>说明</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>--toc-bg</code></td>
-<td><code>color-mix(in srgb, var(--editor-surface) 55%, transparent)</code></td>
+<td><code>transparent</code></td>
 <td>目录背景</td>
 </tr>
 <tr>
 <td><code>--toc-border</code></td>
-<td><code>1px solid var(--editor-border)</code></td>
+<td><code>none</code></td>
 <td>完整 border 简写</td>
 </tr>
 <tr>
@@ -1982,18 +1982,13 @@ tech      typewriter vibrant   violet
 </tr>
 </tbody>
 </table></div>
-<p>取消目录背景与边线：</p>
+<p>主题显式开启目录边框与背景：</p>
 <pre><code class="language-css">:root.theme-my-theme {
-  --toc-bg: transparent;
-  --toc-border: none;
+  --toc-bg: color-mix(in srgb, var(--editor-surface) 55%, transparent);
+  --toc-border: 1px solid var(--editor-border);
 }
 </code></pre>
-<p>自定义 CSS 同样生效：</p>
-<pre><code class="language-css">:root {
-  --toc-bg: transparent;
-  --toc-border: none;
-}
-</code></pre>
+<p>用户自定义 CSS 同样可以覆盖。目录块右上角另有 hover 显示的边框/背景开关，关闭时强制透明无边框（预览与实时模式同步）。</p>
 <h4 id="写法规范">写法规范</h4>
 <pre><code class="language-css">/* ✅ 正确：作用域限定在 .editor-content.theme-&lt;name&gt; 或 .theme-&lt;name&gt; */
 .editor-content.theme-my-theme h1 { /* … */ }
@@ -2628,7 +2623,7 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 <li>[ ] <code>--editor-h1..h6</code> 六个标题色令牌齐全，亮暗各一套</li>
 <li>[ ] H4–H6 有显式元素规则；H6 字号不小于正文 <code>1em</code></li>
 <li>[ ] 标题色阶对比度达标：H1–H4 ≥ 3:1，H5/H6 ≥ 4.5:1</li>
-<li>[ ] 若需要自定义目录块，覆盖 <code>--toc-bg</code> / <code>--toc-border</code>（设为 <code>transparent</code> / <code>none</code> 即取消背景与边线）</li>
+<li>[ ] 若需要目录块边框/背景，显式声明 <code>--toc-bg</code> / <code>--toc-border</code>（全局默认是 <code>transparent</code> / <code>none</code>）；用户也可用目录右上角开关临时关闭</li>
 <li>[ ] 未使用 <code>!important</code> / <code>[class*=]</code> / 裸 <code>z-index</code></li>
 <li>[ ] 未写未加作用域的选择器（必须 <code>.editor-content.theme-&lt;name&gt;</code> 或 <code>.theme-&lt;name&gt;</code>）</li>
 <li>[ ] 未覆盖布局定位属性（<code>position</code> / <code>display</code> / <code>inset</code> / <code>height</code>）</li>
@@ -3290,12 +3285,12 @@ node scripts/check-themes.mjs --quiet   # 只输出失败与统计
 </tr>
 <tr>
 <td><code>--toc-bg</code></td>
-<td><code>color-mix(in srgb, var(--editor-surface) 55%, transparent)</code></td>
+<td><code>transparent</code></td>
 <td style="text-align:center">●</td>
 </tr>
 <tr>
 <td><code>--toc-border</code></td>
-<td><code>1px solid var(--editor-border)</code></td>
+<td><code>none</code></td>
 <td style="text-align:center">●</td>
 </tr>
 <tr>

@@ -164,7 +164,7 @@ exportEpub: 'EPUB にエクスポート',
     next: '次へ (Enter)',
     replaceOne: '置換',
     replaceAll: 'すべて置換',
-    widthHandleHint: '長押ししてドラッグで幅を調整',
+    widthHandleHint: '長押ししてドラッグで幅を調整\nダブルクリックで既定の幅に戻す',
   },
   settings: {
     updateTitle: 'オンライン更新',
@@ -790,6 +790,7 @@ pluginEpubDesc: '現在のドキュメントを EPUB 3 電子書籍として書�
   live: {
     toggleWrap: '折り返しを切り替え',
     copyCode: 'コードをコピー',
+    toggleTocFrame: '目次の枠線と背景を切り替え',
     copyFailed: 'コピーに失敗',
     tocEmpty: '（この文書に見出しはありません）',
     imageLoadFailed: '画像を読み込めません',

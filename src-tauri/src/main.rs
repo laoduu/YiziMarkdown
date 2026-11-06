@@ -2602,6 +2602,7 @@ mod tests {
                 line_height: Some(1.8),
                 code_highlights: docx_export::CodeHighlights::default(),
                 toc_title: None,
+                toc_frame: false,
                 layout: None,
             },
         )

@@ -206,12 +206,10 @@
   --table-head-bg: var(--editor-surface);
 
   /* ===== [toc] 目录块 =====
-     背景 / 边线 / 圆角 / 内外边距全部由令牌控制，主题可覆盖；
-     用户自定义 CSS 也可以直接写：
-       :root { --toc-bg: transparent; --toc-border: none; }
-     来取消目录背景与边线（--toc-border 是完整 border 简写，设成 none 即无边框）。 */
-  --toc-bg: color-mix(in srgb, var(--editor-surface) 55%, transparent);
-  --toc-border: 1px solid var(--editor-border);
+     全局默认**不带**边框与背景；预设主题按自己的调性声明 --toc-bg / --toc-border
+     （--toc-border 是完整 border 简写）。目录块右上角另有显示开关，关闭时强制透明无边框。 */
+  --toc-bg: transparent;
+  --toc-border: none;
   --toc-radius: 6px;
   --toc-padding: 0.65em 1em;
   --toc-margin: 1em 0 1.6em;
@@ -1064,7 +1062,7 @@ a {
   word-break: break-word;
 }
 
-/* 代码块悬浮控件：右上角「换行/复制」，右下角语言标签（Typora 风格，悬停显现，无背景条） */
+/* 代码块 / 目录块的悬浮控件：右上角图标，悬停显现，无背景条 */
 .code-block-actions {
   position: absolute;
   top: 6px;
@@ -1098,8 +1096,9 @@ a {
   transition: opacity 0.15s, background-color 0.15s, color 0.15s;
 }
 
-/* 悬停代码块或正在编辑语言时显现；隐藏态不拦截文本选区与点击 */
+/* 悬停代码块 / 目录块或正在编辑语言时显现；隐藏态不拦截文本选区与点击 */
 .editor-content pre:hover .code-block-actions,
+.markdown-toc:hover .code-block-actions,
 .code-block-actions:focus-within,
 .editor-content pre:hover .code-block-lang,
 .code-block-lang.editing {
@@ -1130,7 +1129,8 @@ a {
 }
 
 .code-block-wrap-btn,
-.code-block-copy-btn {
+.code-block-copy-btn,
+.toc-frame-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1146,12 +1146,19 @@ a {
 }
 
 .code-block-wrap-btn:hover,
-.code-block-copy-btn:hover {
+.code-block-copy-btn:hover,
+.toc-frame-btn:hover {
   background: color-mix(in srgb, var(--editor-surface) 92%, transparent);
   color: var(--editor-text);
 }
 
 :root.code-block-wrap .code-block-wrap-btn {
+  background: color-mix(in srgb, var(--editor-accent) 16%, transparent);
+  color: var(--editor-accent);
+}
+
+/* 目录边框/背景开关：开启时用主题色高亮，关闭时保持普通按钮色 */
+:root:not(.toc-frame-off) .toc-frame-btn {
   background: color-mix(in srgb, var(--editor-accent) 16%, transparent);
   color: var(--editor-accent);
 }
@@ -2628,6 +2635,7 @@ a {
 /* 正文里的独立目录区块：保留 Typora 式细边框与半透明底（与引用块的左侧强调竖线区分开），
    层级交给嵌套 ul。结构规则不挂 .editor-content，阅读模式（.reader-content）用同一套 HTML。 */
 .markdown-toc {
+  position: relative;
   margin: var(--toc-margin);
   padding: var(--toc-padding);
   background: var(--toc-bg);
@@ -2636,19 +2644,35 @@ a {
   line-height: var(--preview-line-height, var(--line-height));
 }
 
+/* 目录右上角开关关闭时，无论主题怎么声明令牌都强制取消边框与背景。
+   用 !important 是因为实时模式的 .cm-live-block--toc 与主题选择器同特异性。
+   默认不带 toc-frame-off：导出 / 阅读模式没有界面开关，仍按主题令牌显示。 */
+:root.toc-frame-off .markdown-toc,
+:root.toc-frame-off .cm-live-block--toc {
+  background: transparent !important;
+  border: none !important;
+}
+
 /* 目录块不显示标题：「目录」这两个字只在导出的 Word 里出现（TOC 域上方那行，
    由 docx_export.rs 的 toc_field 写入）。预览里正文流已经用 `[toc]` 定位，
    再加一行标题纯属噪音，也省掉了一次 i18n 桥接（toc.ts 是纯模块，
    不能 import i18n，之前只能靠 `--toc-title` 变量转一道）。 */
 
+/* 目录条目默认没有列表装饰，视觉上会与普通正文混淆。
+   这里恢复无序列表的圆点/空心圆/方块三级装饰，并统一用主题强调色。 */
 .markdown-toc ul {
   margin: 0;
-  padding-left: 0;
-  list-style: none;
+  padding-left: 1.1em;
+  list-style: disc;
 }
 
 .markdown-toc ul ul {
-  padding-left: 1.15em;
+  padding-left: 1.1em;
+  list-style: circle;
+}
+
+.markdown-toc ul ul ul {
+  list-style: square;
 }
 
 .markdown-toc li {
@@ -2657,7 +2681,7 @@ a {
 }
 
 .markdown-toc li::marker {
-  content: none;
+  color: var(--editor-accent);
 }
 
 /* 目录链接自成一套：nav + 3 个类的特异性压过主题的 `.editor-content.theme-x a`，

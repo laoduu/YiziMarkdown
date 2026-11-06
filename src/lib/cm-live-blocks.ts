@@ -13,6 +13,7 @@ import { syntaxTree } from '@codemirror/language'
 import { useEditorStore } from '../stores/editorStore.ts'
 import { getCurrentLang, translate } from '../i18n/index.ts'
 import { resolveLocalImageSrc } from './localImages.ts'
+import { addTocFrameButton } from './tocFrame.ts'
 import { invokeTauri } from './tauri.ts'
 import { getMarkdownIt } from './markdownRenderer.ts'
 import { useSettingsStore } from '../stores/settingsStore.ts'
@@ -547,6 +548,8 @@ class TocWidget extends WidgetType {
     nav.className = 'cm-live-block cm-live-block--toc markdown-toc'
     // 点目录条目 = 滚动；点目录空白处 = 回到源码（让 [toc] 可编辑）
     revealSourceOnClick(nav, view, this.pos)
+    // 右上角显示开关：与预览模式同一枚按钮、同一个全局偏好
+    addTocFrameButton(nav, tLive('toggleTocFrame'))
     if (this.headings.length === 0) {
       nav.textContent = tLive('tocEmpty')
       return nav
@@ -2305,25 +2308,35 @@ const liveBlocksTheme = EditorView.theme({
     overflow: 'hidden',
     textOverflow: 'ellipsis',
   },
-  // [toc] widget：实时模式里也复刻预览目录的独立边框区块
+  // [toc] widget：实时模式里也复刻预览目录的独立边框区块。
+  // 必须消费 --toc-* 令牌而不是写死颜色/边线：否则用户自定义 CSS
+  // （如 :root { --toc-bg: transparent; --toc-border: none; }）只在预览生效。
+  // 间距仍用 padding（见 .cm-live-block 的说明，margin 会破坏 CM6 高度测量）。
   '.cm-live-block--toc': {
     margin: '0',
-    padding: '0.65em 1em',
-    border: '1px solid var(--editor-border)',
-    borderRadius: '6px',
-    background: 'color-mix(in srgb, var(--editor-surface) 55%, transparent)',
+    padding: 'var(--toc-padding)',
+    border: 'var(--toc-border)',
+    borderRadius: 'var(--toc-radius)',
+    background: 'var(--toc-bg)',
     lineHeight: '1.6',
   },
   '.cm-live-block--toc ul': {
     margin: '0',
-    paddingLeft: '0',
-    listStyle: 'none',
+    paddingLeft: '1.1em',
+    listStyle: 'disc',
   },
   '.cm-live-block--toc ul ul': {
-    paddingLeft: '1.25em',
+    paddingLeft: '1.1em',
+    listStyle: 'circle',
+  },
+  '.cm-live-block--toc ul ul ul': {
+    listStyle: 'square',
   },
   '.cm-live-block--toc li': {
     margin: '0.22em 0',
+  },
+  '.cm-live-block--toc li::marker': {
+    color: 'var(--editor-accent)',
   },
   '.cm-live-block--toc a': {
     color: 'var(--editor-text)',
