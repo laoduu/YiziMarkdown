@@ -69,6 +69,18 @@ export function canonicalRemotePath(raw: string): string | null {
   return `/${out.join('/')}`
 }
 
+/**
+ * `path` 是否位于 `ancestor` 之内（含 `ancestor` 自身）。
+ *
+ * 用于移动校验：文件夹不能被移动到自身或自己的子目录（WebDAV MOVE 会拒绝，
+ * 但提前在界面上拦掉能给出更明确的提示）。根目录包含一切路径。
+ */
+export function isRemotePathWithin(path: string, ancestor: string): boolean {
+  const p = normalizeRemotePath(path)
+  const a = normalizeRemotePath(ancestor)
+  return a === '/' ? true : p === a || p.startsWith(`${a}/`)
+}
+
 /** 人类可读的文件大小。 */
 export function formatSize(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes < 0) return '—'

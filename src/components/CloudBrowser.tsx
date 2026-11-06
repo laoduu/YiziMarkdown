@@ -6,11 +6,12 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  ChevronDown, ChevronRight, ChevronUp, Cloud, CloudOff, FileCode, FilePlus2, Folder, FolderOpen,
-  Loader2, RefreshCw, FolderPlus, Pencil, Trash2, MoreHorizontal,
+  ChevronDown, ChevronRight, ChevronUp, ChevronsDown, ChevronsUp, Cloud, CloudOff, FileCode, FilePlus2, Folder,
+  FolderOpen, FolderPlus, Home, Loader2, MoreHorizontal, Move, Pencil, RefreshCw, Trash2,
 } from 'lucide-react'
 import { useI18n } from '../i18n'
 import Dialog from './Dialog'
+import CloudMoveDialog from './CloudMoveDialog'
 import { openContextMenu, type ContextMenuItem } from './ContextMenu'
 import { useSettingsStore } from '../stores/settingsStore'
 import {
@@ -18,7 +19,9 @@ import {
   WEBDAV_DIR_CHANGED_EVENT,
   type RemoteEntry,
 } from '../lib/webdav'
-import { joinPath, parentPath, normalizeRemotePath, formatSize } from '../lib/remotePath'
+import {
+  joinPath, parentPath, normalizeRemotePath, formatSize, isRemotePathWithin,
+} from '../lib/remotePath'
 
 const MARKDOWN_EXTS = ['.md', '.markdown', '.txt']
 
@@ -31,9 +34,6 @@ function isMarkdownFile(name: string): boolean {
 function isVisible(entry: RemoteEntry): boolean {
   return entry.isDir || isMarkdownFile(entry.name)
 }
-
-/** 面包屑最多原样显示的层级数，超出则把上级折成「…」 */
-const MAX_CRUMBS = 2
 
 type DialogKind = 'newFile' | 'newFolder' | 'rename' | 'delete'
 
@@ -57,7 +57,7 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
   const lastPath = useSettingsStore((s) => s.webdavLastPath)
   const setField = useSettingsStore((s) => s.setField)
 
-  const [path, setPath] = useState(() => lastPath || rootPath || '/')
+  const [path, setPath] = useState(() => normalizeRemotePath(lastPath || rootPath || '/'))
   const [entries, setEntries] = useState<RemoteEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -73,7 +73,16 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
   const [children, setChildren] = useState<Record<string, RemoteEntry[]>>({})
   /** 子目录拉取失败信息（就地显示，不覆盖整个列表） */
   const [dirErrors, setDirErrors] = useState<Record<string, string>>({})
-  const [crumbsOpen, setCrumbsOpen] = useState(false)
+  /** 当前高亮的条目（文件夹或文件） */
+  const [selectedEntryPath, setSelectedEntryPath] = useState<string | null>(null)
+  /** 新建文件/文件夹的目标目录：跟随当前选中的文件夹（选中文件时用其父目录） */
+  const [targetDir, setTargetDir] = useState(() => normalizeRemotePath(lastPath || rootPath || '/'))
+  /** 「一键展开」进行中：避免重复触发 */
+  const [expandingAll, setExpandingAll] = useState(false)
+  /** 是否已处于「全部展开」状态：控制按钮在展开全部 / 收折全部之间切换 */
+  const [allExpanded, setAllExpanded] = useState(false)
+  /** 移动弹窗的目标条目 */
+  const [moveEntry, setMoveEntry] = useState<RemoteEntry | null>(null)
 
   const load = useCallback(async (target: string) => {
     if (!baseUrl) {
@@ -83,6 +92,7 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
     // 目录内容可能已变（刷新、切换目录、增删改）→ 已展开子树的缓存一律作废，
     // 否则重命名/删除后展开的旧列表会继续显示已经不存在的条目
     setExpanded(new Set())
+    setAllExpanded(false)
     setChildren({})
     setDirErrors({})
     setLoading(true)
@@ -103,6 +113,12 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
     load(path)
   }, [path, load])
 
+  // 切换树根（上级 / 根目录 / 主目录）后清空选中状态，新建目标回到新根目录
+  useEffect(() => {
+    setSelectedEntryPath(null)
+    setTargetDir(normalizeRemotePath(path))
+  }, [path])
+
   // 「保存到云端」等外部动作新建了远程文件 → 自动刷新当前目录，
   // 否则用户得手动点刷新才能看到刚上传的文档
   useEffect(() => {
@@ -119,36 +135,28 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
     return () => window.removeEventListener(WEBDAV_DIR_CHANGED_EVENT, onDirChanged)
   }, [path, load])
 
-  // 关闭面包屑「…」下拉：点击任意处、按 Esc
-  useEffect(() => {
-    if (!crumbsOpen) return
-    const close = () => setCrumbsOpen(false)
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close() }
-    window.addEventListener('click', close)
-    window.addEventListener('keydown', onKey)
-    return () => {
-      window.removeEventListener('click', close)
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [crumbsOpen])
-
   // 只展示文件夹与 Markdown 文件（与本地文件树一致）
   const visible = useMemo(() => entries.filter(isVisible), [entries])
 
-  const goUp = useCallback(() => {
-    setPath((p) => parentPath(p))
-  }, [])
-
-  const openEntry = useCallback((entry: RemoteEntry) => {
-    if (entry.isDir) {
-      setPath(entry.path)
+  /** 导航到新的树根；同一路径时等价于刷新 */
+  const navigate = useCallback((target: string) => {
+    const next = normalizeRemotePath(target)
+    setSelectedEntryPath(null)
+    setTargetDir(next)
+    if (next === normalizeRemotePath(path)) {
+      load(next)
     } else {
-      onOpenRemote(entry.path)
+      setPath(next)
     }
-  }, [onOpenRemote])
+  }, [load, path])
 
-  /** 展开 / 收起某个目录；首次展开时按需拉取子项（懒加载，不递归预取） */
+  /**
+   * 展开某个目录；首次展开时按需拉取子项（懒加载，不递归预取）。
+   * 现在点击文件夹只在本树内展开，不再把树根切到该目录。
+   */
   const toggleDir = useCallback(async (dir: string) => {
+    // 手动展开/收折后就不再是「全部展开」状态，按钮回到「展开全部」
+    setAllExpanded(false)
     if (expanded.has(dir)) {
       setExpanded((prev) => {
         const next = new Set(prev)
@@ -172,6 +180,17 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
       setDirErrors((prev) => ({ ...prev, [dir]: e instanceof Error ? e.message : String(e) }))
     }
   }, [baseUrl, children, expanded])
+
+  /** 点击条目：文件夹 = 选中并展开/收折；文件 = 选中并打开 */
+  const activateEntry = useCallback((entry: RemoteEntry) => {
+    setSelectedEntryPath(entry.path)
+    setTargetDir(entry.isDir ? normalizeRemotePath(entry.path) : parentPath(entry.path))
+    if (entry.isDir) {
+      void toggleDir(entry.path)
+    } else {
+      onOpenRemote(entry.path)
+    }
+  }, [onOpenRemote, toggleDir])
 
   /** 当前目录 + 已展开子树 → 待渲染的行（depth 决定缩进与引导线数量） */
   const rows = useMemo(() => {
@@ -197,41 +216,129 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
     return out
   }, [visible, expanded, children, dirErrors])
 
+  /**
+   * 一键展开：从当前树根开始递归拉取所有子/孙目录，成功后一次性写入缓存与展开集合。
+   * 并发上限 6，避免目录很深时把 WebDAV 服务器打满；失败目录保留错误行，不影响其他分支。
+   */
+  const expandAll = useCallback(async () => {
+    if (!baseUrl || expandingAll) return
+    setExpandingAll(true)
+    const loaded: string[] = []
+    const cache: Record<string, RemoteEntry[]> = {}
+    const errors: Record<string, string> = {}
+    const queue = visible.filter((e) => e.isDir).map((e) => e.path)
+    const queued = new Set(queue)
+    try {
+      while (queue.length > 0) {
+        const batch = queue.splice(0, 6)
+        await Promise.all(batch.map(async (dir) => {
+          try {
+            const result = children[dir] ?? await list(baseUrl, dir)
+            cache[dir] = result
+            loaded.push(dir)
+            for (const child of result.filter(isVisible)) {
+              if (child.isDir && !queued.has(child.path)) {
+                queued.add(child.path)
+                queue.push(child.path)
+              }
+            }
+          } catch (e) {
+            errors[dir] = e instanceof Error ? e.message : String(e)
+            // 仍然展开失败目录，让它就地显示错误行而不是悄无声息地收起
+            loaded.push(dir)
+          }
+        }))
+      }
+    } finally {
+      setChildren((prev) => ({ ...prev, ...cache }))
+      setDirErrors(errors)
+      setExpanded(new Set(loaded))
+      setAllExpanded(true)
+      setExpandingAll(false)
+    }
+  }, [baseUrl, children, expandingAll, visible])
+
+  /** 收折全部：保留已拉取的子目录缓存，下次展开无需重新请求 */
+  const collapseAll = useCallback(() => {
+    setExpanded(new Set())
+    setAllExpanded(false)
+  }, [])
+
+  /**
+   * 操作完成后重新展开到目标目录，让新建/移入的条目在嵌套层级下也能立刻看到。
+   * `load(path)` 会清空所有展开缓存，所以这里逐级重新拉取祖先目录。
+   */
+  const revealDir = useCallback(async (target: string) => {
+    if (!baseUrl) return
+    const root = normalizeRemotePath(path)
+    const goal = normalizeRemotePath(target)
+    if (goal === root || !isRemotePathWithin(goal, root)) return
+    const rootSegs = root === '/' ? [] : root.split('/').filter(Boolean)
+    const goalSegs = goal.split('/').filter(Boolean)
+    const rel = goalSegs.slice(rootSegs.length)
+    if (rel.length === 0) return
+
+    const updates: Record<string, RemoteEntry[]> = {}
+    let cur = root
+    for (const seg of rel) {
+      cur = joinPath(cur, seg)
+      try {
+        updates[cur] = await list(baseUrl, cur)
+      } catch {
+        // 目录可能在操作中又被删除/改名：保留已取到的部分即可
+        break
+      }
+    }
+    setChildren((prev) => ({ ...prev, ...updates }))
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      for (const dir of Object.keys(updates)) next.add(dir)
+      return next
+    })
+  }, [baseUrl, path])
+
   const openDialog = (kind: DialogKind, entry?: RemoteEntry) => {
     setDialogError(null)
     setDialog({ kind, entry })
     setNameInput(kind === 'rename' && entry ? entry.name : '')
   }
 
-  /** 行右键 / 行尾「…」按钮共用：打开 / 重命名 / 删除（danger） */
+  /** 行右键 / 行尾「…」按钮共用：打开 / 移动 / 重命名 / 删除（danger） */
   const openEntryMenu = (entry: RemoteEntry, x: number, y: number) => {
     const items: ContextMenuItem[] = []
     if (!entry.isDir) {
       items.push({ key: 'open', icon: <FileCode size={13} />, label: t('cloud.open'), onClick: () => onOpenRemote(entry.path) })
     }
     items.push(
+      {
+        key: 'move',
+        icon: <Move size={13} />,
+        label: entry.isDir ? t('cloud.moveFolder') : t('cloud.moveFile'),
+        onClick: () => setMoveEntry(entry),
+      },
       { key: 'rename', icon: <Pencil size={13} />, label: t('cloud.rename'), onClick: () => openDialog('rename', entry) },
       { key: 'delete', icon: <Trash2 size={13} />, label: t('cloud.delete'), danger: true, separatorBefore: true, onClick: () => openDialog('delete', entry) },
     )
     openContextMenu(x, y, items)
   }
 
-  /** 目标目录：新建文件夹/重命名都在当前目录内 */
+  /** 目标目录：新建文件夹/新建文件都在当前选中的文件夹内 */
   const runDialog = async () => {
     if (!dialog || !baseUrl) return
     const name = nameInput.trim()
     setBusy(true)
     setDialogError(null)
+    const wasCreate = dialog.kind === 'newFile' || dialog.kind === 'newFolder'
     try {
       if (dialog.kind === 'newFile') {
         if (!name) throw new Error(t('sidebar.namePlaceholder'))
         // 不带已知后缀时自动补 .md（与本地新建文件一致）
         const fileName = /\.(md|markdown|txt)$/i.test(name) ? name : `${name}.md`
         // create=true（If-None-Match）：已存在同名文件会报冲突，避免静默覆盖
-        await save(baseUrl, joinPath(path, fileName), '', null, true, null)
+        await save(baseUrl, joinPath(targetDir, fileName), '', null, true, null)
       } else if (dialog.kind === 'newFolder') {
         if (!name) throw new Error(t('cloud.folderNamePlaceholder'))
-        await mkdir(baseUrl, joinPath(path, name))
+        await mkdir(baseUrl, joinPath(targetDir, name))
       } else if (dialog.kind === 'rename' && dialog.entry) {
         if (!name) throw new Error(t('cloud.newNamePlaceholder'))
         const target = joinPath(parentPath(dialog.entry.path), name)
@@ -242,12 +349,23 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
         await remove(baseUrl, dialog.entry.path)
       }
       setDialog(null)
+      setSelectedEntryPath(null)
       await load(path)
+      // 在嵌套文件夹中新建后，重新展开到目标位置，避免新条目藏在收起的子树里
+      if (wasCreate) await revealDir(targetDir)
     } catch (e) {
       setDialogError(e instanceof Error ? e.message : String(e))
     }
     setBusy(false)
   }
+
+  /** 移动成功：刷新当前树，并在目标位于当前树内时展开到目标目录 */
+  const handleMoved = useCallback(async (destDir: string) => {
+    setMoveEntry(null)
+    setSelectedEntryPath(null)
+    await load(path)
+    await revealDir(destDir)
+  }, [load, path, revealDir])
 
   // ===== 未配置 =====
   if (!baseUrl) {
@@ -266,116 +384,66 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
     )
   }
 
-  // ===== 面包屑 =====
-  const crumbs = path.split('/').filter(Boolean)
-  // 层级深时把上级折成「…」：常态只留当前目录名，从根上消掉横向滚动条
-  const collapsed = crumbs.length > MAX_CRUMBS
-  const shownCrumbs = (collapsed ? crumbs.slice(-1) : crumbs)
-    .map((seg, i) => ({ seg, depth: collapsed ? crumbs.length : i + 1 }))
-  const hiddenCrumbs = collapsed
-    ? crumbs.slice(0, -1).map((seg, i) => ({ seg, depth: i + 1 }))
-    : []
+  const iconBtn = 'p-1 rounded transition-colors duration-100 text-[var(--sidebar-text)] ' +
+    'hover:bg-[var(--editor-hover)] hover:text-[var(--editor-text)] disabled:opacity-30 disabled:cursor-default'
+  const homeDir = normalizeRemotePath(rootPath || '/')
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      {/* 路径导航 */}
-      <div className="flex items-center gap-1 px-2 py-1.5 border-b border-[var(--editor-border)] text-xs text-[var(--sidebar-text)] shrink-0">
+      {/* 顶部常驻图标：上级 / 根目录 / 主目录 / 新建文件夹 / 新建文件 / 一键展开 / 刷新 */}
+      <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-[var(--editor-border)] text-xs shrink-0">
         <button
-          onClick={goUp}
+          onClick={() => navigate(parentPath(path))}
           disabled={path === '/'}
-          title={t('sidebar.parentDir')}
-          className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded transition-colors duration-100
-            ${path === '/'
-              ? 'opacity-30 cursor-default'
-              : 'hover:bg-[var(--editor-hover)] hover:text-[var(--editor-text)] cursor-pointer'}`}
+          title={t('cloud.parentDir')}
+          className={iconBtn}
         >
           <ChevronUp size={14} />
-          <span>..</span>
         </button>
-        <div className="flex-1 flex items-center gap-0.5 min-w-0">
-          <button
-            onClick={() => setPath('/')}
-            className="hover:text-[var(--editor-text)] shrink-0"
-            title={t('cloud.root')}
-          >
-            <Cloud size={13} />
-          </button>
-          {hiddenCrumbs.length > 0 && (
-            <div className="relative shrink-0">
-              <button
-                // 必须阻止冒泡：否则同一次点击会被下面的 window 监听立刻关掉
-                onClick={(e) => { e.stopPropagation(); setCrumbsOpen((v) => !v) }}
-                title={path}
-                className="flex items-center gap-0.5 px-0.5 rounded hover:bg-[var(--editor-hover)] hover:text-[var(--editor-text)]"
-              >
-                <span>…</span>
-                <ChevronRight size={11} className="opacity-50" />
-              </button>
-              {crumbsOpen && (
-                <div className="absolute left-0 top-full mt-0.5 z-[9500] min-w-[120px] max-w-[200px] py-1
-                  rounded-lg shadow-xl border border-[var(--editor-border)] bg-[var(--editor-bg)] text-[var(--editor-text)]">
-                  {hiddenCrumbs.map((c) => (
-                    <button
-                      key={c.depth}
-                      onClick={() => {
-                        setPath('/' + crumbs.slice(0, c.depth).join('/'))
-                        setCrumbsOpen(false)
-                      }}
-                      className="w-full px-3 py-1 text-left text-xs truncate hover:bg-[var(--editor-hover)]"
-                    >
-                      {c.seg}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          {shownCrumbs.map((c) => {
-            const isCurrent = c.depth === crumbs.length
-            return (
-              <span
-                key={c.depth}
-                className={`flex items-center gap-0.5 ${isCurrent ? 'min-w-0 flex-1' : 'shrink-0'}`}
-              >
-                <ChevronRight size={11} className="opacity-50 shrink-0" />
-                <button
-                  onClick={() => setPath('/' + crumbs.slice(0, c.depth).join('/'))}
-                  className={`truncate hover:text-[var(--editor-text)] ${
-                    isCurrent
-                      ? 'flex-1 text-left text-[var(--editor-text)] font-medium'
-                      : 'max-w-[110px]'
-                  }`}
-                >
-                  {c.seg}
-                </button>
-              </span>
-            )
-          })}
-        </div>
+        <button onClick={() => navigate('/')} title={t('cloud.root')} className={iconBtn}>
+          <Cloud size={14} />
+        </button>
+        <button
+          onClick={() => navigate(homeDir)}
+          title={`${t('cloud.home')} (${homeDir})`}
+          className={iconBtn}
+        >
+          <Home size={14} />
+        </button>
+        <div className="flex-1 min-w-0" />
+        <button onClick={() => openDialog('newFolder')} title={t('cloud.newFolder')} className={iconBtn}>
+          <FolderPlus size={14} />
+        </button>
+        <button onClick={() => openDialog('newFile')} title={t('cloud.newFile')} className={iconBtn}>
+          <FilePlus2 size={14} />
+        </button>
+        <button
+          onClick={allExpanded ? collapseAll : expandAll}
+          disabled={expandingAll}
+          title={allExpanded ? t('cloud.collapseAll') : t('cloud.expandAll')}
+          className={iconBtn}
+        >
+          {allExpanded
+            ? <ChevronsUp size={14} className={expandingAll ? 'animate-pulse' : ''} />
+            : <ChevronsDown size={14} className={expandingAll ? 'animate-pulse' : ''} />}
+        </button>
         <button
           onClick={() => load(path)}
           disabled={loading}
           title={t('cloud.refresh')}
-          className="p-0.5 rounded hover:bg-[var(--editor-hover)] hover:text-[var(--editor-text)] shrink-0"
+          className={iconBtn}
         >
-          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-        </button>
-        <button
-          onClick={() => openDialog('newFolder')}
-          title={t('cloud.newFolder')}
-          className="p-0.5 rounded hover:bg-[var(--editor-hover)] hover:text-[var(--editor-text)] shrink-0"
-        >
-          <FolderPlus size={13} />
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
         </button>
       </div>
 
-      {/* 内容（空白处右键 = 新建文件 / 新建文件夹 / 刷新；行右键由 CloudRow 自行 stopPropagation 接管） */}
+      {/* 内容（空白处右键 = 在选中文件夹中新建 / 刷新；行右键由 CloudRow 自行 stopPropagation 接管） */}
       <div
         className="flex-1 overflow-auto min-h-0"
         onContextMenu={(e) => {
           e.preventDefault()
           openContextMenu(e.clientX, e.clientY, [
-            { key: 'newFile', icon: <FilePlus2 size={13} />, label: t('sidebar.newFile'), onClick: () => openDialog('newFile') },
+            { key: 'newFile', icon: <FilePlus2 size={13} />, label: t('cloud.newFile'), onClick: () => openDialog('newFile') },
             { key: 'newFolder', icon: <FolderPlus size={13} />, label: t('cloud.newFolder'), onClick: () => openDialog('newFolder') },
             { key: 'refresh', icon: <RefreshCw size={13} />, label: t('cloud.refresh'), onClick: () => load(path) },
           ])
@@ -411,8 +479,8 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
                     entry={row.entry}
                     depth={row.depth}
                     expanded={expanded.has(row.entry.path)}
-                    onToggle={() => toggleDir(row.entry.path)}
-                    onOpen={() => openEntry(row.entry)}
+                    selected={row.entry.path === selectedEntryPath}
+                    onActivate={() => activateEntry(row.entry)}
                     onMenu={openEntryMenu}
                   />
                 )
@@ -438,15 +506,21 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
         )}
       </div>
 
-      {/* 新建文件夹 / 重命名 */}
+      {/* 新建文件 / 新建文件夹 / 重命名 */}
       <Dialog
         open={dialog?.kind === 'newFile' || dialog?.kind === 'newFolder' || dialog?.kind === 'rename'}
         onClose={() => setDialog(null)}
         title={dialog?.kind === 'rename'
           ? t('cloud.rename')
-          : dialog?.kind === 'newFile' ? t('sidebar.newFile') : t('cloud.newFolder')}
+          : dialog?.kind === 'newFile' ? t('cloud.newFile') : t('cloud.newFolder')}
         width={320}
       >
+        {(dialog?.kind === 'newFile' || dialog?.kind === 'newFolder') && (
+          <div className="flex items-baseline gap-1.5 mb-2 text-[0.6875rem] text-[var(--sidebar-text)]">
+            <span className="shrink-0">{t('cloud.pathLabel')}</span>
+            <span className="truncate font-mono" title={targetDir}>{targetDir}</span>
+          </div>
+        )}
         <input
           autoFocus
           value={nameInput}
@@ -499,6 +573,13 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
           </button>
         </div>
       </Dialog>
+
+      {/* 移动文件 / 目录 */}
+      <CloudMoveDialog
+        entry={moveEntry}
+        onClose={() => setMoveEntry(null)}
+        onMoved={handleMoved}
+      />
     </div>
   )
 }
@@ -515,17 +596,17 @@ function TreeGuides({ depth }: { depth: number }) {
   )
 }
 
-function CloudRow({ entry, depth, expanded, onToggle, onOpen, onMenu }: {
+function CloudRow({ entry, depth, expanded, selected, onActivate, onMenu }: {
   entry: RemoteEntry
   depth: number
   expanded: boolean
-  onToggle: () => void
-  onOpen: () => void
+  selected: boolean
+  onActivate: () => void
   onMenu: (entry: RemoteEntry, x: number, y: number) => void
 }) {
   return (
     <div
-      onClick={onOpen}
+      onClick={onActivate}
       onContextMenu={(e) => {
         e.preventDefault()
         // 阻止冒泡到内容容器的空白处菜单
@@ -533,16 +614,18 @@ function CloudRow({ entry, depth, expanded, onToggle, onOpen, onMenu }: {
         onMenu(entry, e.clientX, e.clientY)
       }}
       title={entry.isDir ? entry.name : `${entry.name} · ${formatSize(entry.size)}`}
-      className="group flex items-stretch cursor-pointer
-        transition-colors duration-100 hover:bg-[var(--editor-hover)] text-[var(--editor-text)]"
+      aria-selected={selected}
+      className={`group flex items-stretch cursor-pointer
+        transition-colors duration-100 hover:bg-[var(--editor-hover)] text-[var(--editor-text)]
+        ${selected ? 'bg-[var(--editor-hover)]' : ''}`}
     >
       <TreeGuides depth={depth} />
       <div className="flex items-center gap-1 flex-1 min-w-0 py-1 pl-2 pr-2">
         {entry.isDir ? (
-          // 与本地文件树统一：名称前的展开三角；点名称仍是「进入该目录」
+          // Obsidian 风格：点击文件夹只在本树内展开/收折，不再切换树根
           <>
             <button
-              onClick={(e) => { e.stopPropagation(); onToggle() }}
+              onClick={(e) => { e.stopPropagation(); onActivate() }}
               className="p-0.5 -m-0.5 rounded shrink-0 hover:bg-[var(--editor-bg)]"
             >
               {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -558,7 +641,7 @@ function CloudRow({ entry, depth, expanded, onToggle, onOpen, onMenu }: {
             <FileCode size={14} className="text-[var(--editor-accent)] opacity-70 shrink-0" />
           </>
         )}
-        <span className="flex-1 truncate text-sm">{entry.name}</span>
+        <span className={`flex-1 truncate text-sm ${selected ? 'font-medium' : ''}`}>{entry.name}</span>
         <button
           onClick={(e) => {
             e.stopPropagation()

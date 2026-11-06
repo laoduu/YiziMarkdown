@@ -19,6 +19,7 @@ import {
   baseName,
   normalizeRemotePath,
   canonicalRemotePath,
+  isRemotePathWithin,
   formatSize,
 } from '../src/lib/remotePath.ts'
 
@@ -38,6 +39,19 @@ test('parentPath 覆盖根目录与多级路径', () => {
   // 目录条目带结尾斜杠（来自服务器 href），其父目录仍是上一层
   assert.equal(parentPath('/Notes/'), '/')
   assert.equal(parentPath('/a/b/'), '/a')
+})
+
+test('isRemotePathWithin 判断自身 / 子目录 / 外部路径', () => {
+  assert.equal(isRemotePathWithin('/Notes', '/Notes'), true)
+  assert.equal(isRemotePathWithin('/Notes/Sub', '/Notes'), true)
+  assert.equal(isRemotePathWithin('/Notes/Sub/deep', '/Notes'), true)
+  assert.equal(isRemotePathWithin('/Notes2', '/Notes'), false)
+  assert.equal(isRemotePathWithin('/', '/Notes'), false)
+  // 带结尾斜杠的目录条目也要正确归一化
+  assert.equal(isRemotePathWithin('/Notes/Sub/', '/Notes/'), true)
+  // 根目录包含一切
+  assert.equal(isRemotePathWithin('/Notes', '/'), true)
+  assert.equal(isRemotePathWithin('/', '/'), true)
 })
 
 test('joinPath 不产生双斜杠', () => {
