@@ -1,5 +1,35 @@
 # YiziMarkdown 开发日志
 
+## v0.4.4
+
+> **开发中**：0.4.3 发布后的修复，随下一版本发布。
+
+### 欢迎文档升级后自动刷新（2026-11-09）
+
+**现象**
+- 安装 / 升级到新版本后，欢迎页仍显示旧版内容（缺少七种模式、Linux、5 个技能等新章节）。
+
+**根因**
+- 欢迎页是「未命名标签页」（`filePath = null`），正文随 Zustand persist 存入本地存储；升级安装只替换程序目录的 `welcome.md`，不清应用数据。
+- 启动逻辑只在「完全没有任何持久化数据」时读取 `welcome.md`，老用户直接恢复了旧标签里的旧正文。
+
+**修复**
+- 启动时识别「无 filePath 且名为 `welcome.md`」的标签页，重新调用 `read_welcome` 读取安装包里的最新版本并覆盖正文。
+- 用户自己从磁盘打开的 `welcome.md` 带有 filePath，不受影响。
+
+### 手动更新通道版本相等时误报新版本（2026-11-09）
+
+**现象**
+- 绿色版 / macOS / Linux 已是最新 0.4.3，但「版本与更新」仍显示「发现新版本 0.4.3」。
+
+**根因**
+- 手动更新通道用 `shouldOfferUpdate ? available : skipped` 二选一；版本相等与「用户跳过」都返回 false，被错误归入 `skipped`，而卡片只要存在 update 对象就会渲染「发现新版本」。
+
+**修复**
+- 新增三态判定 `decideUpdate()`：`latest`（清单 ≤ 当前）/ `skipped`（新版本但已跳过同版本）/ `available`（应提示）。
+- 手动通道与自动通道统一使用该判定；`latest` 时清空 update，界面显示「已是最新版本」。
+- 新增 3 个单测覆盖相同版本、旧清单、预发布、脏版本号与跳过记录。
+
 ## v0.4.3
 
 > **已发布**（2026-11-09）：发布 tag `v0.4.3`。`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已同步到 `0.4.3`。用户向说明见 `docs/changelog/CHANGELOG-V0.4.3.md`。

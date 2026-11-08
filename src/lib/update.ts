@@ -75,11 +75,29 @@ export const shouldOfferUpdate = (
   candidate: string,
   current: string,
   skipped?: string | null,
-): boolean => {
-  if (!normalizeVersion(candidate) || !normalizeVersion(current)) return false
-  if (compareVersion(candidate, current) <= 0) return false
-  if (skipped && compareVersion(candidate, skipped) === 0) return false
-  return true
+): boolean => decideUpdate(candidate, current, skipped) === 'available'
+
+/**
+ * 更新提示的三种结果（与 updateStore.status 对齐）：
+ * - `latest`：清单版本等于或低于当前版本 —— 已经是新版本，不应显示「发现新版本」
+ * - `skipped`：确实有新版，但用户此前点过「跳过此版本」
+ * - `available`：确实有新版，且应该提示
+ *
+ * 版本号缺失 / 无法解析时按 `latest` 处理：宁可什么都不提示，也不要因为脏清单误报更新。
+ */
+export type UpdateDecision = 'latest' | 'skipped' | 'available'
+
+export const decideUpdate = (
+  candidate: string,
+  current: string,
+  skipped?: string | null,
+): UpdateDecision => {
+  const cand = normalizeVersion(candidate)
+  const cur = normalizeVersion(current)
+  if (!cand || !cur) return 'latest'
+  if (compareVersion(cand, cur) <= 0) return 'latest'
+  if (skipped && compareVersion(cand, skipped) === 0) return 'skipped'
+  return 'available'
 }
 
 /** 下载进度 0~1。总大小未知时返回 null —— 界面据此画「不确定态」进度条，

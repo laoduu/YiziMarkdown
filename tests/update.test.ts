@@ -3,7 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  normalizeVersion, compareVersion, shouldOfferUpdate, progressRatio, formatBytes,
+  normalizeVersion, compareVersion, shouldOfferUpdate, decideUpdate, progressRatio, formatBytes,
 } from '../src/lib/update.ts'
 
 // ---------- normalizeVersion ----------
@@ -83,6 +83,28 @@ test('shouldOfferUpdate: 「跳过此版本」只跳过那一个版本', () => {
 test('shouldOfferUpdate: 版本号缺失时不提示', () => {
   assert.equal(shouldOfferUpdate('', '0.3.4'), false)
   assert.equal(shouldOfferUpdate('0.3.5', ''), false)
+})
+
+// ---------- decideUpdate ----------
+
+test('decideUpdate: 清单版本等于或低于当前版本一律是 latest', () => {
+  assert.equal(decideUpdate('0.3.4', '0.3.4'), 'latest')
+  assert.equal(decideUpdate('v0.3.4', '0.3.4'), 'latest')
+  assert.equal(decideUpdate('0.3.3', '0.3.4'), 'latest') // 清单被传成旧版本
+  assert.equal(decideUpdate('0.3.4-beta.1', '0.3.4'), 'latest')
+})
+
+test('decideUpdate: 新版本按跳过记录区分 available / skipped', () => {
+  assert.equal(decideUpdate('0.3.5', '0.3.4'), 'available')
+  assert.equal(decideUpdate('0.3.5', '0.3.4', '0.3.5'), 'skipped')
+  assert.equal(decideUpdate('v0.3.5', '0.3.4', '0.3.5'), 'skipped')
+  assert.equal(decideUpdate('0.3.6', '0.3.4', '0.3.5'), 'available') // 跳过的是别的版本
+})
+
+test('decideUpdate: 版本号缺失或无法解析时不提示', () => {
+  assert.equal(decideUpdate('', '0.3.4'), 'latest')
+  assert.equal(decideUpdate('0.3.5', ''), 'latest')
+  assert.equal(decideUpdate('nightly', '0.3.4'), 'latest')
 })
 
 // ---------- progressRatio ----------

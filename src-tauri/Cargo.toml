@@ -1,6 +1,6 @@
 [package]
 name = "yizimarkdown"
-version = "0.4.3"
+version = "0.4.4"
 description = "YiziMarkdown - A sleek Markdown editor"
 authors = ["laoduu <laoduu@users.noreply.github.com>"]
 license = "MIT"

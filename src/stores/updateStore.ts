@@ -14,7 +14,7 @@ import {
   isManualUpdateChannel,
   type AvailableUpdate, type UpdateBlocker,
 } from '../lib/updateClient'
-import { shouldOfferUpdate } from '../lib/update'
+import { decideUpdate } from '../lib/update'
 import { releasePageUrl } from '../lib/manualUpdate'
 import { invokeTauri } from '../lib/tauri'
 import { useSettingsStore } from './settingsStore'
@@ -101,9 +101,16 @@ export const useUpdateStore = create<UpdateStoreState>()((set, get) => ({
       if (manualChannel) {
         const info = await checkManualUpdate()
         const currentVersion = await getCurrentVersion()
+        // 清单版本可能等于当前版本（刚装了最新版）：这时不能落到 skipped 分支，
+        // 否则更新卡片会继续显示「发现新版本 0.4.3」——应明确告诉用户「已是最新」。
+        const decision = decideUpdate(info.version, currentVersion, skipped)
+        if (decision === 'latest') {
+          set({ status: 'latest', update: null })
+          return
+        }
         set({
           update: { ...info, currentVersion, mode: 'manual' },
-          status: shouldOfferUpdate(info.version, currentVersion, skipped) ? 'available' : 'skipped',
+          status: decision,
         })
         return
       }
@@ -112,9 +119,14 @@ export const useUpdateStore = create<UpdateStoreState>()((set, get) => ({
         set({ status: 'latest', update: null })
         return
       }
+      const decision = decideUpdate(found.version, found.currentVersion, skipped)
+      if (decision === 'latest') {
+        set({ status: 'latest', update: null })
+        return
+      }
       set({
         update: found,
-        status: shouldOfferUpdate(found.version, found.currentVersion, skipped) ? 'available' : 'skipped',
+        status: decision,
       })
     } catch (e) {
       // 自动检查：网络断了、清单挂了都不该弹东西出来，静默回到 idle

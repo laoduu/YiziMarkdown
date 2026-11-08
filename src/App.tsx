@@ -625,6 +625,17 @@ function App() {
       // 检查是否有persist恢复的数据
       const store = useEditorStore.getState()
 
+      // 欢迎文档是安装包里的示例页，不是用户文件：升级后必须用新版本内容覆盖
+      // persist 里的旧副本，否则老用户会一直看到旧版欢迎页（tab 名与磁盘文件同名，
+      // 但没有 filePath，因此不会误伤用户自己打开的 welcome.md）。
+      const welcomeTab = store.tabs.find(t => t.filePath === null && t.name === 'welcome.md')
+      if (welcomeTab) {
+        const w = await invokeTauri<string>('read_welcome').catch(() => null)
+        if (w && w !== welcomeTab.content) {
+          useEditorStore.getState().setTabContent(welcomeTab.id, w)
+        }
+      }
+
       // 初次打开：没有任何persist数据
       if (store.tabs.length === 0 && !store.activeTabId && store.recentFiles.length === 0) {
         // 场景1：初次打开 → 加载 welcome.md，预览模式
