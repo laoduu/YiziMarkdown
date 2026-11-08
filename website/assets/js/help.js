@@ -27,7 +27,8 @@
         'message-square': iconSvg('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'),
         'triangle-alert': iconSvg('<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>'),
         'octagon-alert': iconSvg('<path d="M12 16h.01"/><path d="M12 8v4"/><path d="M15.312 2a2 2 0 0 1 1.414.586l4.688 4.688A2 2 0 0 1 22 8.688v6.624a2 2 0 0 1-.586 1.414l-4.688 4.688a2 2 0 0 1-1.414.586H8.688a2 2 0 0 1-1.414-.586l-4.688-4.688A2 2 0 0 1 2 15.312V8.688a2 2 0 0 1 .586-1.414l4.688-4.688A2 2 0 0 1 8.688 2z"/>'),
-        'message-square-warning': iconSvg('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M12 7v2"/><path d="M12 13h.01"/>')
+        'message-square-warning': iconSvg('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M12 7v2"/><path d="M12 13h.01"/>'),
+        'zen': iconSvg('<circle cx="12" cy="12" r="3"/><path d="M12 3v2"/><path d="M12 19v2"/><path d="M3 12h2"/><path d="M19 12h2"/><path d="m5.6 5.6 1.4 1.4"/><path d="m17 17 1.4 1.4"/><path d="m18.4 5.6-1.4 1.4"/><path d="m7 17-1.4 1.4"/>')
     };
     var L = Object.assign({}, window.LUCIDE || {}, EXTRA_ICONS);
     var META = window.LUCIDE_META || {};
@@ -55,9 +56,10 @@
         // 提示块类型表：首列文字是 `[!TYPE]`
         '[!NOTE]': 'info', '[!TIP]': 'lightbulb', '[!IMPORTANT]': 'message-square',
         '[!WARNING]': 'triangle-alert', '[!CAUTION]': 'octagon-alert',
-        // 后 5 项对应 src/components/TabBar.tsx 的视图按钮
+        // 后 7 项对应 src/components/TabBar.tsx 与阅读 / 禅模式
         '源码': 'code', '实时模式': 'sparkles', '并排模式': 'columns-2',
-        '预览模式': 'eye', '演示模式': 'presentation'
+        '预览模式': 'eye', '演示模式': 'presentation',
+        '阅读模式': 'book-open', '禅模式': 'zen'
     };
     function addRowIcons() {
         document.querySelectorAll('.help-content table tr').forEach(function (tr) {

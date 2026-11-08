@@ -218,7 +218,7 @@ function pageTemplate(cfg, body, hash) {
     <link rel="icon" type="image/png" href="assets/icon.png">
     <link rel="shortcut icon" href="assets/favicon.ico">
     <link rel="stylesheet" href="assets/css/style.css">
-    <link rel="stylesheet" href="assets/css/help.css?v=6">
+    <link rel="stylesheet" href="assets/css/help.css?v=7">
 
     <script type="application/ld+json">
     {
@@ -263,6 +263,7 @@ function pageTemplate(cfg, body, hash) {
         </nav>
         <h1 class="help-title">${esc(cfg.title)}</h1>
         <p class="docs-subtitle">${esc(cfg.subtitle)}</p>
+        ${cfg.notice ? `<p class="docs-notice">${esc(cfg.notice)}</p>` : ''}
         <div class="docs-meta">${metaChips}</div>
         <div class="help-search">
             <svg class="help-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>

@@ -313,6 +313,10 @@ body.has-docs-tabs .help-content [id] { scroll-margin-top: 124px; }
     max-width: 680px; margin: 12px auto 0;
     font-size: 15px; line-height: 1.75; color: var(--gray);
 }
+.docs-notice {
+    max-width: 720px; margin: 10px auto 0;
+    font-size: 14px; font-weight: 600; line-height: 1.7; color: var(--blue);
+}
 .docs-meta {
     display: flex; justify-content: center; flex-wrap: wrap;
     gap: 8px; margin-top: 16px;

@@ -22,6 +22,7 @@ export const DOC_PAGES = [
     src: 'docs/slideshow-style-mapping.md',
     title: '演示模式语法',
     subtitle: '翻页、分栏、版式、动画与快捷键的完整对照表 —— 不需要额外格式，写 Markdown 就是写幻灯片。',
+    notice: '本页演示语法无需手动编辑维护；软件内置 AI 助手与「演示稿提炼」Skill，可以用 AI 一键将复杂文档提炼成演示模式，并可导出可编辑修改的 PPTX。',
     description:
       'YiziMarkdown 演示模式语法完整参考：用 --- 分页、*** 分栏，自动版式推断规则，显式 layout / align / fragments 指令，片段逐步显示、切换动画、演讲者备注与播放快捷键。',
     keywords: 'YiziMarkdown,演示模式,幻灯片语法,Markdown分页,分栏,自动版式,演讲者备注',
