@@ -770,6 +770,8 @@ export const zhTW = {
     moveConfirm: '移動到此處',
     moving: '正在移動…',
     moveFailed: '移動失敗：{msg}',
+    assetsDirLabel: '圖片資源（自動管理）',
+    assetsDirHint: '此目錄由 YiziMarkdown 自動管理，僅存放正文引用的圖片（共 {count} 張），請勿刪除或重新命名。',
   },
   properties: {
     title: '屬性',

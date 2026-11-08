@@ -753,6 +753,8 @@ export const ko = {
     moveConfirm: '여기로 이동',
     moving: '이동 중…',
     moveFailed: '이동 실패: {msg}',
+    assetsDirLabel: '이미지 리소스(자동 관리)',
+    assetsDirHint: '이 폴더는 YiziMarkdown이 자동 관리하며 문서에서 참조하는 이미지만 저장합니다({count}개). 삭제, 이름 변경, 이동하지 마세요.',
   },
   properties: {
     title: '속성',

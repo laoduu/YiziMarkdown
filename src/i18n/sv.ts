@@ -753,6 +753,8 @@ export const sv = {
     moveConfirm: 'Flytta hit',
     moving: 'Flyttar...',
     moveFailed: 'Flytten misslyckades: {msg}',
+    assetsDirLabel: 'Bildresurser (hanteras)',
+    assetsDirHint: 'Den här mappen hanteras av YiziMarkdown och innehåller endast bilder som dokumenten refererar till ({count}). Flytta, byt inte namn på eller ta inte bort den.',
   },
   properties: {
     title: 'Egenskaper',

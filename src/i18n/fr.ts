@@ -753,6 +753,8 @@ export const fr = {
     moveConfirm: 'Déplacer ici',
     moving: 'Déplacement...',
     moveFailed: 'Échec du déplacement : {msg}',
+    assetsDirLabel: 'Ressources images (géré)',
+    assetsDirHint: 'Ce dossier est géré par YiziMarkdown et ne contient que les images référencées par les documents ({count}). Ne le supprimez pas, ne le renommez pas et ne le déplacez pas.',
   },
   properties: {
     title: 'Propriétés',

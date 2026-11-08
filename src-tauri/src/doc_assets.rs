@@ -33,8 +33,59 @@ pub(crate) const MAX_PASTED_IMAGE_BYTES: usize = crate::remote_cache::MAX_IMAGE_
 /// 文档同级的图片子目录名。本地全局资源目录与云端 `<WebDAV 根>/assets/`
 /// 统一使用 `assets/`，与用户目录 `~/Documents/yizimarkdown/assets/` 保持同一称呼。
 const ASSETS_DIR: &str = "assets";
+/// `assets/` 里的说明文件名（用户可见，跨客户端都能识别）。
+const ASSETS_README_FILE: &str = "README.md";
 /// 内部暂存根目录（pending / staging），不面向用户；与文档旁的 assets/ 区分开。
 const CACHE_ROOT_DIR: &str = "images";
+
+/// `assets/` 目录的说明文档（中英双语）。
+///
+/// 本地全局资源目录与云端 `<WebDAV 根>/assets/` 共用同一份内容：两处都是用户会在
+/// 文件管理器 / 其它 WebDAV 客户端里打开的位置，需要解释「这是什么、能不能删」。
+/// 故意不放官网链接与版本号 —— 这段话要能长期有效；也不含真实图片语法，
+/// 避免被 `collect_image_urls` 当成待上传图片。
+pub(crate) const ASSETS_README_MD: &str = r#"# 这个文件夹是什么？ / What is this folder?
+
+此目录由 YiziMarkdown 自动创建，仅用于存放文档中引用的图片。
+- 图片以内容哈希命名（如 `image-1a2b3c4d5e6f7a8b.png`），相同图片自动去重；
+- 文档通过路径引用这些图片：云端文档是相对路径（如 `../assets/image-1a2b3c4d5e6f7a8b.png`），
+  本地文档是绝对路径；删除其中的图片会让已保存文档里的图片失效；
+- 请不要删除、重命名或移动本目录，也不要手动清理其中的图片；
+- 备份或迁移文档时，请把这个目录和 .md 文件一起带走。
+
+This folder is created automatically by YiziMarkdown and only stores images
+referenced by your documents.
+- Images are named by content hash (e.g. `image-1a2b3c4d5e6f7a8b.png`);
+  identical images are merged automatically;
+- Documents reference these files by path: relative (`../assets/image-...png`)
+  for cloud documents, absolute for local ones. Removing an image breaks it in
+  the documents that already reference it;
+- Do not delete, rename, move, or manually clean this folder;
+- When backing up or moving documents, take this folder together with the
+  .md files.
+"#;
+
+/// 在图片目录里补写 `README.md`：**只在缺失时写**。
+///
+/// 已存在就视为用户（或其它设备）的内容，绝不覆盖 —— 多设备同步时覆盖会制造冲突，
+/// 用户编辑过的说明也该被尊重。
+pub(crate) fn ensure_assets_readme(dir: &Path) -> std::io::Result<()> {
+    let path = dir.join(ASSETS_README_FILE);
+    if path.exists() {
+        return Ok(());
+    }
+    fs::create_dir_all(dir)?;
+    fs::write(&path, ASSETS_README_MD.as_bytes())
+}
+
+/// 启动时的历史数据回填：只有 `assets/` 已经存在（用户已用过图片）才补说明文件，
+/// 没贴过图的用户不会凭空多出一个空目录。
+pub(crate) fn ensure_user_assets_readme(config_dir: &Path) {
+    let dir = assets_dir_in(config_dir);
+    if dir.is_dir() {
+        let _ = ensure_assets_readme(&dir);
+    }
+}
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -144,7 +195,7 @@ fn cloud_asset_ref_prefix(doc_dir_rel: &str) -> String {
 }
 
 /// `<WebDAV 根>/assets/` 的远程路径（根为 `/` 时是 `/assets/`）。
-fn cloud_assets_remote(remote_root: &str) -> String {
+pub(crate) fn cloud_assets_remote(remote_root: &str) -> String {
     format!("{}/{}", normalize_remote_root(remote_root), ASSETS_DIR)
 }
 
@@ -234,6 +285,8 @@ fn save_image_in(
         if let Some(rel) = doc_dir_rel(&remote_dir_of(remote), root) {
             let assets = cloud_assets_local_in(config_dir, base, root)?;
             let (path, name) = write_image(&assets, bytes, mime)?;
+            // 云端图片目录首次出现时随附说明文件（本地缓存与远端各一份，见 remote_cache）
+            let _ = ensure_assets_readme(&assets);
             return Ok(SavedImage {
                 absolute_path: slash(&path),
                 markdown_ref: format!("{}{name}", cloud_asset_ref_prefix(&rel)),
@@ -260,7 +313,9 @@ fn save_image_in(
 
     // 本地文档（含未命名文档）统一落到全局资源目录：Markdown 写绝对路径，
     // 不侵入项目目录，也不依赖文档是否已保存。
-    let (path, name) = write_image(&assets_dir_in(config_dir), bytes, mime)?;
+    let assets = assets_dir_in(config_dir);
+    let (path, name) = write_image(&assets, bytes, mime)?;
+    let _ = ensure_assets_readme(&assets);
     Ok(SavedImage {
         absolute_path: slash(&path),
         markdown_ref: slash(&path),
@@ -765,6 +820,9 @@ pub fn adopt_staged_assets(
 fn adopt_staged_in(staging_images: &Path, target_images: &Path) -> Result<usize, String> {
     fs::create_dir_all(target_images)
         .map_err(|e| format!("创建图片目录失败 {}：{e}", target_images.display()))?;
+    // 未命名文档直接保存到云端时，图片只经过 staging，没走过云端目录的首次写入；
+    // 这里补上说明文件，保证缓存镜像里的 assets/ 与远端一致。
+    let _ = ensure_assets_readme(target_images);
     let mut copied = 0usize;
     let entries = fs::read_dir(staging_images)
         .map_err(|e| format!("读取暂存图片目录失败 {}：{e}", staging_images.display()))?;
@@ -991,6 +1049,72 @@ mod tests {
         assert!(saved.markdown_ref.starts_with(&slash(&assets_dir_in(&config))));
         assert!(assets_dir_in(&config).join(&saved.file_name).is_file());
         assert!(!doc_dir.join("assets").exists(), "本地文档不应创建项目 assets/");
+    }
+
+    #[test]
+    fn writes_assets_readme_once_and_never_overwrites_user_content() {
+        let dir = temp_dir("assets-readme");
+        ensure_assets_readme(&dir).unwrap();
+        let readme = dir.join(ASSETS_README_FILE);
+        assert!(readme.is_file(), "首次写入应创建 README.md");
+        let first = fs::read_to_string(&readme).unwrap();
+        assert!(first.contains("YiziMarkdown"));
+        assert!(first.contains("What is this folder"), "说明文档应中英双语");
+
+        // 用户（或其它设备）改过的说明不再覆盖
+        fs::write(&readme, "# 我自己的说明").unwrap();
+        ensure_assets_readme(&dir).unwrap();
+        assert_eq!(fs::read_to_string(&readme).unwrap(), "# 我自己的说明");
+
+        // 被删除后可以重建
+        fs::remove_file(&readme).unwrap();
+        ensure_assets_readme(&dir).unwrap();
+        assert_eq!(fs::read_to_string(&readme).unwrap(), first);
+    }
+
+    #[test]
+    fn image_writes_create_readme_in_user_assets_dir() {
+        let config = temp_dir("config-readme-local");
+        let saved = save_image_in(&config, None, PNG, "image/png", Some("assets"), None, None, None)
+            .unwrap();
+        let assets = assets_dir_in(&config);
+        assert!(assets.join(&saved.file_name).is_file());
+        assert!(assets.join(ASSETS_README_FILE).is_file(), "写入图片时应补说明文件");
+    }
+
+    #[test]
+    fn cloud_image_writes_create_readme_in_cache_mirror() {
+        let config = temp_dir("config-readme-cloud");
+        let base_url = "https://dav.example.com/dav/";
+        let root = "/yizimarkdown";
+        save_image_in(
+            &config,
+            Some("C:/cache/yizimarkdown/doc.md"),
+            PNG,
+            "image/png",
+            Some("cloud"),
+            Some(base_url),
+            Some("/yizimarkdown/doc.md"),
+            Some(root),
+        )
+        .unwrap();
+        assert!(cloud_assets_local_in(&config, base_url, root)
+            .unwrap()
+            .join(ASSETS_README_FILE)
+            .is_file());
+    }
+
+    #[test]
+    fn backfills_readme_only_when_user_assets_dir_exists() {
+        let empty = temp_dir("config-readme-empty");
+        ensure_user_assets_readme(&empty);
+        assert!(!assets_dir_in(&empty).exists(), "没贴过图不应凭空创建 assets/");
+
+        let used = temp_dir("config-readme-used");
+        fs::create_dir_all(assets_dir_in(&used)).unwrap();
+        fs::write(assets_dir_in(&used).join("image-old.png"), PNG).unwrap();
+        ensure_user_assets_readme(&used);
+        assert!(assets_dir_in(&used).join(ASSETS_README_FILE).is_file());
     }
 
     #[test]

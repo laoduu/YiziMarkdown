@@ -702,6 +702,8 @@ impl Conn {
             "svg" => "image/svg+xml",
             "bmp" => "image/bmp",
             "ico" => "image/x-icon",
+            // assets/README.md 这类说明文件：不声明文本类型时，部分客户端会当附件下载
+            "md" | "markdown" | "txt" => "text/markdown; charset=utf-8",
             _ => "application/octet-stream",
         };
         let (status, headers, body) = self

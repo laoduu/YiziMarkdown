@@ -753,6 +753,8 @@ export const ja = {
     moveConfirm: 'ここに移動',
     moving: '移動中…',
     moveFailed: '移動に失敗しました：{msg}',
+    assetsDirLabel: '画像リソース（自動管理）',
+    assetsDirHint: 'このフォルダーは YiziMarkdown が自動管理し、文書から参照される画像のみを保存します（{count} 枚）。削除・名前の変更・移動はしないでください。',
   },
   properties: {
     title: 'プロパティ',

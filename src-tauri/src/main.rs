@@ -41,7 +41,7 @@ use theme_layer::{
 };
 
 use ai_proxy::{ai_cancel, ai_chat, ai_clear_key, ai_has_key, ai_list_models, ai_set_key, ai_verify_key};
-use remote_cache::{webdav_open, webdav_save};
+use remote_cache::{ensure_remote_assets_readme, webdav_open, webdav_save};
 use webdav::{
     webdav_clear_credentials, webdav_delete, webdav_get_username, webdav_has_credentials,
     webdav_list, webdav_mkdir, webdav_move, webdav_set_credentials, webdav_test_connection,
@@ -2262,6 +2262,7 @@ fn main() {
             webdav_mkdir,
             webdav_delete,
             webdav_move,
+            ensure_remote_assets_readme,
         ])
                 .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             // 从命令行参数中提取文件路径，通过 eval 直接调用前端全局函数
@@ -2318,6 +2319,11 @@ fn main() {
 
             // 将内置模板同步到用户文档目录（~/Documents/yizimarkdown/templates/）
             let _ = sync_builtin_templates();
+
+            // 历史用户回填：assets/ 已存在但缺少说明文件时补一份（没贴过图则不创建目录）
+            if let Ok(config_dir) = get_user_config_dir() {
+                doc_assets::ensure_user_assets_readme(&config_dir);
+            }
 
             // 注册 .md 文件图标（覆盖MSI安装后缺失DefaultIcon的问题）
             #[cfg(target_os = "windows")]

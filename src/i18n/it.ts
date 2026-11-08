@@ -753,6 +753,8 @@ export const it = {
     moveConfirm: 'Sposta qui',
     moving: 'Spostamento...',
     moveFailed: 'Spostamento non riuscito: {msg}',
+    assetsDirLabel: 'Risorse immagini (gestito)',
+    assetsDirHint: 'Questa cartella è gestita da YiziMarkdown e contiene solo le immagini referenziate dai documenti ({count}). Non eliminarla, rinominarla o spostarla.',
   },
   properties: {
     title: 'Proprietà',

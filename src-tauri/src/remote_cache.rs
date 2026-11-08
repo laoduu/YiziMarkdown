@@ -195,6 +195,19 @@ fn dir_of(path: &str) -> String {
     }
 }
 
+/// 文件路径若位于名为 `assets` 的目录，返回该目录（`/a/assets/x.png` → `/a/assets`）。
+///
+/// 云端图片统一落在 `<WebDAV 根>/assets/`；文档在配置根之外时会退回文档同级
+/// `assets/`。两种目录都需要一份说明文件，而这里只认「父目录名恰好是 assets」。
+fn assets_dir_of(remote_file: &str) -> Option<String> {
+    let parent = dir_of(remote_file);
+    if parent.rsplit('/').next() == Some("assets") {
+        Some(parent)
+    } else {
+        None
+    }
+}
+
 // ---------------------------------------------------------------------------
 // 本地镜像读写
 // ---------------------------------------------------------------------------
@@ -439,6 +452,8 @@ async fn upload_images_up(
     let max_up = remote_doc_dir.split('/').filter(|s| !s.is_empty()).count();
     // 已确保存在的远程目录，避免每张图片都重复 MKCOL 同一层级
     let mut ensured: Vec<String> = Vec::new();
+    // 本次涉及的 assets 目录：循环结束后各补一份说明文件
+    let mut asset_dirs: Vec<String> = Vec::new();
 
     for src in crate::collect_image_urls(md) {
         let ImageRef::Relative(rel) = classify_image_ref(&src) else {
@@ -455,6 +470,11 @@ async fn upload_images_up(
             eprintln!("[webdav] 跳过越出根目录的图片: {src}");
             continue;
         };
+        if let Some(assets) = assets_dir_of(&remote) {
+            if !asset_dirs.contains(&assets) {
+                asset_dirs.push(assets);
+            }
+        }
         if bytes.len() > MAX_IMAGE_BYTES {
             eprintln!("[webdav] 图片超过单张上限，跳过上传: {remote}");
             failed += 1;
@@ -484,7 +504,58 @@ async fn upload_images_up(
             }
         }
     }
+
+    // 让 assets/ 在其它客户端里也不是「莫名其妙的空目录」：只补缺失的说明文件，
+    // 用户改过的版本与上传失败一律不打断保存流程。
+    for assets in &asset_dirs {
+        ensure_remote_assets_readme_in(conn, assets).await;
+    }
+
     (uploaded, failed)
+}
+
+/// 在云端 `assets/` 目录补写 README.md；已存在（含用户编辑过的）就跳过。
+/// 返回是否新建。
+async fn ensure_remote_assets_readme_in(conn: &Conn, assets_dir: &str) -> bool {
+    let path = format!("{assets_dir}/README.md");
+    match conn.stat(&path).await {
+        Ok(None) => {}
+        Ok(Some(_)) => return false,
+        Err(e) => {
+            eprintln!("[webdav] 读取说明文件失败 {path}: {e}");
+            return false;
+        }
+    }
+    match conn
+        .write_bytes(&path, crate::doc_assets::ASSETS_README_MD.as_bytes().to_vec())
+        .await
+    {
+        Ok(()) => true,
+        Err(e) => {
+            eprintln!("[webdav] 上传说明文件失败 {path}: {e}");
+            false
+        }
+    }
+}
+
+/// 补写云端 `<WebDAV 根>/assets/README.md`（历史目录回填）。
+///
+/// 由云端浏览器在展开系统资源目录时调用；本地缓存镜像同步补一份。
+/// 说明文件缺失不该挡住浏览，所以除凭据/连接错误外都静默处理。
+#[tauri::command]
+pub async fn ensure_remote_assets_readme(
+    base_url: String,
+    remote_root: Option<String>,
+) -> Result<bool, String> {
+    let root = remote_root.as_deref().unwrap_or("/");
+    if let Ok(config) = crate::get_user_config_dir() {
+        if let Ok(local) = crate::doc_assets::cloud_assets_local_in(&config, &base_url, root) {
+            let _ = crate::doc_assets::ensure_assets_readme(&local);
+        }
+    }
+    let assets = crate::doc_assets::cloud_assets_remote(root);
+    let conn = Conn::from_keychain(&base_url)?;
+    Ok(ensure_remote_assets_readme_in(&conn, &assets).await)
 }
 
 // ---------------------------------------------------------------------------
@@ -840,5 +911,16 @@ mod tests {
             Some(PathBuf::from("/mirror/assets/x.png"))
         );
         assert_eq!(normalize_relative("/Notes", rel2).as_deref(), Some("/assets/x.png"));
+    }
+
+    #[test]
+    fn detects_assets_directories_from_image_paths() {
+        assert_eq!(assets_dir_of("/assets/x.png").as_deref(), Some("/assets"));
+        assert_eq!(assets_dir_of("/yizimarkdown/assets/x.png").as_deref(), Some("/yizimarkdown/assets"));
+        // 只认父目录名恰好是 assets（大小写与用户目录不受影响）
+        assert_eq!(assets_dir_of("/Notes/assets/x.png").as_deref(), Some("/Notes/assets"));
+        assert_eq!(assets_dir_of("/Notes/images/x.png"), None);
+        assert_eq!(assets_dir_of("/Notes/Assets/x.png"), None);
+        assert_eq!(assets_dir_of("/Notes/doc.md"), None);
     }
 }

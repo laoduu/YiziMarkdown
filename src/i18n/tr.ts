@@ -753,6 +753,8 @@ export const tr = {
     moveConfirm: 'Buraya taşı',
     moving: 'Taşınıyor...',
     moveFailed: 'Taşıma başarısız: {msg}',
+    assetsDirLabel: 'Görsel kaynakları (yönetilir)',
+    assetsDirHint: 'Bu klasör YiziMarkdown tarafından yönetilir ve yalnızca belgelerin başvurduğu görselleri saklar ({count}). Lütfen silmeyin, yeniden adlandırmayın veya taşımayın.',
   },
   properties: {
     title: 'Özellikler',

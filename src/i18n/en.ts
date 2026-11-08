@@ -772,6 +772,8 @@ export const en = {
     moveConfirm: 'Move Here',
     moving: 'Moving...',
     moveFailed: 'Move failed: {msg}',
+    assetsDirLabel: 'Image assets (managed)',
+    assetsDirHint: 'This folder is managed by YiziMarkdown and only stores images referenced by documents ({count} image(s)). Do not delete, rename or move it.',
   },
   properties: {
     title: 'Properties',

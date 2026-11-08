@@ -753,6 +753,8 @@ export const de = {
     moveConfirm: 'Hierher verschieben',
     moving: 'Wird verschoben...',
     moveFailed: 'Verschieben fehlgeschlagen: {msg}',
+    assetsDirLabel: 'Bilddateien (verwaltet)',
+    assetsDirHint: 'Dieser Ordner wird von YiziMarkdown verwaltet und enthält nur von Dokumenten referenzierte Bilder ({count}). Bitte nicht löschen, umbenennen oder verschieben.',
   },
   properties: {
     title: 'Eigenschaften',

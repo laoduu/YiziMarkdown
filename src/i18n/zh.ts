@@ -772,6 +772,8 @@ export const zh = {
     moveConfirm: '移动到此处',
     moving: '正在移动…',
     moveFailed: '移动失败：{msg}',
+    assetsDirLabel: '图片资源（自动管理）',
+    assetsDirHint: '此目录由 YiziMarkdown 自动管理，仅存放正文引用的图片（共 {count} 张），请勿删除或重命名。',
   },
   properties: {
     title: '属性',

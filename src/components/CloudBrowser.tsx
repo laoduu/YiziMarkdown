@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ChevronDown, ChevronRight, ChevronUp, ChevronsDown, ChevronsUp, Cloud, CloudOff, FileCode, FilePlus2, Folder,
-  FolderOpen, FolderPlus, Home, Loader2, MoreHorizontal, Move, Pencil, RefreshCw, Trash2,
+  FolderOpen, FolderPlus, Home, Info, Loader2, Lock, MoreHorizontal, Move, Pencil, RefreshCw, Trash2,
 } from 'lucide-react'
 import { useI18n } from '../i18n'
 import Dialog from './Dialog'
@@ -22,12 +22,30 @@ import {
 import {
   joinPath, parentPath, normalizeRemotePath, formatSize, isRemotePathWithin,
 } from '../lib/remotePath'
+import { ensureRemoteAssetsReadme } from '../lib/docAssets'
 
 const MARKDOWN_EXTS = ['.md', '.markdown', '.txt']
+const IMAGE_EXTS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg', '.ico']
 
 function isMarkdownFile(name: string): boolean {
   const lower = name.toLowerCase()
   return MARKDOWN_EXTS.some((ext) => lower.endsWith(ext))
+}
+
+/** 只用于统计（不列进树）：assets/ 里的图片数量 */
+function isImageFile(name: string): boolean {
+  const lower = name.toLowerCase()
+  return IMAGE_EXTS.some((ext) => lower.endsWith(ext))
+}
+
+/**
+ * 系统资源目录：只认 `<配置根>/assets` 这一层。
+ *
+ * 云端所有图片都集中在这里（见 `src-tauri/src/doc_assets.rs`），它在文档树里看着
+ * 像空目录，所以单独标记并禁止移动/改名/删除；用户自建的同名目录不受影响。
+ */
+function isSystemAssetsDir(dirPath: string, assetsDirPath: string): boolean {
+  return normalizeRemotePath(dirPath) === assetsDirPath
 }
 
 /** 只展示文件夹与 Markdown 文件（与本地文件树一致） */
@@ -40,6 +58,7 @@ type DialogKind = 'newFile' | 'newFolder' | 'rename' | 'delete'
 /** 摊平后的树行：目录展开后其子项以更大的 depth 插在后面 */
 type TreeRow =
   | { kind: 'entry'; key: string; depth: number; entry: RemoteEntry }
+  | { kind: 'hint'; key: string; depth: number; imageCount: number }
   | { kind: 'loading'; key: string; depth: number }
   | { kind: 'error'; key: string; depth: number; message: string }
 
@@ -56,6 +75,12 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
   const rootPath = useSettingsStore((s) => s.webdavRootPath)
   const lastPath = useSettingsStore((s) => s.webdavLastPath)
   const setField = useSettingsStore((s) => s.setField)
+
+  /** 云端系统资源目录：`<配置根>/assets`，所有云端文档共享的图片都在这里 */
+  const assetsDirPath = useMemo(
+    () => joinPath(normalizeRemotePath(rootPath || '/'), 'assets'),
+    [rootPath],
+  )
 
   const [path, setPath] = useState(() => normalizeRemotePath(lastPath || rootPath || '/'))
   const [entries, setEntries] = useState<RemoteEntry[]>([])
@@ -174,12 +199,17 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
       return next
     })
     try {
+      // 系统资源目录：首次展开时顺带补写说明文件（历史目录没有 README.md）。
+      // 必须在 list 之前完成，否则刚写进去的说明文件不会出现在本次列表里。
+      if (isSystemAssetsDir(dir, assetsDirPath)) {
+        await ensureRemoteAssetsReadme(baseUrl, rootPath || '/').catch(() => false)
+      }
       const result = await list(baseUrl, dir)
       setChildren((prev) => ({ ...prev, [dir]: result }))
     } catch (e) {
       setDirErrors((prev) => ({ ...prev, [dir]: e instanceof Error ? e.message : String(e) }))
     }
-  }, [baseUrl, children, expanded])
+  }, [baseUrl, children, expanded, assetsDirPath, rootPath])
 
   /** 点击条目：文件夹 = 选中并展开/收折；文件 = 选中并打开 */
   const activateEntry = useCallback((entry: RemoteEntry) => {
@@ -209,12 +239,19 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
           out.push({ kind: 'loading', key: `${item.path}#loading`, depth: depth + 1 })
           continue
         }
+        // 系统资源目录：图片不列进文档树，只用一行说明「这是什么 + 有多少张」
+        if (isSystemAssetsDir(item.path, assetsDirPath)) {
+          const imageCount = kids.filter((k) => !k.isDir && isImageFile(k.name)).length
+          out.push({
+            kind: 'hint', key: `${item.path}#hint`, depth: depth + 1, imageCount,
+          })
+        }
         walk(kids.filter(isVisible), depth + 1)
       }
     }
     walk(visible, 0)
     return out
-  }, [visible, expanded, children, dirErrors])
+  }, [visible, expanded, children, dirErrors, assetsDirPath])
 
   /**
    * 一键展开：从当前树根开始递归拉取所有子/孙目录，成功后一次性写入缓存与展开集合。
@@ -305,6 +342,8 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
 
   /** 行右键 / 行尾「…」按钮共用：打开 / 移动 / 重命名 / 删除（danger） */
   const openEntryMenu = (entry: RemoteEntry, x: number, y: number) => {
+    // 系统资源目录由应用托管：移动/改名/删除都会让已保存文档的图片失联，直接不提供
+    if (entry.isDir && isSystemAssetsDir(entry.path, assetsDirPath)) return
     const items: ContextMenuItem[] = []
     if (!entry.isDir) {
       items.push({ key: 'open', icon: <FileCode size={13} />, label: t('cloud.open'), onClick: () => onOpenRemote(entry.path) })
@@ -325,6 +364,15 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
   /** 目标目录：新建文件夹/新建文件都在当前选中的文件夹内 */
   const runDialog = async () => {
     if (!dialog || !baseUrl) return
+    // 兜底：系统资源目录既不可改名也不可删除（菜单已隐藏，这里防其它入口绕过）
+    if (
+      dialog.entry?.isDir
+      && isSystemAssetsDir(dialog.entry.path, assetsDirPath)
+      && (dialog.kind === 'rename' || dialog.kind === 'delete')
+    ) {
+      setDialog(null)
+      return
+    }
     const name = nameInput.trim()
     setBusy(true)
     setDialogError(null)
@@ -480,9 +528,21 @@ export default function CloudBrowser({ onOpenRemote, onRequestSettings }: CloudB
                     depth={row.depth}
                     expanded={expanded.has(row.entry.path)}
                     selected={row.entry.path === selectedEntryPath}
+                    system={row.entry.isDir && isSystemAssetsDir(row.entry.path, assetsDirPath)}
                     onActivate={() => activateEntry(row.entry)}
                     onMenu={openEntryMenu}
                   />
+                )
+              }
+              if (row.kind === 'hint') {
+                return (
+                  <div key={row.key} className="flex items-stretch text-[var(--sidebar-text)]">
+                    <TreeGuides depth={row.depth} />
+                    <div className="flex items-start gap-1 py-1 pl-2 pr-2 text-[0.6875rem] leading-relaxed min-w-0">
+                      <Info size={12} className="mt-0.5 shrink-0 opacity-60" />
+                      <span>{t('cloud.assetsDirHint', { count: row.imageCount })}</span>
+                    </div>
+                  </div>
                 )
               }
               // 子目录正在拉取 / 拉取失败：就地占一行，不打断整棵树
@@ -596,14 +656,17 @@ function TreeGuides({ depth }: { depth: number }) {
   )
 }
 
-function CloudRow({ entry, depth, expanded, selected, onActivate, onMenu }: {
+function CloudRow({ entry, depth, expanded, selected, system, onActivate, onMenu }: {
   entry: RemoteEntry
   depth: number
   expanded: boolean
   selected: boolean
+  /** 系统资源目录（`<配置根>/assets`）：加锁标记，且不提供管理操作 */
+  system: boolean
   onActivate: () => void
   onMenu: (entry: RemoteEntry, x: number, y: number) => void
 }) {
+  const { t } = useI18n()
   return (
     <div
       onClick={onActivate}
@@ -613,7 +676,9 @@ function CloudRow({ entry, depth, expanded, selected, onActivate, onMenu }: {
         e.stopPropagation()
         onMenu(entry, e.clientX, e.clientY)
       }}
-      title={entry.isDir ? entry.name : `${entry.name} · ${formatSize(entry.size)}`}
+      title={system
+        ? `${entry.name} · ${t('cloud.assetsDirLabel')}`
+        : entry.isDir ? entry.name : `${entry.name} · ${formatSize(entry.size)}`}
       aria-selected={selected}
       className={`group flex items-stretch cursor-pointer
         transition-colors duration-100 hover:bg-[var(--editor-hover)] text-[var(--editor-text)]
@@ -630,7 +695,10 @@ function CloudRow({ entry, depth, expanded, selected, onActivate, onMenu }: {
             >
               {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             </button>
-            {expanded
+            {system ? (
+              // 系统资源目录用锁标出来，与用户自建文件夹区分
+              <Lock size={14} className="text-[var(--sidebar-text)] shrink-0" />
+            ) : expanded
               ? <FolderOpen size={14} className="text-[var(--editor-accent)] shrink-0" />
               : <Folder size={14} className="text-[var(--editor-accent)] shrink-0" />}
           </>
@@ -642,17 +710,25 @@ function CloudRow({ entry, depth, expanded, selected, onActivate, onMenu }: {
           </>
         )}
         <span className={`flex-1 truncate text-sm ${selected ? 'font-medium' : ''}`}>{entry.name}</span>
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
-            onMenu(entry, r.left, r.bottom + 2)
-          }}
-          className="p-0.5 rounded opacity-0 group-hover:opacity-60 hover:!opacity-100
-            text-[var(--sidebar-text)] hover:bg-[var(--editor-bg)] shrink-0"
-        >
-          <MoreHorizontal size={13} />
-        </button>
+        {system && (
+          <span className="shrink-0 text-[0.625rem] px-1 py-0.5 rounded
+            bg-[var(--editor-hover)] text-[var(--sidebar-text)]">
+            {t('cloud.assetsDirLabel')}
+          </span>
+        )}
+        {!system && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+              onMenu(entry, r.left, r.bottom + 2)
+            }}
+            className="p-0.5 rounded opacity-0 group-hover:opacity-60 hover:!opacity-100
+              text-[var(--sidebar-text)] hover:bg-[var(--editor-bg)] shrink-0"
+          >
+            <MoreHorizontal size={13} />
+          </button>
+        )}
       </div>
     </div>
   )

@@ -130,6 +130,14 @@ export function cleanupPastedAssets(tabId: string): void {
   void invokeTauri<void>('cleanup_pasted_assets', { tabId })
 }
 
+/**
+ * 补写云端 `<WebDAV 根>/assets/README.md`（历史目录回填，仅在缺失时写）。
+ * 由云端浏览器展开系统资源目录时调用；失败可忽略（不阻塞浏览）。
+ */
+export function ensureRemoteAssetsReadme(baseUrl: string, remoteRoot: string): Promise<boolean> {
+  return invokeTauriOrThrow<boolean>('ensure_remote_assets_readme', { baseUrl, remoteRoot })
+}
+
 const TOO_LARGE_ERROR = 'IMAGE_TOO_LARGE'
 
 export function isImageTooLargeError(error: unknown): boolean {

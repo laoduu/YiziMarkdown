@@ -753,6 +753,8 @@ export const nl = {
     moveConfirm: 'Hierheen verplaatsen',
     moving: 'Verplaatsen...',
     moveFailed: 'Verplaatsen mislukt: {msg}',
+    assetsDirLabel: 'Afbeeldingsbronnen (beheerd)',
+    assetsDirHint: 'Deze map wordt beheerd door YiziMarkdown en bevat alleen afbeeldingen waarnaar documenten verwijzen ({count}). Verplaats, hernoem of verwijder deze map niet.',
   },
   properties: {
     title: 'Eigenschappen',

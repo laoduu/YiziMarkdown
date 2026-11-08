@@ -736,6 +736,8 @@ export const es = {
     moveConfirm: 'Mover aquí',
     moving: 'Moviendo...',
     moveFailed: 'Error al mover: {msg}',
+    assetsDirLabel: 'Recursos de imagen (gestionado)',
+    assetsDirHint: 'Esta carpeta la gestiona YiziMarkdown y solo contiene las imágenes referenciadas por los documentos ({count}). No la elimines, renombres ni muevas.',
   },
   dialog: {
     insertLink: 'Insertar enlace',

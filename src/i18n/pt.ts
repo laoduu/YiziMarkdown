@@ -753,6 +753,8 @@ export const pt = {
     moveConfirm: 'Mover para cá',
     moving: 'Movendo...',
     moveFailed: 'Falha ao mover: {msg}',
+    assetsDirLabel: 'Recursos de imagem (gerido)',
+    assetsDirHint: 'Esta pasta é gerida pelo YiziMarkdown e guarda apenas as imagens referenciadas pelos documentos ({count}). Não a elimine, renomeie nem mova.',
   },
   properties: {
     title: 'Propriedades',

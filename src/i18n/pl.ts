@@ -753,6 +753,8 @@ export const pl = {
     moveConfirm: 'Przenieś tutaj',
     moving: 'Przenoszenie...',
     moveFailed: 'Nie udało się przenieść: {msg}',
+    assetsDirLabel: 'Zasoby obrazów (zarządzane)',
+    assetsDirHint: 'Ten folder jest zarządzany przez YiziMarkdown i przechowuje tylko obrazy przywoływane w dokumentach ({count}). Nie usuwaj, nie zmieniaj nazwy ani nie przenoś go.',
   },
   properties: {
     title: 'Właściwości',
