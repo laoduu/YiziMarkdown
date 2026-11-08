@@ -639,6 +639,8 @@ export const fr = {
     gotoHint: 'Saisir 1–{total}',
     gotoConfirm: 'Aller',
     backRef: 'Retour à la référence',
+    pageAnimation: 'Animation de page',
+    animFlip: 'Tourner la page',
     typography: 'Typographie',
     fontSize: 'Taille de police',
     lineHeight: 'Interligne',

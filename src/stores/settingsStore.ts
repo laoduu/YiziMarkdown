@@ -11,6 +11,7 @@ import {
   DEFAULT_SLIDE_COL_ALIGN, DEFAULT_SLIDE_COL_STYLE,
   isSlideColAlign, isSlideColStyle, type SlideColAlign, type SlideColStyle,
 } from '../lib/slideColumns.ts'
+import { DEFAULT_READER_ANIM, type ReaderAnim } from '../lib/readerAnimation.ts'
 
 /** 内容区宽度（正文列 max-width）的取值区间与默认值（px）。
  *  拖拽手柄（components/ContentWidthHandles.tsx）与存档迁移共用同一组边界，避免两处各写一套。 */
@@ -141,6 +142,10 @@ export interface SettingsState {
   /** 分栏样式（默认 card）：card = 每栏一张等高主题卡片，line = 栏间细线，none = 无参照 */
   slideColStyle: SlideColStyle
 
+  // 阅读模式翻页动画（v0.4.3）
+  /** 在阅读模式 HUD 里选择，立即持久化、下次进入阅读沿用。默认「水平滑动」。 */
+  readerAnim: ReaderAnim
+
   // 元信息属性（v0.3.2）
   /** front matter 属性类型：按**属性名**全局存（与 Obsidian 的 types.json 语义一致）。
    *  刻意不按文件路径索引 —— 项目里没有任何按路径索引的持久化，
@@ -258,6 +263,9 @@ export const useSettingsStore = create<SettingsState>()(
       // 演示模式分栏（v0.3.4）
       slideColAlign: DEFAULT_SLIDE_COL_ALIGN,
       slideColStyle: DEFAULT_SLIDE_COL_STYLE,
+
+      // 阅读模式翻页动画（v0.4.3）：默认水平滑动
+      readerAnim: DEFAULT_READER_ANIM,
 
       // 元信息属性（v0.3.2）：属性名 → 类型
       frontMatterTypes: {},

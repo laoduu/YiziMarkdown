@@ -639,6 +639,8 @@ export const nl = {
     gotoHint: 'Voer 1–{total} in',
     gotoConfirm: 'Ga',
     backRef: 'Terug naar verwijzing',
+    pageAnimation: 'Pagina-animatie',
+    animFlip: 'Blad omslaan',
     typography: 'Typografie',
     fontSize: 'Lettergrootte',
     lineHeight: 'Regelafstand',

@@ -639,6 +639,8 @@ export const pl = {
     gotoHint: 'Wpisz 1–{total}',
     gotoConfirm: 'Przejdź',
     backRef: 'Wróć do przypisu',
+    pageAnimation: 'Animacja przewracania',
+    animFlip: 'Przewracanie kartek',
     typography: 'Typografia',
     fontSize: 'Rozmiar czcionki',
     lineHeight: 'Interlinia',

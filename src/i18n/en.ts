@@ -658,6 +658,8 @@ export const en = {
     gotoHint: 'Enter 1–{total}',
     gotoConfirm: 'Go',
     backRef: 'Back to reference',
+    pageAnimation: 'Page animation',
+    animFlip: 'Page Turn',
     typography: 'Typography',
     fontSize: 'Font size',
     lineHeight: 'Line spacing',

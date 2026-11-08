@@ -639,6 +639,8 @@ export const it = {
     gotoHint: 'Inserisci 1–{total}',
     gotoConfirm: 'Vai',
     backRef: 'Torna al riferimento',
+    pageAnimation: 'Animazione di pagina',
+    animFlip: 'Sfogliare il libro',
     typography: 'Tipografia',
     fontSize: 'Dimensione testo',
     lineHeight: 'Interlinea',

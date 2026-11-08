@@ -658,6 +658,8 @@ export const zh = {
     gotoHint: '输入 1–{total}',
     gotoConfirm: '跳转',
     backRef: '返回引用',
+    pageAnimation: '翻页动画',
+    animFlip: '书卷翻页',
     typography: '排版',
     fontSize: '字号',
     lineHeight: '行距',

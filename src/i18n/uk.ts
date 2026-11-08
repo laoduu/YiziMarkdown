@@ -639,6 +639,8 @@ export const uk = {
     gotoHint: 'Введіть 1–{total}',
     gotoConfirm: 'Перейти',
     backRef: 'Повернутися до посилання',
+    pageAnimation: 'Анімація сторінок',
+    animFlip: 'Гортання сторінок',
     typography: 'Типографіка',
     fontSize: 'Розмір шрифту',
     lineHeight: 'Міжрядковий інтервал',

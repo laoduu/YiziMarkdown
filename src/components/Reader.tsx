@@ -12,7 +12,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   BookOpen, Check, Copy, List, Maximize, Minus, Moon, Palette,
-  Plus, Square, Sun, Type, X,
+  Plus, Sparkles, Square, Sun, Type, X,
 } from 'lucide-react'
 import { renderMarkdown } from '../lib/markdownRenderer'
 import { extendMarkdownIt, getMarkdownPluginIds, postRender as pluginPostRender } from '../plugins/registry'
@@ -21,6 +21,11 @@ import { computeOutlineItems } from '../lib/headingId'
 import { splitFrontMatter } from '../lib/frontMatter'
 import { stripInlineMarkers } from '../lib/liveSyntax'
 import { paginateReader, type ReaderOutlineEntry } from '../lib/readerPagination'
+import { clampStartPage, spreadMaxStart } from '../lib/readerSpread'
+import {
+  READER_ANIMS, READER_ANIM_I18N, READER_MOTION_MS,
+  type ReaderAnim,
+} from '../lib/readerAnimation'
 import { postRenderMermaid } from '../renderers/mermaid'
 import { readThemePalette } from '../lib/themePalette'
 import { loadThemeCatalog } from '../lib/themeCatalog'
@@ -102,6 +107,15 @@ interface FlipState {
   to: number
 }
 
+/** 非 3D 动画（slide / fade / zoom）：动画层上叠旧/新两跨页，结束后落定到 to */
+type MotionKind = Exclude<ReaderAnim, 'flip'>
+interface MotionState {
+  kind: MotionKind
+  dir: 'next' | 'prev'
+  from: number
+  to: number
+}
+
 type PageSide = 'left' | 'right' | 'single'
 
 interface FlipPage {
@@ -132,6 +146,21 @@ function BookPage({ html, index, side, front }: FlipPage & { front?: string }) {
   )
 }
 
+/**
+ * 动画层里的书页是同一页 HTML 的第二份副本：复制前先去掉 HTML 锚点 id，
+ * 避免与真实页面重复（目录/脚注按 id 定位会命中错误的副本）。
+ * 但不能动 SVG 内部 id —— Mermaid 的配色是 `<style>#mermaid-id …</style>`
+ * 这种 ID 选择器，去掉后会退回 SVG 默认黑色。
+ */
+function stripHtmlIds(html: string): string {
+  const holder = document.createElement('div')
+  holder.innerHTML = html
+  for (const el of Array.from(holder.querySelectorAll<HTMLElement>('[id]'))) {
+    if (!el.closest('svg')) el.removeAttribute('id')
+  }
+  return holder.innerHTML
+}
+
 export default function Reader({
   content, title, filePath, book, windowMode = 'fullscreen', enabledPlugins, pluginConfigs, onExit,
 }: ReaderProps) {
@@ -142,6 +171,9 @@ export default function Reader({
   const bookRef = useRef<HTMLDivElement>(null)
 
   const settings = useSettingsStore.getState()
+  // 翻页动画：与演示模式相同，在 HUD 里选、立即持久化、下次进入阅读沿用
+  const readerAnim = useSettingsStore((s) => s.readerAnim)
+  const setReaderSetting = useSettingsStore((s) => s.setField)
   const readerFullscreen = useWindowStateStore((s) => s.fullscreen)
   const readerMaximized = useWindowStateStore((s) => s.maximized)
   const [theme, setTheme] = useState(settings.currentTheme || 'liquidglass-prism')
@@ -155,6 +187,7 @@ export default function Reader({
   const [themeMeta, setThemeMeta] = useState<Record<string, string>>({})
   const [themeMenu, setThemeMenu] = useState(false)
   const [fontMenu, setFontMenu] = useState(false)
+  const [animMenu, setAnimMenu] = useState(false)
   const [readerChromeReady, setReaderChromeReady] = useState(false)
 
   const [layout, setLayout] = useState<Layout>({ pageW: 0, pageH: 0, spread: false, gap: 0, margin: 44, padX: 46 })
@@ -179,9 +212,12 @@ export default function Reader({
   const [flashId, setFlashId] = useState<string | null>(null)
   const [flip, setFlip] = useState<FlipState | null>(null)
   const [bookInstant, setBookInstant] = useState(false)
+  // 非 3D 动画（slide / fade / zoom）的叠层状态；flip 为 null 时才是它的舞台
+  const [motion, setMotion] = useState<MotionState | null>(null)
 
   const wheelCooldown = useRef(0)
   const flipTimer = useRef<number | null>(null)
+  const motionTimer = useRef<number | null>(null)
   const flippingRef = useRef(false)
   const flipRef = useRef<HTMLDivElement>(null)
   const currentPageRef = useRef(0)
@@ -375,8 +411,10 @@ export default function Reader({
     setLoading(true)
     // 重新分页时丢弃进行中的翻页动画（旧页码已经失效）
     if (flipTimer.current) { window.clearTimeout(flipTimer.current); flipTimer.current = null }
+    if (motionTimer.current) { window.clearTimeout(motionTimer.current); motionTimer.current = null }
     flippingRef.current = false
     setFlip(null)
+    setMotion(null)
 
     const run = async () => {
       const host = measureRef.current
@@ -525,7 +563,9 @@ export default function Reader({
 
   const spreadMode = layout.spread && pages.length > 1
   const step = spreadMode ? 2 : 1
-  const maxStart = Math.max(0, pages.length - 1)
+  // 双页模式的最后可停起点必须是偶数（左页）：总页数为偶数时，最后一页是右页，
+  // 属于上一跨页，不能再单独占一个「只有半页」的跨页（否则页码左右错位，见 lib/readerSpread.ts）
+  const maxStart = spreadMaxStart(pages.length, spreadMode)
 
   // 翻页动画的四个面：垫在下面的左右页 + 正在翻动的书叶正反面。
   // 书叶以中缝（双页时 x=pageW，单页时 x=0）为轴：正向 0° → -180°，反向 -180° → 0°。
@@ -574,19 +614,30 @@ export default function Reader({
   // 这正是翻页时图表变黑的原因。
   const leafHtml = useMemo(() => {
     if (!flipFaces) return null
-    const strip = (html: string) => {
-      const holder = document.createElement('div')
-      holder.innerHTML = html
-      for (const el of Array.from(holder.querySelectorAll<HTMLElement>('[id]'))) {
-        if (!el.closest('svg')) el.removeAttribute('id')
-      }
-      return holder.innerHTML
-    }
     return {
-      front: strip(flipFaces.front.html),
-      back: strip(flipFaces.back.html),
+      front: stripHtmlIds(flipFaces.front.html),
+      back: stripHtmlIds(flipFaces.back.html),
     }
   }, [flipFaces])
+
+  // 非 3D 动画的旧/新两跨页：旧页垫在下面保持不动，新页按动画入场后盖住它。
+  // HTML 复用已渲染好的 pages，不需要重新渲染 Markdown（与 3D 翻页同源）。
+  const motionPages = useMemo<{ from: FlipPage[]; to: FlipPage[] } | null>(() => {
+    if (!motion) return null
+    const build = (start: number): FlipPage[] => {
+      const out: FlipPage[] = []
+      for (let i = start; i < start + step; i++) {
+        if (i < 0 || i >= pages.length) continue
+        out.push({
+          html: stripHtmlIds(pages[i]),
+          index: i,
+          side: spreadMode ? (i % 2 === 0 ? 'left' : 'right') : 'single',
+        })
+      }
+      return out
+    }
+    return { from: build(motion.from), to: build(motion.to) }
+  }, [motion, pages, step, spreadMode])
 
   /* ---------------- 书叶弯折动画 ----------------
    * 书叶 = LEAF_STRIPS 条竖向窄带，整体绕中缝（或左侧书脊）转动，再叠一层「自由边滞后」的弯折：
@@ -664,10 +715,12 @@ export default function Reader({
   }, [flip, layout.pageW, spreadMode])
 
   const goToPage = useCallback((pageIndex: number) => {
-    // 跳页（目录/脚注/页码输入）不走 3D 翻页，并且要取消正在进行的翻页
+    // 跳页（目录/脚注/页码输入）不走翻页动画，并且要取消正在进行的动画
     if (flipTimer.current) { window.clearTimeout(flipTimer.current); flipTimer.current = null }
+    if (motionTimer.current) { window.clearTimeout(motionTimer.current); motionTimer.current = null }
     flippingRef.current = false
     setFlip(null)
+    setMotion(null)
     // 跳页时窗口会整体换一批页，位移动画必须关掉，否则会看到一长段滑行
     setBookInstant(true)
     window.setTimeout(() => setBookInstant(false), 90)
@@ -678,7 +731,7 @@ export default function Reader({
     const from = currentPageRef.current
     if (flippingRef.current || to === from || to < 0 || to > maxStart) return
     setBackJump(null)
-    // 系统开启「减少动态效果」时不做 3D 翻页，直接落页
+    // 系统开启「减少动态效果」时不做翻页动画，直接落页
     if (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       setBookInstant(true)
       setCurrentPage(to)
@@ -686,18 +739,32 @@ export default function Reader({
       return
     }
     flippingRef.current = true
-    setFlip({ dir, from, to })
-    if (flipTimer.current) window.clearTimeout(flipTimer.current)
-    flipTimer.current = window.setTimeout(() => {
+    // 动画结束那一刻直接落定到目标跨页，不能再走 .reader-book 的位移动画（否则会二次滑动）
+    const settle = () => {
       flippingRef.current = false
-      flipTimer.current = null
-      setFlip(null)
-      // 动画结束那一刻直接落定到目标跨页，不能再走 .reader-book 的位移动画（否则会二次滑动）
       setBookInstant(true)
       setCurrentPage(to)
       window.setTimeout(() => setBookInstant(false), 90)
-    }, FLIP_MS + 20)
-  }, [maxStart])
+    }
+    if (readerAnim === 'flip') {
+      setFlip({ dir, from, to })
+      if (flipTimer.current) window.clearTimeout(flipTimer.current)
+      flipTimer.current = window.setTimeout(() => {
+        flipTimer.current = null
+        setFlip(null)
+        settle()
+      }, FLIP_MS + 20)
+      return
+    }
+    // slide / fade / zoom：叠层上旧页垫底、新页按所选动画入场，结束后落到新页
+    setMotion({ kind: readerAnim, dir, from, to })
+    if (motionTimer.current) window.clearTimeout(motionTimer.current)
+    motionTimer.current = window.setTimeout(() => {
+      motionTimer.current = null
+      setMotion(null)
+      settle()
+    }, READER_MOTION_MS + 20)
+  }, [maxStart, readerAnim])
 
   const next = useCallback(() => {
     if (flippingRef.current) return
@@ -711,6 +778,7 @@ export default function Reader({
 
   useEffect(() => () => {
     if (flipTimer.current) window.clearTimeout(flipTimer.current)
+    if (motionTimer.current) window.clearTimeout(motionTimer.current)
   }, [])
 
   /* ---------------- 键盘 / 滚轮 ---------------- */
@@ -723,7 +791,7 @@ export default function Reader({
         return
       }
       if (e.key === 'Escape') {
-        if (themeMenu || fontMenu) { setThemeMenu(false); setFontMenu(false); return }
+        if (themeMenu || fontMenu || animMenu) { setThemeMenu(false); setFontMenu(false); setAnimMenu(false); return }
         if (tocOpen) { setTocOpen(false); return }
         if (jumpOpen) { setJumpOpen(false); return }
         onExit()
@@ -742,7 +810,7 @@ export default function Reader({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [next, prev, goToPage, pages.length, themeMenu, fontMenu, tocOpen, jumpOpen, onExit])
+  }, [next, prev, goToPage, pages.length, themeMenu, fontMenu, animMenu, tocOpen, jumpOpen, onExit])
 
   useEffect(() => {
     const stage = stageRef.current
@@ -886,6 +954,8 @@ export default function Reader({
                       key={index}
                       html={html}
                       index={index}
+                      // 左右页码位置按索引奇偶：偶数贴外侧左、奇数贴外侧右。
+                      // 前提是跨页起点恒为偶数（见 lib/readerSpread.ts），否则页码会跑到中轴。
                       side={spreadMode ? (index % 2 === 0 ? 'left' : 'right') : 'single'}
                       front={index < frontKinds.length ? frontKinds[index] : ''}
                     />
@@ -946,6 +1016,22 @@ export default function Reader({
                           </div>
                         </div>
                       </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 非 3D 动画（水平滑动 / 淡入淡出 / 轻微缩放）：旧页垫底，新页按所选动画入场 */}
+              {motion && motionPages && (
+                <div className={`reader-motion reader-motion-${motion.kind} reader-motion-${motion.dir}`} aria-hidden="true">
+                  <div className="reader-motion-spread reader-motion-old">
+                    {motionPages.from.map((page) => (
+                      <BookPage key={page.index} {...page} front={frontKinds[page.index] || ''} />
+                    ))}
+                  </div>
+                  <div className="reader-motion-spread reader-motion-new">
+                    {motionPages.to.map((page) => (
+                      <BookPage key={page.index} {...page} front={frontKinds[page.index] || ''} />
                     ))}
                   </div>
                 </div>
@@ -1056,20 +1142,23 @@ export default function Reader({
 
       {/* HUD */}
       <div className="reader-hud">
-        <button className="reader-icon-btn" title={t('reader.toc')} onClick={() => { setTocOpen((v) => !v); setThemeMenu(false); setFontMenu(false) }}>
+        <button className="reader-icon-btn" title={t('reader.toc')} onClick={() => { setTocOpen((v) => !v); setThemeMenu(false); setFontMenu(false); setAnimMenu(false) }}>
           <List size={15} />
         </button>
-        <button className="reader-icon-btn" title={t('reader.goto')} onClick={openJump}>
+        <button className="reader-icon-btn" title={t('reader.goto')} onClick={() => { openJump(); setThemeMenu(false); setFontMenu(false); setAnimMenu(false) }}>
           <BookOpen size={15} />
         </button>
         <button className="reader-icon-btn" title={dark ? t('slideshow.toLight') : t('slideshow.toDark')} onClick={() => setDark((v) => !v)}>
           {dark ? <Sun size={15} /> : <Moon size={15} />}
         </button>
-        <button className="reader-icon-btn" title={t('slideshow.toggleTheme')} onClick={() => { setThemeMenu((v) => !v); setFontMenu(false) }}>
+        <button className="reader-icon-btn" title={t('slideshow.toggleTheme')} onClick={() => { setThemeMenu((v) => !v); setFontMenu(false); setAnimMenu(false) }}>
           <Palette size={15} />
         </button>
-        <button className="reader-icon-btn" title={t('reader.typography')} onClick={() => { setFontMenu((v) => !v); setThemeMenu(false) }}>
+        <button className="reader-icon-btn" title={t('reader.typography')} onClick={() => { setFontMenu((v) => !v); setThemeMenu(false); setAnimMenu(false) }}>
           <Type size={15} />
+        </button>
+        <button className="reader-icon-btn" title={t('reader.pageAnimation')} onClick={() => { setAnimMenu((v) => !v); setThemeMenu(false); setFontMenu(false) }}>
+          <Sparkles size={15} />
         </button>
         <button className="reader-icon-btn" title={t('slideshow.exit')} onClick={onExit}>
           <X size={15} />
@@ -1141,6 +1230,26 @@ export default function Reader({
         </>
       )}
 
+      {/* 翻页动画菜单 */}
+      {animMenu && (
+        <>
+          <div className="reader-dismiss" onClick={() => setAnimMenu(false)} />
+          <div className="reader-menu reader-menu--anim">
+            <div className="reader-menu-title">{t('reader.pageAnimation')}</div>
+            {READER_ANIMS.map((id) => (
+              <button
+                key={id}
+                className={readerAnim === id ? 'is-active' : ''}
+                onClick={() => { setReaderSetting('readerAnim', id); setAnimMenu(false) }}
+              >
+                {readerAnim === id && <Check size={13} />}
+                {t(READER_ANIM_I18N[id])}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
       {/* 目录抽屉 */}
       {tocOpen && (
         <>
@@ -1198,15 +1307,6 @@ export default function Reader({
 }
 
 /* ------------------------------------------------------------------ */
-
-function clampStartPage(page: number, total: number, spread: boolean): number {
-  if (total <= 0) return 0
-  const maxStart = Math.max(0, total - 1)
-  let p = Math.max(0, Math.min(page, maxStart))
-  // 双页模式：落点对齐到对开左页；但最后一页（奇数页数）允许单独显示
-  if (spread && p % 2 === 1 && p !== maxStart) p -= 1
-  return p
-}
 
 function readStored(key: string): StoredPosition | null {
   try {

@@ -656,6 +656,8 @@ export const zhTW = {
     gotoHint: '輸入 1–{total}',
     gotoConfirm: '跳轉',
     backRef: '返回引用',
+    pageAnimation: '翻頁動畫',
+    animFlip: '書卷翻頁',
     typography: '排版',
     fontSize: '字級',
     lineHeight: '行距',

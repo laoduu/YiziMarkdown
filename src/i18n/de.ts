@@ -639,6 +639,8 @@ export const de = {
     gotoHint: '1–{total} eingeben',
     gotoConfirm: 'Los',
     backRef: 'Zurück zur Quelle',
+    pageAnimation: 'Blätteranimation',
+    animFlip: 'Seiten umblättern',
     typography: 'Typografie',
     fontSize: 'Schriftgröße',
     lineHeight: 'Zeilenabstand',

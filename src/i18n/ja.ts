@@ -639,6 +639,8 @@ export const ja = {
     gotoHint: '1–{total} を入力',
     gotoConfirm: '移動',
     backRef: '引用に戻る',
+    pageAnimation: 'ページ送りアニメーション',
+    animFlip: '本をめくる',
     typography: 'タイポグラフィ',
     fontSize: '文字サイズ',
     lineHeight: '行間',

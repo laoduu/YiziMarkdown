@@ -639,6 +639,8 @@ export const pt = {
     gotoHint: 'Introduza 1–{total}',
     gotoConfirm: 'Ir',
     backRef: 'Voltar à referência',
+    pageAnimation: 'Animação de página',
+    animFlip: 'Virar a página',
     typography: 'Tipografia',
     fontSize: 'Tamanho da letra',
     lineHeight: 'Entrelinha',

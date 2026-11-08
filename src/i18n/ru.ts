@@ -638,6 +638,8 @@ export const ru = {
     gotoHint: 'Введите 1–{total}',
     gotoConfirm: 'Перейти',
     backRef: 'Назад к ссылке',
+    pageAnimation: 'Анимация страниц',
+    animFlip: 'Перелистывание страниц',
     typography: 'Типографика',
     fontSize: 'Размер шрифта',
     lineHeight: 'Межстрочный интервал',

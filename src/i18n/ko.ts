@@ -639,6 +639,8 @@ export const ko = {
     gotoHint: '1–{total} 입력',
     gotoConfirm: '이동',
     backRef: '인용으로 돌아가기',
+    pageAnimation: '페이지 넘김 효과',
+    animFlip: '책장 넘기기',
     typography: '타이포그래피',
     fontSize: '글자 크기',
     lineHeight: '줄 간격',

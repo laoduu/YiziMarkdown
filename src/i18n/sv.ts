@@ -639,6 +639,8 @@ export const sv = {
     gotoHint: 'Ange 1–{total}',
     gotoConfirm: 'Gå',
     backRef: 'Tillbaka till referens',
+    pageAnimation: 'Sidövergång',
+    animFlip: 'Bläddra sida',
     typography: 'Typografi',
     fontSize: 'Teckenstorlek',
     lineHeight: 'Radavstånd',

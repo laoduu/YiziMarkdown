@@ -483,8 +483,12 @@
   padding: 6px;
   border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--reader-border) 65%, transparent);
-  background: color-mix(in srgb, var(--reader-paper) 94%, transparent);
-  backdrop-filter: blur(14px);
+  /* 实底、不用透明度：部分主题的 --editor-surface 本身是半透明
+     （如 liquidglass-prism 的 rgba(255,255,255,0.78)），直接拿它当背景
+     会让菜单透出正文、文字看不清。先用不透明的 --reader-bg 打底，
+     再把 surface 铺一层 —— 合成结果完全不透明。 */
+  background-color: var(--reader-bg);
+  background-image: linear-gradient(var(--reader-paper), var(--reader-paper));
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
 }
 .reader-menu button {
@@ -556,10 +560,10 @@
   z-index: 45;
   display: flex;
   flex-direction: column;
-  background: color-mix(in srgb, var(--reader-paper) 96%, transparent);
+  background-color: var(--reader-bg);
+  background-image: linear-gradient(var(--reader-paper), var(--reader-paper));
   border-right: 1px solid var(--reader-border);
   box-shadow: 12px 0 40px rgba(0, 0, 0, 0.18);
-  backdrop-filter: blur(16px);
   /* 抽屉是界面控件，不跟阅读内容字体走 */
   font-family: var(--font-ui);
 }
@@ -638,8 +642,8 @@
   padding: 18px;
   border-radius: 12px;
   border: 1px solid color-mix(in srgb, var(--reader-border) 65%, transparent);
-  background: color-mix(in srgb, var(--reader-paper) 96%, transparent);
-  backdrop-filter: blur(16px);
+  background-color: var(--reader-bg);
+  background-image: linear-gradient(var(--reader-paper), var(--reader-paper));
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
   text-align: center;
 }
@@ -960,4 +964,67 @@
   right: auto;
   left: 0;
   filter: drop-shadow(5px -5px 12px rgba(0, 0, 0, 0.22));
+}
+
+/* ---------------------------- 非 3D 翻页动画 ---------------------------- */
+/* 水平滑动 / 淡入淡出 / 轻微缩放（Reader.tsx 的 motion 叠层）。
+   旧跨页垫底保持不动，新跨页按所选动画入场后盖住它：两跨页都是已渲染的
+   真实书页（不是截图），纸面同色，所以只有内容在动，不会整块换色。
+   时长 0.46s 必须与 lib/readerAnimation.ts 的 READER_MOTION_MS 一致。 */
+
+.reader-motion {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.reader-motion-spread {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: stretch;
+  background: var(--reader-paper);
+  transform-origin: 50% 50%;
+}
+
+.reader-motion-old { z-index: 1; }
+.reader-motion-new { z-index: 2; will-change: transform, opacity; }
+
+/* ---- slide：新跨页从翻页方向整面滑入 ---- */
+.reader-motion-slide.reader-motion-next .reader-motion-new {
+  animation: reader-motion-slide-right 0.46s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+.reader-motion-slide.reader-motion-prev .reader-motion-new {
+  animation: reader-motion-slide-left 0.46s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+@keyframes reader-motion-slide-right {
+  from { transform: translateX(100%); }
+  to { transform: none; }
+}
+@keyframes reader-motion-slide-left {
+  from { transform: translateX(-100%); }
+  to { transform: none; }
+}
+
+/* ---- fade：新跨页原地淡入（旧页在下层被逐渐覆盖） ---- */
+.reader-motion-fade .reader-motion-new {
+  animation: reader-motion-fade-in 0.46s ease both;
+}
+
+@keyframes reader-motion-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ---- zoom：新跨页从 1.05 倍缩放落定（同时淡入） ---- */
+.reader-motion-zoom .reader-motion-new {
+  animation: reader-motion-zoom-in 0.46s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+@keyframes reader-motion-zoom-in {
+  from { opacity: 0; transform: scale(1.05); }
+  to { opacity: 1; transform: none; }
 }

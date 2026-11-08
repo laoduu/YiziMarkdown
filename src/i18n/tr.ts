@@ -639,6 +639,8 @@ export const tr = {
     gotoHint: '1–{total} girin',
     gotoConfirm: 'Git',
     backRef: 'Kaynağa dön',
+    pageAnimation: 'Sayfa animasyonu',
+    animFlip: 'Sayfa çevirme',
     typography: 'Tipografi',
     fontSize: 'Yazı boyutu',
     lineHeight: 'Satır aralığı',
