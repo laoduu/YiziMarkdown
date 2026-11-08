@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>帮助中心 - YiziMarkdown 使用文档（Markdown 编辑器 / AI 助手 / 演示模式）</title>
-    <meta name="description" content="YiziMarkdown 帮助中心：从下载安装、文档管理、五种编辑视图、Markdown 与公式图表写作，到阅读模式与 EPUB 阅读、类 PPT 演示模式、AI 大模型助手、技能系统、主题外观与品牌自定义、快捷键与常见问题，完整使用说明一站查阅。">
-    <meta name="keywords" content="YiziMarkdown,帮助中心,使用教程,Markdown编辑器,阅读模式,EPUB,演示模式,AI助手,技能Skill,主题,快捷键,常见问题">
+    <meta name="description" content="YiziMarkdown 帮助中心：从下载安装、文档管理、七种模式（源码 / 并排 / 实时 / 预览 / 演示 / 阅读 / 禅）、Markdown 与公式图表写作，到阅读模式与 EPUB、类 PPT 演示、AI 大模型助手、技能系统、主题外观与自定义、快捷键与常见问题，完整使用说明一站查阅。">
+    <meta name="keywords" content="YiziMarkdown,帮助中心,使用教程,Markdown编辑器,七种模式,禅模式,阅读模式,EPUB,演示模式,AI助手,技能Skill,主题,快捷键,常见问题">
     <meta name="author" content="YiziPaper">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://md.yizigpt.com/help.html">
@@ -87,7 +87,7 @@
 
             <div class="help-sub" id="start-install">
                 <h3>安装与启动</h3>
-                <p>YiziMarkdown 提供三种分发形式，按需选择：</p>
+                <p>YiziMarkdown 提供四种分发形式，按需选择：</p>
                 <div class="help-table-wrap">
                     <table>
                         <thead><tr><th>形式</th><th>适用</th><th>说明</th></tr></thead>
@@ -95,10 +95,11 @@
                             <tr><td>Windows 安装版</td><td>长期使用的主力机</td><td>标准安装向导，自动创建快捷方式与文件关联；<strong>支持应用内一键更新</strong>（从 v0.3.5 起生效）</td></tr>
                             <tr><td>Windows 便携版</td><td>U 盘 / 临时电脑</td><td><strong>解压即用</strong>，配置与文档随目录带走，不留注册表</td></tr>
                             <tr><td>macOS 通用版</td><td>Intel / Apple Silicon</td><td>Universal Binary 原生运行，无需 Rosetta</td></tr>
+                            <tr><td>Linux <code>deb</code> / <code>AppImage</code></td><td>Ubuntu 22.04+ / Debian 12+</td><td><code>deb</code> 自动注册菜单项、图标与文件关联；<code>AppImage</code> 自带 GTK / WebKit 与媒体组件，双击即用（当前仅 amd64）</td></tr>
                         </tbody>
                     </table>
                 </div>
-                <p>Windows 只提供 <strong>NSIS 安装包</strong>（<code>x64-setup.exe</code>），v0.3.4 起不再发布 MSI。全新安装的第一步是选安装语言（16 种），装好后应用会直接以该语言打开；升级 / 自动更新不会重置你已选的语言。安装版支持应用内一键在线更新，便携版与 macOS 会在启动时提示新版本并打开对应版本的下载页，下载后手动替换即可。</p>
+                <p>Windows 只提供 <strong>NSIS 安装包</strong>（<code>x64-setup.exe</code>），v0.3.4 起不再发布 MSI。全新安装的第一步是选安装语言（16 种），装好后应用会直接以该语言打开；升级 / 自动更新不会重置你已选的语言。安装版支持应用内一键在线更新，便携版、macOS 与 Linux 会在启动时提示新版本并打开对应版本的下载页，下载后手动替换即可。</p>
                 <div class="callout callout-tip">
                     <span class="callout-icon">i</span>
                     <p>macOS 首次打开若提示「无法验证开发者」，在「访达」中按住 Control 点击应用图标 → 选择「打开」即可。详见<a href="#faq">常见问题</a>。</p>
@@ -129,6 +130,8 @@
                     <li>输入 <code>/</code> 唤出斜杠菜单，快速插入列表、表格、代码块。</li>
                     <li>按 <kbd>Ctrl</kbd>+<kbd>S</kbd> 保存为 <code>.md</code> 文件。</li>
                     <li>按 <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd>，立刻把这篇笔记变成幻灯片。</li>
+                    <li>按 <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>R</kbd> 进入阅读模式，把长文排成一本可翻的书。</li>
+                    <li>按 <kbd>F9</kbd> 进入禅模式，撤掉界面，只留下文字。</li>
                 </ol>
             </div>
         </section>
@@ -145,7 +148,7 @@
                         <thead><tr><th>操作</th><th>方式</th><th>说明</th></tr></thead>
                         <tbody>
                             <tr><td>新建</td><td><kbd>Ctrl</kbd>+<kbd>N</kbd></td><td>标签栏右侧 <strong>+</strong> 亦可；可在「设置 → 通用 → 默认模板」指定新建时套用的模板</td></tr>
-                            <tr><td>打开</td><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>支持 <code>.md</code> / <code>.markdown</code> / <code>.txt</code></td></tr>
+                            <tr><td>打开</td><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>支持 <code>.md</code> / <code>.markdown</code> / <code>.txt</code> / <code>.epub</code></td></tr>
                             <tr><td>保存</td><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>新建文件首次保存自动弹出「另存为」</td></tr>
                             <tr><td>另存为</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td><td>另存到新路径</td></tr>
                             <tr><td>关闭</td><td><kbd>Ctrl</kbd>+<kbd>W</kbd></td><td>未保存时会弹确认框</td></tr>
@@ -161,7 +164,7 @@
 
             <div class="help-sub" id="files-export">
                 <h3>导出</h3>
-                <p>工具栏右侧导出按钮支持六种内置格式；启用 EPUB 插件后额外提供 EPUB：</p>
+                <p>工具栏右侧导出按钮支持六种内置格式，加上 EPUB 插件共 7 种：</p>
                 <ul>
                     <li><strong>Word 文档（DOCX）</strong>：Word 原生语义（标题 / 列表 / 表格 / 代码块 / 引用 / 任务列表），表格与表头样式对齐预览；图片支持本地路径、网络图片与 HTML <code>&lt;img&gt;</code> 标签，可用 <code>width</code> 属性控制宽度；<code>[toc]</code> 导出为可更新的 Word 原生目录域</li>
                     <li><strong>PDF</strong>：与预览还原度一致，长文档自动分页（Windows）</li>
@@ -196,12 +199,12 @@
         <!-- ========== 3. 编辑基础 ========== -->
         <section class="help-section" id="edit" data-kw="视图 源码 实时 并排 预览 演示 工具栏 格式化 斜杠菜单 自动补全 搜索 替换 大纲 标题折叠 划词 划词助手 选中 元信息 属性面板 front matter YAML 属性 类型">
             <h2><a class="anchor" href="#edit">#</a>编辑基础</h2>
-            <p class="help-lead">五种视图、工具栏、斜杠菜单，以及 v0.2.3 的划词助手、标题折叠与 v0.3.2 的元信息属性面板。</p>
+            <p class="help-lead">七种模式、工具栏、斜杠菜单，以及 v0.2.3 的划词助手、标题折叠与 v0.3.2 的元信息属性面板。</p>
 
             <div class="help-sub" id="edit-views">
-                <h3>五种视图模式</h3>
+                <h3>七种模式：四项全能 + 三个场景</h3>
                 <figure class="help-figure">
-                    <img src="assets/view-modes.webp" width="1256" height="500" alt="五种视图模式对比（源码 / 并排 / 实时 / 预览 / 演示）" loading="lazy">
+                    <img src="assets/view-modes.webp" width="1256" height="500" alt="编辑视图对比（源码 / 并排 / 实时 / 预览 / 演示）" loading="lazy">
                 </figure>
                 <div class="help-table-wrap">
                     <table>
@@ -210,17 +213,19 @@
                             <col>
                             <col style="width:140px">
                         </colgroup>
-                        <thead><tr><th>模式</th><th>特点</th><th>适合</th></tr></thead>
+                        <thead><tr><th>模式</th><th>特点</th><th>入口</th></tr></thead>
                         <tbody>
-                            <tr><td>源码</td><td>纯 Markdown 文本编辑</td><td>精确控制标记</td></tr>
-                            <tr><td>并排模式</td><td>左编辑右预览，大纲与预览双向联动滚动</td><td>对照检查排版</td></tr>
-                            <tr><td>实时模式</td><td>所见即所得（WYSIWYG），Markdown 标记自动隐藏，光标进入时显现，四种原创交互动画，引导注意力聚焦内容</td><td>专注内容创作</td></tr>
-                            <tr><td>预览模式</td><td>纯渲染，不可编辑</td><td>通读校对</td></tr>
-                            <tr><td>演示模式</td><td>全屏幻灯片</td><td>汇报演示</td></tr>
+                            <tr><td>源码</td><td>纯 Markdown 文本编辑，语法高亮与括号匹配</td><td><kbd>F3</kbd> / 视图按钮</td></tr>
+                            <tr><td>并排模式</td><td>左编辑右预览，大纲与预览双向联动滚动</td><td><kbd>F3</kbd> / 视图按钮</td></tr>
+                            <tr><td>实时模式</td><td>所见即所得（WYSIWYG），标记自动隐藏，光标进入时显现，四种原创交互动画</td><td><kbd>F3</kbd> / 视图按钮</td></tr>
+                            <tr><td>预览模式</td><td>纯渲染，不可编辑，任务列表可直接勾选</td><td><kbd>F3</kbd> / 视图按钮</td></tr>
+                            <tr><td>演示模式</td><td>全屏幻灯片，纯 Markdown 自动版式</td><td><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd></td></tr>
+                            <tr><td>阅读模式</td><td>把正文排成固定页面，双页对开、页码与翻页动画</td><td><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>R</kbd></td></tr>
+                            <tr><td>禅模式</td><td>撤掉界面只留正文，鼠标贴边唤回</td><td><kbd>F9</kbd></td></tr>
                         </tbody>
                     </table>
                 </div>
-                <p>切换视图时会自动定位到当前编辑位置；<strong>停在顶部时不作补偿</strong>，不会刚切过去就被动滚走。按 <kbd>F3</kbd> 可循环切换。</p>
+                <p><kbd>F3</kbd> 在源码 / 并排 / 实时 / 预览之间循环，切换时自动定位到当前编辑位置；<strong>停在顶部时不作补偿</strong>，不会刚切过去就被动滚走。演示、阅读、禅各有独立入口，彼此不冲突。</p>
             </div>
 
             <div class="help-sub" id="edit-properties">
@@ -449,7 +454,7 @@
         <!-- ========== 5. 阅读模式 ========== -->
         <section class="help-section" id="reader" data-kw="阅读模式 书籍 翻页 目录 页码 脚注 EPUB 电子书 封面 分页 全屏 双页 阅读位置">
             <h2><a class="anchor" href="#reader">#</a>阅读模式</h2>
-            <p class="help-lead">全屏、双页对开、真实分页阅读；Markdown 与 EPUB 共用同一套阅读体验。</p>
+            <p class="help-lead">全屏、双页对开、真实分页阅读；支持 4 种翻页动画，Markdown 与 EPUB 共用同一套阅读体验。</p>
 
             <div class="help-sub" id="reader-basic">
                 <h3>进入与阅读</h3>
@@ -461,12 +466,63 @@
                 </ul>
             </div>
 
+            <div class="help-sub" id="reader-anim">
+                <h3>翻页动画</h3>
+                <p>阅读 HUD 的「翻页动画」菜单可随时切换，选择会持久化，下次阅读沿用：</p>
+                <div class="help-table-wrap">
+                    <table>
+                        <thead><tr><th>动画</th><th>效果</th></tr></thead>
+                        <tbody>
+                            <tr><td>水平滑动（默认）</td><td>整页平移，干脆利落</td></tr>
+                            <tr><td>3D 翻页</td><td>书叶从右下角卷起、绕中缝弯折，带受光与落影（单页模式绕书脊）</td></tr>
+                            <tr><td>淡入淡出</td><td>页面淡出淡入，过渡安静</td></tr>
+                            <tr><td>缩放</td><td>轻微缩放进出，适合快速通读</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p>连续按键不会跳页；从目录、页码输入框或脚注跳转时不播放翻页动画。</p>
+            </div>
+
             <div class="help-sub" id="reader-epub">
                 <h3>阅读 EPUB</h3>
                 <ul>
                     <li><kbd>Ctrl</kbd>+<kbd>O</kbd> 或最近文件打开 <code>.epub</code> 后直接进入阅读模式，先最大化窗口，不经过源码 / 实时 / 预览</li>
                     <li>解析 EPUB 3 nav / EPUB 2 NCX 目录，读取内嵌封面图、图片、公式、Mermaid SVG、脚注和跨章节链接</li>
                     <li>统一使用应用阅读主题（忽略出版社 CSS）；DRM 加密与固定版式（漫画、画册）EPUB 暂不支持</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- ========== 5b. 禅模式 ========== -->
+        <section class="help-section" id="zen" data-kw="禅模式 禅 F9 沉浸写作 隐藏界面 边缘唤回 锚点 退出 源码 实时 专注">
+            <h2><a class="anchor" href="#zen">#</a>禅模式</h2>
+            <p class="help-lead">撤掉整个界面，只留下正文与留白；版面完全不变，正文一个像素都不移动。</p>
+
+            <div class="help-sub" id="zen-basic">
+                <h3>进入与退出</h3>
+                <ul>
+                    <li>按 <kbd>F9</kbd> 或点工具栏的禅模式按钮进入；再次按 <kbd>F9</kbd>、按 <kbd>Esc</kbd>，或点击常驻的禅模式按钮都能退出</li>
+                    <li>工具栏、标签栏、侧栏、AI 面板、状态栏按层次朝屏幕边缘收折淡出，退出时严格反向播放</li>
+                    <li>禅模式按钮不会消失，始终停在原位，周围一圈极浅的呼吸涟漪，既是「你在禅模式里」的状态锚，也是退出通道</li>
+                </ul>
+            </div>
+
+            <div class="help-sub" id="zen-edge">
+                <h3>边缘唤回</h3>
+                <ul>
+                    <li>鼠标贴住屏幕任一边（上 / 左 / 右 / 下），对应区域原地淡回；离开约 1.2 秒后自动收回</li>
+                    <li>顶部保留一条透明拖拽带，最大化窗口下也能拖动窗口</li>
+                    <li>输入法组合中或浮层打开时，<kbd>Esc</kbd> 优先关闭浮层，不会误退出禅模式</li>
+                </ul>
+            </div>
+
+            <div class="help-sub" id="zen-detail">
+                <h3>适用场景与细节</h3>
+                <ul>
+                    <li>仅在源码 / 实时模式可用；切到并排、预览，或进入阅读 / 演示时会自动退出</li>
+                    <li>隐藏行号与侧栏竖线、极淡暗角、指针静止 2 秒自动隐藏</li>
+                    <li>纵向滚动条换成极简细条，随滚动或靠近右缘出现；横向滚动条保持原生</li>
+                    <li>系统开启「减少动态效果」时，收折与涟漪瞬时完成，不播放光晕</li>
                 </ul>
             </div>
         </section>
@@ -766,6 +822,7 @@
                             <tr><td>文档摘要</td><td>输出一句话主旨 + 3~6 个核心要点 + 关键结论</td><td>是</td></tr>
                             <tr><td>润色改写</td><td>修正语法与不通顺处、优化表达节奏，保持原意</td><td>否</td></tr>
                             <tr><td>全文翻译</td><td>完整翻译为目标语言，保留专有名词与 Markdown 排版，代码原样保留</td><td>是</td></tr>
+                            <tr><td>Markdown 格式化</td><td>把杂乱文本整理成规范 Markdown：标题层级、列表、表格、引用与代码围栏，只整理格式、不改动内容</td><td>否</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -845,10 +902,11 @@
                 <h3>浏览云端文件</h3>
                 <ul>
                     <li>侧边栏切换到<strong>「云端」</strong>标签页，点击文件夹进入；层级较深时顶部面包屑把上级折成 <code>…</code>，点 <code>…</code> 可下拉跳转任意隐藏层级</li>
-                    <li>点<strong>文件夹图标</strong>可就地逐层展开子目录（懒加载），带层级引导线，不必来回进出</li>
+                    <li>顶部常驻图标依次为上级目录、根目录、主目录、新建文件夹、新建文件、一键展开、刷新</li>
+                    <li>点<strong>文件夹图标</strong>可就地逐层展开子目录（懒加载），带层级引导线；再次点击收折，不再切换树根</li>
                     <li>点击文档直接打开；正文与文档中<strong>相对引用</strong>的图片会一并下载到本地缓存</li>
-                    <li>悬停行尾的 <code>⋯</code> 或右键，可<strong>新建文件夹 / 重命名 / 删除</strong>（删除不可撤销，删文件夹会一并删除其中内容）</li>
-                    <li>右上角 <code>⟳</code> 手动刷新；保存到云端后若正浏览该目录，列表会自动刷新</li>
+                    <li>悬停行尾的 <code>⋯</code> 或右键，可<strong>新建文件 / 文件夹 / 移动 / 重命名 / 删除</strong>（删除不可撤销，删文件夹会一并删除其中内容；不能移动到自身或其子目录）</li>
+                    <li><code>assets/</code> 是系统图片目录：标记为锁定，禁止移动 / 重命名 / 删除；展开时显示图片数量与用途说明</li>
                 </ul>
             </div>
 
@@ -881,6 +939,7 @@
                     <li>需要服务端支持 WebDAV。若提示需要 <strong>Digest 认证</strong>，请改用应用专用密码（本程序只支持 Basic 认证）</li>
                     <li>只有<strong>相对路径</strong>的图片会随文档同步；绝对路径（<code>D:\pics\a.png</code>、<code>/home/me/a.png</code>）、<code>file://</code>、网络图片与 <code>data:</code> 都不会上传</li>
                     <li>云端文档在本地保留一份缓存（<code>~/Documents/yizimarkdown/webdav/</code>）用于图片渲染与导出；删除它不影响云端数据，下次打开会自动重新下载</li>
+                    <li>云端图片统一存放在 WebDAV 根目录下的 <code>assets/</code>，目录里会自动写入中英双语 <code>README.md</code>，说明用途与「请勿手动清理」；该目录在文件树中受保护，无法移动、重命名或删除</li>
                 </ul>
             </div>
         </section>
@@ -965,13 +1024,15 @@
                         <tbody>
                             <tr><td>通用</td><td>界面设置（语言 16 种、界面字号 80%–120%）、自动保存间隔、Markdown / EPUB 文件关联、默认模板</td></tr>
                             <tr><td>外观</td><td>品牌标识（左上角与状态栏名称）、主题选择与管理、用户主题导入、深色模式、自定义 CSS（保存即生成「自定义主题」）</td></tr>
-                            <tr><td>编辑器</td><td>源码 / 预览字体字号行高、实时模式动画、拼写检查、鼠标光标样式（原生 / 加粗）</td></tr>
+                            <tr><td>编辑器</td><td>源码 / 预览字体字号行高、拼写检查、鼠标光标样式（原生 / 加粗）</td></tr>
+                            <tr><td>实时模式</td><td>标记显现动画（聚焦 / 闪光 / 辉光 / 涟漪）、属性面板相关选项</td></tr>
                             <tr><td>AI 助手</td><td>供应商与模型、API 密钥、上下文轮数、引用上限</td></tr>
                             <tr><td>云端存储</td><td>WebDAV 服务器地址、凭据（存系统凭据库）、起始目录、测试连接</td></tr>
                             <tr><td>快捷键</td><td>可视化配置、按键录制、冲突检测、恢复默认</td></tr>
                             <tr><td>插件</td><td>EPUB 导出开关；KaTeX 公式与 Mermaid 已内置为核心渲染器，无需在插件页开启</td></tr>
                             <tr><td>模板</td><td>新建 / 编辑 / 删除文档模板，指定默认模板</td></tr>
-                            <tr><td>版本与更新</td><td>版本号、更新卡片（手动检查 / 查看更新说明 / 跳过此版本 / 启动时自动检查）、开源许可、相关链接</td></tr>
+                            <tr><td>文档</td><td>内置帮助、主题规范、技能规范等文档入口</td></tr>
+                            <tr><td>关于</td><td>版本号、更新卡片（手动检查 / 查看更新说明 / 跳过此版本 / 启动时自动检查）、开源许可、相关链接</td></tr>
                             <tr><td>其他产品</td><td>作者其他工具与作者主页的入口，附图标与官网地址，点击用系统浏览器打开</td></tr>
                         </tbody>
                     </table>
@@ -1039,8 +1100,10 @@
                             <tr><td><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd></td><td>演示模式</td><td><kbd>Ctrl</kbd>+<kbd>L</kbd></td><td>分割线</td></tr>
                             <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>[</kbd></td><td>折叠标题</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>]</kbd></td><td>展开标题</td></tr>
                             <tr><td><kbd>F1</kbd></td><td>快捷键大全</td><td><kbd>Ins</kbd></td><td>斜杠菜单</td></tr>
-                            <tr><td><kbd>F2</kbd></td><td>切换深浅模式</td><td><kbd>F3</kbd></td><td>循环切换视图</td></tr>
-                            <tr><td><kbd>F12</kbd></td><td>开发者工具</td><td><kbd>/</kbd> 或 <kbd>、</kbd></td><td>斜杠菜单</td></tr>
+                            <tr><td><kbd>F2</kbd></td><td>切换深浅模式</td><td><kbd>F3</kbd></td><td>循环四种编辑视图</td></tr>
+                            <tr><td><kbd>F9</kbd></td><td>禅模式（仅源码 / 实时）</td><td><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>R</kbd></td><td>阅读模式</td></tr>
+                            <tr><td><kbd>F11</kbd></td><td>切换全屏</td><td><kbd>F12</kbd></td><td>开发者工具</td></tr>
+                            <tr><td><kbd>/</kbd> 或 <kbd>、</kbd></td><td>斜杠菜单</td><td><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd></td><td>演示模式</td></tr>
                         </tbody>
                     </table>
                 </div>

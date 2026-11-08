@@ -25,7 +25,7 @@ export const DOC_PAGES = [
     description:
       'YiziMarkdown 演示模式语法完整参考：用 --- 分页、*** 分栏，自动版式推断规则，显式 layout / align / fragments 指令，片段逐步显示、切换动画、演讲者备注与播放快捷键。',
     keywords: 'YiziMarkdown,演示模式,幻灯片语法,Markdown分页,分栏,自动版式,演讲者备注',
-    meta: ['适用版本 v0.4.2', '纯 Markdown', '零标记'],
+    meta: ['适用版本 v0.4.3', '纯 Markdown', '零标记'],
     searchPlaceholder: '搜索语法，例如「分栏」「指令」',
     icons: [
       'file-text', 'presentation', 'settings', 'list', 'sparkles', 'file-text',
@@ -40,7 +40,7 @@ export const DOC_PAGES = [
     description:
       'YiziMarkdown 主题设计规范：主题令牌分层（基础 / 区域 / 装饰 / 效果）、文件与命名、明暗双模式、builtin.json / themes.user.json 元数据、check-themes 校验门禁、从零写一个主题的完整示例与令牌总表。',
     keywords: 'YiziMarkdown,主题设计,主题规范,CSS变量,令牌,builtin.json,自定义主题',
-    meta: ['基线 v0.4.2+', '更新 2026-11-04', '面向主题作者'],
+    meta: ['基线 v0.4.3+', '更新 2026-11-09', '面向主题作者'],
     searchPlaceholder: '搜索令牌或规则，例如「--editor-bg」',
     skipSections: ['目录'],
     dropLeadingQuote: true,
@@ -58,7 +58,7 @@ export const DOC_PAGES = [
     description:
       'YiziMarkdown 技能（Skill）规范：skills.json 字段与逗号规则、提示词编写技巧、自定义技能创建步骤、存储位置与版本更新覆盖机制，以及修改后不生效等常见问题。',
     keywords: 'YiziMarkdown,Skill,技能,自定义技能,skills.json,提示词,AI助手',
-    meta: ['适用版本 v0.4.2', '用户目录可改'],
+    meta: ['适用版本 v0.4.3', '用户目录可改'],
     searchPlaceholder: '搜索技能配置，例如「needsDoc」',
     icons: ['zap', 'folder-open', 'settings', 'pencil-line', 'code', 'sparkles', 'circle-help']
   }
