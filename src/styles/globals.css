@@ -3294,5 +3294,3 @@ a {
   .zen-halo,
   .zen-anchor-ripple { animation: none !important; }
 }
-
-.app-container.zen-mode::after { content: ''; position: fixed; left: 56px; top: 0; width: 50px; height: 6px; background: #0000ff; z-index: 99999; pointer-events: none; }
