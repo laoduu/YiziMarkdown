@@ -313,7 +313,7 @@ sudo apt install libwebkit2gtk-4.1-dev build-essential libssl-dev libayatana-app
 npm run tauri:build -- --bundles deb,appimage
 ```
 
-构建产物：
+构建产物（**当前仅提供 amd64 / x86_64**；ARM 的 `arm64` deb 与 `aarch64` AppImage 暂不发布）：
 - Debian 系安装包：`src-tauri/target/release/bundle/deb/YiziMarkdown_<ver>_amd64.deb`（约 16 MB，装到 `/usr/bin`，注册菜单项、图标与 `.md` / `.epub` 文件关联）
 - 通用免安装版：`src-tauri/target/release/bundle/appimage/YiziMarkdown_<ver>_amd64.AppImage`（约 100 MB，自带 GTK/WebKit 与 GStreamer 媒体组件，双击即用）
 

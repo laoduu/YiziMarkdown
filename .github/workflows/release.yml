@@ -91,6 +91,8 @@ jobs:
             # Debian 11 只有 webkit 4.0，本来就不支持）。
             # 不产 rpm：Fedora/openSUSE 的依赖名是 webkit2gtk4.1 / gtk3，与 Debian 系不同，
             # Tauri 生成的 Requires 需要人工核对，等有明确需求再加。
+            # 架构：只产 amd64（x86_64）。deb/AppImage 都是「一包一架构」，ARM 需要独立的
+            # aarch64 构建（原生 ARM runner 或交叉编译），当前暂不发布。
             args: --bundles deb,appimage
     runs-on: ${{ matrix.platform }}
     steps:
