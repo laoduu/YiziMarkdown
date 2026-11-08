@@ -2,7 +2,7 @@
 
 ## v0.4.3
 
-> **未发布**（截至 2026-11-06）：新一轮开发已启动。`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已升至 `0.4.3`，尚未打包、未打 tag。用户向说明见 `docs/changelog/CHANGELOG-V0.4.3.md`。
+> **已发布**（2026-11-09）：发布 tag `v0.4.3`。`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已同步到 `0.4.3`。用户向说明见 `docs/changelog/CHANGELOG-V0.4.3.md`。
 
 ### Linux 发行：deb + AppImage（2026-11-08）
 
