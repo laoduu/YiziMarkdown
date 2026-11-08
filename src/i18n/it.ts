@@ -132,7 +132,7 @@ export const it = {
     skip: 'Salta questa versione',
     close: 'Chiudi',
     downloadPage: 'Apri pagina di download',
-    manualHint: 'Le build macOS e portatili si aggiornano manualmente: scarica il nuovo pacchetto e sostituisci l’app attuale.',
+    manualHint: 'Le versioni desktop si aggiornano manualmente: scarica il pacchetto per il tuo sistema e sostituisci l’app attuale.',
   },
   sidebar: {
     files: 'File',

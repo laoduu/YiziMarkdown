@@ -132,7 +132,7 @@ export const tr = {
     skip: 'Bu sürümü atla',
     close: 'Kapat',
     downloadPage: 'İndirme sayfasını aç',
-    manualHint: 'macOS ve taşınabilir sürümler elle güncellenir: yeni paketi indirip mevcut uygulamayı değiştirin.',
+    manualHint: 'Masaüstü sürümleri elle güncellenir: sisteminize uygun paketi indirip mevcut uygulamayı değiştirin.',
   },
   sidebar: {
     files: 'Dosyalar',

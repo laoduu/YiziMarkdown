@@ -174,6 +174,11 @@ node scripts/check-themes.mjs --strict # 发布前自查，告警也算失败
 
 ### 3.1 位置
 
+> 路径口径：**用户目录**指 `get_user_config_dir()` 解析出来的 `yizimarkdown/` —— Windows/macOS 是
+> `~/Documents/yizimarkdown/`；Linux 是 XDG 文档目录下的同名目录（`~/.config/user-dirs.dirs` 的
+> `XDG_DOCUMENTS_DIR`，如 `~/文档/yizimarkdown/`），该目录不存在时兜底
+> `~/.local/share/yizimarkdown/`。下文表格里的 `~/Documents/yizimarkdown/` 均按此口径理解。
+
 | 路径 | 角色 |
 |------|------|
 | **`src-tauri/themes/*.css`** | **运行时唯一读取目录**。所有主题 CSS 放这里 |

@@ -131,7 +131,7 @@ export const zhTW = {
     skip: '略過此版本',
     close: '關閉',
     downloadPage: '開啟下載頁',
-    manualHint: 'macOS / 免安裝版不會自動更新：下載新套件後手動取代目前應用程式即可。',
+    manualHint: '桌面版不會自動更新：下載對應系統的安裝套件，手動取代目前應用程式即可。',
   },
   sidebar: {
     files: '檔案',

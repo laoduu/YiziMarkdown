@@ -132,7 +132,7 @@ export const de = {
     skip: 'Diese Version überspringen',
     close: 'Schließen',
     downloadPage: 'Downloadseite öffnen',
-    manualHint: 'macOS- und Portable-Versionen werden manuell aktualisiert: neues Paket herunterladen und die aktuelle App ersetzen.',
+    manualHint: 'Desktop-Versionen werden manuell aktualisiert: Laden Sie das Paket für Ihr System herunter und ersetzen Sie die aktuelle App.',
   },
   sidebar: {
     files: 'Dateien',

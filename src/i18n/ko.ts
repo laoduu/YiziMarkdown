@@ -132,7 +132,7 @@ export const ko = {
     skip: '이 버전 건너뛰기',
     close: '닫기',
     downloadPage: '다운로드 페이지 열기',
-    manualHint: 'macOS / 포터블 빌드는 수동 업데이트입니다: 새 패키지를 내려받은 뒤 현재 앱을 교체하세요.',
+    manualHint: '데스크톱 빌드는 수동 업데이트입니다: 해당 시스템용 패키지를 내려받은 뒤 현재 앱을 교체하세요.',
   },
   sidebar: {
     files: '파일',

@@ -132,7 +132,7 @@ export const sv = {
     skip: 'Hoppa över den här versionen',
     close: 'Stäng',
     downloadPage: 'Öppna nedladdningssidan',
-    manualHint: 'macOS- och portabla versioner uppdateras manuellt: ladda ner det nya paketet och ersätt den aktuella appen.',
+    manualHint: 'Skrivbordsversioner uppdateras manuellt: ladda ner paketet för ditt system och ersätt den aktuella appen.',
   },
   sidebar: {
     files: 'Filer',

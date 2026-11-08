@@ -475,8 +475,24 @@ fn register_md_file_icon() {
 
 // ===== 应用目录（exe 同级）=====
 
-/// 获取应用根目录（exe 同级；macOS bundle 下为 Contents/Resources）
+/// 安装版的**只读资源目录**，由 `app.path().resource_dir()` 在 setup 里写入一次。
+///
+/// Tauri 的 Linux 打包把 `bundle.resources` 放在 `usr/lib/<productName>/`，与可执行文件
+/// 不同级（deb 是 `/usr/lib/YiziMarkdown`，AppImage 是 `AppDir/usr/lib/YiziMarkdown`）。
+/// 如果沿用「exe 同级」，安装版的内置主题 / 技能 / 模板 / 文档全部找不到 —— AppImage
+/// 实测日志：`Failed to read .../usr/bin/themes/builtin.json: 没有那个文件或目录`。
+/// dev 下 `resource_dir()` 就是 cargo 输出目录（Tauri 自己识别 `target/`），行为与改动前一致。
+static RESOURCE_DIR: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+
+/// 获取应用根目录（资源所在目录）。
+///
+/// 打包版 = Tauri 解析出的资源目录；dev / 未初始化时回落 exe 同级（macOS bundle 下为
+/// Contents/Resources），保留启动早期（setup 之前）调用的可用性。
 fn get_app_root() -> Result<PathBuf, String> {
+    if let Some(dir) = RESOURCE_DIR.get() {
+        return Ok(dir.clone());
+    }
+
     let exe = std::env::current_exe()
         .map_err(|e| format!("Failed to get exe path: {}", e))?;
 
@@ -498,9 +514,14 @@ fn get_app_root() -> Result<PathBuf, String> {
     Ok(exe.parent().unwrap_or(Path::new(".")).to_path_buf())
 }
 
-/// 获取用户文档中的配置目录：~/Documents/yizimarkdown/（包含 skills/ 等用户配置）
+/// 获取用户文档中的配置目录：`<用户文档>/yizimarkdown/`（含 skills / templates / themes / assets）
 /// Windows: C:\Users\<user>\Documents\yizimarkdown\
 /// macOS:   /Users/<user>/Documents/yizimarkdown\
+/// Linux:   XDG 文档目录（`~/.config/user-dirs.dirs` 的 `XDG_DOCUMENTS_DIR`，通常 `~/Documents`）
+///          该目录**不存在**时兜底 `$XDG_DATA_HOME/yizimarkdown`（默认 `~/.local/share/yizimarkdown`）
+///
+/// Linux 分支必须存在：缺了会回落到 exe 所在目录 —— deb 是 `/usr/bin`（普通用户不可写），
+/// AppImage 是解包临时目录（退出即丢），用户配置根本无法持久化。
 pub(crate) fn get_user_config_dir() -> Result<PathBuf, String> {
     #[cfg(target_os = "windows")]
     {
@@ -514,7 +535,24 @@ pub(crate) fn get_user_config_dir() -> Result<PathBuf, String> {
             return Ok(PathBuf::from(home).join("Documents").join("yizimarkdown"));
         }
     }
-    // fallback：应用根目录
+    #[cfg(target_os = "linux")]
+    {
+        // ① XDG 文档目录（只认**已存在**的，不替用户创建 ~/Documents —— 有些桌面环境
+        //    故意不建文档目录）；② 兜底 XDG 数据目录。
+        if let Some(docs) = dirs::document_dir().filter(|d| d.is_dir()) {
+            return Ok(docs.join("yizimarkdown"));
+        }
+        let data_home = std::env::var_os("XDG_DATA_HOME")
+            .map(PathBuf::from)
+            .filter(|p| p.is_absolute())
+            .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/share")))
+            .ok_or_else(|| {
+                "Linux: 无法解析用户数据目录（HOME 与 XDG_DATA_HOME 都缺失）".to_string()
+            })?;
+        return Ok(data_home.join("yizimarkdown"));
+    }
+    // fallback：应用根目录（理论上走不到，上面每个平台都已 return）
+    #[allow(unreachable_code)]
     get_app_root()
 }
 
@@ -1219,6 +1257,34 @@ fn get_platform() -> String {
         "linux" => "linux".to_string(),
         other => other.to_string(),
     }
+}
+
+/// Linux 窗口图标（RGBA，≤256×256）。
+///
+/// 不能直接拿 `app.default_window_icon()`：`bundle.icon` 里第一个 `.png` 是
+/// `icons/icon.png`（512×512），而 GDK 会把过大的窗口图标**直接丢弃** —— 实测 512×512
+/// 交给 `set_icon` 后，窗口属性里根本没有 `_NET_WM_ICON`（任务栏 / 窗口切换器只看得到
+/// 系统兜底图标），256 及以下则正常写入。所以这里先把源图缩到 256 以内。
+///
+/// 设置时机无碍：`set_icon` 走 GTK 的 `gtk_window_set_icon`，在窗口 realize 之前调用也会
+/// 被记进 icon_list、realize 时写进属性（实测在 setup 阶段设置即可）。
+#[cfg(target_os = "linux")]
+fn linux_window_icon() -> Option<tauri::image::Image<'static>> {
+    /// 窗口图标边长上限（超过这个尺寸 GDK 会丢弃）
+    const MAX: u32 = 256;
+    const PNG: &[u8] = include_bytes!("../icons/icon.png");
+
+    let img = image::load_from_memory(PNG).ok()?.to_rgba8();
+    let (w, h) = (img.width(), img.height());
+    if w <= MAX && h <= MAX {
+        return Some(tauri::image::Image::new_owned(img.into_raw(), w, h));
+    }
+
+    let scale = MAX as f32 / w.max(h) as f32;
+    let tw = ((w as f32 * scale).round() as u32).max(1);
+    let th = ((h as f32 * scale).round() as u32).max(1);
+    let rgba = image::imageops::resize(&img, tw, th, image::imageops::FilterType::Lanczos3);
+    Some(tauri::image::Image::new_owned(rgba.into_raw(), tw, th))
 }
 
 /// 在新窗口中用 YiziMarkdown 自身打开指定文件
@@ -2296,7 +2362,14 @@ fn main() {
                 });
             }
         }))        .setup(|app| {
-            // 启动时确保目录结构完整
+            // 先把 Tauri 解析出的**只读资源目录**记下来，之后的资源读取全部走它：
+            // deb → /usr/lib/YiziMarkdown；AppImage → AppDir/usr/lib/YiziMarkdown；
+            // dev → cargo 输出目录（与改动前一致）。详见 get_app_root()。
+            if let Ok(dir) = app.path().resource_dir() {
+                let _ = RESOURCE_DIR.set(dir);
+            }
+
+            // 启动时确保目录结构完整（写到用户目录，不再是安装目录）
             let root = std::env::current_exe()
                 .ok()
                 .and_then(|p| p.parent().map(|d| d.to_path_buf()))
@@ -2328,6 +2401,18 @@ fn main() {
             // 注册 .md 文件图标（覆盖MSI安装后缺失DefaultIcon的问题）
             #[cfg(target_os = "windows")]
             register_md_file_icon();
+
+            // Linux / X11：窗口图标。
+            // Tauri 只给 Windows 生成默认窗口图标（见 tauri-codegen 的 Target::Windows 分支），
+            // Linux 上 `default_window_icon()` 有值却从没被调用过 set_icon —— 窗口因此没有
+            // `_NET_WM_ICON`，任务栏 / 窗口切换器只能拿到系统兜底图标。
+            // 图标尺寸必须 ≤256（见 linux_window_icon 的注释），不能直接甩默认的 512×512。
+            #[cfg(target_os = "linux")]
+            if let Some(icon) = linux_window_icon() {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.set_icon(icon);
+                }
+            }
 
             // 解析命令行参数，传递待打开文件路径给前端
             let open_file = parse_cli_args();

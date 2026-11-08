@@ -7,6 +7,8 @@
 #   - YiziMarkdown_<ver>_x64-portable.zip  便携版            （Windows 腿，make-portable.ps1）
 #   - YiziMarkdown_<ver>_source.zip        源码包            （Windows 腿，git archive）
 #   - YiziMarkdown_<ver>_universal.dmg     macOS 通用 dmg    （macOS 腿）
+#   - YiziMarkdown_<ver>_amd64.deb         Debian 系安装包    （Linux 腿，ubuntu-22.04）
+#   - YiziMarkdown_<ver>_amd64.AppImage    通用免安装版      （Linux 腿，ubuntu-22.04）
 #
 # Release 正文取 docs/changelog/CHANGELOG-V<ver>.md —— 该文件是**用户向简短版**，
 # 与根 changelog.md 的完整技术记录分工（口径见 changelog.md「既定分工」）。
@@ -81,6 +83,15 @@ jobs:
             args: --bundles nsis --config src-tauri/tauri.updater.conf.json
           - platform: macos-latest
             args: --target universal-apple-darwin --bundles dmg
+          - platform: ubuntu-22.04
+            # Linux：deb + AppImage。
+            # **必须用 22.04 构建，不能换 ubuntu-latest**：24.04 编出的二进制要 glibc 2.39，
+            # Ubuntu 22.04（2.35）/ Debian 12（2.36）连启动都会失败；22.04 的基线是 2.35，
+            # 覆盖 Debian 12+ / Ubuntu 22.04+（deb 的 libwebkit2gtk-4.1-0 依赖也是同一门槛，
+            # Debian 11 只有 webkit 4.0，本来就不支持）。
+            # 不产 rpm：Fedora/openSUSE 的依赖名是 webkit2gtk4.1 / gtk3，与 Debian 系不同，
+            # Tauri 生成的 Requires 需要人工核对，等有明确需求再加。
+            args: --bundles deb,appimage
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -101,6 +112,27 @@ jobs:
       - name: Add macOS universal targets
         if: matrix.platform == 'macos-latest'
         run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      # Linux 腿的系统依赖：runner 上默认没有 webkit2gtk-4.1。
+      # patchelf 是 AppImage 打包（linuxdeploy）必需的，缺了会在 bundling 阶段报错。
+      # gstreamer 插件是 `bundleMediaFramework` 的打包来源：linuxdeploy-plugin-gstreamer
+      # 把**构建机**上的插件目录整体复制进 AppDir；runner 没装插件时该插件脚本会直接报错退出。
+      - name: Install Linux bundle dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            file \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good \
+            gstreamer1.0-libav
 
       - uses: swatinem/rust-cache@v2
         with:

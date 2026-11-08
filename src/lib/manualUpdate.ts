@@ -1,9 +1,10 @@
 /**
- * 「手动更新」通道的纯逻辑（macOS / 便携版）。
+ * 「手动更新」通道的纯逻辑（macOS / Windows 便携版 / Linux）。
  *
- * 这两类环境的共同点：**能查版本，但装不了包**。
+ * 这几类环境的共同点：**能查版本，但装不了包**。
  *   · macOS：发布清单里只有 Windows 资源（见 scripts/make-manifest.mjs），dmg 由用户手动安装
  *   · Windows 便携版：没有安装目录可覆盖，替换 exe 只能由用户自己做
+ *   · Linux：deb 装不了包；AppImage 未接入签名清单（见 README「Linux（deb + AppImage）」）
  *
  * 所以这里只回答两个问题：下载页该指向哪里、更新说明怎么压成一句提示。
  * 真正的网络请求在 Rust 侧（`check_manual_update`，读同一个 latest.json），

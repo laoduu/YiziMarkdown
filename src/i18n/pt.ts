@@ -132,7 +132,7 @@ export const pt = {
     skip: 'Ignorar esta versão',
     close: 'Fechar',
     downloadPage: 'Abrir página de download',
-    manualHint: 'As versões de macOS e portáteis são atualizadas manualmente: baixe o novo pacote e substitua o aplicativo atual.',
+    manualHint: 'As versões para desktop são atualizadas manualmente: baixe o pacote do seu sistema e substitua o aplicativo atual.',
   },
   sidebar: {
     files: 'Arquivos',

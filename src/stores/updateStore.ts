@@ -55,7 +55,7 @@ interface UpdateStoreState {
   /** 启动后自动检查一次（尊重设置里的开关，且只在环境允许时） */
   checkOnStartup: () => Promise<void>
   install: () => Promise<void>
-  /** 打开下载页（手动更新通道：macOS / 便携版） */
+  /** 打开下载页（手动更新通道：macOS / 便携版 / Linux） */
   openDownloadPage: () => Promise<void>
   /** 跳过这个版本：记进设置，之后不再提示它（别的版本照常提示） */
   skip: () => void
@@ -88,7 +88,7 @@ export const useUpdateStore = create<UpdateStoreState>()((set, get) => ({
     const blocker = await getUpdateBlocker()
     set({ blocker })
 
-    // 能自动装的走插件；**装不了但查得到**的（macOS / 便携版）只查清单，
+    // 能自动装的走插件；**装不了但查得到**的（macOS / 便携版 / Linux）只查清单，
     // 有新版本就提示手动下载 —— 这条通道不碰插件、不下载、不校验签名
     const manualChannel = isManualUpdateChannel(blocker)
     if (blocker && !manualChannel) {

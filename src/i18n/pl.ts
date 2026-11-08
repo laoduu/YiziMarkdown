@@ -132,7 +132,7 @@ export const pl = {
     skip: 'Pomiń tę wersję',
     close: 'Zamknij',
     downloadPage: 'Otwórz stronę pobierania',
-    manualHint: 'Wersje macOS i przenośne aktualizuje się ręcznie: pobierz nowy pakiet i zastąp bieżącą aplikację.',
+    manualHint: 'Wersje desktopowe aktualizuje się ręcznie: pobierz pakiet dla swojego systemu i zastąp bieżącą aplikację.',
   },
   sidebar: {
     files: 'Pliki',

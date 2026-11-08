@@ -132,7 +132,7 @@ export const fr = {
     skip: 'Ignorer cette version',
     close: 'Fermer',
     downloadPage: 'Ouvrir la page de téléchargement',
-    manualHint: 'Les versions macOS / portables se mettent à jour manuellement : téléchargez le nouveau paquet puis remplacez l’application actuelle.',
+    manualHint: 'Les versions bureau se mettent à jour manuellement : téléchargez le paquet de votre système puis remplacez l’application actuelle.',
   },
   sidebar: {
     files: 'Fichiers',

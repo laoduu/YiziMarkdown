@@ -73,7 +73,7 @@ export interface AvailableUpdate {
   date: string | null
   /**
    * `auto` = 插件能自己下载并装（Windows NSIS 安装版）
-   * `manual` = 只能提示用户去下载页手动换包（macOS / 便携版）
+   * `manual` = 只能提示用户去下载页手动换包（macOS / 便携版 / Linux）
    */
   mode: 'auto' | 'manual'
 }
@@ -90,7 +90,7 @@ export const getCurrentVersion = async (): Promise<string> =>
   (await invokeTauri<string>('get_app_version')) ?? '0.0.0'
 
 /**
- * 只查版本、不安装（macOS / 便携版）。
+ * 只查版本、不安装（macOS / 便携版 / Linux）。
  *
  * 后端读的是 `plugins.updater.endpoints` 指向的同一份 latest.json，但只取
  * version / notes / pub_date —— 不碰平台资源、不下载、不校验签名。

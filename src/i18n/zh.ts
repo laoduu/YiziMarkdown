@@ -131,7 +131,7 @@ export const zh = {
     skip: '跳过此版本',
     close: '关闭',
     downloadPage: '打开下载页',
-    manualHint: 'macOS / 便携版不自动更新：下载新包后手动替换当前应用即可。',
+    manualHint: '桌面版不自动更新：下载对应系统的安装包，手动替换当前应用即可。',
   },
   sidebar: {
     files: '文件',

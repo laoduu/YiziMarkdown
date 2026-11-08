@@ -131,7 +131,7 @@ export const en = {
     skip: 'Skip this version',
     close: 'Close',
     downloadPage: 'Open download page',
-    manualHint: 'macOS / portable builds update manually: download the new package, then replace the current app.',
+    manualHint: 'Desktop builds update manually: download the package for your system, then replace the current app.',
   },
   sidebar: {
     files: 'Files',

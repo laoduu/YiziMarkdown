@@ -1773,7 +1773,7 @@ function App() {
           </div>
         </>
       )}
-      {/* 手动更新提示（macOS / 便携版）：右下角卡片，Windows 安装版不会出现 */}
+      {/* 手动更新提示（macOS / 便携版 / Linux）：右下角卡片，Windows 安装版不会出现 */}
       <UpdateNotice />
 
       {toast.visible && (

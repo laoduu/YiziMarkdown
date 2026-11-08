@@ -29,6 +29,8 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "category": "Productivity",
+    "shortDescription": "A sleek Markdown editor",
     "icon": [
       "icons/icon.ico",
       "icons/icon.icns",
@@ -84,13 +86,25 @@
         "language": "zh-CN"
       }
     },
+    "linux": {
+      "deb": {
+        "section": "editors",
+        "depends": [
+          "libdbus-1-3"
+        ]
+      },
+      "appimage": {
+        "bundleMediaFramework": true
+      }
+    },
     "fileAssociations": [
       {
         "ext": [
           "md"
         ],
         "name": "Markdown File",
-        "description": "Markdown Document"
+        "description": "Markdown Document",
+        "mimeType": "text/markdown"
       },
       {
         "ext": [

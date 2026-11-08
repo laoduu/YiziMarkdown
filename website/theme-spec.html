@@ -9,7 +9,7 @@
     <meta name="author" content="YiziPaper">
     <meta name="robots" content="index, follow">
     <meta name="docs-src" content="docs/THEME-DESIGN-SPEC.md">
-    <meta name="docs-hash" content="0fc28586294d5806d1f7f7a91b6825bbf8fe23cd294bc58c650463dd0db82726">
+    <meta name="docs-hash" content="4860f3375a7efd2e479758d5c39611a9dbfb8e9de0d205f37a3ef373e958dec7">
     <link rel="canonical" href="https://md.yizigpt.com/theme-spec.html">
 
     <!-- Open Graph -->
@@ -252,8 +252,14 @@ node scripts/check-themes.mjs --strict # 发布前自查，告警也算失败
 <section class="help-section" id="3-文件与命名规范" data-icon="file-text" data-kw="3. 文件与命名规范 ">
 <h2><a class="anchor" href="#3-文件与命名规范">#</a>3. 文件与命名规范</h2>
 
-<div class="help-sub" id="31-位置" data-kw="3.1 位置 路径 角色 src-tauri/themes/*.css 运行时唯一读取目录 。所有主题 CSS 放这里 src-tauri/themes/builtin.json 内置主题元数据注册表（ id / file / name / desc / swatch ） ~/Documents/yizimarkdown/themes/themes.user.json 用户层元数据（改名 / 排序 / 隐藏 / override 基准） src/styles/globals.css 基准令牌全集 + 组件消费点。 ">
+<div class="help-sub" id="31-位置" data-kw="3.1 位置 路径口径： 用户目录 指 get_user_config_dir() 解析出来的 yizimarkdown/ —— Windows/macOS 是 ~/Documents/yizimarkdown/ ；Linux 是 XDG 文档目录下的同名目录（ ~/.config/user-dirs.dirs 的 XDG_DOCUMENTS_DIR ，如 ~/文档/yizimarkdown/ ），该目录不存在时兜底 ~/.local/share/yizimarkdown/ 。下文表格里的 ~/Documents/">
 <h3>3.1 位置</h3>
+<blockquote>
+<p>路径口径：<strong>用户目录</strong>指 <code>get_user_config_dir()</code> 解析出来的 <code>yizimarkdown/</code> —— Windows/macOS 是
+<code>~/Documents/yizimarkdown/</code>；Linux 是 XDG 文档目录下的同名目录（<code>~/.config/user-dirs.dirs</code> 的
+<code>XDG_DOCUMENTS_DIR</code>，如 <code>~/文档/yizimarkdown/</code>），该目录不存在时兜底
+<code>~/.local/share/yizimarkdown/</code>。下文表格里的 <code>~/Documents/yizimarkdown/</code> 均按此口径理解。</p>
+</blockquote>
 <div class="help-table-wrap"><table class="docs-table">
 <thead>
 <tr>

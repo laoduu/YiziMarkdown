@@ -132,7 +132,7 @@ export const nl = {
     skip: 'Deze versie overslaan',
     close: 'Sluiten',
     downloadPage: 'Downloadpagina openen',
-    manualHint: 'macOS- en draagbare builds worden handmatig bijgewerkt: download het nieuwe pakket en vervang de huidige app.',
+    manualHint: 'Desktopversies worden handmatig bijgewerkt: download het pakket voor uw systeem en vervang de huidige app.',
   },
   sidebar: {
     files: 'Bestanden',

@@ -132,7 +132,7 @@ export const es = {
     skip: 'Omitir esta versión',
     close: 'Cerrar',
     downloadPage: 'Abrir página de descarga',
-    manualHint: 'Las versiones de macOS y portátiles se actualizan manualmente: descarga el nuevo paquete y sustituye la aplicación actual.',
+    manualHint: 'Las versiones de escritorio se actualizan manualmente: descarga el paquete de tu sistema y sustituye la aplicación actual.',
   },
   sidebar: {
     files: 'Archivos',

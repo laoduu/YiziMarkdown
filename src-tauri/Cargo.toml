@@ -2,9 +2,9 @@
 name = "yizimarkdown"
 version = "0.4.3"
 description = "YiziMarkdown - A sleek Markdown editor"
-authors = ["You"]
-license = ""
-repository = ""
+authors = ["laoduu <laoduu@users.noreply.github.com>"]
+license = "MIT"
+repository = "https://github.com/laoduu/YiziMarkdown"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -40,6 +40,9 @@ keyring = { version = "3", default-features = false, features = [
 reqwest = { version = "0.13", default-features = false, features = ["json", "stream", "default-tls"] }
 futures-util = "0.3"
 once_cell = "1"
+# Linux 用户目录解析（XDG user-dirs 的 DOCUMENTS）：只在 Linux 分支用到。
+# 该 crate 已在 Cargo.lock（经其它依赖传递），这里显式声明直接使用。
+dirs = "6"
 tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "macros"] }
 # 导出 DOCX：markdown 解析 + OOXML 打包（轻量，仅 deflate）
 pulldown-cmark = "0.13"

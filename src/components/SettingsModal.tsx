@@ -1585,7 +1585,7 @@ function UpdateCard() {
   const busy = status === 'checking' || status === 'downloading'
   const ratio = progressRatio(downloaded, total)
   const notesHtml = useMemo(() => (update?.notes ? renderMarkdown(update.notes) : ''), [update?.notes])
-  // macOS / 便携版：查得到、装不了 —— 卡片改成「打开下载页」，不画「立即更新」
+  // macOS / 便携版 / Linux：查得到、装不了 —— 卡片改成「打开下载页」，不画「立即更新」
   const manualChannel = isManualUpdateChannel(blocker)
 
   const muted: React.CSSProperties = { fontSize: 11, color: 'var(--sidebar-text)', margin: '6px 0 0', lineHeight: 1.5 }
@@ -1647,7 +1647,7 @@ function UpdateCard() {
     }
     if (!update) {
       // 没结果时把「为什么不能自动更新」说清楚（dev / MSI / 浏览器）；
-      // 手动通道（macOS / 便携版）此时是 idle，同样需要这句解释
+      // 手动通道（macOS / 便携版 / Linux）此时是 idle，同样需要这句解释
       return blocker
         ? <p style={muted}>{t(UPDATE_BLOCKER_KEYS[blocker] ?? 'settings.updateBlockerUnknown')}</p>
         : null
@@ -1707,7 +1707,7 @@ function UpdateCard() {
           {t('settings.updateTitle')}
         </span>
         {/* 不能自动更新的环境不给「检查更新」按钮：点了也不会有结果。
-            例外是手动通道（macOS / 便携版）——它们查得到版本，只是装不了 */}
+            例外是手动通道（macOS / 便携版 / Linux）——它们查得到版本，只是装不了 */}
         {(!blocker || manualChannel) && status !== 'downloading' && status !== 'installed' && (
           <button
             onClick={() => void useUpdateStore.getState().check(true)}

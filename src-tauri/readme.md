@@ -7,7 +7,7 @@
 
 **官方网站：** https://md.yizigpt.com
 
-一款简洁精致的跨平台 `Markdown` 编辑器，支持 Windows 便携版与 macOS 版本。免安装，解压即用，兼顾颜值与实用。Windows 可安装，也可下载压缩包解压即用；macOS 提供通用二进制安装包，Intel 与 Apple Silicon 均原生运行。
+一款简洁精致的跨平台 `Markdown` 编辑器，支持 Windows 便携版与 macOS 版本。免安装，解压即用，兼顾颜值与实用。Windows 可安装，也可下载压缩包解压即用；macOS 提供通用二进制安装包，Intel 与 Apple Silicon 均原生运行；Linux 提供 Debian 系 `deb` 与免安装 `AppImage`（Ubuntu 22.04+ / Debian 12+）。
 
 为什么要开发一款 `Markdown` 编辑器？
 
@@ -139,10 +139,10 @@
 
 ### 其他
 
-- **文档模板**：模板存放在用户目录 `~/Documents/yizimarkdown/templates/`，放入 `.md` 文件即可使用（也可在 设置 → 模板 中新建/编辑，新建后菜单即时刷新）；内置模板首次启动自动同步到该目录，升级/重装不会覆盖你的模板
+- **文档模板**：模板存放在用户目录（Windows/macOS 为 `~/Documents/yizimarkdown/templates/`，Linux 为 XDG 文档目录下的 `yizimarkdown/templates/`，无文档目录时是 `~/.local/share/yizimarkdown/templates/`），放入 `.md` 文件即可使用（也可在 设置 → 模板 中新建/编辑，新建后菜单即时刷新）；内置模板首次启动自动同步到该目录，升级/重装不会覆盖你的模板
 - **快捷键系统**：可视化快捷键配置面板，支持 30 个 action 的自定义绑定、按键录制、冲突检测和恢复默认
 - **设置面板**：通用、外观、编辑器、实时模式、AI 助手、云端、插件、快捷键、模板、关于等多个标签页，设置即时预览
-- **版本与更新**：Windows 安装版可在应用内一键更新；macOS 与便携版启动时会检查 `latest.json`，发现新版在右下角提示并打开对应版本的下载页（手动替换，不自动安装）
+- **版本与更新**：Windows 安装版可在应用内一键更新；macOS、Linux 与便携版启动时会检查 `latest.json`，发现新版在右下角提示并打开对应版本的下载页（手动替换，不自动安装；Linux 的 `deb` 与 `AppImage` 都走这条提醒通道）
 
 ---
 
@@ -223,7 +223,7 @@ YiziMarkdown/
     └── default.md          # 默认模板
 ```
 
-> 提示：AI 技能与文档模板的真实存储位置都在用户目录 —— `~/Documents/yizimarkdown/skills/` 与 `~/Documents/yizimarkdown/templates/`（程序目录下的同名文件夹是内置资源，首次启动会同步过去）。自定义内容请放用户目录，升级/重装不会被覆盖。
+> 提示：AI 技能与文档模板的真实存储位置都在**用户目录** —— Windows/macOS 是 `~/Documents/yizimarkdown/skills/` 与 `.../templates/`；Linux 是 XDG 文档目录下的 `yizimarkdown/`（如 `~/文档/yizimarkdown/`），系统没有文档目录时兜底 `~/.local/share/yizimarkdown/`。（程序目录下的同名文件夹是内置资源，首次启动会同步过去）。自定义内容请放用户目录，升级/重装不会被覆盖。
 
 ---
 
@@ -259,6 +259,17 @@ npm install
 npm run tauri:dev
 ```
 
+### Linux 开发态任务栏图标（可选）
+
+elementary / GNOME 这类桌面是按窗口的 `WM_CLASS` 去找同名 `.desktop` 里的 `Icon` 取任务栏图标的；开发态没有安装包，也就没有 `.desktop`，Dock 只会显示通用图标（窗口本身的 `_NET_WM_ICON` 已由 Rust 侧补上，安装包不受影响）。执行一次：
+
+```bash
+npm run dev:icon           # 写入 ~/.local/share/applications/yizimarkdown-dev.desktop
+npm run dev:icon:remove    # 撤销
+```
+
+之后重启 dev 窗口，Dock 即显示应用图标。
+
 ### 构建发布版
 
 **Windows**
@@ -285,6 +296,19 @@ npm run tauri:build -- --target universal-apple-darwin
 构建产物：
 - 应用包：`src-tauri/target/universal-apple-darwin/release/bundle/macos/YiziMarkdown.app`
 - 安装包：`src-tauri/target/universal-apple-darwin/release/bundle/dmg/YiziMarkdown_0.2.2_universal.dmg`
+
+**Linux（deb + AppImage）**
+
+```bash
+sudo apt install libwebkit2gtk-4.1-dev build-essential libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+npm run tauri:build -- --bundles deb,appimage
+```
+
+构建产物：
+- Debian 系安装包：`src-tauri/target/release/bundle/deb/YiziMarkdown_<ver>_amd64.deb`（约 16 MB，装到 `/usr/bin`，注册菜单项、图标与 `.md` / `.epub` 文件关联）
+- 通用免安装版：`src-tauri/target/release/bundle/appimage/YiziMarkdown_<ver>_amd64.AppImage`（约 100 MB，自带 GTK/WebKit 与 GStreamer 媒体组件，双击即用）
+
+注意：**必须在 Ubuntu 22.04 上构建**。24.04 编出的二进制要求 glibc 2.39，Ubuntu 22.04（2.35）/ Debian 12（2.36）会直接启动失败；`deb` 的 `libwebkit2gtk-4.1-0` 依赖同样把下限锁在 Ubuntu 22.04 / Debian 12（Debian 11 只有 webkit 4.0）。暂不提供 `rpm`：Fedora/openSUSE 的依赖名与 Debian 系不同，需要单独维护。
 
 ### 项目结构
 
