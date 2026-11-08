@@ -19,6 +19,7 @@ export const ko = {
     notSet: '설정 안 됨',
   },
   toolbar: {
+    zen: '젠 모드',
     read: '읽기 모드',
     brand: 'YiziMarkdown',
     newFile: '새로 만들기 (Ctrl+N)',
@@ -110,6 +111,12 @@ export const ko = {
     closeOthers: '다른 탭 닫기',
     closeRight: '오른쪽 탭 닫기',
     closeAll: '모두 닫기',
+  },
+  zen: {
+    exit: '젠 모드 종료',
+    exitHint: 'F9 또는 Esc로 젠 모드를 종료',
+    unavailable: '먼저 파일을 여세요',
+    editorOnly: '젠 모드는 소스 / 라이브 보기에서만 사용할 수 있습니다',
   },
   statusbar: {
     updateAvailable: '새 버전 {v}',
@@ -472,6 +479,7 @@ export const ko = {
     authorHome: '개발자 홈페이지',
   },
   shortcuts: {
+    zenMode: '젠 모드',
     readingMode: '읽기 모드',
     file: '파일',
     edit: '편집',

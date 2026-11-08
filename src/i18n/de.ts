@@ -19,6 +19,7 @@ export const de = {
     notSet: 'Nicht festgelegt',
   },
   toolbar: {
+    zen: 'Zen-Modus',
     read: 'Lesemodus',
     brand: 'YiziMarkdown',
     newFile: 'Neu (Ctrl+N)',
@@ -110,6 +111,12 @@ export const de = {
     closeOthers: 'Andere schließen',
     closeRight: 'Rechte schließen',
     closeAll: 'Alle schließen',
+  },
+  zen: {
+    exit: 'Zen-Modus verlassen',
+    exitHint: 'F9 oder Esc beendet den Zen-Modus',
+    unavailable: 'Zuerst eine Datei öffnen',
+    editorOnly: 'Der Zen-Modus gilt nur für Quelltext- und Live-Ansicht',
   },
   statusbar: {
     updateAvailable: 'Version {v} verfügbar',
@@ -472,6 +479,7 @@ export const de = {
     authorHome: 'Autorenseite',
   },
   shortcuts: {
+    zenMode: 'Zen-Modus',
     readingMode: 'Lesemodus',
     file: 'Datei',
     edit: 'Bearbeiten',

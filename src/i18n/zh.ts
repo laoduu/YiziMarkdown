@@ -18,6 +18,7 @@ export const zh = {
     notSet: '未设置',
   },
   toolbar: {
+    zen: '禅模式',
     read: '阅读模式',
     brand: 'YiziMarkdown',
     newFile: '新建 (Ctrl+N)',
@@ -109,6 +110,12 @@ export const zh = {
     closeOthers: '关闭其他',
     closeRight: '关闭右侧',
     closeAll: '关闭全部',
+  },
+  zen: {
+    exit: '退出禅模式',
+    exitHint: '按 F9 或 Esc 退出禅模式',
+    unavailable: '打开文件后可用',
+    editorOnly: '禅模式只用于源码 / 实时编辑',
   },
   statusbar: {
     updateAvailable: '有新版本 {v}',
@@ -485,6 +492,7 @@ export const zh = {
     authorHome: '作者主页',
   },
   shortcuts: {
+    zenMode: '禅模式',
     readingMode: '阅读模式',
     // 分类
     file: '文件',

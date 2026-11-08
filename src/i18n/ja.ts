@@ -19,6 +19,7 @@ export const ja = {
     notSet: '未設定',
   },
   toolbar: {
+    zen: '禅モード',
     read: '読書モード',
     brand: 'YiziMarkdown',
     newFile: '新規 (Ctrl+N)',
@@ -110,6 +111,12 @@ export const ja = {
     closeOthers: '他を閉じる',
     closeRight: '右側を閉じる',
     closeAll: 'すべて閉じる',
+  },
+  zen: {
+    exit: '禅モードを終了',
+    exitHint: 'F9 または Esc で禅モードを終了',
+    unavailable: '先にファイルを開いてください',
+    editorOnly: '禅モードはソース / ライブ表示のみ',
   },
   statusbar: {
     updateAvailable: 'v{v} があります',
@@ -472,6 +479,7 @@ export const ja = {
     authorHome: '作者のホームページ',
   },
   shortcuts: {
+    zenMode: '禅モード',
     readingMode: '読書モード',
     file: 'ファイル',
     edit: '編集',

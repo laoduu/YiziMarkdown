@@ -19,6 +19,7 @@ export const it = {
     notSet: 'Non impostato',
   },
   toolbar: {
+    zen: 'Modalità zen',
     read: 'Modalità lettura',
     brand: 'YiziMarkdown',
     newFile: 'Nuovo (Ctrl+N)',
@@ -110,6 +111,12 @@ export const it = {
     closeOthers: 'Chiudi gli altri',
     closeRight: 'Chiudi a destra',
     closeAll: 'Chiudi tutti',
+  },
+  zen: {
+    exit: 'Esci dalla modalità zen',
+    exitHint: 'Premi F9 o Esc per uscire dalla modalità zen',
+    unavailable: 'Apri prima un file',
+    editorOnly: 'La modalità zen è disponibile solo nelle viste Codice e Live',
   },
   statusbar: {
     updateAvailable: 'Versione {v} disponibile',
@@ -472,6 +479,7 @@ export const it = {
     authorHome: "Pagina dell'autore",
   },
   shortcuts: {
+    zenMode: 'Modalità zen',
     readingMode: 'Modalità lettura',
     file: 'File',
     edit: 'Modifica',

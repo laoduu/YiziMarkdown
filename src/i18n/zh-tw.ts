@@ -18,6 +18,7 @@ export const zhTW = {
     notSet: '未設定',
   },
   toolbar: {
+    zen: '禪模式',
     read: '閱讀模式',
     brand: 'YiziMarkdown',
     newFile: '新建 (Ctrl+N)',
@@ -109,6 +110,12 @@ export const zhTW = {
     closeOthers: '關閉其他',
     closeRight: '關閉右側',
     closeAll: '關閉全部',
+  },
+  zen: {
+    exit: '結束禪模式',
+    exitHint: '按 F9 或 Esc 結束禪模式',
+    unavailable: '開啟文件後可用',
+    editorOnly: '禪模式只用於原始碼 / 即時編輯',
   },
   statusbar: {
     updateAvailable: '有新版本 {v}',
@@ -483,6 +490,7 @@ export const zhTW = {
     authorHome: '作者主頁',
   },
   shortcuts: {
+    zenMode: '禪模式',
     readingMode: '閱讀模式',
     // 分類
     file: '檔案',

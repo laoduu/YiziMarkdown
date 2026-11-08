@@ -61,6 +61,7 @@ export const SHORTCUT_ACTIONS: ShortcutAction[] = [
   { id: 'toggleDevtools', labelKey: 'shortcuts.toggleDevtools', defaultKey: 'f12',               categoryKey: 'shortcuts.view' },
   { id: 'presentSlides', labelKey: 'shortcuts.presentSlides', defaultKey: 'ctrl+alt+p',        categoryKey: 'shortcuts.view' },
   { id: 'readingMode',   labelKey: 'shortcuts.readingMode',   defaultKey: 'ctrl+alt+r',        categoryKey: 'shortcuts.view' },
+  { id: 'zenMode',       labelKey: 'shortcuts.zenMode',       defaultKey: 'f9',                categoryKey: 'shortcuts.view' },
   { id: 'toggleFullscreen', labelKey: 'shortcuts.toggleFullscreen', defaultKey: 'f11',          categoryKey: 'shortcuts.view' },
 ]
 

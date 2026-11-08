@@ -13,7 +13,8 @@
   --editor-accent: #0066cc;
   --editor-border: #e5e5e5;
   --editor-surface: #f8f8f8;
-  --editor-hover: rgba(0, 0, 0, 0.03);  --editor-selection-bg: rgba(0, 102, 204, 0.35);
+  --editor-hover: rgba(0, 0, 0, 0.03);
+  --editor-selection-bg: rgba(0, 102, 204, 0.35);
   --editor-cursor: #0066cc;
   --sidebar-bg: #fafafa;
   --sidebar-text: #666666;
@@ -281,7 +282,8 @@
   --editor-accent: #569cd6;
   --editor-border: #3c3c3c;
   --editor-surface: #252526;
-  --editor-hover: rgba(255, 255, 255, 0.05);  --editor-selection-bg: rgba(86, 156, 214, 0.45);
+  --editor-hover: rgba(255, 255, 255, 0.05);
+  --editor-selection-bg: rgba(86, 156, 214, 0.45);
   --editor-cursor: #569cd6;
   --sidebar-bg: #252526;
   --sidebar-text: #858585;
@@ -3091,3 +3093,206 @@ a {
 @media (prefers-reduced-motion: reduce) {
   .update-notice { animation: none; }
 }
+
+/* ==================================================================
+   禅模式（Zen Mode）—— 收折式消隐
+   口径见 src/lib/zenMode.ts 与 README「禅模式」。
+
+   职责划分（重要）：
+   · **收折动画（clip-path + transform）由 App 的 rAF 逐帧驱动** —— 不用 CSS transition。
+     WebKitGTK 对 clip-path transition 有合成错位 bug（实测：图层被画到屏幕底部），
+     JS 逐帧写内联样式走普通重绘，绕开合成器，且时序完全可控。
+   · CSS 只负责：pointer-events 收权 / 行号等 opacity / 容器底色 / 固定浮层（暗角、
+     光晕、锚点、自绘滚动条）。
+   · 铁律：不改文档区任何 width / height / grid / margin / padding —— 正文逐像素不动。
+   ================================================================== */
+
+/* 熄灭后整块屏幕是一张同色纸 */
+.app-container.zen-mode { background: var(--editor-bg); }
+
+/* 进入时鼠标通常还停在刚点击的按钮上：hover 底色会在收折过程中变成一块"色块"。
+   禅模式（且未唤回顶部）期间禁掉工具栏按钮的 hover 底色，切换过程中不再闪色块。 */
+.app-container.zen-mode:not(.zen-awake-top) .toolbar button:hover {
+  background-color: transparent !important;
+}
+
+/* ---- pointer-events 收权（唤回区恢复） ---- */
+.app-container.zen-mode .sidebar,
+.app-container.zen-mode .ai-chat-panel,
+.app-container.zen-mode .toolbar,
+.app-container.zen-mode .tab-bar,
+.app-container.zen-mode .statusbar {
+  pointer-events: none;
+}
+.app-container.zen-mode.zen-awake-left .sidebar,
+.app-container.zen-mode.zen-awake-right .ai-chat-panel,
+.app-container.zen-mode.zen-awake-top .toolbar,
+.app-container.zen-mode.zen-awake-top .tab-bar,
+.app-container.zen-mode.zen-awake-bottom .statusbar {
+  pointer-events: auto;
+}
+
+/* ---- 行号与它右侧的分隔线：淡出即可（只改 opacity，不改宽度，正文不动） ---- */
+.app-container.zen-mode .cm-gutters {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 480ms cubic-bezier(0.22, 1, 0.36, 1) 0ms;
+}
+
+/* ---- 更新提示卡、正文区左上角的侧栏切换按钮 ---- */
+.app-container.zen-mode .update-notice,
+.app-container.zen-mode .zen-fade-aux {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 480ms cubic-bezier(0.22, 1, 0.36, 1) 260ms;
+}
+.zen-fade-aux {
+  transition: opacity 420ms cubic-bezier(0.22, 1, 0.36, 1) 260ms;
+}
+
+/* ---- 编辑器纵向滚动条：永久由自绘细条接管（横向保留原生） ----
+   为什么"永久"：WebKitGTK 把拇指改成透明后，撤销样式不会恢复绘制（实测 resize 都没用），
+   所以不能"临时隐藏"。这里只把**纵向**拇指常驻透明（宽度不变，不会推动正文），
+   显示/隐藏完全由 ZenScrollIndicator 控制（进出场动画期间 suppressed）。 */
+.app-container .cm-scroller::-webkit-scrollbar-thumb:vertical { background: transparent; }
+.app-container .cm-scroller::-webkit-scrollbar-thumb:vertical:hover { background: transparent; }
+
+/* ---- 顶部 6px 透明拖拽带 ---- */
+.zen-drag-strip {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 6px;
+  z-index: 60;
+  cursor: default;
+}
+.app-container.zen-awake-top .zen-drag-strip { pointer-events: none; }
+
+/* ---- 暗角 + 进出场光晕 ---- */
+.zen-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(ellipse 82% 76% at 50% 46%,
+      transparent 46%,
+      var(--zen-vignette-color, rgba(0, 0, 0, 0.04)) 100%);
+  transition: opacity 700ms ease;
+}
+.app-container.zen-mode .zen-vignette { opacity: 1; }
+
+.zen-halo {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(ellipse 64% 60% at 50% 47%,
+      color-mix(in srgb, var(--editor-accent) 10%, transparent) 0%,
+      transparent 72%);
+  animation: zen-halo 1100ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes zen-halo {
+  0%   { opacity: 0;    transform: scale(0.92); }
+  32%  { opacity: 0.55; }
+  100% { opacity: 0;    transform: scale(1.1); }
+}
+
+/* ---- 禅模式锚点按钮（常驻，位置与工具栏内 #zen-anchor 一致） ---- */
+.zen-anchor-float {
+  position: fixed;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm, 6px);
+  background: transparent;
+  /* 与工具栏里的原按钮同色：与它完全重合，进出场看不出"换了一个"（定海神针） */
+  color: var(--toolbar-accent, var(--editor-accent));
+  opacity: 0.9;
+  cursor: pointer;
+  transition: opacity 160ms ease, background-color 160ms ease, color 160ms ease;
+}
+.zen-anchor-float:hover {
+  background: var(--editor-hover);
+  color: var(--editor-accent);
+}
+
+/* 持续涟漪（复用点击涟漪的主题配色思路，刻意调浅） */
+.zen-anchor-ripple {
+  position: absolute;
+  inset: 2px;
+  border-radius: 999px;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow:
+    0 0 0 1.5px color-mix(in srgb, var(--editor-accent) 45%, transparent),
+    0 0 12px color-mix(in srgb, var(--editor-accent) 12%, transparent);
+  animation: zen-anchor-breathe 2.8s ease-out infinite;
+}
+@keyframes zen-anchor-breathe {
+  0%   { transform: scale(0.9);  opacity: 0; }
+  18%  { opacity: 0.55; }
+  62%  { opacity: 0; }
+  100% { opacity: 0; transform: scale(2.2); }
+}
+
+/* ---- 自绘滚动条（固定定位、不占布局；拖动时略加宽，只作用在浮层自身） ---- */
+.zen-scroll-indicator {
+  position: fixed;
+  width: 4px;
+  border-radius: 999px;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--sidebar-text) 62%, var(--editor-bg));
+  transition: opacity 240ms ease, width 160ms ease, background-color 160ms ease;
+}
+.zen-scroll-indicator.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.zen-scroll-indicator.is-visible:hover {
+  background: var(--sidebar-text);
+}
+.zen-scroll-indicator.is-dragging {
+  width: 6px;
+  opacity: 1;
+}
+
+/* ---- 指针静止 2s 后隐藏；唤回区与锚点保持可见光标 ---- */
+.app-container.zen-idle * { cursor: none !important; }
+.app-container.zen-idle .zen-anchor-float,
+.app-container.zen-idle.zen-awake-top .toolbar,
+.app-container.zen-idle.zen-awake-top .toolbar *,
+.app-container.zen-idle.zen-awake-top .tab-bar,
+.app-container.zen-idle.zen-awake-top .tab-bar *,
+.app-container.zen-idle.zen-awake-left .sidebar,
+.app-container.zen-idle.zen-awake-left .sidebar *,
+.app-container.zen-idle.zen-awake-right .ai-chat-panel,
+.app-container.zen-idle.zen-awake-right .ai-chat-panel *,
+.app-container.zen-idle.zen-awake-bottom .statusbar,
+.app-container.zen-idle.zen-awake-bottom .statusbar * {
+  cursor: auto !important;
+}
+.app-container.zen-idle .zen-anchor-float { cursor: pointer !important; }
+
+/* ---- 系统要求减少动态：瞬时切换，光晕不播 ---- */
+@media (prefers-reduced-motion: reduce) {
+  .cm-gutters,
+  .update-notice,
+  .zen-fade-aux,
+  .zen-vignette {
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+  }
+  .zen-halo,
+  .zen-anchor-ripple { animation: none !important; }
+}
+
+.app-container.zen-mode::after { content: ''; position: fixed; left: 56px; top: 0; width: 50px; height: 6px; background: #0000ff; z-index: 99999; pointer-events: none; }

@@ -147,6 +147,8 @@ export interface EditorRef {
   getScrollDoms: () => { editor: HTMLElement | null; preview: HTMLElement | null }
   undo: () => void
   redo: () => void
+  /** 聚焦编辑器（退出禅模式后把焦点还给正文） */
+  focus: () => void
 }
 
 interface EditorProps {
@@ -1271,6 +1273,9 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         redo({ state: view.state, dispatch: view.dispatch })
         view.focus()
       }
+    },
+    focus: () => {
+      viewRef.current?.focus()
     }
   }))
 

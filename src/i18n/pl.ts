@@ -19,6 +19,7 @@ export const pl = {
     notSet: 'Nie ustawiono',
   },
   toolbar: {
+    zen: 'Tryb zen',
     read: 'Tryb czytania',
     brand: 'YiziMarkdown',
     newFile: 'Nowy (Ctrl+N)',
@@ -110,6 +111,12 @@ export const pl = {
     closeOthers: 'Zamknij pozostałe',
     closeRight: 'Zamknij po prawej',
     closeAll: 'Zamknij wszystko',
+  },
+  zen: {
+    exit: 'Wyjdź z trybu zen',
+    exitHint: 'Naciśnij F9 lub Esc, aby wyjść z trybu zen',
+    unavailable: 'Najpierw otwórz plik',
+    editorOnly: 'Tryb zen dotyczy tylko widoku źródła i podglądu na żywo',
   },
   statusbar: {
     updateAvailable: 'Dostępna wersja {v}',
@@ -472,6 +479,7 @@ export const pl = {
     authorHome: 'Strona autora',
   },
   shortcuts: {
+    zenMode: 'Tryb zen',
     readingMode: 'Tryb czytania',
     file: 'Plik',
     edit: 'Edycja',

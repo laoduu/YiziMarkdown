@@ -58,6 +58,7 @@ import {
   Maximize,
 } from 'lucide-react'
 import WindowControls from './WindowControls'
+import ZenIcon from './ZenIcon'
 import { windowOps } from '../lib/windowOps'
 import { openContextMenu } from './ContextMenu'
 import { useWindowStateStore } from '../stores/windowStateStore'
@@ -91,6 +92,8 @@ interface ToolbarProps {
   onSettings: () => void
   onPresent: () => void
   onRead: () => void
+  /** 禅模式开关（F9）：撤掉全部界面构件，只留正文 */
+  onZen: () => void
   onAIChat: () => void
   isDark: boolean
   onUndo?: () => void
@@ -109,6 +112,7 @@ const AUTO_COLLAPSE_THRESHOLD = 1380
 export default function Toolbar({
   onNew, onNewFromTemplate, onOpen, onSave, onSaveAs, onSaveToCloud, onToggleSidebar, onToggleDark, onUndo, onRedo,
   onInsertMarkdown, onInsertFootnote, onExport, pluginExports = [], onSearch, onSettings, onPresent, onRead, onAIChat,
+  onZen,
   isDark, previewMode = false,
 }: ToolbarProps) {
   const { t } = useI18n()
@@ -841,6 +845,11 @@ export default function Toolbar({
         />
         <ToolbarButton icon={<Presentation size={16} />} tooltip={t('toolbar.present')} onClick={onPresent} accent />
         <ToolbarButton icon={<BookOpen size={16} />} tooltip={t('toolbar.read')} onClick={onRead} accent />
+        {/* 禅模式锚点：进入禅后工具栏整体淡出，但 App 会按这个 span 的位置浮出一个
+            同位置的常驻按钮（状态锚 + 退出通道）。位置测量依赖这个 id，勿改。 */}
+        <span id="zen-anchor" style={{ display: 'inline-flex' }}>
+          <ToolbarButton icon={<ZenIcon size={20} />} tooltip={t('toolbar.zen')} onClick={onZen} accent />
+        </span>
         <ToolbarButton icon={<Bot size={16} />} tooltip={t('ai.chatTitle')} onClick={onAIChat} accent />
         <ToolbarButton icon={<Settings size={16} />} tooltip={t('toolbar.settings')} onClick={onSettings} accent />
         

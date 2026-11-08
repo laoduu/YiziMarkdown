@@ -19,6 +19,7 @@ export const nl = {
     notSet: 'Niet ingesteld',
   },
   toolbar: {
+    zen: 'Zen-modus',
     read: 'Leesmodus',
     brand: 'YiziMarkdown',
     newFile: 'Nieuw (Ctrl+N)',
@@ -110,6 +111,12 @@ export const nl = {
     closeOthers: 'Sluit anderen',
     closeRight: 'Sluit rechts',
     closeAll: 'Sluit alles',
+  },
+  zen: {
+    exit: 'Zen-modus verlaten',
+    exitHint: 'Druk op F9 of Esc om de zen-modus te verlaten',
+    unavailable: 'Open eerst een bestand',
+    editorOnly: 'Zen-modus is alleen voor Bron- en Live-weergave',
   },
   statusbar: {
     updateAvailable: 'Versie {v} beschikbaar',
@@ -472,6 +479,7 @@ export const nl = {
     authorHome: 'Pagina van de auteur',
   },
   shortcuts: {
+    zenMode: 'Zen-modus',
     readingMode: 'Leesmodus',
     file: 'Bestand',
     edit: 'Bewerken',

@@ -19,6 +19,7 @@ export const tr = {
     notSet: 'Ayarlanmadı',
   },
   toolbar: {
+    zen: 'Zen modu',
     read: 'Okuma modu',
     brand: 'YiziMarkdown',
     newFile: 'Yeni (Ctrl+N)',
@@ -110,6 +111,12 @@ export const tr = {
     closeOthers: 'Diğerlerini kapat',
     closeRight: 'Sağdakileri kapat',
     closeAll: 'Tümünü kapat',
+  },
+  zen: {
+    exit: 'Zen modundan çık',
+    exitHint: 'Zen modundan çıkmak için F9 veya Esc',
+    unavailable: 'Önce bir dosya açın',
+    editorOnly: 'Zen modu yalnızca Kaynak ve Canlı görünümlerde kullanılabilir',
   },
   statusbar: {
     updateAvailable: '{v} sürümü hazır',
@@ -472,6 +479,7 @@ export const tr = {
     authorHome: 'Yazarın sayfası',
   },
   shortcuts: {
+    zenMode: 'Zen modu',
     readingMode: 'Okuma modu',
     file: 'Dosya',
     edit: 'Düzen',

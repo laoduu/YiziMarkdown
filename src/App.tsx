@@ -13,8 +13,15 @@ import DocxExportDialog, { type DocxExportOptions } from './components/DocxExpor
 import ExportResultDialog from './components/ExportResultDialog'
 import PluginExportDialog, { type PluginExportSource } from './components/PluginExportDialog'
 import AIChatPanel from './components/AIChatPanel'
+import ZenScrollIndicator from './components/ZenScrollIndicator'
+import ZenIcon from './components/ZenIcon'
 import { PanelLeftClose, PanelLeft, Loader2 } from 'lucide-react'
 import { invokeTauri, invokeTauriOrThrow } from './lib/tauri'
+import {
+  zenAllowedForViewMode, zenEdgeRegionAt, pointInRect, shouldExitZenOnEscape,
+  easeInOutCubic, ZEN_TIMING, zenEnterTotalMs, zenExitTotalMs,
+  type ZenRegion, type ZenRect,
+} from './lib/zenMode'
 import { openRemote, save as saveToCloud, notifyRemoteDirChanged } from './lib/webdav'
 import { parentPath, joinPath, baseName, canonicalRemotePath } from './lib/remotePath'
 import { saveActiveTab, markConflictResolved, dirOf } from './lib/saveRouter'
@@ -155,6 +162,92 @@ interface EpubSession {
   restoreUnmaximize: boolean
 }
 
+
+/** 禅模式收折清单：每块朝最近的屏幕边收起（clip + 轻微位移；两者都不参与布局） */
+const ZEN_FOLD_ITEMS: Array<{
+  region: ZenRegion
+  selectors: string[]
+  kind: 'left' | 'right' | 'up' | 'down'
+  enterDelay: number
+  exitDelay: number
+}> = [
+  { region: 'left',   selectors: ['.sidebar'],       kind: 'left',  enterDelay: ZEN_TIMING.enterPanelDelay,   exitDelay: ZEN_TIMING.exitPanelDelay },
+  { region: 'right',  selectors: ['.ai-chat-panel'], kind: 'right', enterDelay: ZEN_TIMING.enterPanelDelay,   exitDelay: ZEN_TIMING.exitPanelDelay },
+  { region: 'top',    selectors: ['.toolbar'],       kind: 'up',    enterDelay: ZEN_TIMING.enterToolbarDelay, exitDelay: ZEN_TIMING.exitToolbarDelay },
+  { region: 'top',    selectors: ['.tab-bar'],       kind: 'up',    enterDelay: ZEN_TIMING.enterTabbarDelay,  exitDelay: ZEN_TIMING.exitTabbarDelay },
+  { region: 'bottom', selectors: ['.statusbar'],     kind: 'down',  enterDelay: ZEN_TIMING.enterStatusDelay,  exitDelay: ZEN_TIMING.exitStatusDelay },
+]
+
+/** 收折的视觉位移：竖向块滑向屏幕外 10px，横向块 18px（transform 不影响布局） */
+const foldShiftOf = (kind: 'left' | 'right' | 'up' | 'down', p: number): string =>
+  kind === 'left' ? `translateX(${-ZEN_TIMING.foldShift * p}px)`
+  : kind === 'right' ? `translateX(${ZEN_TIMING.foldShift * p}px)`
+  : kind === 'up' ? `translateY(${-10 * p}px)`
+  : `translateY(${10 * p}px)`
+
+const foldClipOf = (kind: 'left' | 'right' | 'up' | 'down', p: number): string =>
+  kind === 'left' ? `inset(0 ${p * 100}% 0 0)`
+  : kind === 'right' ? `inset(0 0 0 ${p * 100}%)`
+  : kind === 'up' ? `inset(0 0 ${p * 100}% 0)`
+  : `inset(${p * 100}% 0 0 0)`
+
+/**
+ * rAF 逐帧驱动某元素收折：p=0 完全展开，p=1 完全收起。
+ * 不用 CSS transition：WebKitGTK 对 clip-path transition 有**合成错位** bug
+ * （实测图层被画到屏幕底部）；逐帧写内联样式走普通重绘，且时序完全可控。
+ * 返回取消函数；中途取消时进度保留，下一次从当前视觉位置继续。
+ */
+function animateFoldTo(
+  el: HTMLElement,
+  kind: 'left' | 'right' | 'up' | 'down',
+  target: number,
+  duration: number,
+  delay: number,
+  progress: Map<HTMLElement, number>,
+  onDone?: () => void,
+): () => void {
+  const apply = (p: number) => {
+    // p=0 时写 none 而不是 0 值：`transform: translateY(0)` 仍然会创建包含块，
+    // 让工具栏/侧栏里那些 fixed 定位的菜单算错坐标（唤回后点菜单会飘）。
+    if (p <= 0.001) {
+      el.style.clipPath = 'none'
+      el.style.transform = 'none'
+    } else {
+      el.style.clipPath = foldClipOf(kind, p)
+      el.style.transform = foldShiftOf(kind, p)
+    }
+    progress.set(el, p)
+  }
+  let timer: ReturnType<typeof setTimeout> | null = null
+  let raf = 0
+  let cancelled = false
+  const start = () => {
+    if (cancelled) return
+    const from = progress.get(el) ?? 0
+    if (duration <= 0 || Math.abs(target - from) < 0.002) {
+      apply(target)
+      onDone?.()
+      return
+    }
+    const started = performance.now()
+    const tick = (now: number) => {
+      if (cancelled) return
+      const t = Math.min(1, Math.max(0, (now - started) / duration))
+      apply(from + (target - from) * easeInOutCubic(t))
+      if (t < 1) raf = requestAnimationFrame(tick)
+      else onDone?.()
+    }
+    raf = requestAnimationFrame(tick)
+  }
+  if (delay > 0) timer = setTimeout(start, delay)
+  else start()
+  return () => {
+    cancelled = true
+    if (timer) clearTimeout(timer)
+    cancelAnimationFrame(raf)
+  }
+}
+
 function App() {
   const { t } = useI18n()
   const { currentTheme, isDark, fontFamily, previewFontFamily, fontSize, lineHeight, previewFontSize, previewLineHeight, contentMaxWidth, uiTextScale, codeBlockWrap, codeBlockLineNumbers, tocFrame, enabledPlugins, pluginConfigs, setField, aiPanelOpen, updateSettings, userThemeEnabled, userThemeName, customCssBase, slideColStyle, slideColAlign, cursorStyle } = useSettingsStore()
@@ -174,6 +267,35 @@ function App() {
   const [showShortcutsPanel, setShowShortcutsPanel] = useState(false)
   const [isSlideshow, setIsSlideshow] = useState(false)
   const [isReader, setIsReader] = useState(false)
+  /** 禅模式：所有界面构件原地淡出，只留正文（F9 开关；会话级，不持久化） */
+  const [zenMode, setZenMode] = useState(false)
+  /** 指针静止后隐藏（禅模式下才为 true），任何输入都会立刻恢复 */
+  const [zenIdle, setZenIdle] = useState(false)
+  /** 边缘唤回：鼠标贴住哪条边，哪个区域就原地淡回来（'top' | 'left' | 'right' | 'bottom'） */
+  const [zenAwake, setZenAwake] = useState<ZenRegion | null>(null)
+  /** 禅模式锚点按钮的位置（进入时按工具栏里 #zen-anchor 实测，窗口 resize 时重新量） */
+  const [zenAnchor, setZenAnchor] = useState<{ left: number; top: number; width: number; height: number } | null>(null)
+  /** 进出场的淡光晕：每次切换换一个 key，重播一次动画 */
+  const [zenHaloKey, setZenHaloKey] = useState(0)
+  /** 鼠标动 → 滚动条显形；静止 1.4s 再隐去 */
+  const [zenScrollVisible, setZenScrollVisible] = useState(false)
+  /**
+   * 进出场动画进行中（进入 ~1.14s / 退出 ~1.16s）。自绘滚动条在这段时间完全不出现。
+   *
+   * 为什么不再"临时隐藏原生滚动条"：WebKitGTK 把滚动条拇指改成透明后，撤销样式也不会
+   * 恢复绘制（实测 resize 都没用）。所以原生**纵向**滚动条改为永久由自绘细条接管
+   * （见 globals.css 的 :vertical 规则）。
+   */
+  const [zenTransitioning, setZenTransitioning] = useState(false)
+  const zenModeRef = useRef(false)
+  /** 首次挂载不进入"过渡抑制"（否则启动后的 1.2s 里滚动条不可用） */
+  const zenFirstRunRef = useRef(true)
+  const appShellRef = useRef<HTMLDivElement>(null)
+  /** 当前唤回区（ref 供 pointermove 闭包读取，避免每帧 setState 依赖） */
+  const zenAwakeRef = useRef<ZenRegion | null>(null)
+  const zenSleepRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** 首次进入的退出提示只给一次（本次运行内） */
+  const zenHintShownRef = useRef(false)
   /** EPUB 阅读会话（独立于标签页；打开 EPUB 时直接全屏阅读） */
   const [epubSession, setEpubSession] = useState<EpubSession | null>(null)
   const epubSessionRef = useRef<EpubSession | null>(null)
@@ -396,6 +518,7 @@ function App() {
         }
         case 'presentSlides': startSlideshow(); break
         case 'readingMode': startReader(); break
+        case 'zenMode': toggleZenMode(); break
         // 格式化 action：通过 insertMarkdown 注入
         case 'bold': editorRef.current?.insertMarkdown('**', 'wrap'); break
         case 'italic': editorRef.current?.insertMarkdown('*', 'wrap'); break
@@ -653,6 +776,315 @@ function App() {
   const showToast = useCallback((message: string, duration = 2000) => {
     setToast({ message, visible: true })
     setTimeout(() => setToast({ message: '', visible: false }), duration)
+  }, [])
+
+  /**
+   * 禅模式开关（F9 / 工具栏 / 右键）。
+   *
+   * 消隐式而不是塌陷式：只切一个布尔，所有界面构件**原地**淡出（CSS 只动 opacity），
+   * 不改任何 width/height/grid/transform —— 正文列的矩形全程逐像素不变。
+   * 只服务编辑态（源码 / 实时），分栏、预览、阅读、演示都不进禅境。
+   */
+  const toggleZenMode = useCallback((force?: boolean) => {
+    const prev = zenModeRef.current
+    const next = force ?? !prev
+    if (next === prev) return
+    if (next) {
+      const tab = useEditorStore.getState().currentTab()
+      if (!tab) {
+        showToast(t('zen.unavailable'))
+        return
+      }
+      if (!zenAllowedForViewMode(tab.viewMode || 'edit')) {
+        showToast(t('zen.editorOnly'))
+        return
+      }
+    }
+    zenModeRef.current = next
+    setZenMode(next)
+    // 每次进出都重播一次极淡光晕：换 key 让元素重挂载，animation 重新从头播
+    setZenHaloKey(k => k + 1)
+    if (next) {
+      if (!zenHintShownRef.current) {
+        zenHintShownRef.current = true
+        // 等界面淡完再提示出口，别和动画抢注意力
+        window.setTimeout(
+          () => showToast(t('zen.exitHint'), 3200),
+          ZEN_TIMING.enterStatusDelay + ZEN_TIMING.fold + 200,
+        )
+      }
+    } else {
+      zenAwakeRef.current = null
+      setZenAwake(null)
+      window.setTimeout(() => editorRef.current?.focus(), 30)
+    }
+  }, [showToast, t])
+
+  /**
+   * 边缘唤回：指针贴住屏幕某条边 → 对应区域原地淡回；在唤回区里移动时保持；
+   * 离开 1.2s 后收回。区域尺寸完全不变，所以正文不会因此平移。
+   */
+  useEffect(() => {
+    if (!zenMode) {
+      zenAwakeRef.current = null
+      setZenAwake(null)
+      return
+    }
+    const rectOf = (sel: string): DOMRect | null => {
+      const el = appShellRef.current?.querySelector<HTMLElement>(sel)
+      return el ? el.getBoundingClientRect() : null
+    }
+    /** 某唤回区的矩形；区域不可见（侧栏折叠 / AI 未打开）时返回 null，不唤醒 */
+    const regionRect = (region: ZenRegion): ZenRect | null => {
+      if (region === 'top') {
+        const bar = rectOf('.toolbar')
+        if (!bar) return null
+        const tab = rectOf('.tab-bar')
+        return { top: bar.top, left: 0, right: window.innerWidth, bottom: (tab ?? bar).bottom }
+      }
+      if (region === 'left') {
+        const r = rectOf('.sidebar')
+        return r && r.width > 1
+          ? { top: r.top, left: r.left, right: r.right, bottom: r.bottom }
+          : null
+      }
+      if (region === 'right') {
+        const r = rectOf('.ai-chat-panel')
+        return r && r.width > 1
+          ? { top: r.top, left: r.left, right: r.right, bottom: r.bottom }
+          : null
+      }
+      const r = rectOf('.statusbar')
+      return r ? { top: r.top, left: r.left, right: r.right, bottom: r.bottom } : null
+    }
+    const clearSleep = () => {
+      if (zenSleepRef.current) {
+        clearTimeout(zenSleepRef.current)
+        zenSleepRef.current = null
+      }
+    }
+    const scheduleSleep = () => {
+      if (!zenAwakeRef.current || zenSleepRef.current) return
+      zenSleepRef.current = setTimeout(() => {
+        zenSleepRef.current = null
+        zenAwakeRef.current = null
+        setZenAwake(null)
+      }, ZEN_TIMING.awakeLinger)
+    }
+    const onMove = (e: PointerEvent) => {
+      let next = zenEdgeRegionAt(
+        e.clientX, e.clientY, window.innerWidth, window.innerHeight, ZEN_TIMING.edge,
+      )
+      // 已在唤回区里（不贴边）也保持，避免鼠标一离开热区界面就闪回去
+      if (!next && zenAwakeRef.current) {
+        const r = regionRect(zenAwakeRef.current)
+        if (r && pointInRect(e.clientX, e.clientY, r)) next = zenAwakeRef.current
+      }
+      // 命中边缘但目标区域根本不可见 → 不唤醒（例如侧栏已折叠时贴左边）
+      if (next && !regionRect(next)) next = null
+      if (next) {
+        clearSleep()
+        if (zenAwakeRef.current !== next) {
+          zenAwakeRef.current = next
+          setZenAwake(next)
+        }
+      } else {
+        scheduleSleep()
+      }
+    }
+    window.addEventListener('pointermove', onMove, { passive: true })
+    return () => {
+      clearSleep()
+      window.removeEventListener('pointermove', onMove)
+    }
+  }, [zenMode])
+
+  // 进出场动画期间隐藏自绘滚动条；动画结束立即交还"随滚动/鼠标自然触发"
+  useEffect(() => {
+    if (zenFirstRunRef.current) {
+      zenFirstRunRef.current = false
+      return
+    }
+    setZenTransitioning(true)
+    const total = zenMode ? zenEnterTotalMs : zenExitTotalMs
+    const timer = setTimeout(() => setZenTransitioning(false), total + 40)
+    return () => clearTimeout(timer)
+  }, [zenMode])
+
+  // 指针静止 2s 后隐藏（禅模式专属；唤回区展示中不隐藏，否则看不见可点的按钮）
+  useEffect(() => {
+    if (!zenMode || zenAwake !== null) {
+      setZenIdle(false)
+      return
+    }
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const reset = () => {
+      setZenIdle(false)
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => setZenIdle(true), ZEN_TIMING.idleCursor)
+    }
+    reset()
+    const events: Array<keyof WindowEventMap> = ['pointermove', 'pointerdown', 'wheel', 'keydown']
+    events.forEach(ev => window.addEventListener(ev, reset, { passive: true }))
+    return () => {
+      if (timer) clearTimeout(timer)
+      events.forEach(ev => window.removeEventListener(ev, reset))
+    }
+  }, [zenMode, zenAwake])
+
+  // Esc 退出禅模式 —— 但让位给输入法组合与任何已打开的浮层（见 shouldExitZenOnEscape）。
+  // capture 阶段只做"判定"，不抢其它组件的 Esc；浮层打开时直接放行。
+  useEffect(() => {
+    if (!zenMode) return
+    const overlayOpen =
+      isSettingsOpen || showShortcutsPanel || isSearchOpen || docxDialogOpen ||
+      pptxDialog !== null || pluginExportDialog !== null || exportResultPath !== null ||
+      isReader || isSlideshow || epubSession !== null
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (!shouldExitZenOnEscape({ imeComposing: e.isComposing, overlayOpen })) return
+      e.preventDefault()
+      toggleZenMode(false)
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [
+    zenMode, toggleZenMode, isSettingsOpen, showShortcutsPanel, isSearchOpen,
+    docxDialogOpen, pptxDialog, pluginExportDialog, exportResultPath,
+    isReader, isSlideshow, epubSession,
+  ])
+
+  // 收折编排：进入禅 = 逐块朝屏幕边收起（面板→工具栏→Tab→状态栏）；
+  // 退出禅 = 严格反向；禅中 = 只跟随「边缘唤回」（目标区展开、其余收起）。
+  const zenFoldProgressRef = useRef(new Map<HTMLElement, number>())
+  const zenFoldCancelRef = useRef(new Map<HTMLElement, () => void>())
+  /** 退出动画结束后统一清掉内联 clip/transform（残留 transform 会破坏 fixed 菜单定位） */
+  const zenClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const zenPrevRef = useRef(false)
+
+  useEffect(() => {
+    const host = appShellRef.current
+    if (!host) return
+    const reduced =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    const cancelAll = () => {
+      zenFoldCancelRef.current.forEach(cancel => cancel())
+      zenFoldCancelRef.current.clear()
+    }
+    const clearInline = () => {
+      ZEN_FOLD_ITEMS.forEach(({ selectors }) => {
+        selectors.forEach(sel => {
+          host.querySelectorAll<HTMLElement>(sel).forEach(el => {
+            el.style.clipPath = ''
+            el.style.transform = ''
+            zenFoldProgressRef.current.set(el, 0)
+          })
+        })
+      })
+    }
+    /** 驱动一个条目到目标状态；返回是否真的有元素参与（供完成计数） */
+    const drive = (
+      item: (typeof ZEN_FOLD_ITEMS)[number],
+      target: number,
+      duration: number,
+      delay: number,
+      onDone?: () => void,
+    ): boolean => {
+      let touched = false
+      item.selectors.forEach(sel => {
+        host.querySelectorAll<HTMLElement>(sel).forEach(el => {
+          touched = true
+          zenFoldCancelRef.current.get(el)?.()
+          const cancel = animateFoldTo(
+            el, item.kind, target,
+            reduced ? 0 : duration,
+            reduced ? 0 : delay,
+            zenFoldProgressRef.current,
+            onDone,
+          )
+          zenFoldCancelRef.current.set(el, cancel)
+        })
+      })
+      return touched
+    }
+
+    // 每次重新编排前先取消上一次的"清样式"定时器，避免它掐断正在播的动画
+    if (zenClearTimerRef.current) {
+      clearTimeout(zenClearTimerRef.current)
+      zenClearTimerRef.current = null
+    }
+
+    const entering = zenMode && !zenPrevRef.current
+    const exiting = !zenMode && zenPrevRef.current
+    zenPrevRef.current = zenMode
+
+    if (!zenMode) {
+      if (exiting) {
+        // 反向错峰回归：状态栏 0 → Tab 260 → 工具栏 520 → 面板 780
+        ZEN_FOLD_ITEMS.forEach(item =>
+          drive(item, 0, ZEN_TIMING.fold, item.exitDelay),
+        )
+        // 全部到位后统一清内联样式：残留的 transform 会创建包含块，破坏 fixed 菜单定位
+        const last = ZEN_FOLD_ITEMS.reduce((m, it) => Math.max(m, it.exitDelay), 0)
+        zenClearTimerRef.current = setTimeout(() => {
+          zenClearTimerRef.current = null
+          clearInline()
+        }, last + ZEN_TIMING.fold + 80)
+      } else {
+        // 初始挂载：确保没有遗留内联样式
+        cancelAll()
+        clearInline()
+      }
+      return () => { /* 由下次进入/退出显式接管 */ }
+    }
+
+    if (entering) {
+      // 一块一块收起：面板 0 → 工具栏 260 → Tab 520 → 状态栏 760
+      ZEN_FOLD_ITEMS.forEach(item => drive(item, 1, ZEN_TIMING.fold, item.enterDelay))
+      return
+    }
+
+    // 禅中：跟随边缘唤回（目标区展开 160ms，其余收起 240ms）
+    ZEN_FOLD_ITEMS.forEach(item => {
+      const open = item.region === zenAwake
+      drive(item, open ? 0 : 1, open ? ZEN_TIMING.awakeIn : ZEN_TIMING.awakeOut, 0)
+    })
+  }, [zenMode, zenAwake])
+
+  /** 禅模式顶部拖拽带：位移超过阈值才 startDragging（保留双击最大化，见 Toolbar 同款逻辑） */
+  const handleZenDragStrip = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return
+    if (useWindowStateStore.getState().fullscreen) return
+    // 最大化时禁止拖动：WebKitGTK 的 startDragging 会把**最大化窗口整体搬走**且尺寸不变
+    // （实测：窗口被拖到屏幕底部，工具栏悬在屏幕边缘）。要移动窗口先双击还原。
+    if (useWindowStateStore.getState().maximized) return
+    const startX = e.clientX
+    const startY = e.clientY
+    let dragging = false
+    const cleanup = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    const onMove = (ev: MouseEvent) => {
+      if (dragging) return
+      if (
+        Math.abs(ev.clientX - startX) < ZEN_TIMING.dragThreshold &&
+        Math.abs(ev.clientY - startY) < ZEN_TIMING.dragThreshold
+      ) return
+      dragging = true
+      cleanup()
+      void windowOps.startDragging()
+    }
+    const onUp = () => cleanup()
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }, [])
+
+  const handleZenDragStripDoubleClick = useCallback(() => {
+    if (useWindowStateStore.getState().fullscreen) return
+    void windowOps.toggleMaximize()
   }, [])
 
   /** 打开 EPUB 字节：解析后直接进入全屏阅读模式，不创建编辑器标签页。 */
@@ -1498,6 +1930,74 @@ function App() {
   const isSaved = tab?.isSaved ?? true
   const viewMode = tab?.viewMode || 'edit'
 
+  // 状态 ref 同步（toggle 里用 ref 判定，避免同一次事件里连按两次读到旧值）
+  zenModeRef.current = zenMode
+
+  // 禅境只在源码 / 实时成立：切到分栏、预览，或进入阅读 / 演示 → 自动退出（不做动画，让位给新模态）
+  useEffect(() => {
+    if (!zenMode) return
+    if (!zenAllowedForViewMode(viewMode)) setZenMode(false)
+  }, [zenMode, viewMode])
+
+  useEffect(() => {
+    if (zenMode && (isReader || isSlideshow)) setZenMode(false)
+  }, [zenMode, isReader, isSlideshow])
+
+  // 禅模式锚点：工具栏会整体收折，但开关按钮必须**原地不动**（定海神针）。
+  // 进入时立刻浮出同坐标的按钮（和工具栏里的原按钮完全重合，视觉上等于没动）；
+  // 退出时等所有块展开完才卸载 —— 原按钮从收折中展开的过程中，浮层一直盖在它上面。
+  const zenAnchorClearRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (zenAnchorClearRef.current) {
+      clearTimeout(zenAnchorClearRef.current)
+      zenAnchorClearRef.current = null
+    }
+    const measure = () => {
+      const el = document.getElementById('zen-anchor')
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      setZenAnchor({ left: r.left, top: r.top, width: r.width, height: r.height })
+    }
+    if (zenMode) {
+      measure()
+      window.addEventListener('resize', measure)
+      return () => window.removeEventListener('resize', measure)
+    }
+    // 退出：位置保持不变，等退出动画播完再卸下浮层（与展开出来的原按钮无缝交接）
+    zenAnchorClearRef.current = setTimeout(() => {
+      zenAnchorClearRef.current = null
+      setZenAnchor(null)
+    }, zenExitTotalMs + 80)
+    return () => {
+      if (zenAnchorClearRef.current) {
+        clearTimeout(zenAnchorClearRef.current)
+        zenAnchorClearRef.current = null
+      }
+    }
+  }, [zenMode])
+
+  // 禅模式里滚动条默认隐形（只把拇指画成透明，**不改宽度**，否则内容会位移）；
+  // 鼠标一动就显形，静止 1.4s 再隐去。
+  useEffect(() => {
+    if (!zenMode) {
+      setZenScrollVisible(false)
+      return
+    }
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const showScrollbar = () => {
+      setZenScrollVisible(v => (v ? v : true))
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => setZenScrollVisible(false), ZEN_TIMING.scrollLinger)
+    }
+    window.addEventListener('pointermove', showScrollbar, { passive: true })
+    window.addEventListener('wheel', showScrollbar, { passive: true })
+    return () => {
+      if (timer) clearTimeout(timer)
+      window.removeEventListener('pointermove', showScrollbar)
+      window.removeEventListener('wheel', showScrollbar)
+    }
+  }, [zenMode])
+
   // 导出时解析相对图片的基准目录（与 DOCX 导出同一规则：Markdown 文件所在目录）
   const docBaseDir = (() => {
     if (!tab?.filePath) return null
@@ -1521,7 +2021,52 @@ function App() {
   }, [showShortcutsPanel])
 
   return (
-    <div className="app-container theme-transition">
+    <div
+      ref={appShellRef}
+      className={`app-container theme-transition${zenMode ? ' zen-mode' : ''}${zenIdle ? ' zen-idle' : ''}${zenAwake ? ` zen-awake-${zenAwake}` : ''}${zenScrollVisible ? ' zen-scroll-active' : ''}`}
+    >
+      {/* 禅模式：顶部 6px 透明拖拽带（无可见元素，只让窗口拖得动；全屏禁用） */}
+      {zenMode && (
+        <div
+          className="zen-drag-strip"
+          onMouseDown={handleZenDragStrip}
+          onDoubleClick={handleZenDragStripDoubleClick}
+        />
+      )}
+      {/* 暗角：常驻元素，靠 zen-mode 切 opacity —— 伪元素做不出「退出时淡出」 */}
+      <div
+        className="zen-vignette"
+        aria-hidden="true"
+        style={{
+          ['--zen-vignette-color' as any]: isDark ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.035)',
+        }}
+      />
+      {/* 进出场的淡光晕：每次切换换 key 重播；只在动画期间可见（infinite 无，播完停） */}
+      {zenHaloKey > 0 && (
+        <div key={zenHaloKey} className="zen-halo" aria-hidden="true" />
+      )}
+      {/* 禅模式锚点按钮：与工具栏里 #zen-anchor 同位置；工具栏淡出后它留在这里，
+          既是"你在禅模式里"的状态锚，也是退出通道；周围有一圈极浅的持续涟漪 */}
+      {zenAnchor && (
+        <button
+          className="zen-anchor-float"
+          style={{
+            left: zenAnchor.left,
+            top: zenAnchor.top,
+            width: zenAnchor.width,
+            height: zenAnchor.height,
+          }}
+          onClick={() => toggleZenMode(false)}
+          title={t('zen.exit')}
+          aria-label={t('zen.exit')}
+        >
+          <ZenIcon size={20} />
+          <span className="zen-anchor-ripple" aria-hidden="true" />
+        </button>
+      )}
+      {/* 禅模式自绘滚动条：不占布局、鼠标动才显形（原生 overlay 滚动条做不到这点） */}
+      <ZenScrollIndicator active={zenScrollVisible} suppressed={zenTransitioning} />
+
       <Toolbar 
         onNew={handleNewFile}
         onNewFromTemplate={handleNewFromTemplate}
@@ -1548,6 +2093,7 @@ function App() {
         previewMode={viewMode === 'preview'}
         onUndo={() => editorRef.current?.undo()}
         onRedo={() => editorRef.current?.redo()}
+        onZen={() => toggleZenMode()}
       />
       
       <TabBar onNew={handleNewFile} onPresent={startSlideshow} />
@@ -1582,7 +2128,7 @@ function App() {
         >
           <button
             onClick={() => setSidebarVisible(!sidebarVisible)}
-            className="absolute top-1 left-1 z-10 w-6 h-6 flex items-center justify-center rounded
+            className="zen-fade-aux absolute top-1 left-1 z-10 w-6 h-6 flex items-center justify-center rounded
               text-[var(--editor-text)] opacity-40 hover:opacity-100 hover:bg-[var(--editor-hover)]
               transition-opacity duration-150"
             title={sidebarVisible ? t('app.collapseSidebar') : t('app.expandSidebar')}

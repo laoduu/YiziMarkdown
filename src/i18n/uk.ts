@@ -19,6 +19,7 @@ export const uk = {
     notSet: 'Не встановлено',
   },
   toolbar: {
+    zen: 'Дзен-режим',
     read: 'Режим читання',
     brand: 'YiziMarkdown',
     newFile: 'Новий (Ctrl+N)',
@@ -110,6 +111,12 @@ export const uk = {
     closeOthers: 'Закрити інші',
     closeRight: 'Закрити праворуч',
     closeAll: 'Закрити всі',
+  },
+  zen: {
+    exit: 'Вийти з дзен-режиму',
+    exitHint: 'Натисніть F9 або Esc, щоб вийти з дзен-режиму',
+    unavailable: 'Спочатку відкрийте файл',
+    editorOnly: 'Дзен-режим доступний лише в режимах джерела та живого перегляду',
   },
   statusbar: {
     updateAvailable: 'Доступна версія {v}',
@@ -472,6 +479,7 @@ export const uk = {
     authorHome: 'Сторінка автора',
   },
   shortcuts: {
+    zenMode: 'Дзен-режим',
     readingMode: 'Режим читання',
     file: 'Файл',
     edit: 'Редагування',

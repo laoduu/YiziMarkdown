@@ -19,6 +19,7 @@ export const sv = {
     notSet: 'Inte inställd',
   },
   toolbar: {
+    zen: 'Zen-läge',
     read: 'Läsläge',
     brand: 'YiziMarkdown',
     newFile: 'Ny (Ctrl+N)',
@@ -110,6 +111,12 @@ export const sv = {
     closeOthers: 'Stäng övriga',
     closeRight: 'Stäng till höger',
     closeAll: 'Stäng alla',
+  },
+  zen: {
+    exit: 'Avsluta zen-läge',
+    exitHint: 'Tryck F9 eller Esc för att lämna zen-läget',
+    unavailable: 'Öppna en fil först',
+    editorOnly: 'Zen-läget gäller endast för käll- och live-läget',
   },
   statusbar: {
     updateAvailable: 'Version {v} tillgänglig',
@@ -472,6 +479,7 @@ export const sv = {
     authorHome: 'Författarens sida',
   },
   shortcuts: {
+    zenMode: 'Zen-läge',
     readingMode: 'Läsläge',
     file: 'Fil',
     edit: 'Redigera',
