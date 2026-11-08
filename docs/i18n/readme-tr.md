@@ -406,7 +406,7 @@ npm run tauri:build -- --bundles deb,appimage
 
 Derleme çıktıları (**şimdilik yalnızca amd64 / x86_64 sağlanır**; ARM `arm64` deb ve `aarch64` AppImage henüz yayımlanmıyor):
 - Debian paketi: `src-tauri/target/release/bundle/deb/YiziMarkdown_<ver>_amd64.deb` (yaklaşık 16 MB, `/usr/bin` altına kurulur, menü öğesi, simge ve `.md` / `.epub` dosya ilişkilendirmelerini kaydeder)
-- Kurulum gerektirmeyen taşınabilir sürüm: `src-tauri/target/release/bundle/appimage/YiziMarkdown_<ver>_amd64.AppImage` (yaklaşık 100 MB, GTK / WebKit ve GStreamer medya bileşenlerini içerir, çift tıklayarak kullanılır)
+- Kurulum gerektirmeyen taşınabilir sürüm: `src-tauri/target/release/bundle/appimage/YiziMarkdown_<ver>_amd64.AppImage` (yaklaşık 150 MB, GTK / WebKit ve GStreamer medya bileşenlerini içerir, çift tıklayarak kullanılır)
 
 Not: **Ubuntu 22.04 üzerinde derlenmelidir**. 24.04'te derlenen ikili dosyalar glibc 2.39 gerektirir; Ubuntu 22.04 (2.35) / Debian 12 (2.36) üzerinde doğrudan başlatma başarısız olur; `deb` paketinin `libwebkit2gtk-4.1-0` bağımlılığı da alt sınırı aynı şekilde Ubuntu 22.04 / Debian 12'ye sabitler (Debian 11'de yalnızca webkit 4.0 vardır). `rpm` sağlanmıyor: Fedora / openSUSE'un bağımlılık adları Debian tabanlı dağıtımlardan farklıdır ve ayrı bakım gerektirir.
 

@@ -406,7 +406,7 @@ npm run tauri:build -- --bundles deb,appimage
 
 建置產物（**目前僅提供 amd64 / x86_64**；ARM 的 `arm64` deb 與 `aarch64` AppImage 暫不發佈）：
 - Debian 系安裝包：`src-tauri/target/release/bundle/deb/YiziMarkdown_<ver>_amd64.deb`（約 16 MB，裝到 `/usr/bin`，註冊選單項目、圖示與 `.md` / `.epub` 檔案關聯）
-- 通用免安裝版：`src-tauri/target/release/bundle/appimage/YiziMarkdown_<ver>_amd64.AppImage`（約 100 MB，自帶 GTK / WebKit 與 GStreamer 媒體元件，雙擊即用）
+- 通用免安裝版：`src-tauri/target/release/bundle/appimage/YiziMarkdown_<ver>_amd64.AppImage`（約 150 MB，自帶 GTK / WebKit 與 GStreamer 媒體元件，雙擊即用）
 
 注意：**必須在 Ubuntu 22.04 上建置**。24.04 編出的二進位要求 glibc 2.39，Ubuntu 22.04（2.35）/ Debian 12（2.36）會直接啟動失敗；`deb` 的 `libwebkit2gtk-4.1-0` 依賴同樣把下限鎖在 Ubuntu 22.04 / Debian 12（Debian 11 只有 webkit 4.0）。暫不提供 `rpm`：Fedora / openSUSE 的依賴名稱與 Debian 系不同，需要單獨維護。
 

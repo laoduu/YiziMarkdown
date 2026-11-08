@@ -406,7 +406,7 @@ npm run tauri:build -- --bundles deb,appimage
 
 Артефакты (**сейчас только amd64 / x86_64**; `arm64` deb и `aarch64` AppImage для ARM пока не публикуются):
 - Пакет для Debian: `src-tauri/target/release/bundle/deb/YiziMarkdown_<ver>_amd64.deb` (около 16 МБ, устанавливается в `/usr/bin`, регистрирует пункт меню, значок и связь файлов `.md` / `.epub`)
-- Универсальная версия без установки: `src-tauri/target/release/bundle/appimage/YiziMarkdown_<ver>_amd64.AppImage` (около 100 МБ, включает GTK / WebKit и медиакомпоненты GStreamer, запускается двойным щелчком)
+- Универсальная версия без установки: `src-tauri/target/release/bundle/appimage/YiziMarkdown_<ver>_amd64.AppImage` (около 150 МБ, включает GTK / WebKit и медиакомпоненты GStreamer, запускается двойным щелчком)
 
 Внимание: **собирать нужно на Ubuntu 22.04**. Бинарники, собранные на 24.04, требуют glibc 2.39 и сразу не запускаются на Ubuntu 22.04 (2.35) / Debian 12 (2.36); зависимость `deb` от `libwebkit2gtk-4.1-0` тоже задаёт нижнюю границу Ubuntu 22.04 / Debian 12 (в Debian 11 есть только webkit 4.0). `rpm` пока не предоставляется: в Fedora / openSUSE другие имена зависимостей, их нужно поддерживать отдельно.
 

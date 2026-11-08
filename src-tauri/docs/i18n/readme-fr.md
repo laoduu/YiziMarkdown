@@ -406,7 +406,7 @@ npm run tauri:build -- --bundles deb,appimage
 
 Artefacts de build (**amd64 / x86_64 uniquement pour l'instant** ; le `deb` `arm64` et l'`AppImage` `aarch64` ARM ne sont pas publiés) :
 - paquet Debian : `src-tauri/target/release/bundle/deb/YiziMarkdown_<ver>_amd64.deb` (environ 16 Mo, installé dans `/usr/bin`, enregistre l'entrée de menu, l'icône et les associations de fichiers `.md` / `.epub`)
-- version portable sans installation : `src-tauri/target/release/bundle/appimage/YiziMarkdown_<ver>_amd64.AppImage` (environ 100 Mo, embarque GTK / WebKit et les composants média GStreamer, double-clic pour lancer)
+- version portable sans installation : `src-tauri/target/release/bundle/appimage/YiziMarkdown_<ver>_amd64.AppImage` (environ 150 Mo, embarque GTK / WebKit et les composants média GStreamer, double-clic pour lancer)
 
 Attention : **la compilation doit se faire sous Ubuntu 22.04**. Un binaire compilé sous 24.04 exige glibc 2.39 et échoue au démarrage sous Ubuntu 22.04 (2.35) / Debian 12 (2.36) ; la dépendance `libwebkit2gtk-4.1-0` du `deb` fixe la même limite basse (Debian 11 ne dispose que de webkit 4.0). Pas de `rpm` pour l'instant : Fedora / openSUSE utilisent d'autres noms de dépendances et demanderaient une maintenance séparée.
 

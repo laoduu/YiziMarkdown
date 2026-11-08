@@ -406,7 +406,7 @@ npm run tauri:build -- --bundles deb,appimage
 
 빌드 산출물(**현재 amd64 / x86_64만 제공**; ARM `arm64` deb와 `aarch64` AppImage는 아직 배포하지 않음):
 - Debian 계열 설치 패키지: `src-tauri/target/release/bundle/deb/YiziMarkdown_<ver>_amd64.deb`(약 16 MB, `/usr/bin`에 설치되고 메뉴 항목, 아이콘, `.md` / `.epub` 파일 연결을 등록)
-- 범용 설치 불필요 버전: `src-tauri/target/release/bundle/appimage/YiziMarkdown_<ver>_amd64.AppImage`(약 100 MB, GTK / WebKit과 GStreamer 미디어 구성 요소를 내장, 더블클릭으로 바로 실행)
+- 범용 설치 불필요 버전: `src-tauri/target/release/bundle/appimage/YiziMarkdown_<ver>_amd64.AppImage`(약 150 MB, GTK / WebKit과 GStreamer 미디어 구성 요소를 내장, 더블클릭으로 바로 실행)
 
 주의: **Ubuntu 22.04에서 빌드해야 합니다**. 24.04에서 빌드한 바이너리는 glibc 2.39를 요구해 Ubuntu 22.04(2.35) / Debian 12(2.36)에서 바로 실행에 실패합니다. `deb`의 `libwebkit2gtk-4.1-0` 의존성도 하한을 Ubuntu 22.04 / Debian 12에 고정합니다(Debian 11에는 webkit 4.0만 있습니다). `rpm`은 제공하지 않습니다: Fedora / openSUSE는 의존성 이름이 Debian 계열과 달라 따로 유지보수해야 합니다.
 
