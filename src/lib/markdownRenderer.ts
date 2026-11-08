@@ -4,6 +4,7 @@ import footnote from 'markdown-it-footnote'
 import hljs from 'highlight.js'
 import { generateHeadingId } from './headingId.ts'
 import { splitFrontMatter } from './frontMatter.ts'
+import { normalizeMarkdownMarkers } from './markdownMarkerNbsp.ts'
 import { tocPlugin } from './toc.ts'
 import { alertPlugin } from './alert.ts'
 import { extendCoreMarkdownIt } from '../renderers/index.ts'
@@ -264,7 +265,8 @@ export function renderMarkdown(
   Object.keys(headingCountRef).forEach(k => delete headingCountRef[k])
   // 元信息块不参与预览渲染。解析统一在 lib/frontMatter.ts
   // （此前这里有一份与 slides.ts 规则不一致的内联正则）。
-  return getMarkdownIt(pluginExtenders).render(splitFrontMatter(content).body)
+  // 兜底：把「##/ - / > 后面的 NBSP」规范化（不改正文中间的空格）
+  return getMarkdownIt(pluginExtenders).render(splitFrontMatter(normalizeMarkdownMarkers(content)).body)
 }
 
 export default getMarkdownIt

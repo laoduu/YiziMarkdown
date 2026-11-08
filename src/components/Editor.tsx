@@ -12,6 +12,7 @@ import { useSettingsStore } from '../stores/settingsStore'
 import { useEditorStore, type ViewMode } from '../stores/editorStore'
 import { findOutlineByLine, computeOutlineItems } from '../lib/headingId'
 import { numberOrderedLines } from '../lib/listFormat'
+import { findMarkerNbspOffsets } from '../lib/markdownMarkerNbsp'
 import { isTaskLine, toggleTaskAtLine } from '../lib/taskList'
 import { decideClipboardPaste, imageMarkdownRef, LOCAL_IMAGE_PREFIX, materializePastedImages, planPasteInsert } from '../lib/clipboardMarkdown'
 import { collectClipboardImages, imageAltFromFile, readFileAsBase64 } from '../lib/clipboardImages'
@@ -132,6 +133,25 @@ export function insertFootnoteAtView(view: EditorView): void {
     selection: { anchor: trimmedLen + ref.length + gap.length + def.length },
   })
   view.focus()
+}
+
+/**
+ * 把「行首块标记 + NBSP」里的 NBSP 换成 ASCII 空格（等长替换，光标/选区不跳）。
+ *
+ * 为什么不在 updateListener 里直接 dispatch：CodeMirror 不允许在 update 进行中再 dispatch。
+ * 延到下一个宏任务；若正在输入法组合（composing）则等下一次输入再修。
+ */
+function scheduleMarkerNbspFix(view: EditorView): void {
+  if (!findMarkerNbspOffsets(view.state.doc.toString()).length) return
+  setTimeout(() => {
+    if (!view.dom.isConnected || view.composing) return
+    const text = view.state.doc.toString()
+    const offsets = findMarkerNbspOffsets(text)
+    if (!offsets.length) return
+    view.dispatch({
+      changes: offsets.map(i => ({ from: i, to: i + 1, insert: ' ' })),
+    })
+  }, 0)
 }
 
 export interface EditorRef {
@@ -1359,6 +1379,9 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
             const newContent = update.state.doc.toString()
             lastSyncedFromEditorRef.current = newContent
             onChange(newContent)
+            // 输入法可能把「## 后的空格」写成 U+00A0（NBSP）：等这次 update 结束后修成 ASCII 空格，
+            // 否则标题/列表在预览与实时模式下都不渲染（CommonMark 只认空格/制表符）
+            scheduleMarkerNbspFix(update.view)
           }
           if (update.selectionSet && onCursorChange) {
             const pos = update.state.selection.main.head
@@ -1377,6 +1400,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     viewRef.current = view
     viewReadyRef.current = true
     lastSyncedFromEditorRef.current = content
+    scheduleMarkerNbspFix(view)
 
     // DOM paste（**捕获阶段**）：富文本来源（网页 / Word / Google Docs…）统一在内存里转成 Markdown。
     // 必须是捕获阶段：CodeMirror 的 paste 观察器绑在 contentDOM 上，先执行会先把 text/plain
@@ -1640,6 +1664,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         changes: { from: 0, to: currentContent.length, insert: content },
       })
       syncingFromExternalRef.current = false
+      scheduleMarkerNbspFix(view)
     }
   }, [content])
 
