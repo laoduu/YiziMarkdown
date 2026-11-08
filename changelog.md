@@ -4,6 +4,90 @@
 
 > **未发布**（截至 2026-11-06）：新一轮开发已启动。`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已升至 `0.4.3`，尚未打包、未打 tag。用户向说明见 `docs/changelog/CHANGELOG-V0.4.3.md`。
 
+### Linux 发行：deb + AppImage（2026-11-08）
+
+**发行**
+- `.github/workflows/release.yml` 增加第三条构建腿 `ubuntu-22.04`，`--bundles deb,appimage`；构建前装 `libwebkit2gtk-4.1-dev`、`patchelf`、`gstreamer1.0-plugins-base/good/libav`。
+- **必须锁 22.04**：24.04 编出的二进制要求 glibc 2.39，Ubuntu 22.04（2.35）/ Debian 12（2.36）启动即失败；22.04 基线是 2.35，覆盖 Debian 12+ / Ubuntu 22.04+。
+- 不产 rpm：Fedora/openSUSE 依赖名（`webkit2gtk4.1`/`gtk3`）与 Debian 系不同，`Requires` 需人工核对，等有需求再加。
+
+**包元数据**
+- `bundle.category: "Productivity"` —— Tauri 只接受枚举值（填 `Office` 会直接 `invalid category` 构建失败），由它映射成 desktop 的 `Categories=Office;`。
+- `fileAssociations` 的 `.md` 补 `mimeType: text/markdown`（否则 desktop 只有 epub 关联）。
+- deb `section: editors`、`depends` 显式加 `libdbus-1-3`（keyring 走 secret-service）；`authors`/`license`/`repository` 填真实值，替代 `Maintainer: You`。
+- AppImage 打开 `bundleMediaFramework`：默认 false 时只带 gstreamer 核心库、不带插件，运行时报
+  `GStreamer element appsink not found`，音视频不可用；开启后 linuxdeploy-plugin-gstreamer 会把构建机插件目录整包复制进 AppDir，体积 88MB → ~100MB。
+
+**运行路径（两个真实 bug）**
+- 应用根目录原为 `current_exe().parent()`，但 Linux 打包把资源放在 `usr/lib/<ProductName>/`（deb 与 AppImage 都是）⇒ 内置主题/技能/模板/文档全部读不到（AppImage 日志实锤 `Failed to read .../usr/bin/themes/builtin.json`）。改为在 `setup` 里把 `app.path().resource_dir()` 存进 `OnceLock<PathBuf>`，`get_app_root()` 优先用它；dev 仍是 cargo 输出目录。
+- 用户目录缺 Linux 分支，回落到 exe 目录：dev 污染 `target/debug/`、AppImage 写进解包临时目录（退出即丢）、deb 写 `/usr/bin`（无权限）。改为按 XDG 文档目录（`XDG_DOCUMENTS_DIR`，**目录必须已存在**，不替用户建 `~/Documents`）解析，否则兜底 `$XDG_DATA_HOME/yizimarkdown`（默认 `~/.local/share/yizimarkdown`）。
+
+**窗口图标**
+- Tauri 只给 Windows 生成默认窗口图标；Linux 上从不调用 `set_icon`，窗口没有 `_NET_WM_ICON`。补 `linux_window_icon()`：GDK 会丢弃过大的图标（实测 512×512 不写属性、256 及以下正常），故把 512 源图缩到 256 再 `set_icon`。
+- elementary/GNOME Dock 是按 WM_CLASS 找 `.desktop` 取图标，安装包自带；开发态另加 `scripts/linux-dev-icon.mjs`（`npm run dev:icon` / `dev:icon:remove`），写 `~/.local/share/applications/yizimarkdown-dev.desktop`（`NoDisplay=true`、`StartupWMClass=yizimarkdown`）。
+
+**更新提醒**
+- `update.manualHint` 16 语言改为平台中立；Linux 走既有的「只提醒不安装」通道（`get_platform() → 'not-windows'`）。docx/README/主题规范同步更新口径。
+
+**验证**
+- deb 15.3MB / AppImage 87.6MB；AppImage 实测：用户在 `~/文档/yizimarkdown/` 自动重建、技能/模板同步成功、`appsink`/`playbin`/`decodebin` 等媒体元素齐全、启动日志不再报 appsink 缺失；正文/资源路径正常。
+- `cargo test` 179 通过、1 个 SVG 字体渲染用例失败（本机字体环境，与本次无关；此前失败的模板同步用例因用户目录修复而通过）。
+
+**说明**：`docs/changelog/CHANGELOG-V0.4.3.md` 增加用户向「Linux 客户端」条目。
+
+### 禅模式（2026-11-08）
+
+**需求口径（与"专注模式"划清界限）**
+- 不做"当前行高亮、其余变淡"；禅 = **撤掉界面**，只留正文与留白。
+- 消隐而不是塌陷：所有界面构件原地退场，**不改 width/height/grid/transform**，正文列矩形逐像素不动。
+- 只服务编辑态（源码 / 实时）；分栏、预览、阅读、演示都不进禅境。
+
+**交互**
+- 入口：`F9`（新增 `zenMode` action）+ 工具栏按钮；无文档时提示先打开文件，分栏/预览时提示仅编辑态可用。
+- 退出：`F9` / `Esc`（输入法组合中、任何浮层打开时让位）/ 常驻锚点按钮。
+- 边缘唤回：指针贴屏幕某边（热区 8px）→ 对应区域原地展开，离开 1.2s 收回；顶部保留 6px 透明拖拽带（最大化时禁止 `startDragging`，否则 WebKitGTK 会把最大化窗口整体搬走）。
+- 锚点：开关按钮常驻原位（进入时按工具栏 `#zen-anchor` 实测矩形，与原生按钮逐像素重合、不淡入不消失），带一圈极浅的持续涟漪；顶部唤回时真实工具栏在原位展开，浮层与之重合。
+- 自动退出：`viewMode` 变为分栏/预览，或打开阅读/演示时。
+
+**动画**
+- 收折由 App 的 rAF 逐帧写内联 `clip-path`/`transform`，**不用 CSS transition**：WebKitGTK 对 clip-path transition 有合成错位 bug（实测整块 UI 被画到屏幕底部）。`p=0` 写 `none`，避免残留 transform 创建包含块、破坏 fixed 菜单定位。
+- 错峰（各块 380ms）：消失 = 面板 0 → 工具栏 260 → Tab 520 → 状态栏 760；回归严格反向。每次进出叠一层 900ms 极淡主题光晕（accent 10%，峰值可见度约 5%）。
+- `prefers-reduced-motion` ⇔ 1ms / 墨晕与涟漪不播。
+
+**滚动条（WebKitGTK 踩坑）**
+- 原生 `::-webkit-scrollbar-thumb` 一旦改 transparent，**撤销 class/样式不会恢复绘制**（实测重置窗口尺寸也无效）⇒ "动画期间临时隐藏、结束恢复"不可行。
+- 最终方案：编辑器**纵向**拇指永久透明（`::-webkit-scrollbar-thumb:vertical`，宽度不变、正文不动），由 `ZenScrollIndicator` 自绘 4px 细条接管：滚动/贴近右缘 56px 显形、可拖动、1s 后淡出；进出场动画期间 `suppressed` 整体不渲染；横向滚动条保留原生。
+- 组件用 MutationObserver 盯 `.cm-scroller` 的出现/替换，避免 App 启动早于编辑器挂载时绑定失败。
+
+**图标**
+- `ZenIcon`：用户提供的 SVG（两组对称笔画 + 4 点），`currentColor` 跟随主题/按钮状态；素材图形只占 viewBox ~73%×64%，用 `scale(1.22)` 居中放大并去掉底板，避免"图标比邻居小、内边距过多"。
+
+**验证**
+- 正文第一行包围盒在 进入前 / 动画中 / 禅中 / 退出后 完全一致：`(516,166) → (792,758)`；抽帧确认错峰顺序（侧栏+工具栏先收、Tab 次之、状态栏最后）。
+- `npm test` 从 477 → 485（含 zen 时序/边缘/Esc 单测）；`tsc`、`check-i18n --strict`、`npm run build` 全通过。
+
+**说明**：用户向条目写进 `docs/changelog/CHANGELOG-V0.4.3.md`「新增」；README 新增「禅模式」小节与 F9 快捷键。
+
+### 输入法 NBSP 导致 Markdown 不渲染（2026-11-08）
+
+**现象**
+- 实时 / 并排 / 预览下，肉眼写的是 `## 二级标题`、`- 列表`，却渲染成普通文本；同一篇文档里有的标题正常、有的不正常。
+
+**根因**
+- 搜狗拼音（Linux 版）在候选状态按空格，提交的是 **U+00A0（NBSP，不换行空格）**，不是 ASCII 空格。用户看到的"空格"其实不是空格。
+- CommonMark 规定 ATX 标题的 `#`、列表 `-`/`1.`、引用 `>` 之后必须是空格或制表符；NBSP 不算 ⇒ 整行退化为文本。预览与实时共用同一份源码，所以两种模式一起"坏"。
+- 证据：直接读 localStorage WAL，文档里是 `##\u00A0怎么进入禅模式？` 与 `## 怎么进入禅模式？` 并存，前者不渲染、后者正常。
+
+**修复（三层，均为等长替换）**
+- 新增 `src/lib/markdownMarkerNbsp.ts`：只在**行首块标记之后**把 NBSP 换成 U+0020（`#`/`-`/`*`/`+`/`>`/`1.`/`1)`）；围栏代码块（``` / ~~~）与 4 空格缩进代码豁免；正文中间的 NBSP 不动。
+- `Editor.tsx`：输入时（`update.docChanged` + `setTimeout` 异步 dispatch，不能在 update 中再 dispatch）、编辑器挂载、外部内容同步（切 Tab / 打开文件）三处触发；`view.composing` 时跳过，等下一次输入再修。长度不变 ⇒ 光标/选区不位移。
+- `markdownRenderer.renderMarkdown()` 在进 markdown-it 前再兜底一次（防旧内容/粘贴内容漏网）。
+- **刻意不处理 U+3000（全角空格）与全角标点（＃/－）**：全角空格是用户主动输入、有排版语义的字符；`##　标题` 本来就不是标题，保持原样才是严格按语法，不能替用户改字。用单测锁定该边界。
+
+**验证**
+- 用户那篇文档在重载后自动修复：标题全部正常渲染，WAL 中 NBSP 计数归零。
+- 新增 `tests/markdownMarkerNbsp.test.ts` 6 条（含 U+3000 绝不转换、代码块豁免、长度不变）；`npm test` 485 通过。
+
 ### 首次启动语言自适应（2026-11-07）
 
 - 没有安装器语言时（便携版 / macOS / Linux / 浏览器预览），首次启动按 `navigator.languages` 自动选择受支持的界面语言；系统语言不受支持时回退 English，避免不懂中文的用户面对中文界面。
