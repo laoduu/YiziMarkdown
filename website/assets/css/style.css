@@ -196,21 +196,25 @@
             white-space: nowrap;
         }
         .hero-actions {
-            display: flex; gap: 14px; justify-content: center; flex-wrap: nowrap;
-            width: max-content; max-width: calc(100vw - 48px); margin: 0 auto;
+            display: flex; flex-direction: column; gap: 12px;
+            width: 100%; margin: 0 auto;
             animation: fadeUp 0.6s ease-out 0.3s both;
+        }
+        .hero-actions-row {
+            display: flex; gap: 14px; justify-content: center; flex-wrap: nowrap;
         }
         .hero-actions .btn-primary,
         .hero-actions .btn-secondary {
             white-space: nowrap;
             padding: 14px 22px; font-size: 15px;
         }
-        /* 平板：适度收紧按钮，保证 4 个下载按钮单行且文字不换行 */
+        /* 平板：适度收紧按钮，保证每行 3 个下载按钮不拥挤 */
         @media (max-width: 1024px) {
             .hero-actions { gap: 10px; }
+            .hero-actions-row { gap: 10px; }
             .hero-actions .btn-primary,
             .hero-actions .btn-secondary {
-                padding: 13px 22px; font-size: 14.5px;
+                padding: 13px 18px; font-size: 14.5px;
             }
         }
 
@@ -964,7 +968,7 @@
             .features-grid { grid-template-columns: 1fr; }
             .shortcut-grid { grid-template-columns: 1fr; }
             .theme-selector { grid-template-columns: repeat(2, 1fr); }
-            .hero-actions { flex-direction: column; align-items: center; flex-wrap: wrap; }
+            .hero-actions-row { flex-direction: column; align-items: center; width: 100%; }
             .btn-primary, .btn-secondary { width: 100%; justify-content: center; max-width: 320px; }
             .theme-info-name { font-size: 28px; }
         }
