@@ -11,6 +11,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { renderMarkdown } from '../src/lib/markdownRenderer.ts'
 import { isTaskLine, toggleTaskAtLine, toggleTaskLine } from '../src/lib/taskList.ts'
 
@@ -43,6 +44,14 @@ test('纯文本任务项仍然渲染为可点击的 label', () => {
 test('非任务列表项不产生 label 包裹', () => {
   const html = renderMarkdown('- 普通项目\n')
   assert.ok(!html.includes('<label'), html)
+})
+
+test('阅读模式任务列表不叠加列表圆点', () => {
+  const css = readFileSync(new URL('../src/styles/reader.css', import.meta.url), 'utf8')
+  assert.match(
+    css,
+    /\.reader-content \.contains-task-list,\s*\.reader-content \.task-list-item \{[^}]*list-style: none;/s,
+  )
 })
 
 // ---- 混合语法专项：预览点击必须按行回写，不能靠 textContent 全等匹配 ----
