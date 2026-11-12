@@ -133,6 +133,7 @@ function GeneralSettings() {
   const [isDefaultEpubReader, setIsDefaultEpubReader] = useState(false)
   const [associating, setAssociating] = useState(false)
   const [associatingEpub, setAssociatingEpub] = useState(false)
+  const [assocError, setAssocError] = useState<string | null>(null)
 
   const currentLang = store.language
 
@@ -153,29 +154,38 @@ function GeneralSettings() {
 
   const handleAssociateChange = async (checked: boolean) => {
     setAssociating(true)
+    setAssocError(null)
     try {
       if (checked) {
-        const ok = await invokeTauri<boolean>('associate_md_files')
-        if (ok) setIsDefaultEditor(true)
+        await invokeTauriOrThrow<boolean>('associate_md_files')
       } else {
-        const ok = await invokeTauri<boolean>('disassociate_md_files')
-        if (ok) setIsDefaultEditor(false)
+        await invokeTauriOrThrow<boolean>('disassociate_md_files')
       }
-    } catch (e) { console.error('File association failed:', e) }
+      // 以实际系统状态为准：命令返回的是「操作成功」，不是「当前是默认」
+      const actual = await invokeTauriOrThrow<boolean>('is_md_associated')
+      setIsDefaultEditor(actual === true)
+    } catch (e) {
+      console.error('File association failed:', e)
+      setAssocError(String(e))
+    }
     setAssociating(false)
   }
 
   const handleEpubAssociateChange = async (checked: boolean) => {
     setAssociatingEpub(true)
+    setAssocError(null)
     try {
       if (checked) {
-        const ok = await invokeTauri<boolean>('associate_epub_files')
-        if (ok) setIsDefaultEpubReader(true)
+        await invokeTauriOrThrow<boolean>('associate_epub_files')
       } else {
-        const ok = await invokeTauri<boolean>('disassociate_epub_files')
-        if (ok) setIsDefaultEpubReader(false)
+        await invokeTauriOrThrow<boolean>('disassociate_epub_files')
       }
-    } catch (e) { console.error('EPUB file association failed:', e) }
+      const actual = await invokeTauriOrThrow<boolean>('is_epub_associated')
+      setIsDefaultEpubReader(actual === true)
+    } catch (e) {
+      console.error('EPUB file association failed:', e)
+      setAssocError(String(e))
+    }
     setAssociatingEpub(false)
   }
 
@@ -238,6 +248,9 @@ function GeneralSettings() {
                 </span>
               </label>
             </Row>
+            {assocError && (
+              <p className="px-4 pb-2 text-[0.6875rem] text-red-500 break-words">{assocError}</p>
+            )}
           </Section>
           <Section title={t('settings.startup')}>
             <Row label={t('settings.defaultTemplate')}>

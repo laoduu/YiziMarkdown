@@ -96,6 +96,27 @@
 - 开发窗口实测 `WM_CLASS = "yizimarkdown-dev", "Yizimarkdown-dev"`（`xprop`）；正式构建仍为 `yizimarkdown`。
 - `cargo check --no-default-features` 通过；已重写本机 `yizimarkdown-dev.desktop`。
 
+### Linux 无法关联 md / epub，双击却打开 dev 版（2026-11-13）
+
+**现象**
+- Linux 下设置面板里点击「设为默认 Markdown 编辑器 / EPUB 阅读器」没有反应，复选框不变化。
+- 但双击 `.md` / `.epub` 又能打开文件 —— 打开的是开发态的 dev 版本。
+
+**根因（三个原因叠加）**
+1. **Linux 后端根本没实现文件关联**：`associate_md_files` / `associate_epub_files` 在 Linux 分支直接返回 Err（原文「only supported on Windows and macOS」）；`is_md_associated` / `is_epub_associated` 恒返回 `false`。
+2. **前端把错误静默吞掉**：`invokeTauri` 内部 catch 后返回 `null`，设置面板只在成功时改复选框，所以点击表现为「无效、没有变化」，也没有任何提示。
+3. **默认处理器是开发态条目**：安装包的 `YiziMarkdown.desktop` 只声明 `MimeType`（我能打开），默认用谁由 `mimeapps.list` 决定，deb 安装不会改默认；而 `npm run dev:icon` 写入的 `yizimarkdown-dev.desktop` 也声明了 `MimeType`，本机 `~/.config/mimeapps.list` 的默认处理器正是它 —— 于是双击启动 `target/debug/yizimarkdown`，看起来「能打开，但是 dev 版」。
+
+**修复**
+- 新增 `src/linux_file_assoc.rs`：用 `xdg-mime` 写入默认处理器；查询状态只认 `mimeapps.list` 里的**显式**默认，不看 `xdg-mime query default` 的启发式回落（否则取消关联后会被 `mimeinfo.cache` 再次选回，复选框关不掉）；取消关联时从用户级 `mimeapps.list` / `<桌面>-mimeapps.list` 中移除本应用。
+- desktop 文件 ID 区分场景：debug → `yizimarkdown-dev.desktop`，release → `YiziMarkdown.desktop`；AppImage / 手动集成按 `StartupWMClass` / `Exec` 自动识别。
+- `scripts/linux-dev-icon.mjs` 去掉 `MimeType`：图标条目不再注册为文件处理器，从源头避免抢占默认关联。
+- 设置面板改用 `invokeTauriOrThrow`，失败时在面板内显示错误；操作完成后重新查询实际状态，而不是假定成功。
+
+**验证**
+- dev 实测：Markdown / EPUB 的勾选与取消均生效，`mimeapps.list` 与复选框状态同步；无桌面条目时会在面板内显示错误原因。
+- Rust 新增 5 个单元测试（默认列表解析、关联移除、段落保留）；`cargo test` 187 通过。`tsc` / `npm test` 494 通过。
+
 ## v0.4.3
 
 > **已发布**（2026-11-09）：发布 tag `v0.4.3`。`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已同步到 `0.4.3`。用户向说明见 `docs/changelog/CHANGELOG-V0.4.3.md`。

@@ -1503,6 +1503,10 @@ fn write_keybindings(content: String) -> Result<(), String> {
 
 // ===== 文件关联 (.md) =====
 
+/// Linux: 通过 xdg-mime 设置 / 取消默认处理器（见模块头注释）
+#[cfg(target_os = "linux")]
+mod linux_file_assoc;
+
 /// macOS: 通过 LaunchServices 设置/取消 .md 默认处理器
 #[cfg(target_os = "macos")]
 mod macos_file_assoc {
@@ -1700,9 +1704,15 @@ fn associate_md_files() -> Result<bool, String> {
         return macos_file_assoc::set_default(true);
     }
 
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    #[cfg(target_os = "linux")]
     {
-        return Err("File association is only supported on Windows and macOS".to_string());
+        linux_file_assoc::set_default(true, linux_file_assoc::MD_MIMES)?;
+        return Ok(true);
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    {
+        return Err("File association is only supported on Windows, macOS and Linux".to_string());
     }
 }
 
@@ -1730,9 +1740,15 @@ fn disassociate_md_files() -> Result<bool, String> {
         return macos_file_assoc::set_default(false);
     }
 
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    #[cfg(target_os = "linux")]
     {
-        return Err("File association is only supported on Windows and macOS".to_string());
+        linux_file_assoc::set_default(false, linux_file_assoc::MD_MIMES)?;
+        return Ok(true);
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    {
+        return Err("File association is only supported on Windows, macOS and Linux".to_string());
     }
 }
 
@@ -1761,7 +1777,12 @@ fn is_md_associated() -> Result<bool, String> {
         return macos_file_assoc::is_default();
     }
 
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    #[cfg(target_os = "linux")]
+    {
+        return Ok(linux_file_assoc::is_default(linux_file_assoc::MD_MIMES));
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
     {
         return Ok(false);
     }
@@ -1821,9 +1842,15 @@ fn associate_epub_files() -> Result<bool, String> {
         return macos_file_assoc::set_epub_default(true);
     }
 
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    #[cfg(target_os = "linux")]
     {
-        return Err("File association is only supported on Windows and macOS".to_string());
+        linux_file_assoc::set_default(true, linux_file_assoc::EPUB_MIMES)?;
+        return Ok(true);
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    {
+        return Err("File association is only supported on Windows, macOS and Linux".to_string());
     }
 }
 
@@ -1864,9 +1891,15 @@ fn disassociate_epub_files() -> Result<bool, String> {
         return macos_file_assoc::set_epub_default(false);
     }
 
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    #[cfg(target_os = "linux")]
     {
-        return Err("File association is only supported on Windows and macOS".to_string());
+        linux_file_assoc::set_default(false, linux_file_assoc::EPUB_MIMES)?;
+        return Ok(true);
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    {
+        return Err("File association is only supported on Windows, macOS and Linux".to_string());
     }
 }
 
@@ -1892,7 +1925,12 @@ fn is_epub_associated() -> Result<bool, String> {
         return macos_file_assoc::is_epub_default();
     }
 
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    #[cfg(target_os = "linux")]
+    {
+        return Ok(linux_file_assoc::is_default(linux_file_assoc::EPUB_MIMES));
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
     {
         return Ok(false);
     }

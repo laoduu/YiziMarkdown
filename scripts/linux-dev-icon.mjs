@@ -59,7 +59,8 @@ writeFileSync(
     'StartupWMClass=yizimarkdown-dev',
     'Terminal=false',
     'NoDisplay=true',
-    'MimeType=text/markdown;application/epub+zip',
+    // 不写 MimeType：这份条目只用于 Dock 图标映射。声明 MIME 会让开发态
+    // 成为 text/markdown / epub 的候选处理器，进而抢走默认关联。
     'Categories=Office;',
     '',
   ].join('\n'),
