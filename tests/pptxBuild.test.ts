@@ -13,6 +13,7 @@ import assert from 'node:assert/strict'
 import JSZip from 'jszip'
 import { buildPptx } from '../src/lib/pptxBuild.ts'
 import { splitInlineMath } from '../src/lib/inlineMath.ts'
+import { canMergeRunStyles } from '../src/lib/pptxScene.ts'
 import type { SceneRunStyle, SlideScene } from '../src/lib/pptxTypes.ts'
 
 const LATIN = 'Segoe UI'
@@ -160,6 +161,12 @@ test('PPTX：KaTeX 未生成 DOM 时仍能识别正文原始 TeX', () => {
   assert.deepEqual(splitInlineMath('价格 \\$5，不是公式'), [
     { kind: 'text', text: '价格 \\$5，不是公式' },
   ])
+})
+
+test('PPTX：公式 run 不能被合并成普通文本', () => {
+  assert.equal(canMergeRunStyles(runStyle(), runStyle()), true)
+  assert.equal(canMergeRunStyles(runStyle(), runStyle({ mathTex: 'x^2' })), false)
+  assert.equal(canMergeRunStyles(runStyle({ mathTex: 'x^2' }), runStyle()), false)
 })
 
 test('PPTX：公式的 MC 信封包住整个 p:sp（PowerPoint 原生写法），不写在 a:p 里', async () => {

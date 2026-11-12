@@ -92,12 +92,12 @@ export function measureSceneOverflow(
   }
 }
 
-/** 判断两个 run 样式是否完全一致（用于合并相邻文本片段，减少 XML 体积） */
-function sameStyle(a: SceneRunStyle, b: SceneRunStyle): boolean {
+/** 判断两个普通文本 run 样式是否完全一致；公式 run 永远不能参与文本合并。 */
+export function canMergeRunStyles(a: SceneRunStyle, b: SceneRunStyle): boolean {
   return a.color === b.color && a.sizePt === b.sizePt && a.bold === b.bold &&
     a.italic === b.italic && a.underline === b.underline && a.strike === b.strike &&
     a.latin === b.latin && a.ea === b.ea && a.charSpacingPt === b.charSpacingPt &&
-    a.highlight === b.highlight && a.link === b.link && !a.mathTex
+    a.highlight === b.highlight && a.link === b.link && !a.mathTex && !b.mathTex
 }
 
 /** `annotation[encoding="application/x-tex"]` → TeX；KaTeX 的可见 HTML 不可信，必须取源。 */
@@ -330,7 +330,7 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
     const appendRun = (target: SceneRun[], text: string, style: SceneRunStyle) => {
       if (!text) return
       const prev = target[target.length - 1]
-      if (prev && sameStyle(prev.style, style)) {
+      if (prev && canMergeRunStyles(prev.style, style)) {
         prev.text += text
         return
       }
@@ -357,7 +357,8 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
     ) => {
       if (!text) return
       const style = trimRun({ ...runStyleOf(el, bg), ...extra })
-      for (const segment of splitInlineMath(text)) {
+      const segments = splitInlineMath(text)
+      for (const segment of segments) {
         if (segment.kind === 'text') {
           appendRun(current, segment.text, style)
           const line = lineMap.get(lineIndex) || []
@@ -614,7 +615,7 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
         const style = trimRun(runStyleOf(el, slideBg))
         const line = lines[lines.length - 1]
         const prev = line[line.length - 1]
-        if (prev && sameStyle(prev.style, style)) prev.text += part
+        if (prev && canMergeRunStyles(prev.style, style)) prev.text += part
         else line.push({ text: part, style })
       })
     }
