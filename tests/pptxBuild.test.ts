@@ -233,3 +233,24 @@ test('PPTX：16:9 尺寸按 1280×720 基准（12192000×6858000 EMU）', async 
   const presentation = await zip.file('ppt/presentation.xml')!.async('string')
   assert.match(presentation, /<p:sldSz cx="12192000" cy="6858000"\/>/)
 })
+
+test('PPTX：视觉行固定浏览器换行，并关闭 PowerPoint 二次自动换行', async () => {
+  const style = runStyle()
+  const scene = sampleScene()
+  scene.nodes = [{
+    t: 'text',
+    x: 1, y: 1, w: 5, h: 1.4,
+    align: 'left', valign: 'top', lineSpacingPt: 24,
+    baseColor: 'F8FAFC', baseSizePt: 20, latin: LATIN, ea: EA,
+    paragraphs: [{ runs: [{ text: '浏览器第一行浏览器第二行', style }] }],
+    visualLines: [
+      [{ text: '浏览器第一行', style }],
+      [{ text: '浏览器第二行', style }],
+    ],
+  }]
+  const { xml } = await buildXml(scene)
+  assert.match(xml, /<a:bodyPr wrap="none"/)
+  assert.equal((xml.match(/<a:t xml:space="preserve">浏览器第[一二]行<\/a:t>/g) || []).length, 2)
+  assert.equal((xml.match(/<a:p>/g) || []).length, 2)
+  assert.equal((xml.match(/<a:rPr\b[^>]*sz="2000"/g) || []).length, 2)
+})

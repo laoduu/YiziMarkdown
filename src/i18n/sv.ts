@@ -833,7 +833,7 @@ export const sv = {
     overflow: "Hantering av överflöd",
     overflowWarn: "Varna och lista sidor",
     overflowShrink: "Minska texten automatiskt",
-    overflowHint: "Innehållet mäts i en fast 1280×720-vy; sidor som inte får plats listas efter exporten.",
+    overflowHint: "Innehållet mäts i presentationsskärmens 16:9-vy med bevarade tecken- och relativa storlekar; sidor som inte får plats listas efter exporten.",
     preview: "Förhandsgranska bildspelet",
     previewHint: "Bildspelet använder aktuell fönsterstorlek, så layouten kan skilja sig något från 1280×720-exporten.",
     export: "Exportera",

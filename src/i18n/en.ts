@@ -852,7 +852,7 @@ export const en = {
     overflow: "Overflow handling",
     overflowWarn: "Warn and list pages",
     overflowShrink: "Shrink text automatically",
-    overflowHint: "Content is measured in a fixed 1280×720 viewport; overflowing pages are listed after export.",
+    overflowHint: "Content is measured in the presentation screen's 16:9 viewport, preserving font and relative sizes; overflowing pages are listed after export.",
     preview: "Preview slideshow",
     previewHint: "The slideshow uses the current window size, so the layout may differ slightly from the 1280×720 export.",
     export: "Export",

@@ -833,7 +833,7 @@ export const ko = {
     overflow: "넘침 처리",
     overflowWarn: "경고하고 페이지 나열",
     overflowShrink: "텍스트 자동 축소",
-    overflowHint: "내용은 고정 1280×720 뷰포트에서 측정되며, 넘치는 페이지는 내보낸 후 나열됩니다.",
+    overflowHint: "발표 화면의 16:9 뷰포트에서 측정하여 글꼴과 상대 크기를 유지하며, 넘치는 페이지는 내보낸 후 나열됩니다.",
     preview: "슬라이드쇼 미리보기",
     previewHint: "슬라이드쇼는 현재 창 크기를 사용하므로 1280×720 내보내기와 레이아웃이 조금 다를 수 있습니다.",
     export: "내보내기",

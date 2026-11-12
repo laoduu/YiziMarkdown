@@ -833,7 +833,7 @@ export const de = {
     overflow: "Überlaufbehandlung",
     overflowWarn: "Warnen und Seiten auflisten",
     overflowShrink: "Text automatisch verkleinern",
-    overflowHint: "Inhalte werden in einem festen 1280×720-Viewport gemessen; überlaufende Seiten werden nach dem Export aufgelistet.",
+    overflowHint: "Inhalte werden im 16:9-Viewport des Präsentationsbildschirms gemessen; Schrift- und relative Größen bleiben erhalten. Überlaufende Seiten werden nach dem Export aufgelistet.",
     preview: "Präsentation ansehen",
     previewHint: "Die Präsentation nutzt die aktuelle Fenstergröße; das Layout kann daher leicht vom 1280×720-Export abweichen.",
     export: "Exportieren",

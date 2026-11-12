@@ -833,7 +833,7 @@ export const fr = {
     overflow: "Gestion du débordement",
     overflowWarn: "Avertir et lister les pages",
     overflowShrink: "Réduire le texte automatiquement",
-    overflowHint: "Le contenu est mesuré dans une fenêtre fixe de 1280×720 ; les pages en débordement sont listées après l’export.",
+    overflowHint: "Le contenu est mesuré dans la fenêtre 16:9 de l’écran de présentation, en conservant les tailles de police et les proportions ; les pages en débordement sont listées après l’export.",
     preview: "Aperçu du diaporama",
     previewHint: "Le diaporama utilise la taille de fenêtre actuelle ; la mise en page peut donc différer légèrement de l’export 1280×720.",
     export: "Exporter",

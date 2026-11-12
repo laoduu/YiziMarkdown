@@ -8,6 +8,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { measureSceneOverflow } from '../src/lib/pptxScene.ts'
+import { presentationViewport } from '../src/lib/pptxViewport.ts'
 import type { SceneNode } from '../src/lib/pptxTypes.ts'
 
 const W = 13.333
@@ -55,4 +56,18 @@ test('PPTX 超页：装饰元素（金句引号/章节序号）不参与超页�
   assert.deepEqual(measureSceneOverflow([decorative], W, H), {
     top: 0, right: 0, bottom: 0, left: 0,
   })
+})
+
+test('PPTX 视口：1080p 全屏保持原尺寸，不退回 1280×720 基准', () => {
+  assert.deepEqual(presentationViewport(1920, 1080), { width: 1920, height: 1080 })
+  assert.deepEqual(presentationViewport(2560, 1440), { width: 2560, height: 1440 })
+})
+
+test('PPTX 视口：非 16:9 屏幕按可容纳的 16:9 内容区测量', () => {
+  assert.deepEqual(presentationViewport(1920, 1200), { width: 1920, height: 1080 })
+  assert.deepEqual(presentationViewport(1600, 900), { width: 1600, height: 900 })
+})
+
+test('PPTX 视口：非法尺寸回落到 1280×720', () => {
+  assert.deepEqual(presentationViewport(0, Number.NaN), { width: 1280, height: 720 })
 })

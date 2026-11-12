@@ -852,7 +852,7 @@ export const zh = {
     overflow: "超页处理",
     overflowWarn: "警告并列出页码",
     overflowShrink: "自动压缩字号",
-    overflowHint: "内容按固定 1280×720 基准测量；超页会在导出后列出。",
+    overflowHint: "按演示所在屏幕的 16:9 视口测量，字号与相对大小保持不变；超页会在导出后列出。",
     preview: "先看演示效果",
     previewHint: "演示使用当前窗口尺寸，版式可能与 1280×720 的导出略有差异。",
     export: "导出",

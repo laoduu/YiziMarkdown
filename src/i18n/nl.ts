@@ -833,7 +833,7 @@ export const nl = {
     overflow: "Overloopafhandeling",
     overflowWarn: "Waarschuwen en pagina’s tonen",
     overflowShrink: "Tekst automatisch verkleinen",
-    overflowHint: "Inhoud wordt gemeten in een vast 1280×720-venster; dia’s die overlopen worden na de export vermeld.",
+    overflowHint: "Inhoud wordt gemeten in het 16:9-venster van het presentatiescherm, met behoud van letter- en relatieve groottes; overlopende dia’s worden na de export vermeld.",
     preview: "Presentatie bekijken",
     previewHint: "De presentatie gebruikt de huidige venstergrootte, dus de lay-out kan iets afwijken van de 1280×720-export.",
     export: "Exporteren",

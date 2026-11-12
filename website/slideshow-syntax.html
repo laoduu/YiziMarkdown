@@ -9,7 +9,7 @@
     <meta name="author" content="YiziPaper">
     <meta name="robots" content="index, follow">
     <meta name="docs-src" content="docs/slideshow-style-mapping.md">
-    <meta name="docs-hash" content="32ba960e943ebb5b5867cff4733a4e73bd01f308b8ee7c0c92912c328f883563">
+    <meta name="docs-hash" content="c55feab7213aa697429d17fb3f3283e9a48cc6ea15f5ed1f6899dfcf17c47d3f">
     <link rel="canonical" href="https://md.yizigpt.com/slideshow-syntax.html">
 
     <!-- Open Graph -->
@@ -97,7 +97,7 @@
 <li>解析与渲染（演示 / 导出共用）：<code>src/lib/slideDeck.ts</code></li>
 <li>渲染与主题继承：<code>src/components/Slideshow.tsx</code></li>
 <li>幻灯片样式：<code>src/styles/slideshow.css</code></li>
-<li>PPTX 导出：<code>src/lib/pptxExport.ts</code>（编排）、<code>pptxFrame.ts</code>（1280×720 测量）、<code>pptxScene.ts</code>（DOM → 场景图）、<code>pptxBuild.ts</code>（PptxGenJS + XML 后处理）</li>
+<li>PPTX 导出：<code>src/lib/pptxExport.ts</code>（编排）、<code>pptxFrame.ts</code>（演示屏幕 16:9 视口测量）、<code>pptxScene.ts</code>（DOM → 场景图）、<code>pptxBuild.ts</code>（PptxGenJS + XML 后处理）</li>
 </ul>
 </div>
 
@@ -535,7 +535,7 @@ date: 2026-08-13
 <section class="help-section" id="导出为-pptx" data-icon="code-2" data-kw="导出为 PPTX 演示模式可以一键导出 .pptx ， 不需要在 Markdown 里加任何标记 。导出结果是 PowerPoint 里的 原生可编辑对象 （文字、表格、图片、形状、原生公式），不是整页截图。">
 <h2><a class="anchor" href="#导出为-pptx">#</a>导出为 PPTX</h2>
 <p>演示模式可以一键导出 <code>.pptx</code>，<strong>不需要在 Markdown 里加任何标记</strong>。导出结果是 PowerPoint 里的<strong>原生可编辑对象</strong>（文字、表格、图片、形状、原生公式），不是整页截图。</p>
-<div class="help-sub" id="入口" data-kw="入口 编辑器工具栏 →「导出」菜单 →「PPTX」 演示模式右下角 HUD →「导出 PPTX」 两处打开的是 同一个导出弹窗 ：HUD 入口多一个「只导当前页」选项；工具栏入口没有当前页，但提供「先看演示效果」按钮。 导出时： 主题、明暗、版式、演示字号、填充比例、分栏样式全部沿用演示的同一套解析与 CSS（演示与导出共用 src/lib/slideDeck.ts ），暗色主题所见即所得，不会强制白底。 基准固定为 16:9 / 1280×720 ，与当前窗口大小无关；演示窗口更宽或更窄都不会改变导出结果。 先选">
+<div class="help-sub" id="入口" data-kw="入口 编辑器工具栏 →「导出」菜单 →「PPTX」 演示模式右下角 HUD →「导出 PPTX」 两处打开的是 同一个导出弹窗 ：HUD 入口多一个「只导当前页」选项；工具栏入口没有当前页，但提供「先看演示效果」按钮。 导出时： 主题、明暗、版式、演示字号、填充比例、分栏样式全部沿用演示的同一套解析与 CSS（演示与导出共用 src/lib/slideDeck.ts ），暗色主题所见即所得，不会强制白底。 测量视口跟随 演示所在屏幕的 16:9 内容区 ，再把浏览器实际排版归一化到标准 16:9 PPT 页面；因此">
 <h3>入口</h3>
 <ul>
 <li>编辑器工具栏 →「导出」菜单 →「PPTX」</li>
@@ -545,7 +545,7 @@ date: 2026-08-13
 <p>导出时：</p>
 <ul>
 <li>主题、明暗、版式、演示字号、填充比例、分栏样式全部沿用演示的同一套解析与 CSS（演示与导出共用 <code>src/lib/slideDeck.ts</code>），暗色主题所见即所得，不会强制白底。</li>
-<li>基准固定为 <strong>16:9 / 1280×720</strong>，与当前窗口大小无关；演示窗口更宽或更窄都不会改变导出结果。</li>
+<li>测量视口跟随<strong>演示所在屏幕的 16:9 内容区</strong>，再把浏览器实际排版归一化到标准 16:9 PPT 页面；因此 1080p / 2K 全屏下原本能完整显示的页面，不会因为固定退回 1280×720 而突然溢出。</li>
 <li>先选保存路径，再逐页测量生成；弹窗里有进度与「取消导出」。</li>
 <li>弹窗打开期间，演示的翻页键与滚轮翻页会挂起，避免误翻页。</li>
 </ul>

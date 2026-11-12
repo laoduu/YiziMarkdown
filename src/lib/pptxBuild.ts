@@ -154,13 +154,19 @@ function runOptions(run: SceneRun, jobs: Map<string, MathJob>, display = false):
 
 function textShape(slide: any, node: TextNode, jobs: Map<string, MathJob>): void {
   const runs: any[] = []
-  node.paragraphs.forEach((paragraph, pIdx) => {
-    const isLastParagraph = pIdx === node.paragraphs.length - 1
-    paragraph.runs.forEach((run, rIdx) => {
+  // 浏览器测出的视觉行优先。PowerPoint 的字体度量与 WebView 不完全一致，
+  // 若让它再次 wrap="square"，同样的文本可能多出一行并越过演示时的高度。
+  // 这里只固定浏览器已决定的换行位置，字号、坐标、行距都不缩放。
+  const sourceLines = node.visualLines?.length
+    ? node.visualLines
+    : node.paragraphs.map((paragraph) => paragraph.runs)
+  sourceLines.forEach((line, lineIdx) => {
+    const isLastLine = lineIdx === sourceLines.length - 1
+    line.forEach((run, rIdx) => {
       const { text, options } = runOptions(run, jobs)
       if (!text && !run.style.mathTex) return
-      const isLastRun = rIdx === paragraph.runs.length - 1
-      if (isLastRun && !isLastParagraph) options.breakLine = true
+      const isLastRun = rIdx === line.length - 1
+      if (isLastRun && !isLastLine) options.breakLine = true
       runs.push({ text, options })
     })
   })
@@ -174,7 +180,7 @@ function textShape(slide: any, node: TextNode, jobs: Map<string, MathJob>): void
     valign: node.valign,
     align: node.align,
     lineSpacing: Math.max(1, node.lineSpacingPt),
-    wrap: !node.noWrap,
+    wrap: node.visualLines?.length ? false : !node.noWrap,
     isTextBox: true,
   })
 }

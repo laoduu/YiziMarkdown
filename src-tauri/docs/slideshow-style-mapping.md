@@ -7,7 +7,7 @@ YiziMarkdown 的演示模式（幻灯片）**不需要任何额外格式**：你
 - 解析与渲染（演示 / 导出共用）：`src/lib/slideDeck.ts`
 - 渲染与主题继承：`src/components/Slideshow.tsx`
 - 幻灯片样式：`src/styles/slideshow.css`
-- PPTX 导出：`src/lib/pptxExport.ts`（编排）、`pptxFrame.ts`（1280×720 测量）、`pptxScene.ts`（DOM → 场景图）、`pptxBuild.ts`（PptxGenJS + XML 后处理）
+- PPTX 导出：`src/lib/pptxExport.ts`（编排）、`pptxFrame.ts`（演示屏幕 16:9 视口测量）、`pptxScene.ts`（DOM → 场景图）、`pptxBuild.ts`（PptxGenJS + XML 后处理）
 
 ---
 
@@ -293,7 +293,7 @@ date: 2026-08-13
 导出时：
 
 - 主题、明暗、版式、演示字号、填充比例、分栏样式全部沿用演示的同一套解析与 CSS（演示与导出共用 `src/lib/slideDeck.ts`），暗色主题所见即所得，不会强制白底。
-- 基准固定为 **16:9 / 1280×720**，与当前窗口大小无关；演示窗口更宽或更窄都不会改变导出结果。
+- 测量视口跟随**演示所在屏幕的 16:9 内容区**，再把浏览器实际排版归一化到标准 16:9 PPT 页面；因此 1080p / 2K 全屏下原本能完整显示的页面，不会因为固定退回 1280×720 而突然溢出。
 - 先选保存路径，再逐页测量生成；弹窗里有进度与「取消导出」。
 - 弹窗打开期间，演示的翻页键与滚轮翻页会挂起，避免误翻页。
 

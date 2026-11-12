@@ -1,10 +1,10 @@
 /**
- * pptxFrame.ts — 隐藏 iframe（1280×720 真实视口）里的「演示复刻」与测量宿主。
+ * pptxFrame.ts — 隐藏 iframe（演示屏幕 16:9 视口）里的「演示复刻」与测量宿主。
  *
  * 为什么必须是 iframe 而不是容器：slideshow.css 的排版大量依赖 `vw/vh`
- * （内容边距、字号 clamp、栏距）。父窗口里放一个 1280px 宽的 div 不会改变
- * `vw` 的解析基准 —— 只有 iframe 自己的 viewport 是 1280×720，布局才等同于
- * 「16:9 全屏演示」。这也是导出基准固定 1280×720 的唯一实现方式。
+ * （内容边距、字号 clamp、栏距）。父窗口里放一个固定宽度 div 不会改变
+ * `vw` 的解析基准 —— 只有 iframe 使用与演示屏幕一致的 16:9 viewport，
+ * 布局才与全屏演示相同。场景层再把结果归一化到 PowerPoint 页面。
  *
  * 本模块只负责「把页面渲染成可测量的 DOM」：克隆样式、逐页挂载、插件后处理、
  * 图片/图表落成 data URL、等字体与图片就绪。DOM → 场景图在 pptxScene.ts。
@@ -34,6 +34,9 @@ export interface FrameCreateOptions {
   docTitle?: string
   /** 演示字号系数（settings 里的 slideFontScale；用于超页时按比例回缩重排） */
   baseFontScale?: number
+  /** 演示模式实际视口（通常是当前屏幕的 16:9 内容区） */
+  viewportWidth?: number
+  viewportHeight?: number
 }
 
 export interface RenderSlideSpec {
@@ -227,14 +230,16 @@ export class PptxFrame {
       docBaseDir: string | null
     },
   ): Promise<PptxFrame> {
+    const width = opts.viewportWidth && opts.viewportWidth > 0 ? opts.viewportWidth : FRAME_W
+    const height = opts.viewportHeight && opts.viewportHeight > 0 ? opts.viewportHeight : FRAME_H
     const iframe = document.createElement('iframe')
     iframe.setAttribute('aria-hidden', 'true')
     iframe.style.cssText = [
       'position:fixed',
       'left:-20000px',
       'top:0',
-      `width:${FRAME_W}px`,
-      `height:${FRAME_H}px`,
+      `width:${width}px`,
+      `height:${height}px`,
       'border:0',
       'pointer-events:none',
       'visibility:visible',

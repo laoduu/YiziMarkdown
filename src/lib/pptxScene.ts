@@ -2,8 +2,8 @@
  * pptxScene.ts — 把「已经渲染好的演示 DOM」测量成 **场景图**（见 pptxTypes.ts）。
  *
  * 为什么先量再画：PowerPoint 没有 CSS 布局。要让导出与演示逐块对齐，唯一可行的做法
- * 是在 1280×720 的真实视口里让浏览器排一次版，再把每个盒子的位置 / 字号 / 颜色读出来，
- * 翻译成 pt / inch。这里**不复制** slideshow.css 的数值，而是读 computed style：
+ * 是在演示屏幕的真实 16:9 视口里让浏览器排一次版，再把每个盒子的位置 / 字号 / 颜色读出来，
+ * 归一化到 13.333×7.5in。这里**不复制** slideshow.css 的数值，而是读 computed style：
  * 主题、明暗、字号缩放、填充比例、分栏样式改了，场景图自动跟着变。
  *
  * 装饰（标题下划线、章节大序号、金句对角引号、agenda 数字、列表圆点/序号）来自
@@ -20,8 +20,8 @@ import type {
 } from './pptxTypes.ts'
 import {
   borderRadiusPx, cleanText, colorAlpha, contentBoxPx, flattenColor, fontSizePx, hasStrike,
-  hasUnderline, isBold, letterSpacingPt, lineHeightPx, num, parseBoxShadow, parseColor, pxToIn,
-  pxToPt, rectOf, resolveFontStack, round2, round3, styleOf, textAlignOf, PX_PER_IN,
+  hasUnderline, isBold, letterSpacingPt, lineHeightPx, num, parseBoxShadow, parseColor,
+  rectOf, resolveFontStack, round2, round3, styleOf, textAlignOf,
 } from './pptxTheme.ts'
 
 export interface SceneOptions {
@@ -40,6 +40,9 @@ export interface SceneOptions {
 interface Box { x: number; y: number; w: number; h: number }
 
 const EPS = 2
+const SLIDE_W_IN = 40 / 3
+const SLIDE_H_IN = 7.5
+const CSS_PX_PER_IN = 96
 
 /**
  * 用场景节点的真实包围盒计算四边溢出（px）。
@@ -79,7 +82,7 @@ export function measureSceneOverflow(
   }
   if (!Number.isFinite(minX)) return { top: 0, right: 0, bottom: 0, left: 0 }
 
-  const px = (inch: number) => Math.round(Math.max(0, inch) * PX_PER_IN)
+  const px = (inch: number) => Math.round(Math.max(0, inch) * CSS_PX_PER_IN)
   return {
     top: px(-minY),
     right: px(maxX - slideWIn),
@@ -112,6 +115,78 @@ function contentBox(el: Element, win: Window): Box {
 function textBoxOf(el: Element, win: Window): Box {
   const b = contentBox(el, win)
   return { x: b.x, y: b.y, w: b.w, h: b.h + EPS }
+}
+
+interface VisualLineSlot {
+  top: number
+  bottom: number
+  center: number
+}
+
+/** 读取一组 DOM Range 矩形，按纵向位置合并成浏览器的实际视觉行。 */
+function visualLineSlots(root: Element, win: Window): VisualLineSlot[] {
+  const range = win.document.createRange()
+  try {
+    range.selectNodeContents(root)
+  } catch {
+    return []
+  }
+  const rects = Array.from(range.getClientRects())
+    .filter((r) => r.width > 0.5 && r.height > 0.5)
+    .sort((a, b) => a.top - b.top || a.left - b.left)
+  const lineHeight = Math.max(1, lineHeightPx(styleOf(root, win)))
+  const tolerance = Math.max(4, lineHeight * 0.42)
+  const slots: VisualLineSlot[] = []
+
+  for (const rect of rects) {
+    const center = rect.top + rect.height / 2
+    let slot = slots.find((s) => {
+      const overlap = Math.min(s.bottom, rect.bottom) - Math.max(s.top, rect.top)
+      return overlap > Math.min(s.bottom - s.top, rect.height) * 0.25 ||
+        Math.abs(s.center - center) <= tolerance
+    })
+    if (!slot) {
+      slot = { top: rect.top, bottom: rect.bottom, center }
+      slots.push(slot)
+    } else {
+      slot.top = Math.min(slot.top, rect.top)
+      slot.bottom = Math.max(slot.bottom, rect.bottom)
+      slot.center = (slot.top + slot.bottom) / 2
+    }
+  }
+  return slots.sort((a, b) => a.top - b.top)
+}
+
+/**
+ * Range 矩形落在第几个视觉行。
+ *
+ * 不同字号的 span 会改变矩形高度；先按纵向重叠判断，重叠不足时再看中心距离。
+ * `fallback` 用于纯空白字符——它们通常没有自己的 ClientRect。
+ */
+function lineIndexAtRect(
+  rect: { top: number; bottom: number; height: number } | null | undefined,
+  slots: VisualLineSlot[],
+  fallback: number,
+): number {
+  if (!rect || !slots.length) return fallback
+  const center = rect.top + rect.height / 2
+  let best = fallback
+  let bestScore = -Infinity
+  slots.forEach((slot, idx) => {
+    const overlap = Math.min(slot.bottom, rect.bottom) - Math.max(slot.top, rect.top)
+    const distance = Math.abs(slot.center - center)
+    const score = overlap * 10 - distance
+    if (score > bestScore) {
+      bestScore = score
+      best = idx
+    }
+  })
+  return best
+}
+
+function lineIndexAtElement(el: Element, slots: VisualLineSlot[], fallback: number): number {
+  const r = rectOf(el)
+  return lineIndexAtRect({ top: r.y, bottom: r.y + r.h, height: r.h }, slots, fallback)
 }
 
 /** 绝对定位伪元素的盒子：优先用它自己的 left/right/top/bottom + 尺寸。 */
@@ -176,6 +251,11 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
   const nodes: SceneNode[] = []
 
   const slideRect = rectOf(slide)
+  // DOM 可能在实际全屏视口（如 1920×1080）中排版；场景图统一换算成
+  // PowerPoint 的 13.333×7.5in。这里只是真实尺寸的坐标归一化，不是整页缩放。
+  const pxPerIn = slideRect.w / SLIDE_W_IN
+  const toIn = (px: number) => round3(px / pxPerIn)
+  const toPt = (px: number) => round2(px / pxPerIn * 72)
   const slideCS = styleOf(slide, win)
   const slideBg = flattenColor(slideCS.backgroundColor, '#FFFFFF')
   const padL = num(slideCS.paddingLeft)
@@ -208,7 +288,7 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
     const href = anchor?.getAttribute('href') || ''
     return {
       color: flattenColor(cs.color, bg),
-      sizePt: pxToPt(fontSizePx(cs)),
+      sizePt: toPt(fontSizePx(cs)),
       bold: isBold(cs) || undefined,
       italic: /italic|oblique/i.test(cs.fontStyle) || undefined,
       underline: hasUnderline(cs) || undefined,
@@ -235,9 +315,26 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
 
   // ---------- 行内文本收集 ----------
 
-  const collectInline = (root: Element, skipNestedBlocks: boolean, bg = slideBg): SceneParagraph[] => {
+  const collectInline = (
+    root: Element,
+    skipNestedBlocks: boolean,
+    bg = slideBg,
+  ): { paragraphs: SceneParagraph[]; visualLines?: SceneRun[][] } => {
     const paragraphs: SceneParagraph[] = []
+    const lineMap = new Map<number, SceneRun[]>()
+    const lineSlots = visualLineSlots(root, win)
     let current: SceneRun[] = []
+    let lastVisualLine = 0
+
+    const appendRun = (target: SceneRun[], text: string, style: SceneRunStyle) => {
+      if (!text) return
+      const prev = target[target.length - 1]
+      if (prev && sameStyle(prev.style, style)) {
+        prev.text += text
+        return
+      }
+      target.push({ text, style })
+    }
 
     const flush = () => {
       const runs = current
@@ -251,21 +348,60 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
       if (kept.length) paragraphs.push({ runs: kept })
     }
 
-    const push = (text: string, el: Element, extra?: Partial<SceneRunStyle>) => {
+    const push = (
+      text: string,
+      el: Element,
+      extra?: Partial<SceneRunStyle>,
+      lineIndex = lastVisualLine,
+    ) => {
       if (!text) return
       const style = trimRun({ ...runStyleOf(el, bg), ...extra })
-      const prev = current[current.length - 1]
-      if (prev && sameStyle(prev.style, style)) {
-        prev.text += text
+      appendRun(current, text, style)
+      const line = lineMap.get(lineIndex) || []
+      appendRun(line, text, style)
+      lineMap.set(lineIndex, line)
+      lastVisualLine = lineIndex
+    }
+
+    const pushTextNode = (node: Text, parentEl: Element) => {
+      const raw = node.nodeValue || ''
+      if (!raw) return
+      const range = win.document.createRange()
+      range.selectNodeContents(node)
+      const rects = Array.from(range.getClientRects())
+        .filter((r) => r.width > 0.5 && r.height > 0.5)
+
+      if (rects.length <= 1) {
+        const line = lineIndexAtRect(rects[0], lineSlots, lastVisualLine)
+        push(cleanText(raw), parentEl, undefined, line)
         return
       }
-      current.push({ text, style })
+
+      // 一个文本节点可能跨多行。逐字符读取它所属的视觉行，再在行边界切开；
+      // 这样 runs 的样式保持不变，但 PowerPoint 不需要重新猜浏览器在哪里换行。
+      let buffer = ''
+      let line = lineIndexAtRect(rects[0], lineSlots, lastVisualLine)
+      for (let i = 0; i < raw.length;) {
+        const cp = raw.codePointAt(i)
+        const size = cp !== undefined && cp > 0xffff ? 2 : 1
+        range.setStart(node, i)
+        range.setEnd(node, i + size)
+        const rect = range.getClientRects()[0]
+        const nextLine = lineIndexAtRect(rect, lineSlots, line)
+        if (nextLine !== line && buffer) {
+          push(cleanText(buffer), parentEl, undefined, line)
+          buffer = ''
+        }
+        line = nextLine
+        buffer += raw.slice(i, i + size)
+        i += size
+      }
+      if (buffer) push(cleanText(buffer), parentEl, undefined, line)
     }
 
     const visit = (node: Node, parentEl: Element) => {
       if (node.nodeType === 3) {
-        const t = cleanText(node.nodeValue || '')
-        if (t) push(t, parentEl)
+        pushTextNode(node as Text, parentEl)
         return
       }
       if (node.nodeType !== 1) return
@@ -281,7 +417,12 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
           // 直接取它会比正文大 21%。字号取**外层行内上下文**，才是 PPT 里该用的值。
           const host = el.parentElement || el
           const style = trimRun({ ...runStyleOf(host, bg), mathTex: tex })
-          current.push({ text: `$${tex}$`, style })
+          const line = lineIndexAtElement(el, lineSlots, lastVisualLine)
+          appendRun(current, `$${tex}$`, style)
+          const lineRuns = lineMap.get(line) || []
+          appendRun(lineRuns, `$${tex}$`, style)
+          lineMap.set(line, lineRuns)
+          lastVisualLine = line
         } else {
           push(cleanText(el.textContent || ''), el)
         }
@@ -293,10 +434,11 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
         const input = el as HTMLInputElement
         if (input.type === 'checkbox') {
           const accent = flattenColor(win.getComputedStyle(el).accentColor || '#4f46e5', bg)
+          const line = lineIndexAtElement(el, lineSlots, lastVisualLine)
           push(input.checked ? '☑' : '☐', el, {
             color: input.checked ? accent : flattenColor(styleOf(el, win).color, bg),
             checkbox: true,
-          })
+          }, line)
         }
         return
       }
@@ -308,7 +450,16 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
     const children = root.childNodes
     for (let i = 0; i < children.length; i++) visit(children[i], root)
     flush()
-    return paragraphs
+
+    const visualLines: SceneRun[][] = []
+    for (const [, runs] of Array.from(lineMap.entries()).sort((a, b) => a[0] - b[0])) {
+      if (!runs.length) continue
+      runs[0].text = runs[0].text.replace(/^ +/, '')
+      runs[runs.length - 1].text = runs[runs.length - 1].text.replace(/ +$/, '')
+      const kept = runs.filter((r) => r.text !== '' || r.style.mathTex)
+      if (kept.length) visualLines.push(kept)
+    }
+    return { paragraphs, visualLines: visualLines.length ? visualLines : undefined }
   }
 
   // ---------- 节点 ----------
@@ -317,25 +468,32 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
     box: Box,
     paragraphs: SceneParagraph[],
     cs: CSSStyleDeclaration,
-    opt?: { align?: 'left' | 'center' | 'right'; decorative?: boolean; noWrap?: boolean; bg?: string },
+    opt?: {
+      align?: 'left' | 'center' | 'right'
+      decorative?: boolean
+      noWrap?: boolean
+      bg?: string
+      visualLines?: SceneRun[][]
+    },
   ) => {
     if (!paragraphs.length) return
     const font = resolveFontStack(cs.fontFamily)
     const bg = opt?.bg || slideBg
     const node: TextNode = {
       t: 'text',
-      x: pxToIn(box.x),
-      y: pxToIn(box.y),
-      w: pxToIn(Math.max(1, box.w)),
-      h: pxToIn(Math.max(1, box.h)),
+      x: toIn(box.x),
+      y: toIn(box.y),
+      w: toIn(Math.max(1, box.w)),
+      h: toIn(Math.max(1, box.h)),
       align: opt?.align || textAlignOf(cs),
       valign: 'top',
-      lineSpacingPt: round2(lineHeightPx(cs) * 0.75),
+      lineSpacingPt: toPt(lineHeightPx(cs)),
       paragraphs,
       baseColor: flattenColor(cs.color, bg),
-      baseSizePt: pxToPt(fontSizePx(cs)),
+      baseSizePt: toPt(fontSizePx(cs)),
       latin: font.latin,
       ea: font.ea,
+      visualLines: opt?.visualLines,
       decorative: opt?.decorative || undefined,
       noWrap: opt?.noWrap || undefined,
     }
@@ -344,9 +502,9 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
 
   const emitTextBlock = (el: Element) => {
     const cs = styleOf(el, win)
-    const paragraphs = collectInline(el, true)
+    const { paragraphs, visualLines } = collectInline(el, true)
     if (!paragraphs.length) return
-    pushText(textBoxOf(el, win), paragraphs, cs, { align: textAlignOf(cs) })
+    pushText(textBoxOf(el, win), paragraphs, cs, { align: textAlignOf(cs), visualLines })
   }
 
   const emitImage = (img: HTMLImageElement) => {
@@ -367,9 +525,9 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
     const shadow = fromMermaid ? undefined : parseBoxShadow(cs)
     nodes.push({
       t: 'image',
-      x: pxToIn(r.x), y: pxToIn(r.y), w: pxToIn(r.w), h: pxToIn(r.h),
+      x: toIn(r.x), y: toIn(r.y), w: toIn(r.w), h: toIn(r.h),
       src,
-      radiusPt: borderRadiusPx(cs) * 0.75,
+      radiusPt: toPt(borderRadiusPx(cs)),
       shadow,
       alt: img.getAttribute('alt') || undefined,
     })
@@ -381,7 +539,7 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
     const width = Math.max(1, num(cs.borderTopWidth, 1))
     nodes.push({
       t: 'rect',
-      x: pxToIn(r.x), y: pxToIn(r.y), w: pxToIn(r.w), h: pxToIn(width),
+      x: toIn(r.x), y: toIn(r.y), w: toIn(r.w), h: toIn(width),
       fill: flattenColor(cs.borderTopColor, slideBg),
     })
   }
@@ -398,11 +556,11 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
     const r = box || rectOf(el)
     nodes.push({
       t: 'card',
-      x: pxToIn(r.x), y: pxToIn(r.y), w: pxToIn(r.w), h: pxToIn(r.h),
+      x: toIn(r.x), y: toIn(r.y), w: toIn(r.w), h: toIn(r.h),
       fill: bg && bg.a > 0 ? flattenColor(cs.backgroundColor, slideBg) : undefined,
       lineColor: borderW > 0 ? flattenColor(cs.borderTopColor, slideBg) : undefined,
-      linePt: borderW > 0 ? round2(borderW * 0.75) : undefined,
-      radiusPt: radius * 0.75,
+      linePt: borderW > 0 ? toPt(borderW) : undefined,
+      radiusPt: toPt(radius),
       shadow,
     })
   }
@@ -417,10 +575,10 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
       const color = flattenColor((cs as any)[`border${side}Color`] || cs.borderTopColor, slideBg)
       if (side === 'Left' || side === 'Right') {
         const x = side === 'Left' ? r.x : r.x + r.w - w
-        nodes.push({ t: 'rect', x: pxToIn(x), y: pxToIn(r.y), w: pxToIn(w), h: pxToIn(r.h), fill: color })
+        nodes.push({ t: 'rect', x: toIn(x), y: toIn(r.y), w: toIn(w), h: toIn(r.h), fill: color })
       } else {
         const y = side === 'Top' ? r.y : r.y + r.h - w
-        nodes.push({ t: 'rect', x: pxToIn(r.x), y: pxToIn(y), w: pxToIn(r.w), h: pxToIn(w), fill: color })
+        nodes.push({ t: 'rect', x: toIn(r.x), y: toIn(y), w: toIn(r.w), h: toIn(w), fill: color })
       }
     }
   }
@@ -480,23 +638,23 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
     // PowerPoint 的精确行距会把首行整体下移约半个行距，若背景也只覆盖内容盒，
     // 末行（尤其收尾的 `}`）会露到色块外。演示里的色块本来就是含 padding 的。
     const fill = (parseColor(cs.backgroundColor)?.a || 0) > 0 ? flattenColor(cs.backgroundColor, slideBg) : undefined
-    const linePt = num(cs.borderTopWidth) > 0 ? round2(num(cs.borderTopWidth) * 0.75) : undefined
+    const linePt = num(cs.borderTopWidth) > 0 ? toPt(num(cs.borderTopWidth)) : undefined
     if (fill || linePt) {
       nodes.push({
         t: 'rect',
-        x: pxToIn(r.x), y: pxToIn(r.y), w: pxToIn(r.w), h: pxToIn(r.h),
+        x: toIn(r.x), y: toIn(r.y), w: toIn(r.w), h: toIn(r.h),
         fill,
         lineColor: linePt ? flattenColor(cs.borderTopColor, slideBg) : undefined,
         linePt,
-        radiusPt: borderRadiusPx(cs) * 0.75,
+        radiusPt: toPt(borderRadiusPx(cs)),
       })
     }
     nodes.push({
       t: 'code',
-      x: pxToIn(box.x), y: pxToIn(box.y), w: pxToIn(box.w), h: pxToIn(box.h),
+      x: toIn(box.x), y: toIn(box.y), w: toIn(box.w), h: toIn(box.h),
       lines,
-      sizePt: pxToPt(fontSizePx(codeCS)),
-      lineSpacingPt: round2(lineHeightPx(codeCS) * 0.75),
+      sizePt: toPt(fontSizePx(codeCS)),
+      lineSpacingPt: toPt(lineHeightPx(codeCS)),
       latin: font.latin,
       ea: font.ea,
       scale,
@@ -534,34 +692,43 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
         for (const side of ['Top', 'Right', 'Bottom', 'Left'] as const) {
           const w = num((cs as any)[`border${side}Width`])
           borders.push(w > 0.3
-            ? { color: flattenColor((cs as any)[`border${side}Color`] || cs.borderTopColor, slideBg), pt: round2(w * 0.75) }
+            ? { color: flattenColor((cs as any)[`border${side}Color`] || cs.borderTopColor, slideBg), pt: toPt(w) }
             : null)
         }
-        const paragraphs = collectInline(cell, true)
-        const text = paragraphs.map((p) => p.runs.map((r) => r.text).join('')).join('\n')
+        const { paragraphs, visualLines } = collectInline(cell, true)
+        // 表格单元格同样保留浏览器视觉行，避免 PowerPoint 用不同字体度量把
+        // 单行重新折成两行，撑高行高后把后续行挤出页面。
+        const text = (visualLines || paragraphs.map((p) => p.runs))
+          .map((line) => line.map((r) => r.text).join(''))
+          .join('\n')
         return {
           text,
           bold: isBold(cs) || undefined,
           color: flattenColor(cs.color, slideBg),
-          sizePt: pxToPt(fontSizePx(cs)),
+          sizePt: toPt(fontSizePx(cs)),
           latin: font.latin,
           ea: font.ea,
           fill: cellFill(cell, row),
           borders,
           align: textAlignOf(cs),
           valign: cs.verticalAlign === 'middle' ? 'middle' : cs.verticalAlign === 'bottom' ? 'bottom' : 'top',
-          margin: [num(cs.paddingTop) / 96, num(cs.paddingRight) / 96, num(cs.paddingBottom) / 96, num(cs.paddingLeft) / 96],
+          margin: [
+            toIn(num(cs.paddingTop)),
+            toIn(num(cs.paddingRight)),
+            toIn(num(cs.paddingBottom)),
+            toIn(num(cs.paddingLeft)),
+          ],
           header: cell.tagName === 'TH' || undefined,
         }
       })
     })
     nodes.push({
       t: 'table',
-      x: pxToIn(tableRect.x), y: pxToIn(tableRect.y),
-      w: pxToIn(colWidths.reduce((a, b) => a + b, 0) || tableRect.w),
-      h: pxToIn(rowHeights.reduce((a, b) => a + b, 0) || tableRect.h),
-      colW: colWidths.map((w) => round3(w / 96)),
-      rowH: rowHeights.map((h) => round3(h / 96)),
+      x: toIn(tableRect.x), y: toIn(tableRect.y),
+      w: toIn(colWidths.reduce((a, b) => a + b, 0) || tableRect.w),
+      h: toIn(rowHeights.reduce((a, b) => a + b, 0) || tableRect.h),
+      colW: colWidths.map(toIn),
+      rowH: rowHeights.map(toIn),
       rows: sceneRows,
     })
   }
@@ -575,9 +742,9 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
     const font = resolveFontStack(cs.fontFamily)
     const node: MathNode = {
       t: 'math',
-      x: pxToIn(r.x), y: pxToIn(r.y), w: pxToIn(r.w), h: pxToIn(r.h),
+      x: toIn(r.x), y: toIn(r.y), w: toIn(r.w), h: toIn(r.h),
       tex,
-      sizePt: pxToPt(fontSizePx(cs)),
+      sizePt: toPt(fontSizePx(cs)),
       color: flattenColor(cs.color, slideBg),
       latin: font.latin,
       ea: font.ea,
@@ -614,7 +781,7 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
             const font = resolveFontStack(pcs.fontFamily || liCS.fontFamily)
             const style: SceneRunStyle = {
               color: pseudoColor(pcs, slideBg),
-              sizePt: pxToPt(fontSizePx(pcs)),
+              sizePt: toPt(fontSizePx(pcs)),
               bold: isBold(pcs) || undefined,
               latin: font.latin,
               ea: font.ea,
@@ -628,7 +795,7 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
               const box = pseudoBox(li, pcs, size.w, size.h)
               nodes.push({
                 t: 'ellipse',
-                x: pxToIn(box.x), y: pxToIn(box.y), w: pxToIn(box.w), h: pxToIn(box.h),
+                x: toIn(box.x), y: toIn(box.y), w: toIn(box.w), h: toIn(box.h),
                 fill: flattenColor(pcs.backgroundColor, slideBg),
               })
             }
@@ -646,7 +813,7 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
         const font = resolveFontStack(pcs.fontFamily || liCS.fontFamily)
         const style: SceneRunStyle = {
           color: pseudoColor(pcs, slideBg),
-          sizePt: pxToPt(fontSizePx(pcs)),
+          sizePt: toPt(fontSizePx(pcs)),
           bold: isBold(pcs) || undefined,
           latin: font.latin,
           ea: font.ea,
@@ -661,9 +828,9 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
       if (ownBlocks.length) {
         ownBlocks.forEach((child) => emitBlock(child))
       } else {
-        const paragraphs = collectInline(li, true)
+        const { paragraphs, visualLines } = collectInline(li, true)
         if (paragraphs.length) {
-          pushText(textBoxOf(li, win), paragraphs, liCS, { align: textAlignOf(liCS) })
+          pushText(textBoxOf(li, win), paragraphs, liCS, { align: textAlignOf(liCS), visualLines })
         }
       }
 
@@ -718,8 +885,14 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
       // TOC 的条目没有项目符号（CSS content:none）；作为普通文本逐条渲染
       const lis = Array.from(el.querySelectorAll('li'))
       lis.forEach((li) => {
-        const paragraphs = collectInline(li, true)
-        if (paragraphs.length) pushText(textBoxOf(li, win), paragraphs, styleOf(li, win), { align: textAlignOf(styleOf(li, win)) })
+        const { paragraphs, visualLines } = collectInline(li, true)
+        const liStyle = styleOf(li, win)
+        if (paragraphs.length) {
+          pushText(textBoxOf(li, win), paragraphs, liStyle, {
+            align: textAlignOf(liStyle),
+            visualLines,
+          })
+        }
       })
       return
     }
@@ -739,7 +912,7 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
           const left = pcs.left !== 'auto' ? num(pcs.left) : -18
           nodes.push({
             t: 'rect',
-            x: pxToIn(r.x + left), y: pxToIn(r.y), w: pxToIn(w), h: pxToIn(r.h),
+            x: toIn(r.x + left), y: toIn(r.y), w: toIn(w), h: toIn(r.h),
             fill: flattenColor(pcs.backgroundColor || style.borderTopColor, slideBg),
           })
         })
@@ -762,13 +935,17 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
         })
         const own = Array.from(el.childNodes).some((n) => n.nodeType === 3 && (n.nodeValue || '').trim())
         if (own) {
-          const paragraphs = collectInline(el, true)
-          if (paragraphs.length) pushText(textBoxOf(el, win), paragraphs, cs, { align: textAlignOf(cs) })
+          const { paragraphs, visualLines } = collectInline(el, true)
+          if (paragraphs.length) {
+            pushText(textBoxOf(el, win), paragraphs, cs, { align: textAlignOf(cs), visualLines })
+          }
         }
       } else {
         // 只有行内元素（常见：`> 引用` 单段）⇒ 整块作为一个文本块输出
-        const paragraphs = collectInline(el, true)
-        if (paragraphs.length) pushText(textBoxOf(el, win), paragraphs, cs, { align: textAlignOf(cs) })
+        const { paragraphs, visualLines } = collectInline(el, true)
+        if (paragraphs.length) {
+          pushText(textBoxOf(el, win), paragraphs, cs, { align: textAlignOf(cs), visualLines })
+        }
       }
       return
     }
@@ -788,12 +965,16 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
         // 容器自身的纯文本（rare）：只取不在子块里的文本
         const own = Array.from(el.childNodes).some((n) => n.nodeType === 3 && (n.nodeValue || '').trim())
         if (own) {
-          const paragraphs = collectInline(el, true)
-          if (paragraphs.length) pushText(textBoxOf(el, win), paragraphs, cs, { align: textAlignOf(cs) })
+          const { paragraphs, visualLines } = collectInline(el, true)
+          if (paragraphs.length) {
+            pushText(textBoxOf(el, win), paragraphs, cs, { align: textAlignOf(cs), visualLines })
+          }
         }
       } else {
-        const paragraphs = collectInline(el, true)
-        if (paragraphs.length) pushText(textBoxOf(el, win), paragraphs, cs, { align: textAlignOf(cs) })
+        const { paragraphs, visualLines } = collectInline(el, true)
+        if (paragraphs.length) {
+          pushText(textBoxOf(el, win), paragraphs, cs, { align: textAlignOf(cs), visualLines })
+        }
       }
       return
     }
@@ -822,7 +1003,7 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
       const font = resolveFontStack(pcs.fontFamily)
       const style: SceneRunStyle = {
         color: pseudoColor(pcs, slideBg),
-        sizePt: pxToPt(fsz),
+        sizePt: toPt(fsz),
         bold: isBold(pcs) || undefined,
         latin: font.latin,
         ea: font.ea,
@@ -851,10 +1032,10 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
     }
     nodes.push({
       t: 'rect',
-      x: pxToIn(box.x), y: pxToIn(box.y), w: pxToIn(box.w), h: pxToIn(box.h),
+      x: toIn(box.x), y: toIn(box.y), w: toIn(box.w), h: toIn(box.h),
       fill: fill.color,
       gradient: fill.gradient ? { color: fill.color } : undefined,
-      radiusPt: borderRadiusPx(pcs) * 0.75,
+      radiusPt: toPt(borderRadiusPx(pcs)),
     })
   })
 
@@ -887,7 +1068,7 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
       const font = resolveFontStack(pcs.fontFamily)
       const style: SceneRunStyle = {
         color: pseudoColor(pcs, slideBg),
-        sizePt: pxToPt(fsz),
+        sizePt: toPt(fsz),
         latin: font.latin,
         ea: font.ea,
       }
@@ -933,8 +1114,8 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
 
   const overflow = measureSceneOverflow(
     nodes,
-    slideRect.w / PX_PER_IN,
-    slideRect.h / PX_PER_IN,
+    SLIDE_W_IN,
+    SLIDE_H_IN,
   )
   const overflowPx = Math.max(overflow.top, overflow.right, overflow.bottom, overflow.left)
   if (overflowPx > EPS) {

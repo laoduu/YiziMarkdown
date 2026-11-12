@@ -833,7 +833,7 @@ export const tr = {
     overflow: "Taşma işlemi",
     overflowWarn: "Uyar ve sayfaları listele",
     overflowShrink: "Metni otomatik küçült",
-    overflowHint: "İçerik sabit 1280×720 görünümde ölçülür; taşan sayfalar dışa aktarma sonrası listelenir.",
+    overflowHint: "İçerik, yazı tipi ve göreli boyutlar korunarak sunum ekranının 16:9 görünümünde ölçülür; taşan sayfalar dışa aktarma sonrası listelenir.",
     preview: "Sunumu önizle",
     previewHint: "Sunum geçerli pencere boyutunu kullanır, bu nedenle düzen 1280×720 dışa aktarımından biraz farklı olabilir.",
     export: "Dışa aktar",

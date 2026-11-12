@@ -850,7 +850,7 @@ export const zhTW = {
     overflow: "超頁處理",
     overflowWarn: "警告並列出頁碼",
     overflowShrink: "自動壓縮字級",
-    overflowHint: "內容依固定 1280×720 基準測量；超頁會在匯出後列出。",
+    overflowHint: "依簡報所在螢幕的 16:9 視窗測量，字號與相對大小保持不變；超頁會在匯出後列出。",
     preview: "先看演示效果",
     previewHint: "演示使用目前視窗尺寸，版式可能與 1280×720 的匯出略有差異。",
     export: "匯出",

@@ -833,7 +833,7 @@ export const pt = {
     overflow: "Tratamento de excesso",
     overflowWarn: "Avisar e listar páginas",
     overflowShrink: "Reduzir o texto automaticamente",
-    overflowHint: "O conteúdo é medido em uma janela fixa de 1280×720; as páginas com excesso são listadas após a exportação.",
+    overflowHint: "O conteúdo é medido na janela 16:9 da tela de apresentação, preservando fontes e proporções; as páginas com excesso são listadas após a exportação.",
     preview: "Ver apresentação",
     previewHint: "A apresentação usa o tamanho atual da janela, então o layout pode diferir ligeiramente da exportação em 1280×720.",
     export: "Exportar",

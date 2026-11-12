@@ -833,7 +833,7 @@ export const pl = {
     overflow: "Obsługa przepełnienia",
     overflowWarn: "Ostrzeż i wylistuj strony",
     overflowShrink: "Automatycznie zmniejsz tekst",
-    overflowHint: "Treść jest mierzona w stałym oknie 1280×720; przepełnione strony są wylistowane po eksporcie.",
+    overflowHint: "Treść jest mierzona w oknie 16:9 ekranu prezentacji z zachowaniem rozmiaru czcionek i proporcji; przepełnione strony są wylistowane po eksporcie.",
     preview: "Pokaż prezentację",
     previewHint: "Pokaz używa bieżącego rozmiaru okna, więc układ może nieznacznie różnić się od eksportu 1280×720.",
     export: "Eksportuj",

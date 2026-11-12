@@ -833,7 +833,7 @@ export const it = {
     overflow: "Gestione del superamento",
     overflowWarn: "Avvisa ed elenca le pagine",
     overflowShrink: "Riduci automaticamente il testo",
-    overflowHint: "Il contenuto viene misurato in una finestra fissa 1280×720; le pagine in eccesso vengono elencate dopo l’esportazione.",
+    overflowHint: "Il contenuto viene misurato nella finestra 16:9 dello schermo di presentazione, mantenendo dimensioni dei caratteri e proporzioni; le pagine in eccesso vengono elencate dopo l’esportazione.",
     preview: "Anteprima presentazione",
     previewHint: "La presentazione usa le dimensioni attuali della finestra, quindi il layout può differire leggermente dall’esportazione 1280×720.",
     export: "Esporta",

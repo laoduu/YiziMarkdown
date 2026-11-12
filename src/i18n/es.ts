@@ -833,7 +833,7 @@ export const es = {
     overflow: "Gestión de desbordamiento",
     overflowWarn: "Advertir y listar páginas",
     overflowShrink: "Reducir el texto automáticamente",
-    overflowHint: "El contenido se mide en una ventana fija de 1280×720; las páginas desbordadas se listan después de exportar.",
+    overflowHint: "El contenido se mide en la ventana 16:9 de la pantalla de presentación, conservando tamaños de fuente y proporciones; las páginas desbordadas se listan después de exportar.",
     preview: "Ver presentación",
     previewHint: "La presentación usa el tamaño de ventana actual, así que el diseño puede diferir ligeramente de la exportación a 1280×720.",
     export: "Exportar",

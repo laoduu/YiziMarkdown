@@ -3,7 +3,7 @@
  *
  * 顺序：
  *   parseDeck（与演示同一份解析）
- *     → 隐藏 iframe 1280×720（PptxFrame）
+ *     → 隐藏 iframe（演示屏幕 16:9 视口，PptxFrame）
  *     → 逐页 setSlide + buildSlideScene（DOM → 场景图）
  *     → 收集 TeX 调 Rust latex_to_omml
  *     → buildPptx（pptxgenjs + JSZip 后处理）
@@ -22,6 +22,7 @@ import { loadSlideshowThemeCss } from './slideTheme.ts'
 import { resolveColAlign, type SlideColAlign, type SlideColStyle } from './slideColumns.ts'
 import { slideTypographyVars, DEFAULT_SLIDE_TYPOGRAPHY, type SlideTypography } from './slideTypography.ts'
 import { invokeTauriOrThrow } from './tauri.ts'
+import { presentationViewport } from './pptxViewport.ts'
 import type { PptxWarning, SceneNode, SlideScene } from './pptxTypes.ts'
 
 export type PptxOverflowMode = 'warn' | 'shrink'
@@ -49,6 +50,8 @@ export interface PptxExportOptions {
   includeNotes: boolean
   includeFooter: boolean
   overflowMode: PptxOverflowMode
+  /** 演示模式实际视口；缺省读取当前屏幕并收敛到 16:9 */
+  viewport?: { width: number; height: number }
   /** 不传 = 全部页 */
   range?: PptxRange
   onProgress?: (done: number, total: number, label: string) => void
@@ -148,7 +151,7 @@ function attachOmml(scenes: SlideScene[], ommlMap: Map<string, string>): void {
 }
 
 /**
- * 让浏览器按缩小后的字号重新排版，直到内容装进 1280×720 的可视区。
+ * 让浏览器按缩小后的字号重新排版，直到内容装进当前演示视口。
  *
  * `initial` 必须是**在当前页基础字号下**测出来的场景（调用方已先 setFontScale(1)），
  * 不能是上一页压缩后的残留状态。每次只从更小的档位继续向下试，避免先放大再缩小的
@@ -206,6 +209,10 @@ export async function exportPptx(opts: PptxExportOptions): Promise<PptxExportRes
   const deckTocHtml = buildDeckTocHtml(allSlides)
   const themeCss = await loadSlideshowThemeCss(opts.theme, opts.customCssBase)
   throwIfAborted(opts.signal)
+  const viewport = presentationViewport(
+    opts.viewport?.width ?? window.screen.width,
+    opts.viewport?.height ?? window.screen.height,
+  )
 
   const frame = await PptxFrame.create({
     theme: opts.theme,
@@ -218,6 +225,8 @@ export async function exportPptx(opts: PptxExportOptions): Promise<PptxExportRes
     enabledPlugins,
     pluginConfigs,
     docBaseDir: opts.docBaseDir ?? null,
+    viewportWidth: viewport.width,
+    viewportHeight: viewport.height,
   })
 
   const scenes: SlideScene[] = []

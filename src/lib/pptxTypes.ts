@@ -76,6 +76,13 @@ export interface TextNode {
   baseSizePt: number
   latin: string
   ea: string
+  /**
+   * 浏览器实际排出的视觉行（已按换行切成 runs）。
+   *
+   * 有该字段时，生成层会写死这些换行并关闭 PowerPoint 的二次自动换行；
+   * 没有时退回 paragraphs，让 PowerPoint 自行排版（旧调用方 / 无法测量的场景）。
+   */
+  visualLines?: SceneRun[][]
   /** 装饰性文本（大序号 / 引号 / agenda 数字）：不参与超页检测的编辑性修正 */
   decorative?: boolean
   /** 文本框不换行（代码块：用横向滚动语义，宁可溢出也不折行） */
