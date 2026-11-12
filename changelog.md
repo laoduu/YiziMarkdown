@@ -60,6 +60,23 @@
 **验证**
 - `cargo test strips_windows_verbatim_prefix_for_display` 与 `normalize_app_path_keeps_platform_behavior` 通过；dev 客户端已自动重编译并重启。
 
+### 拖动 AI 面板宽度时滚动条不跟随（2026-11-12）
+
+**现象**
+- 源码 / 实时模式下，拖动右侧 AI 助手面板的宽度，编辑器右侧的自绘滚动条停在旧位置，表现为一根孤立的细条；直到发生滚动才跳回正确位置。并排 / 预览模式不受影响。
+
+**根因**
+- 自绘滚动条只监听滚动、窗口 resize 与 `.cm-content` 的尺寸变化，没有观察滚动容器 `.cm-scroller` 自身的宽度变化。
+- 拖动 AI 面板时变的是 `.cm-scroller` 的宽度；正文列受 `max-width` 限制，拖动过程中 `.cm-content` 宽度常常不变，因此不触发重测。
+
+**修复**
+- `ResizeObserver` 改为同时观察 `.cm-scroller` 本身与 `.cm-content`，容器尺寸一变就重算滚动条的 `left / top / height`。
+- 滚动条是 `position: fixed` 的独立细条，重测不会反过来影响容器尺寸，不会形成 ResizeObserver 循环。
+
+**验证**
+- dev 实测：按住 AI 面板边框拖动时，滚动条实时跟随新的面板边缘；松开后仍保持正确位置。
+- `npx tsc --noEmit` 通过。
+
 ## v0.4.3
 
 > **已发布**（2026-11-09）：发布 tag `v0.4.3`。`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已同步到 `0.4.3`。用户向说明见 `docs/changelog/CHANGELOG-V0.4.3.md`。

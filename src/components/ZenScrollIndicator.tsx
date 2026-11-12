@@ -97,12 +97,13 @@ export default function ZenScrollIndicator({ active, suppressed = false }: ZenSc
       scrollerRef.current = el
       if (el) {
         el.addEventListener('scroll', onScroll, { passive: true })
-        // 内容增减（打字、插图、折叠）后滚动范围会变
+        // 内容增减（打字、插图、折叠）后滚动范围会变；**滚动容器自身**的尺寸变化
+        // （拖动 AI 面板、折叠侧栏、窗口缩放）会移动右边缘 —— 不观察它，细条会留在
+        // 旧位置，变成一根孤立的滚动条，直到下一次滚动才归位。
+        ro = new ResizeObserver(measure)
+        ro.observe(el)
         const content = el.querySelector<HTMLElement>('.cm-content')
-        if (content) {
-          ro = new ResizeObserver(measure)
-          ro.observe(content)
-        }
+        if (content) ro.observe(content)
       }
       measure()
     }
