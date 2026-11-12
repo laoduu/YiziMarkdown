@@ -52,6 +52,11 @@ test('阅读模式任务列表不叠加列表圆点', () => {
     css,
     /\.reader-content \.contains-task-list,\s*\.reader-content \.task-list-item \{[^}]*list-style: none;/s,
   )
+  assert.match(css, /\.reader-content \.contains-task-list \{[^}]*padding-left: 0;/s)
+  assert.match(
+    css,
+    /\.reader-content \.task-list-item > ul,\s*\.reader-content \.task-list-item > ol \{[^}]*padding-left: 1\.45em;/s,
+  )
 })
 
 // ---- 混合语法专项：预览点击必须按行回写，不能靠 textContent 全等匹配 ----

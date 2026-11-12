@@ -200,6 +200,13 @@
 .reader-content .task-list-item {
   list-style: none;
 }
+.reader-content .contains-task-list {
+  padding-left: 0;
+}
+.reader-content .task-list-item > ul,
+.reader-content .task-list-item > ol {
+  padding-left: 1.45em;
+}
 .reader-content li > ul,
 .reader-content li > ol { margin: 0.25em 0 0.4em; }
 .reader-content blockquote {
