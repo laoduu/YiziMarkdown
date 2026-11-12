@@ -18,6 +18,7 @@ import type {
   CodeLine, MathNode, PptxWarning, SceneNode, SceneOverflow, SceneParagraph, SceneRun, SceneRunStyle,
   SceneTableCell, SlideScene, TextNode,
 } from './pptxTypes.ts'
+import { splitInlineMath } from './inlineMath.ts'
 import {
   borderRadiusPx, cleanText, colorAlpha, contentBoxPx, flattenColor, fontSizePx, hasStrike,
   hasUnderline, isBold, letterSpacingPt, lineHeightPx, num, parseBoxShadow, parseColor,
@@ -356,10 +357,21 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
     ) => {
       if (!text) return
       const style = trimRun({ ...runStyleOf(el, bg), ...extra })
-      appendRun(current, text, style)
-      const line = lineMap.get(lineIndex) || []
-      appendRun(line, text, style)
-      lineMap.set(lineIndex, line)
+      for (const segment of splitInlineMath(text)) {
+        if (segment.kind === 'text') {
+          appendRun(current, segment.text, style)
+          const line = lineMap.get(lineIndex) || []
+          appendRun(line, segment.text, style)
+          lineMap.set(lineIndex, line)
+          continue
+        }
+
+        const mathStyle = trimRun({ ...style, mathTex: segment.tex })
+        appendRun(current, `$${segment.tex}$`, mathStyle)
+        const line = lineMap.get(lineIndex) || []
+        appendRun(line, `$${segment.tex}$`, mathStyle)
+        lineMap.set(lineIndex, line)
+      }
       lastVisualLine = lineIndex
     }
 

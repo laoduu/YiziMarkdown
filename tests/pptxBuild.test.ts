@@ -12,6 +12,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import JSZip from 'jszip'
 import { buildPptx } from '../src/lib/pptxBuild.ts'
+import { splitInlineMath } from '../src/lib/inlineMath.ts'
 import type { SceneRunStyle, SlideScene } from '../src/lib/pptxTypes.ts'
 
 const LATIN = 'Segoe UI'
@@ -22,6 +23,7 @@ function runStyle(extra: Partial<SceneRunStyle> = {}): SceneRunStyle {
 }
 
 const INLINE_OMML = '<m:oMath><m:r><m:t>x</m:t></m:r></m:oMath>'
+const INLINE_OMML_2 = '<m:oMath><m:r><m:t>z</m:t></m:r></m:oMath>'
 const DISPLAY_OMML = '<m:oMath><m:r><m:t>y</m:t></m:r></m:oMath>'
 
 function sampleScene(): SlideScene {
@@ -121,6 +123,43 @@ test('PPTX：公式转成 mc:AlternateContent + a14:m + OMML，且命名空间�
   assert.ok(!xml.includes('\uE000'), '导出后仍有公式占位标记')
   // OMML run 带字号/颜色/Cambria Math
   assert.match(xml, /<m:r><a:rPr lang="en-US" sz="2000"><a:solidFill><a:srgbClr val="F8FAFC"\/><\/a:solidFill><a:latin typeface="Cambria Math"/)
+})
+
+test('PPTX：同一段落中的多个行内公式全部转成原生公式', async () => {
+  const scene = sampleScene()
+  scene.nodes = [{
+    t: 'text',
+    x: 1, y: 1, w: 8, h: 0.8,
+    align: 'left', valign: 'top', lineSpacingPt: 28,
+    baseColor: 'F8FAFC', baseSizePt: 20, latin: LATIN, ea: EA,
+    paragraphs: [{
+      runs: [
+        { text: '', style: runStyle({ mathTex: '1.01^{365}', mathOmml: INLINE_OMML }) },
+        { text: '，而 ', style: runStyle() },
+        { text: '', style: runStyle({ mathTex: '1.019^{365}', mathOmml: INLINE_OMML_2 }) },
+      ],
+    }],
+  }]
+  const { xml } = await buildXml(scene)
+  assert.equal((xml.match(/<a14:m>/g) || []).length, 2, xml)
+  assert.match(xml, /\$1\.01\^\{365\}\$/)
+  assert.match(xml, /\$1\.019\^\{365\}\$/)
+  assert.ok(!/[\uE000-\uF8FF]/.test(xml), '导出后仍有公式占位标记')
+})
+
+test('PPTX：KaTeX 未生成 DOM 时仍能识别正文原始 TeX', () => {
+  assert.deepEqual(
+    splitInlineMath('数学思维：$1.01^{365}$；对比 $1.019^{365} = 962.89$'),
+    [
+      { kind: 'text', text: '数学思维：' },
+      { kind: 'math', tex: '1.01^{365}' },
+      { kind: 'text', text: '；对比 ' },
+      { kind: 'math', tex: '1.019^{365} = 962.89' },
+    ],
+  )
+  assert.deepEqual(splitInlineMath('价格 \\$5，不是公式'), [
+    { kind: 'text', text: '价格 \\$5，不是公式' },
+  ])
 })
 
 test('PPTX：公式的 MC 信封包住整个 p:sp（PowerPoint 原生写法），不写在 a:p 里', async () => {

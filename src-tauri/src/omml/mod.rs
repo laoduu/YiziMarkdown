@@ -46,4 +46,12 @@ mod tests {
         assert!(x.contains("<m:sSup>"));
         assert!(x.contains('E') && x.contains("<m:t>c</m:t>"));
     }
+
+    #[test]
+    fn decimal_base_with_large_superscript() {
+        let x = to_omath("1.01^{365}");
+        assert!(x.contains("<m:sSup>"), "{}", x);
+        assert!(x.contains("<m:t>365</m:t>"), "{}", x);
+        assert!(x.contains("1.0"), "{}", x);
+    }
 }
