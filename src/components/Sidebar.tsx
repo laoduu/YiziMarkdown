@@ -1,5 +1,5 @@
 import { computeOutlineItems } from '../lib/headingId'
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import {
   ChevronRight,
   ChevronDown,
@@ -21,6 +21,7 @@ import CloudBrowser from './CloudBrowser'
 import Dialog from './Dialog'
 import { openContextMenu, type ContextMenuItem } from './ContextMenu'
 import { invokeTauriOrThrow } from '../lib/tauri'
+import { clampSidebarWidth, useSettingsStore } from '../stores/settingsStore'
 
 interface SidebarProps {
   visible: boolean
@@ -121,6 +122,50 @@ export default function Sidebar({ visible, currentFile, currentFolder, content, 
   const [activeTab, setActiveTab] = useState<'files' | 'outline' | 'cloud'>('outline')
   const [fileTree, setFileTree] = useState<FileNode[]>([])
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
+
+  // 拖拽调节侧栏宽度：拖动中的宽度只放本地 state，松手才写回设置存档，
+  // 避免每帧触发整棵文件树重渲染、也避免把拖动过程写进 localStorage。
+  const sidebarWidth = useSettingsStore(s => s.sidebarWidth)
+  const [dragWidth, setDragWidth] = useState<number | null>(null)
+  const dragWidthRef = useRef<number | null>(null)
+  const dragStartX = useRef(0)
+  const dragStartWidth = useRef(0)
+  const isDragging = dragWidth !== null
+  // 存档值可能来自更宽的窗口（或手改 localStorage），读取时按当前窗口再收一次
+  const resolvedWidth = dragWidth ?? clampSidebarWidth(sidebarWidth, window.innerWidth)
+
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    dragStartX.current = e.clientX
+    dragStartWidth.current = resolvedWidth
+    dragWidthRef.current = resolvedWidth
+    setDragWidth(resolvedWidth)
+  }
+
+  useEffect(() => {
+    if (!isDragging) return
+    const handleDragMove = (e: MouseEvent) => {
+      const width = clampSidebarWidth(
+        dragStartWidth.current + (e.clientX - dragStartX.current),
+        window.innerWidth
+      )
+      dragWidthRef.current = width
+      setDragWidth(width)
+    }
+    const handleDragEnd = () => {
+      if (dragWidthRef.current !== null) {
+        useSettingsStore.getState().setField('sidebarWidth', dragWidthRef.current)
+      }
+      dragWidthRef.current = null
+      setDragWidth(null)
+    }
+    document.addEventListener('mousemove', handleDragMove)
+    document.addEventListener('mouseup', handleDragEnd)
+    return () => {
+      document.removeEventListener('mousemove', handleDragMove)
+      document.removeEventListener('mouseup', handleDragEnd)
+    }
+  }, [isDragging])
 
   // 读取当前目录
   const readFolder = useCallback(async (folderPath: string) => {
@@ -268,7 +313,15 @@ export default function Sidebar({ visible, currentFile, currentFolder, content, 
   if (!visible) return null
 
   return (
-    <div className="sidebar">
+    <div
+      className="sidebar"
+      style={{ width: resolvedWidth, transition: isDragging ? 'none' : undefined }}
+    >
+      {/* 拖拽手柄：右侧边缘，与 AI 面板左侧手柄同款 */}
+      <div
+        onMouseDown={handleResizeStart}
+        className={`absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-[var(--editor-accent)] transition-colors z-20 ${isDragging ? 'bg-[var(--editor-accent)]' : 'bg-transparent'}`}
+      />
       {/* 标签页 */}
       <div className="flex border-b border-[var(--editor-border)]">
         <TabButton 
