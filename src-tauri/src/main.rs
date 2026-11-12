@@ -2210,6 +2210,8 @@ async fn export_docx_pandoc(
     md: String,
     base_dir: Option<String>,
     template_path: Option<String>,
+    include_toc: bool,
+    toc_title: String,
 ) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
         let base = base_dir.map(PathBuf::from);
@@ -2219,6 +2221,8 @@ async fn export_docx_pandoc(
             Path::new(&path),
             base.as_deref(),
             template.as_deref(),
+            include_toc,
+            &toc_title,
         )
     })
     .await

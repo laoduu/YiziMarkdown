@@ -1,7 +1,7 @@
 /**
  * DOCX 导出弹窗：只负责「导出前选参数」，真正的保存路径与导出由 App 侧继续完成。
  *
- * 与 PPTX 导出弹窗保持同一套视觉（dialog token / 圆角 / 遮罩）：
+ * 与 PPTX 导出弹窗保持同一套视觉（dialog token / 圆角 / 遮罩），但选项更少：
  *   - 导出方式：内置 OOXML 生成器 / 本机 Pandoc
  *   - Pandoc 方式可选择 .docx reference document 作为 Word 模板
  *   - 是否导出主题色（关闭后标题、表头、代码高亮统一走黑白灰）

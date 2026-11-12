@@ -161,46 +161,36 @@ export async function prepareMarkdownForDocx(
  *
  * Pandoc 自己支持提示块和常见 Markdown 扩展，所以这里不做 DOCX 生成器专用的
  * 注释标记转换；只处理两类缺少 Pandoc 等价能力会明显丢效果的内容：
- *   · 显式 `[toc]` → `--toc` 参数（同时移除占位行）；普通带标题文档绝不自动加目录
+ *   · 显式 `[toc]` → `--toc` 参数 + 原位标记；Pandoc 先生成完整 TOC，
+ *     Rust 侧再把整个 TOC 内容控件移动到标记处
  *   · Mermaid → SVG 图片，失败时仍保留原代码块
  */
 export async function prepareMarkdownForPandoc(
   markdown: string,
   renderMermaid?: (code: string) => Promise<string | null>,
   tocMaxLevel = 6,
-  tocTitle = 'Table of Contents',
 ): Promise<{ markdown: string; includeToc: boolean }> {
   const md = new MarkdownIt({ html: true })
   const hasEligibleHeading = collectTocItems(md.parse(splitFrontMatter(markdown).body, {}))
     .some((item) => item.level <= tocMaxLevel)
   const includeToc = hasTocPlaceholder(markdown) && hasEligibleHeading
-  let out = replaceTocPlaceholders(markdown, includeToc ? pandocTocField(tocTitle, tocMaxLevel) : '')
+  let out = replaceTocPlaceholders(
+    markdown,
+    includeToc ? pandocTocMarkerBlock() : '',
+  )
   if (renderMermaid) out = await replaceMermaidFences(out, renderMermaid)
   return { markdown: out, includeToc }
 }
 
-function escapeXml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
+/** 与 Rust `PANDOC_TOC_MARKER` 同字符串。使用 ASCII 避免编码差异。 */
+export const PANDOC_TOC_MARKER = 'YIZIMARKDOWN_PANDOC_TOC_7F3A2C91'
 
 /**
- * Pandoc 的 `--toc` 只能把目录放在文档开头。要保留 `[toc]` 的实际位置，
- * 就在该占位处写一个原生 Word TOC 域；用户更新域后由 Word 填充条目和页码。
+ * 保留 Pandoc 原始 TOC 内容控件的外观与交互，只在 Markdown 中留下移动目标。
+ * 不能用手工空 TOC 域替代：那会丢失 TOCHeading、内容控件边框和更新菜单。
  */
-export function pandocTocField(title: string, maxLevel = 6): string {
-  const instr = ` TOC \\o "1-${Math.max(1, Math.min(9, Math.round(maxLevel)))}" \\h \\z \\u `
-  const xml = [
-    '<w:p>',
-    '<w:r><w:fldChar w:fldCharType="begin"/></w:r>',
-    `<w:r><w:instrText xml:space="preserve">${instr}</w:instrText></w:r>`,
-    '<w:r><w:fldChar w:fldCharType="separate"/></w:r>',
-    `<w:r><w:rPr><w:b/></w:rPr><w:t>${escapeXml(title)}</w:t></w:r>`,
-    '<w:r><w:fldChar w:fldCharType="end"/></w:r>',
-    '</w:p>',
-  ].join('')
-  return '```{=openxml}\n' + xml + '\n```'
+export function pandocTocMarkerBlock(): string {
+  return '```{=openxml}\n'
+    + `<w:p><w:r><w:t>${PANDOC_TOC_MARKER}</w:t></w:r></w:p>\n`
+    + '```'
 }

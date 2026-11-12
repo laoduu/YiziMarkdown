@@ -99,6 +99,14 @@ const PAGE_CONTENT_W: f64 = 9026.0;
 const TOC_FRAME_PAD_X: u32 = 200;
 /// 单格表格的上下内边距（twips），约 6pt。
 const TOC_FRAME_PAD_Y: u32 = 120;
+/// Word「目录」内容控件：点击后显示 TOC 边框和更新目录操作。
+const TOC_CONTENT_CONTROL_OPEN: &str = concat!(
+    "<w:sdt><w:sdtPr><w:docPartObj>",
+    "<w:docPartGallery w:val=\"Table of Contents\"/>",
+    "<w:docPartUnique/>",
+    "</w:docPartObj></w:sdtPr><w:sdtContent>"
+);
+const TOC_CONTENT_CONTROL_CLOSE: &str = "</w:sdtContent></w:sdt>";
 
 /// 目录条目：级别、纯文字、**估算**页码。
 #[derive(Clone)]
@@ -2941,6 +2949,7 @@ impl DocxBuilder {
                     heading_before
                 ));
             }
+            self.body.push_str(TOC_CONTENT_CONTROL_OPEN);
             let w = self.metrics.text_width_twips();
             let border = if self.theme.border.trim().is_empty() { "BFBFBF" } else { self.theme.border.as_str() };
             let fill = if self.theme.surface.trim().is_empty() { "F5F5F5" } else { self.theme.surface.as_str() };
@@ -2964,6 +2973,8 @@ impl DocxBuilder {
                  <w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"{fill}\"/></w:tcPr>",
                 w = w, border = border, fill = fill, px = TOC_FRAME_PAD_X, py = TOC_FRAME_PAD_Y
             ));
+        } else {
+            self.body.push_str(TOC_CONTENT_CONTROL_OPEN);
         }
         let title_before = if framed { 0 } else { heading_before };
         self.body.push_str(&format!(
@@ -2995,6 +3006,7 @@ impl DocxBuilder {
             if framed {
                 self.body.push_str("</w:tc></w:tr></w:tbl>");
             }
+            self.body.push_str(TOC_CONTENT_CONTROL_CLOSE);
             return;
         }
 
@@ -3045,6 +3057,7 @@ impl DocxBuilder {
         if framed {
             self.body.push_str("</w:tc></w:tr></w:tbl>");
         }
+        self.body.push_str(TOC_CONTENT_CONTROL_CLOSE);
     }
 
     fn render_block_event(&mut self, iter: &mut EventIter, ev: Event) {
@@ -4811,6 +4824,24 @@ mod tests {
         println!("已导出: {}", out.display());
     }
 
+    /// 手动运行：生成一份包含目录的最小 DOCX，用真实 Word 检查目录内容控件。
+    /// cargo test write_toc_probe_docx_for_inspection -- --ignored --nocapture
+    #[test]
+    #[ignore = "手动运行，产出 target/toc-probe.docx 供 Word 验收目录内容控件"]
+    fn write_toc_probe_docx_for_inspection() {
+        let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let bytes = markdown_to_docx(
+            "# 第一章\n\n[toc]\n\n正文\n\n## 第二章\n",
+            test_theme(),
+            None,
+            RemoteImages::new(),
+        )
+        .expect("generate toc probe");
+        let out = manifest.join("target/toc-probe.docx");
+        std::fs::write(&out, bytes).expect("write toc probe");
+        println!("已导出: {}", out.display());
+    }
+
     /// 手动运行：产出项目符号验收样本，用**真实 Word** 打开逐级核对字形。
     ///
     /// 背景：`numbering_xml()` 曾把 Unicode 码位（`U+2022`/`U+25E6`/`U+25AA`）配 Symbol 字体，
@@ -5192,6 +5223,13 @@ mod tests {
     fn toc_field_uses_layout_max_level_and_bookmarks() {
         let md = "# A\n\n<!--yizi:toc-->\n\n## B\n\n### C\n\n#### D\n\n##### E\n\n###### F\n";
         let doc = xml_of(md);
+        assert!(doc.contains(TOC_CONTENT_CONTROL_OPEN), "目录内容控件缺失: {}", doc);
+        assert!(doc.contains(TOC_CONTENT_CONTROL_CLOSE), "目录内容控件未闭合: {}", doc);
+        let sdt = doc.find(TOC_CONTENT_CONTROL_OPEN).unwrap();
+        let heading = doc.find("<w:pStyle w:val=\"TocHeading\"/>").unwrap();
+        let field = doc.find(" TOC \\o \"1-6\"").unwrap();
+        let close = doc.find(TOC_CONTENT_CONTROL_CLOSE).unwrap();
+        assert!(sdt < heading && heading < field && field < close, "目录内容控件顺序错误: {}", doc);
         // 目录收全部 1-6 级
         assert!(doc.contains(" TOC \\o \"1-6\" \\h \\z \\u "), "目录域层级不对: {}", doc);
         assert!(doc.contains("<w:pStyle w:val=\"TOC1\"/>"), "TOC1 缺失: {}", doc);
@@ -5217,6 +5255,12 @@ mod tests {
         assert!(framed.contains("<w:tbl><w:tblPr><w:tblW w:w=\"9026\""), "带框目录未用单格表格包裹: {}", framed);
         assert!(framed.contains("<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"F0F7FF\"/>"), "目录背景缺失: {}", framed);
         assert!(framed.contains("w:color=\"D5E2FF\""), "目录边框颜色缺失: {}", framed);
+        assert!(
+            framed.find(TOC_CONTENT_CONTROL_OPEN) < framed.find("<w:tbl>")
+                && framed.find(TOC_CONTENT_CONTROL_CLOSE) > framed.rfind("</w:tbl>"),
+            "带框目录内容控件没有完整包住表格: {}",
+            framed
+        );
         // DOCX 的目录是 TOC 域 + TOC1-6 样式，不能额外套一层无序列表编号
         assert!(!framed.contains("<w:numPr>"), "DOCX 目录不应带无序列表编号: {}", framed);
 
@@ -5229,6 +5273,13 @@ mod tests {
 
         let plain = docx_part(md, test_theme(), "word/document.xml");
         assert!(!plain.contains("w:fill=\"F0F7FF\""), "关闭目录边框后仍导出了背景: {}", plain);
+        assert!(
+            plain.find(TOC_CONTENT_CONTROL_OPEN) < plain.find("<w:pStyle w:val=\"TocHeading\"/>")
+                && plain.find(TOC_CONTENT_CONTROL_CLOSE)
+                    > plain.find("<w:pStyle w:val=\"TOC1\"/>"),
+            "无框目录内容控件没有包住标题与条目: {}",
+            plain
+        );
         let plain_styles = docx_part(md, test_theme(), "word/styles.xml");
         assert!(plain_styles.contains("w:pos=\"9026\""), "无框目录的页码制表位不应收窄: {}", plain_styles);
     }
