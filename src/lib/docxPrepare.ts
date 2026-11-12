@@ -168,12 +168,39 @@ export async function prepareMarkdownForPandoc(
   markdown: string,
   renderMermaid?: (code: string) => Promise<string | null>,
   tocMaxLevel = 6,
+  tocTitle = 'Table of Contents',
 ): Promise<{ markdown: string; includeToc: boolean }> {
   const md = new MarkdownIt({ html: true })
   const hasEligibleHeading = collectTocItems(md.parse(splitFrontMatter(markdown).body, {}))
     .some((item) => item.level <= tocMaxLevel)
   const includeToc = hasTocPlaceholder(markdown) && hasEligibleHeading
-  let out = replaceTocPlaceholders(markdown, '')
+  let out = replaceTocPlaceholders(markdown, includeToc ? pandocTocField(tocTitle, tocMaxLevel) : '')
   if (renderMermaid) out = await replaceMermaidFences(out, renderMermaid)
   return { markdown: out, includeToc }
+}
+
+function escapeXml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+/**
+ * Pandoc 的 `--toc` 只能把目录放在文档开头。要保留 `[toc]` 的实际位置，
+ * 就在该占位处写一个原生 Word TOC 域；用户更新域后由 Word 填充条目和页码。
+ */
+export function pandocTocField(title: string, maxLevel = 6): string {
+  const instr = ` TOC \\o "1-${Math.max(1, Math.min(9, Math.round(maxLevel)))}" \\h \\z \\u `
+  const xml = [
+    '<w:p>',
+    '<w:r><w:fldChar w:fldCharType="begin"/></w:r>',
+    `<w:r><w:instrText xml:space="preserve">${instr}</w:instrText></w:r>`,
+    '<w:r><w:fldChar w:fldCharType="separate"/></w:r>',
+    `<w:r><w:rPr><w:b/></w:rPr><w:t>${escapeXml(title)}</w:t></w:r>`,
+    '<w:r><w:fldChar w:fldCharType="end"/></w:r>',
+    '</w:p>',
+  ].join('')
+  return '```{=openxml}\n' + xml + '\n```'
 }

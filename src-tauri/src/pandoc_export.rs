@@ -28,7 +28,6 @@ pub fn markdown_to_docx(
     output: &Path,
     base_dir: Option<&Path>,
     template: Option<&Path>,
-    include_toc: bool,
 ) -> Result<(), String> {
     if let Some(template) = template {
         if !is_valid_template(template) {
@@ -68,7 +67,7 @@ pub fn markdown_to_docx(
         stamp
     ));
 
-    let args = build_args(&temp_output, base_dir, template, include_toc);
+    let args = build_args(&temp_output, base_dir, template);
     let mut last_not_found = None;
 
     for program in pandoc_candidates() {
@@ -180,7 +179,6 @@ fn build_args(
     output: &Path,
     base_dir: Option<&Path>,
     template: Option<&Path>,
-    include_toc: bool,
 ) -> Vec<OsString> {
     let mut args = vec![
         OsString::from("--from=markdown"),
@@ -189,9 +187,6 @@ fn build_args(
         OsString::from("--output"),
         output.as_os_str().to_owned(),
     ];
-    if include_toc {
-        args.push(OsString::from("--toc"));
-    }
     if let Some(dir) = base_dir {
         args.push(OsString::from("--resource-path"));
         args.push(dir.as_os_str().to_owned());
@@ -265,19 +260,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn args_include_template_resource_path_and_toc() {
+    fn args_include_template_and_resource_path() {
         let args = build_args(
             Path::new("out.docx"),
             Some(Path::new("docs")),
             Some(Path::new("reference.docx")),
-            true,
         );
         let args: Vec<String> = args
             .into_iter()
             .map(|arg| arg.to_string_lossy().to_string())
             .collect();
         assert!(args.windows(2).any(|w| w == ["--output", "out.docx"]));
-        assert!(args.contains(&"--toc".to_string()));
+        assert!(!args.contains(&"--toc".to_string()));
         assert!(args.windows(2).any(|w| w == ["--resource-path", "docs"]));
         assert!(args
             .windows(2)
@@ -323,7 +317,6 @@ mod tests {
             &output,
             Some(&dir),
             Some(&template),
-            true,
         )
         .unwrap();
         let bytes = std::fs::read(&output).unwrap();

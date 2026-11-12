@@ -14,6 +14,7 @@ import {
   replaceMermaidFences,
   prepareMarkdownForDocx,
   prepareMarkdownForPandoc,
+  pandocTocField,
   svgToDataUrl,
   DOCX_TOC_MARKER,
 } from '../src/lib/docxPrepare.ts'
@@ -129,13 +130,21 @@ test('DOCX 预处理：代码围栏里的提示块示例不被改写', async () 
   assert.equal(await prepareMarkdownForDocx(src), src)
 })
 
-test('Pandoc 预处理：目录转成 --toc，提示块保持 Pandoc 原生语法', async () => {
+test('Pandoc 预处理：目录转成原位 Word TOC 域，提示块保持 Pandoc 原生语法', async () => {
   const src = '# 标题\n\n[toc]\n\n> [!TIP] 小技巧\n> 正文\n'
   const out = await prepareMarkdownForPandoc(src)
   assert.equal(out.includeToc, true)
   assert.ok(!out.markdown.includes('[toc]'), out.markdown)
+  assert.ok(out.markdown.includes('```{=openxml}'), out.markdown)
+  assert.ok(out.markdown.includes('TOC \\o "1-6" \\h \\z \\u'), out.markdown)
   assert.ok(out.markdown.includes('> [!TIP] 小技巧'), out.markdown)
   assert.ok(!out.markdown.includes('<!--yizi:'), out.markdown)
+})
+
+test('Pandoc TOC 域：使用本地化标题并转义 XML', () => {
+  const block = pandocTocField('A & B', 3)
+  assert.match(block, /TOC \\o "1-3"/)
+  assert.match(block, /<w:t>A &amp; B<\/w:t>/)
 })
 
 test('Pandoc 预处理：普通带标题文档不自动生成目录', async () => {

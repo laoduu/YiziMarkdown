@@ -1799,6 +1799,7 @@ function App() {
             tab.content,
             (code) => renderMermaidSvgForExport(code, docxMermaidPalette, false),
             6,
+            translate(getCurrentLang(), 'reader.toc'),
           )
           tocIncluded = pandocDoc.includeToc
           await invokeTauriOrThrow('export_docx_pandoc', {
@@ -1806,7 +1807,6 @@ function App() {
             md: pandocDoc.markdown,
             baseDir,
             templatePath: docxOptions.templatePath,
-            includeToc: pandocDoc.includeToc,
           })
         } else {
           // Word 版式的单一事实源：标题比例、段距、引用/代码/表格间距、目录层级
