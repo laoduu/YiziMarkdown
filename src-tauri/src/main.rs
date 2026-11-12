@@ -2259,6 +2259,18 @@ async fn export_pdf(app: tauri::AppHandle, html: String, path: String) -> Result
 }
 
 fn main() {
+    // Linux 开发态与正式安装包必须能被桌面环境区分开：
+    //   · 安装包自带的 YiziMarkdown.desktop 声明 StartupWMClass=yizimarkdown；
+    //   · npm run dev:icon 写的 yizimarkdown-dev.desktop 也是同一个类，
+    //     于是装完 deb 后窗口会被优先匹配到开发态条目，任务栏 / 进程列表显示
+    //     「YiziMarkdown (Dev)」。
+    // 这里在 GTK 初始化前把 GLib 程序名改成 yizimarkdown-dev（WM_CLASS 的 instance 部分），
+    // 开发态于是只匹配 dev 条目；正式构建（--release）保持 yizimarkdown 不变。
+    #[cfg(target_os = "linux")]
+    if cfg!(debug_assertions) {
+        glib::set_prgname(Some("yizimarkdown-dev"));
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())

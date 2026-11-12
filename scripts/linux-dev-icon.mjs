@@ -53,7 +53,10 @@ writeFileSync(
     `Icon=${icon}`,
     // Dock 通过 WM_CLASS ↔ StartupWMClass 找到这个条目（标准键；
     // 老式的 `WMClass` 键不符合 Desktop Entry 规范，desktop-file-validate 会报错，已不用）
-    'StartupWMClass=yizimarkdown',
+    // 开发构建在 main() 里把 GLib 程序名设为 yizimarkdown-dev（WM_CLASS instance），
+    // 正式安装包仍是 yizimarkdown —— 两边必须写成各自的类名，否则装完 deb 后
+    // 窗口会匹配到这份开发条目，任务栏显示「YiziMarkdown (Dev)」。
+    'StartupWMClass=yizimarkdown-dev',
     'Terminal=false',
     'NoDisplay=true',
     'MimeType=text/markdown;application/epub+zip',

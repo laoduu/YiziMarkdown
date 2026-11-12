@@ -71,6 +71,11 @@ windows-core = "0.61"
 # 窗口 1px 系统边框跟随主题背景（Windows 11 DWMWA_BORDER_COLOR）
 windows = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Dwm"] }
 
+[target.'cfg(target_os = "linux")'.dependencies]
+# Linux 开发态：设置进程的 WM_CLASS 实例名（g_set_prgname），让开发窗口与正式安装包
+# 在桌面环境里可以区分。tao/gtk 已传递引入同一版本，这里只是显式声明直接使用。
+glib = "0.18"
+
 [features]
 # This feature is used for production builds where `devPath` points to the
 # filesystem. By default, `devPath` points to the frontend dev server.

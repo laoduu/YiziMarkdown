@@ -77,6 +77,25 @@
 - dev 实测：按住 AI 面板边框拖动时，滚动条实时跟随新的面板边缘；松开后仍保持正确位置。
 - `npx tsc --noEmit` 通过。
 
+### Linux 安装包被任务栏显示成「YiziMarkdown (Dev)」（2026-11-13）
+
+**现象**
+- 用 deb 安装正式版后，任务栏 / 进程列表里的应用名仍带开发态的 Dev 标记。
+
+**根因**
+- `npm run dev:icon` 写入的用户级 `yizimarkdown-dev.desktop` 声明了 `StartupWMClass=yizimarkdown`，与安装包自带的 `YiziMarkdown.desktop` **完全相同**。
+- GNOME 等桌面按 WM_CLASS 匹配 `.desktop` 时，用户目录优先于系统目录，于是正式安装版窗口被匹配到开发条目，显示它声明的名称「YiziMarkdown (Dev)」。
+- 开发构建与安装包的 WM_CLASS 一直相同（都来自二进制名 `yizimarkdown`），桌面环境无法区分两者。
+
+**修复**
+- 开发构建在 `main()` 里、GTK 初始化之前调用 `glib::set_prgname("yizimarkdown-dev")`，把 WM_CLASS 的 instance 改成 `yizimarkdown-dev`；正式构建（`--release`）保持 `yizimarkdown`。
+- `scripts/linux-dev-icon.mjs` 的 `StartupWMClass` 同步改为 `yizimarkdown-dev` —— 开发态窗口只匹配开发条目，正式安装版只匹配系统条目。
+- `Cargo.toml` 新增 Linux 目标依赖 `glib`（tao/gtk 已传递引入同一版本，无新增下载）。
+
+**验证**
+- 开发窗口实测 `WM_CLASS = "yizimarkdown-dev", "Yizimarkdown-dev"`（`xprop`）；正式构建仍为 `yizimarkdown`。
+- `cargo check --no-default-features` 通过；已重写本机 `yizimarkdown-dev.desktop`。
+
 ## v0.4.3
 
 > **已发布**（2026-11-09）：发布 tag `v0.4.3`。`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已同步到 `0.4.3`。用户向说明见 `docs/changelog/CHANGELOG-V0.4.3.md`。
