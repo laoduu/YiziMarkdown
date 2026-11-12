@@ -297,6 +297,17 @@ test('detectLayout: title 提取（供章节标记）', () => {
   assert.equal(detectLayout('## 第一章 **重点**').title, '第一章 重点')
 })
 
+test('detectLayout: 代码围栏中的注释不会被误判为 Markdown 标题', () => {
+  const src = '**Code Block:**\n\n```python\n#  Notin Style Theme - Sample Code\ndef hello():\n    pass\n```\n'
+  assert.equal(detectLayout(src).title, undefined)
+})
+
+test('detectLayout: 跳过代码围栏后仍能识别真实标题和级别', () => {
+  const src = '~~~md\n# fake heading\n~~~\n\n## Real Heading'
+  assert.equal(detectLayout(src).title, 'Real Heading')
+  assert.equal(detectLayout(src).titleLevel, 2)
+})
+
 // ---------- splitColumns（页内 `***` 分栏） ----------
 
 test('splitColumns: 无 *** 返回单栏（与 splitSlides 一致的空输入行为）', () => {

@@ -20,6 +20,7 @@ export interface DeckSlide {
   notes: string
   kind: SlideKind
   title?: string
+  titleLevel?: number
   align?: 'left' | 'center' | 'right'
   /** 该页顶层列表是否参与片段逐步显示（版式 + deck/页级 fragments 指令共同决定） */
   fragmentEligible: boolean
@@ -83,7 +84,8 @@ export function parseDeck(content: string, fallbackTitle = ''): ParsedDeck {
       : true
     const fragmentEligible = pageFragments && FRAGMENT_KINDS.includes(kind)
     return {
-      src: b2, notes, kind, title: layout.title, align: directives.align, fragmentEligible,
+      src: b2, notes, kind, title: layout.title, titleLevel: layout.titleLevel,
+      align: directives.align, fragmentEligible,
       columns: hasColumns ? split.parts.length : undefined,
       colParts: hasColumns ? split.parts : undefined,
       colIntro: hasColumns && split.intro ? split.intro : undefined,
@@ -108,8 +110,7 @@ export function buildDeckTocHtml(slides: DeckSlide[]): string {
   slides.forEach((s, i) => {
     if (!s.title || s.kind === 'cover' || s.kind === 'thanks') return
     if (/^\s*\[{1,2}toc\]{1,2}\s*$/mi.test(s.src)) return
-    const marks = /^(#{1,6})\s/m.exec(s.src)?.[1].length
-    entries.push({ text: s.title, slide: i, level: marks ? Math.min(6, marks) : 2 })
+    entries.push({ text: s.title, slide: i, level: s.titleLevel ?? 2 })
   })
   return renderDeckTocHtml(entries)
 }

@@ -212,11 +212,26 @@ export function splitColumns(src: string, max = MAX_COLUMNS): ColumnSplit {
  *  `---` 分页与 `***` 分栏早就做了 fence 感知，这里补齐同样的约定。 */
 function fenceMask(lines: string[]): boolean[] {
   const mask: boolean[] = []
-  let inFence = false
+  let fenceChar = ''
+  let fenceLength = 0
   for (const line of lines) {
     const t = line.trim()
-    if (/^```/.test(t)) { mask.push(true); inFence = !inFence; continue }
-    mask.push(inFence)
+    const marker = /^(`{3,}|~{3,})/.exec(t)?.[1]
+    if (marker) {
+      if (!fenceChar) {
+        fenceChar = marker[0]
+        fenceLength = marker.length
+        mask.push(true)
+        continue
+      }
+      if (marker[0] === fenceChar && marker.length >= fenceLength) {
+        fenceChar = ''
+        fenceLength = 0
+        mask.push(true)
+        continue
+      }
+    }
+    mask.push(fenceChar !== '')
   }
   return mask
 }
@@ -344,6 +359,8 @@ export interface SlideLayout {
   kind: SlideKind
   /** 页内第一个标题的纯文本（供章节标记 / 封面展示） */
   title?: string
+  /** 页内第一个真实 Markdown 标题的级别（1–6） */
+  titleLevel?: number
 }
 
 /** 块类型（scanBlocks 产出） */
@@ -430,15 +447,25 @@ export function scanBlocks(src: string): BlockInfo[] {
   return blocks
 }
 
-/** 从页内第一个标题行提取纯文本（去掉 markdown 标记） */
-export function extractTitle(src: string): string | undefined {
-  const line = src.split(/\r?\n/).find((l) => /^#{1,6}\s/.test(l.trim()))
+/** 从页内第一个真实 Markdown 标题提取文本与级别，跳过代码围栏内的注释。 */
+export function extractTitleInfo(src: string): { text: string; level: number } | undefined {
+  const lines = src.split(/\r?\n/)
+  const inFence = fenceMask(lines)
+  const line = lines.find((l, i) => !inFence[i] && /^#{1,6}\s/.test(l.trim()))
   if (!line) return undefined
-  return line
+  const trimmed = line.trim()
+  const level = /^#{1,6}/.exec(trimmed)?.[0].length ?? 1
+  const text = trimmed
     .replace(/^#{1,6}\s+/, '')
     .replace(/[*_`~]/g, '')
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
     .trim()
+  return { text, level }
+}
+
+/** 从页内第一个真实 Markdown 标题提取纯文本（去掉 markdown 标记）。 */
+export function extractTitle(src: string): string | undefined {
+  return extractTitleInfo(src)?.text
 }
 
 /** 版式规则上下文 */
@@ -587,10 +614,11 @@ export const LAYOUT_RULES: LayoutRule[] = [
 export function detectLayout(src: string): SlideLayout {
   const blocks = scanBlocks(src)
   if (!blocks.length) return { kind: 'content' }
-  const title = extractTitle(src) || ''
+  const titleInfo = extractTitleInfo(src)
+  const title = titleInfo?.text || ''
   const ctx: LayoutContext = { blocks, title: title.toLowerCase() }
   const rule = LAYOUT_RULES.find((r) => r.match(ctx))
-  return { kind: rule!.kind, title: title || undefined }
+  return { kind: rule!.kind, title: title || undefined, titleLevel: titleInfo?.level }
 }
 
 /** 兼容旧接口：仅返回版式名 */
