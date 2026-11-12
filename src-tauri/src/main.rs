@@ -484,6 +484,30 @@ fn register_md_file_icon() {
 /// dev 下 `resource_dir()` 就是 cargo 输出目录（Tauri 自己识别 `target/`），行为与改动前一致。
 static RESOURCE_DIR: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
 
+/// 去掉 Windows 逐字路径（verbatim path）的 `\\?\` 前缀。
+///
+/// Tauri 的 `resource_dir()` 内部会对 exe 路径做 `canonicalize()`，Windows 上 Rust 的
+/// `canonicalize` 返回逐字路径 `\\?\D:\Program Files\YiziMarkdown`。文件读写完全正常，
+/// 但会原样显示在「设置 → 配置目录 → 程序运行位置」，看起来像一串乱码。
+/// 这里统一还原成普通路径；UNC 形式 `\\?\UNC\server\share` 还原成 `\\server\share`。
+/// 非 Windows 路径不会命中任何前缀，原样返回。
+fn strip_windows_verbatim_prefix(text: &str) -> Option<String> {
+    // `\\?\UNC\` 必须排在 `\\?\` 前面判断，否则会把 "UNC\" 当成路径的一部分
+    if let Some(rest) = text.strip_prefix("\\\\?\\UNC\\") {
+        Some(format!("\\\\{}", rest))
+    } else {
+        text.strip_prefix("\\\\?\\").map(|rest| rest.to_string())
+    }
+}
+
+/// 把资源目录还原成用户可读的普通路径（只影响展示与日志，不改变指向）。
+fn normalize_app_path(path: PathBuf) -> PathBuf {
+    match strip_windows_verbatim_prefix(&path.to_string_lossy()) {
+        Some(clean) => PathBuf::from(clean),
+        None => path,
+    }
+}
+
 /// 获取应用根目录（资源所在目录）。
 ///
 /// 打包版 = Tauri 解析出的资源目录；dev / 未初始化时回落 exe 同级（macOS bundle 下为
@@ -511,7 +535,9 @@ fn get_app_root() -> Result<PathBuf, String> {
         }
     }
 
-    Ok(exe.parent().unwrap_or(Path::new(".")).to_path_buf())
+    Ok(normalize_app_path(
+        exe.parent().unwrap_or(Path::new(".")).to_path_buf(),
+    ))
 }
 
 /// 获取用户文档中的配置目录：`<用户文档>/yizimarkdown/`（含 skills / templates / themes / assets）
@@ -2366,7 +2392,7 @@ fn main() {
             // deb → /usr/lib/YiziMarkdown；AppImage → AppDir/usr/lib/YiziMarkdown；
             // dev → cargo 输出目录（与改动前一致）。详见 get_app_root()。
             if let Ok(dir) = app.path().resource_dir() {
-                let _ = RESOURCE_DIR.set(dir);
+                let _ = RESOURCE_DIR.set(normalize_app_path(dir));
             }
 
             // 启动时确保目录结构完整（写到用户目录，不再是安装目录）
@@ -2793,5 +2819,33 @@ mod tests {
         for url in &cfg.endpoints {
             assert_eq!(url.scheme(), "https", "endpoints 必须是 https：{url}");
         }
+    }
+
+    #[test]
+    fn strips_windows_verbatim_prefix_for_display() {
+        // 安装版最常见的形态：Tauri canonicalize 后的驱动器路径 → 普通路径
+        assert_eq!(
+            strip_windows_verbatim_prefix(r"\\?\D:\Program Files\YiziMarkdown").as_deref(),
+            Some(r"D:\Program Files\YiziMarkdown")
+        );
+        // UNC 网络路径：\\?\UNC\ → \\
+        assert_eq!(
+            strip_windows_verbatim_prefix(r"\\?\UNC\server\share\YiziMarkdown").as_deref(),
+            Some(r"\\server\share\YiziMarkdown")
+        );
+        // 普通路径不命中，原样返回（由调用方回落到原 PathBuf）
+        assert_eq!(strip_windows_verbatim_prefix(r"D:\Program Files\YiziMarkdown"), None);
+        assert_eq!(strip_windows_verbatim_prefix("/usr/lib/YiziMarkdown"), None);
+        assert_eq!(strip_windows_verbatim_prefix(r"\\server\share"), None);
+    }
+
+    #[test]
+    fn normalize_app_path_keeps_platform_behavior() {
+        assert_eq!(
+            normalize_app_path(PathBuf::from(r"\\?\D:\Program Files\YiziMarkdown")),
+            PathBuf::from(r"D:\Program Files\YiziMarkdown")
+        );
+        let plain = PathBuf::from("/usr/lib/YiziMarkdown");
+        assert_eq!(normalize_app_path(plain.clone()), plain);
     }
 }

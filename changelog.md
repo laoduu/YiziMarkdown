@@ -44,6 +44,22 @@
 **验证**
 - 新增 `tests/sidebarWidth.test.ts`（6 条边界用例）；`npx tsc --noEmit` 通过，`npm test` 494 项通过。
 
+### Windows 安装版「程序运行位置」带 `\\?\` 前缀（2026-11-12）
+
+**现象**
+- Windows 安装版在「设置 → 配置目录」里，程序运行位置显示为 `\\?\D:\Program Files\YiziMarkdown`。
+
+**根因**
+- Tauri 的 `resource_dir()` 内部会对 exe 路径做 `canonicalize()`；Windows 上 Rust 的 `canonicalize` 返回逐字路径（verbatim path，带 `\\?\` 前缀）。文件读写不受影响，但该路径被原样输出到前端展示。
+
+**修复**
+- setup 记录资源目录时统一去掉 `\\?\` 前缀：驱动器路径还原为 `D:\...`，UNC 路径 `\\?\UNC\server\share` 还原为 `\\server\share`；`get_app_root()` 的回落分支同样处理。
+- 只改展示用的路径字符串，不改变目录指向；非 Windows 路径不命中前缀，行为不变。
+- 新增 2 个单元测试覆盖驱动器路径、UNC 路径与普通路径。
+
+**验证**
+- `cargo test strips_windows_verbatim_prefix_for_display` 与 `normalize_app_path_keeps_platform_behavior` 通过；dev 客户端已自动重编译并重启。
+
 ## v0.4.3
 
 > **已发布**（2026-11-09）：发布 tag `v0.4.3`。`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已同步到 `0.4.3`。用户向说明见 `docs/changelog/CHANGELOG-V0.4.3.md`。
