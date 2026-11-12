@@ -23,6 +23,8 @@ YiziMarkdown 是一款以「写作」为中心的跨平台 Markdown 编辑器。
 
 ## 七种模式：一份文档，七种呈现
 
+![七种模式一览](https://github.com/laoduu/YiziMarkdown/raw/main/assets/readme/modes.svg)
+
 Markdown 的价值不只在「写」，也在「给谁看、怎么看」。YiziMarkdown 为同一份文档提供了七种呈现方式：前四种是编辑视图，在源码与成品之间来回切换；后三种是独立场景，把文档变成幻灯片、书页，或干脆只剩正文。
 
 | 模式 | 一句话定位 | 入口 | 适合 |
