@@ -223,28 +223,31 @@ fn open_path(path: String) -> Result<(), String> {
     open::that(&path).map_err(|e| format!("Failed to open file: {}", e))
 }
 
-/// 在系统文件管理器中显示并选中该文件（Windows 资源管理器 / macOS Finder）
+fn export_directory(path: &Path) -> Result<&Path, String> {
+    let folder = if path.is_dir() {
+        path
+    } else {
+        path
+            .parent()
+            .filter(|parent| !parent.as_os_str().is_empty())
+            .ok_or_else(|| format!("Export directory not found: {}", path.display()))?
+    };
+    Ok(folder)
+}
+
+/// 在系统文件管理器中打开文件所在目录。
+///
+/// 不再把 `/select,<path>` 交给 Explorer 解析：该参数在含空格、Unicode 或不同
+/// Windows 版本上会把路径误解析成另一个目录。按钮语义是「打开所在目录」，
+/// 直接打开父目录最稳定；路径本身仍然来自本次实际导出的保存结果。
 #[tauri::command]
 fn reveal_in_explorer(path: String) -> Result<(), String> {
-    #[cfg(target_os = "windows")]
-    return Command::new("explorer")
-        .arg(format!("/select,{}", path))
-        .spawn()
-        .map(|_| ())
-        .map_err(|e| format!("Failed to open explorer: {}", e));
-
-    #[cfg(target_os = "macos")]
-    return Command::new("open")
-        .args(["-R", &path])
-        .spawn()
-        .map(|_| ())
-        .map_err(|e| format!("Failed to open Finder: {}", e));
-
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-    {
-        let parent = Path::new(&path).parent().unwrap_or_else(|| Path::new("."));
-        open::that(parent).map_err(|e| format!("Failed to open: {}", e))
+    let target = Path::new(&path);
+    if !target.exists() {
+        return Err(format!("Exported file not found: {}", path));
     }
+    let folder = export_directory(target)?;
+    open::that(folder).map_err(|e| format!("Failed to open export directory: {}", e))
 }
 
 // ===== 系统字体 =====
@@ -2430,6 +2433,17 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn export_directory_uses_saved_file_parent() {
+        let root = std::env::temp_dir().join("yizimd-export-dir");
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("exports")).unwrap();
+        let file = root.join("exports").join("result.pptx");
+        assert_eq!(export_directory(&file).unwrap(), file.parent().unwrap());
+        assert_eq!(export_directory(&root).unwrap(), root);
+        let _ = fs::remove_dir_all(&root);
+    }
 
     #[test]
     fn migrates_legacy_user_files_without_overwriting_user_content() {
