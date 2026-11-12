@@ -51,8 +51,6 @@ interface Props {
   onJumpToSlide?: (index: number) => void
 }
 
-type RangeMode = 'all' | 'current' | 'custom'
-
 interface Progress {
   pct: number
   text: string
@@ -80,6 +78,9 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
   const includeNotes = useSettingsStore((s) => s.pptxIncludeNotes)
   const includeFooter = useSettingsStore((s) => s.pptxIncludeFooter)
   const overflowMode = useSettingsStore((s) => s.pptxOverflowMode)
+  const rangeMode = useSettingsStore((s) => s.pptxRangeMode)
+  const customStart = useSettingsStore((s) => s.pptxCustomStart)
+  const customEnd = useSettingsStore((s) => s.pptxCustomEnd)
   const setField = useSettingsStore((s) => s.setField)
   const slideFontFamily = useSettingsStore((s) => s.slideFontFamily)
   const slideFontWeight = useSettingsStore((s) => s.slideFontWeight)
@@ -94,9 +95,6 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
     [source.content, source.title],
   )
 
-  const [rangeMode, setRangeMode] = useState<RangeMode>('all')
-  const [customStart, setCustomStart] = useState(1)
-  const [customEnd, setCustomEnd] = useState(Math.max(1, totalSlides))
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState<Progress | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -107,12 +105,9 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
 
   const hasCurrent = typeof source.currentSlide === 'number'
 
-  // 每次打开重置
+  // 打开时只重置临时进度，并校正跨文档后可能失效的范围。
   useEffect(() => {
     if (!open) return
-    setRangeMode('all')
-    setCustomStart(1)
-    setCustomEnd(Math.max(1, totalSlides))
     setBusy(false)
     setProgress(null)
     setError(null)
@@ -120,7 +115,14 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
     setWarnings([])
     setOverflowSlides([])
     abortRef.current = null
-  }, [open, totalSlides])
+    if (rangeMode === 'current' && !hasCurrent) {
+      setField('pptxRangeMode', 'all')
+    }
+    const end = Math.max(1, Math.min(totalSlides, customEnd > 0 ? customEnd : totalSlides))
+    const start = Math.max(1, Math.min(end, customStart))
+    if (start !== customStart) setField('pptxCustomStart', start)
+    if (end !== customEnd) setField('pptxCustomEnd', end)
+  }, [open, totalSlides, hasCurrent, rangeMode, customStart, customEnd, setField])
 
   // Esc：未在导出时关闭（导出中 Esc 取消）
   useEffect(() => {
@@ -307,17 +309,17 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
             <div className="font-semibold mb-1.5">{t('pptxExport.range')}</div>
             <div className="flex flex-wrap items-center gap-3">
               <label className="flex items-center gap-1.5 cursor-pointer">
-                <input type="radio" checked={rangeMode === 'all'} onChange={() => setRangeMode('all')} />
+                <input type="radio" checked={rangeMode === 'all'} onChange={() => setField('pptxRangeMode', 'all')} />
                 {t('pptxExport.rangeAll', { n: totalSlides })}
               </label>
               {hasCurrent && (
                 <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="radio" checked={rangeMode === 'current'} onChange={() => setRangeMode('current')} />
+                  <input type="radio" checked={rangeMode === 'current'} onChange={() => setField('pptxRangeMode', 'current')} />
                   {t('pptxExport.rangeCurrent', { n: (source.currentSlide || 0) + 1 })}
                 </label>
               )}
               <label className="flex items-center gap-1.5 cursor-pointer">
-                <input type="radio" checked={rangeMode === 'custom'} onChange={() => setRangeMode('custom')} />
+                <input type="radio" checked={rangeMode === 'custom'} onChange={() => setField('pptxRangeMode', 'custom')} />
                 {t('pptxExport.rangeCustom')}
               </label>
               {rangeMode === 'custom' && (
@@ -327,7 +329,7 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
                     min={1}
                     max={totalSlides}
                     value={customStart}
-                    onChange={(e) => setCustomStart(Number(e.target.value) || 1)}
+                    onChange={(e) => setField('pptxCustomStart', Number(e.target.value) || 1)}
                     className="w-14 px-1.5 py-0.5 rounded border border-[var(--editor-border)] bg-[var(--editor-bg)]"
                   />
                   <span className="opacity-60">–</span>
@@ -336,7 +338,7 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
                     min={1}
                     max={totalSlides}
                     value={customEnd}
-                    onChange={(e) => setCustomEnd(Number(e.target.value) || 1)}
+                    onChange={(e) => setField('pptxCustomEnd', Number(e.target.value) || 1)}
                     className="w-14 px-1.5 py-0.5 rounded border border-[var(--editor-border)] bg-[var(--editor-bg)]"
                   />
                 </span>

@@ -173,6 +173,22 @@ export interface SettingsState {
   pptxIncludeFooter: boolean
   /** 内容超页处理：warn = 照常导出并列出页码；shrink = 自动回缩字号重排 */
   pptxOverflowMode: 'warn' | 'shrink'
+  /** 上次选择的 PPTX 导出范围 */
+  pptxRangeMode: 'all' | 'current' | 'custom'
+  /** 自定义 PPTX 导出的起止页（1 起）；End=0 表示尚未设置，打开面板时落到当前总页数 */
+  pptxCustomStart: number
+  pptxCustomEnd: number
+
+  // DOCX 内置导出
+  /** 是否导出主题色 */
+  docxThemeColors: boolean
+  /** 字号行距是否跟随预览 */
+  docxFollowPreview: boolean
+  /** 字体是否跟随预览 */
+  docxFollowPreviewFont: boolean
+
+  /** 插件导出面板中显式标记为持久化的选项，键为 `pluginId:format`。 */
+  exportOptionValues: Record<string, Record<string, unknown>>
 
   // AI 面板运行时状态（不持久化）
   /** AI 面板是否打开 */
@@ -282,6 +298,17 @@ export const useSettingsStore = create<SettingsState>()(
       pptxIncludeNotes: true,
       pptxIncludeFooter: true,
       pptxOverflowMode: 'warn',
+      pptxRangeMode: 'all',
+      pptxCustomStart: 1,
+      pptxCustomEnd: 0,
+
+      // DOCX 内置导出
+      docxThemeColors: true,
+      docxFollowPreview: true,
+      docxFollowPreviewFont: true,
+
+      // 插件导出面板的持久化选项
+      exportOptionValues: {},
 
       // AI 面板运行时状态
       aiPanelOpen: false,
@@ -314,7 +341,8 @@ export const useSettingsStore = create<SettingsState>()(
       // v20: 粘贴图片保存位置 —— 新增 imageSaveMode（local 文档默认文档旁 images/）
       // v21: 取消「粘贴图片保存位置」设置 —— 本地文档统一写用户目录 assets/，
       //      存档里的 imageSaveMode 直接删除（不再有两条路径分支）
-      version: 21,
+      // v22: 导出面板选项持久化 —— Word 内置版式、PPTX 范围、插件结构化选项
+      version: 22,
       migrate: (persisted: unknown) => {
         // 自动迁移旧字体栈到 MiSans 方案
         const oldFont = "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
@@ -395,6 +423,22 @@ export const useSettingsStore = create<SettingsState>()(
           if (typeof state.pptxIncludeFooter !== 'boolean') state.pptxIncludeFooter = true
           if (state.pptxOverflowMode !== 'warn' && state.pptxOverflowMode !== 'shrink') {
             state.pptxOverflowMode = 'warn'
+          }
+          // v22：导出面板选项。旧存档没有这些键 ⇒ 保持原有默认行为。
+          if (typeof state.docxThemeColors !== 'boolean') state.docxThemeColors = true
+          if (typeof state.docxFollowPreview !== 'boolean') state.docxFollowPreview = true
+          if (typeof state.docxFollowPreviewFont !== 'boolean') state.docxFollowPreviewFont = true
+          if (state.pptxRangeMode !== 'all' && state.pptxRangeMode !== 'current' && state.pptxRangeMode !== 'custom') {
+            state.pptxRangeMode = 'all'
+          }
+          state.pptxCustomStart = Math.round(clampNumber(state.pptxCustomStart, 1, 100000, 1))
+          state.pptxCustomEnd = Math.round(clampNumber(state.pptxCustomEnd, 0, 100000, 0))
+          if (
+            !state.exportOptionValues
+            || typeof state.exportOptionValues !== 'object'
+            || Array.isArray(state.exportOptionValues)
+          ) {
+            state.exportOptionValues = {}
           }
           // v15：数学公式 / Mermaid 不再是插件；清掉旧存档里的开关与配置。
           // 不影响未来真正的插件（如 epub）；只删除这两个已内置化的 id。

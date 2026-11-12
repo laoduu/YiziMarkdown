@@ -6,11 +6,11 @@
  *   - 字号行距是否跟随预览（关闭则用 Word 规范版式：A4 / 11pt / 1.5 倍行距）
  *   - 字体是否跟随预览（关闭则用 Word 经典默认字体：正文 Calibri / 等线，标题 Calibri Light / 等线 Light）
  *
- * 选项不落盘：每次打开都回到默认（跟随主题 + 跟随预览），避免用户忘记上次关过什么。
+ * 版式选项会持久化，下次打开自动恢复。
  */
-import { useState } from 'react'
 import { FileDown, X } from 'lucide-react'
 import { useI18n } from '../i18n'
+import { useSettingsStore } from '../stores/settingsStore'
 
 export interface DocxExportOptions {
   /** 导出主题色（标题/表头/代码高亮）；false = 黑白灰 */
@@ -29,9 +29,10 @@ interface Props {
 
 export default function DocxExportDialog({ open, onClose, onExport }: Props) {
   const { t } = useI18n()
-  const [themeColors, setThemeColors] = useState(true)
-  const [followPreview, setFollowPreview] = useState(true)
-  const [followPreviewFont, setFollowPreviewFont] = useState(true)
+  const themeColors = useSettingsStore((s) => s.docxThemeColors)
+  const followPreview = useSettingsStore((s) => s.docxFollowPreview)
+  const followPreviewFont = useSettingsStore((s) => s.docxFollowPreviewFont)
+  const setField = useSettingsStore((s) => s.setField)
 
   if (!open) return null
 
@@ -73,7 +74,7 @@ export default function DocxExportDialog({ open, onClose, onExport }: Props) {
             <input
               type="checkbox"
               checked={themeColors}
-              onChange={(e) => setThemeColors(e.target.checked)}
+              onChange={(e) => setField('docxThemeColors', e.target.checked)}
               className="mt-0.5"
             />
             <span>
@@ -88,7 +89,7 @@ export default function DocxExportDialog({ open, onClose, onExport }: Props) {
             <input
               type="checkbox"
               checked={followPreview}
-              onChange={(e) => setFollowPreview(e.target.checked)}
+              onChange={(e) => setField('docxFollowPreview', e.target.checked)}
               className="mt-0.5"
             />
             <span>
@@ -103,7 +104,7 @@ export default function DocxExportDialog({ open, onClose, onExport }: Props) {
             <input
               type="checkbox"
               checked={followPreviewFont}
-              onChange={(e) => setFollowPreviewFont(e.target.checked)}
+              onChange={(e) => setField('docxFollowPreviewFont', e.target.checked)}
               className="mt-0.5"
             />
             <span>

@@ -20,6 +20,8 @@ export interface PluginConfigField {
   unit?: string
   /** 默认值 */
   defaultValue: string | number | boolean
+  /** 导出面板中是否跨次记住该选项；动态生成的文档信息（如书名/作者）应保持 false */
+  persist?: boolean
   /** 选项下方的说明文字 */
   hint?: string
   /** 说明文字的 i18n key（可选，优先于 hint） */

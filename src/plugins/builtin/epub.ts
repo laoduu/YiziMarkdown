@@ -523,13 +523,13 @@ export const epubPlugin: EditorPlugin = {
     },
     {
       key: 'language', label: '语言', labelKey: 'epubExport.language',
-      type: 'select', defaultValue: 'zh-CN',
+      type: 'select', defaultValue: 'zh-CN', persist: true,
       options: EPUB_LANGUAGES.map((l) => ({ value: l.value, label: l.label })),
       hintKey: 'epubExport.languageHint',
     },
     {
       key: 'chapterSplit', label: '章节拆分', labelKey: 'epubExport.chapterSplit',
-      type: 'select', defaultValue: 'auto',
+      type: 'select', defaultValue: 'auto', persist: true,
       options: [
         { value: 'auto', label: '自动（H2 → H1）', labelKey: 'epubExport.splitAuto' },
         { value: 'h1', label: '按 H1 拆章', labelKey: 'epubExport.splitH1' },
@@ -540,16 +540,16 @@ export const epubPlugin: EditorPlugin = {
     },
     {
       key: 'cover', label: '生成封面页', labelKey: 'epubExport.cover',
-      type: 'checkbox', defaultValue: true,
+      type: 'checkbox', defaultValue: true, persist: true,
     },
     {
       key: 'tocVisible', label: '生成可见目录页', labelKey: 'epubExport.tocVisible',
-      type: 'checkbox', defaultValue: true,
+      type: 'checkbox', defaultValue: true, persist: true,
       hintKey: 'epubExport.tocHint',
     },
     {
       key: 'theme', label: '阅读主题', labelKey: 'epubExport.theme',
-      type: 'select', defaultValue: 'follow',
+      type: 'select', defaultValue: 'follow', persist: true,
       options: [
         { value: 'follow', label: '跟随应用主题', labelKey: 'epubExport.themeFollow' },
         { value: 'light', label: '浅色阅读', labelKey: 'epubExport.themeLight' },
@@ -558,7 +558,7 @@ export const epubPlugin: EditorPlugin = {
     },
     {
       key: 'stripDuplicateTitle', label: '移除重复首页标题', labelKey: 'epubExport.stripTitle',
-      type: 'checkbox', defaultValue: true,
+      type: 'checkbox', defaultValue: true, persist: true,
       hintKey: 'epubExport.stripTitleHint',
     },
   ],

@@ -11,6 +11,7 @@ import ExportResultActions from './ExportResultActions'
 import { useI18n } from '../i18n'
 import { getPluginById, exportWithPlugin } from '../plugins/registry'
 import { invokeTauri, invokeTauriOrThrow } from '../lib/tauri'
+import { useSettingsStore } from '../stores/settingsStore'
 import type { PluginConfigField, PluginExportContext, PluginExportWarning } from '../plugins/types'
 
 export interface PluginExportSource {
@@ -73,6 +74,7 @@ export default function PluginExportDialog({ open, pluginId, format, source, def
   const { t } = useI18n()
   const plugin = useMemo(() => getPluginById(pluginId), [pluginId])
   const fields = plugin?.exportOptions || []
+  const setField = useSettingsStore((s) => s.setField)
   const [values, setValues] = useState<Record<string, Value>>({})
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState<{ pct: number; text: string } | null>(null)
@@ -109,10 +111,15 @@ export default function PluginExportDialog({ open, pluginId, format, source, def
     setResult(null)
     abortRef.current = false
     const defaults = plugin?.getExportDefaults?.(baseContext) || {}
+    const optionKey = `${pluginId}:${format}`
+    const saved = useSettingsStore.getState().exportOptionValues[optionKey] || {}
     const next: Record<string, Value> = {}
-    for (const field of fields) next[field.key] = fieldValue(field, defaults[field.key])
+    for (const field of fields) {
+      const raw = field.persist && field.key in saved ? saved[field.key] : defaults[field.key]
+      next[field.key] = fieldValue(field, raw)
+    }
     setValues(next)
-  }, [open, pluginId, plugin]) // 打开时只初始化一次；source 变化不重置用户选项
+  }, [open, pluginId, format, plugin]) // 打开时只初始化一次；source 变化不重置用户选项
 
   const startExport = useCallback(async () => {
     if (busy || !plugin) return
@@ -165,7 +172,16 @@ export default function PluginExportDialog({ open, pluginId, format, source, def
 
   if (!open || !plugin) return null
 
-  const setValue = (key: string, value: Value) => setValues((prev) => ({ ...prev, [key]: value }))
+  const setValue = (field: PluginConfigField, value: Value) => {
+    setValues((prev) => ({ ...prev, [field.key]: value }))
+    if (!field.persist) return
+    const optionKey = `${pluginId}:${format}`
+    const all = useSettingsStore.getState().exportOptionValues
+    setField('exportOptionValues', {
+      ...all,
+      [optionKey]: { ...(all[optionKey] || {}), [field.key]: value },
+    })
+  }
   const fieldLabel = (f: PluginConfigField) => f.labelKey ? t(f.labelKey) : f.label
   const fieldHint = (f: PluginConfigField) => f.hintKey ? t(f.hintKey) : f.hint
 
@@ -219,7 +235,7 @@ export default function PluginExportDialog({ open, pluginId, format, source, def
                   <select
                     className="settings-select"
                     value={String(values[field.key] ?? field.defaultValue)}
-                    onChange={(e) => setValue(field.key, e.target.value)}
+                    onChange={(e) => setValue(field, e.target.value)}
                     disabled={busy}
                   >
                     {field.options?.map((opt) => (
@@ -232,7 +248,7 @@ export default function PluginExportDialog({ open, pluginId, format, source, def
                     type="checkbox"
                     className="settings-checkbox"
                     checked={Boolean(values[field.key])}
-                    onChange={(e) => setValue(field.key, e.target.checked)}
+                    onChange={(e) => setValue(field, e.target.checked)}
                     disabled={busy}
                   />
                 )}
@@ -244,7 +260,7 @@ export default function PluginExportDialog({ open, pluginId, format, source, def
                     max={field.max}
                     step={field.step}
                     value={Number(values[field.key] ?? field.defaultValue)}
-                    onChange={(e) => setValue(field.key, Number(e.target.value))}
+                    onChange={(e) => setValue(field, Number(e.target.value))}
                     disabled={busy}
                   />
                 )}
@@ -253,7 +269,7 @@ export default function PluginExportDialog({ open, pluginId, format, source, def
                     type="text"
                     className="settings-input w-56"
                     value={String(values[field.key] ?? field.defaultValue)}
-                    onChange={(e) => setValue(field.key, e.target.value)}
+                    onChange={(e) => setValue(field, e.target.value)}
                     disabled={busy}
                   />
                 )}
