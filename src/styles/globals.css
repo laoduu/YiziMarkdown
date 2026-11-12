@@ -2843,7 +2843,8 @@ a {
    图标是 octicon 的 16×16 path，内联成 data URI 当 mask 用：没有图片文件，
    颜色由 --alert-accent 一处控制（mask + background-color: currentColor）。
    特异性 (0,3,1)：要压过 globals 后面 `blockquote p:first-of-type` 的 margin 规则。 */
-.editor-content blockquote.md-alert .md-alert-title {
+.editor-content blockquote.md-alert .md-alert-title,
+.reader-content blockquote.md-alert .md-alert-title {
   display: flex;
   align-items: center;
   gap: 0.4em;
@@ -2855,7 +2856,8 @@ a {
   color: var(--alert-accent);
 }
 
-.editor-content blockquote.md-alert .md-alert-title::before {
+.editor-content blockquote.md-alert .md-alert-title::before,
+.reader-content blockquote.md-alert .md-alert-title::before {
   content: "";
   flex: 0 0 auto;
   width: 1em;
@@ -2866,6 +2868,7 @@ a {
 }
 
 .editor-content .md-alert-note,
+.reader-content .md-alert-note,
 .ys-slide .md-alert-note,
 .cm-md-alert-title-note {
   --alert-accent: #0969da;
@@ -2873,6 +2876,7 @@ a {
 }
 
 .editor-content .md-alert-tip,
+.reader-content .md-alert-tip,
 .ys-slide .md-alert-tip,
 .cm-md-alert-title-tip {
   --alert-accent: #1f883d;
@@ -2880,6 +2884,7 @@ a {
 }
 
 .editor-content .md-alert-important,
+.reader-content .md-alert-important,
 .ys-slide .md-alert-important,
 .cm-md-alert-title-important {
   --alert-accent: #8250df;
@@ -2887,6 +2892,7 @@ a {
 }
 
 .editor-content .md-alert-warning,
+.reader-content .md-alert-warning,
 .ys-slide .md-alert-warning,
 .cm-md-alert-title-warning {
   --alert-accent: #9a6700;
@@ -2894,6 +2900,7 @@ a {
 }
 
 .editor-content .md-alert-caution,
+.reader-content .md-alert-caution,
 .ys-slide .md-alert-caution,
 .cm-md-alert-title-caution {
   --alert-accent: #cf222e;
@@ -2902,18 +2909,23 @@ a {
 
 /* 深色主题只换色，图标与标题沿用 */
 .dark .editor-content .md-alert-note,
+.dark .reader-content .md-alert-note,
 .dark .ys-slide .md-alert-note,
 .dark .cm-md-alert-title-note { --alert-accent: #6cb0ff; }
 .dark .editor-content .md-alert-tip,
+.dark .reader-content .md-alert-tip,
 .dark .ys-slide .md-alert-tip,
 .dark .cm-md-alert-title-tip { --alert-accent: #56d364; }
 .dark .editor-content .md-alert-important,
+.dark .reader-content .md-alert-important,
 .dark .ys-slide .md-alert-important,
 .dark .cm-md-alert-title-important { --alert-accent: #d2a8ff; }
 .dark .editor-content .md-alert-warning,
+.dark .reader-content .md-alert-warning,
 .dark .ys-slide .md-alert-warning,
 .dark .cm-md-alert-title-warning { --alert-accent: #e3b341; }
 .dark .editor-content .md-alert-caution,
+.dark .reader-content .md-alert-caution,
 .dark .ys-slide .md-alert-caution,
 .dark .cm-md-alert-title-caution { --alert-accent: #ff7b72; }
 
