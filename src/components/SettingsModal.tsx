@@ -987,6 +987,11 @@ function EditorSettings() {
                 <input type="checkbox" checked={store.wordWrap} onChange={(e) => store.setField('wordWrap', e.target.checked)} className="settings-checkbox" />
               </label>
             </Row>
+            <Row label={t('live.toggleTocFrame')}>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={store.tocFrame} onChange={(e) => store.setField('tocFrame', e.target.checked)} className="settings-checkbox" />
+              </label>
+            </Row>
           </Section>
           
           <Section title={t('settings.font')}>

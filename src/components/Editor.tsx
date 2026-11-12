@@ -30,7 +30,6 @@ import { headingFoldExtension } from '../lib/cm-heading-fold'
 import { slashMenuExtension, slashMenuState, showSlashMenu, hideSlashMenu, slashMenuAction } from '../lib/cm-slash-menu'
 import { COLUMN_REGION_SNIPPET, COLUMN_REGION_CURSOR } from '../lib/slides'
 import { selectionToolbarExtension, type SelectionToolbarInfo } from '../lib/cm-selection-toolbar'
-import { addTocFrameButton } from '../lib/tocFrame'
 import { LINE_NUMBERS_ICON, withCodeLineNumbers } from '../lib/codeBlockLines'
 import SlashMenu from './SlashMenu'
 import SelectionToolbar from './SelectionToolbar'
@@ -533,15 +532,6 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
       })
     })
   }, [renderedHtml, content, onContentChange])
-
-  // 目录块右上角：边框/背景显示开关（hover 显现，与实时模式共用同一偏好）
-  useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
-    container.querySelectorAll<HTMLElement>('nav.markdown-toc').forEach((nav) => {
-      addTocFrameButton(nav, t('live.toggleTocFrame'))
-    })
-  }, [renderedHtml, t])
 
   // 标记全空表格：部分主题会把 max-content / auto 的空表格缩成几个字的宽度，
   // 实时模式却是满宽。标在 DOM 上比 CSS :has 更兼容旧 WebKit（同时会带进 HTML/PDF 导出）。

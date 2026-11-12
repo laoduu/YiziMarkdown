@@ -13,7 +13,6 @@ import { syntaxTree } from '@codemirror/language'
 import { useEditorStore } from '../stores/editorStore.ts'
 import { getCurrentLang, translate } from '../i18n/index.ts'
 import { resolveLocalImageSrc } from './localImages.ts'
-import { addTocFrameButton } from './tocFrame.ts'
 import { LINE_NUMBERS_ICON, withCodeLineNumbers } from './codeBlockLines.ts'
 import { invokeTauri } from './tauri.ts'
 import { getMarkdownIt } from './markdownRenderer.ts'
@@ -561,8 +560,6 @@ class TocWidget extends WidgetType {
     nav.className = 'cm-live-block cm-live-block--toc markdown-toc'
     // 点目录条目 = 滚动；点目录空白处 = 回到源码（让 [toc] 可编辑）
     revealSourceOnClick(nav, view, this.pos)
-    // 右上角显示开关：与预览模式同一枚按钮、同一个全局偏好
-    addTocFrameButton(nav, tLive('toggleTocFrame'))
     if (this.headings.length === 0) {
       nav.textContent = tLive('tocEmpty')
       return nav

@@ -99,7 +99,7 @@ const PRINT_CSS = [
 
 /** 独立 HTML 的额外样式：只解开应用 UI 的视口锁定，其余排版照预览。
     目录右上角的边框/背景开关是编辑辅助，静态导出里没有可用的点击处理器，必须隐藏。 */
-const SCREEN_CSS = 'html,body{height:auto!important;overflow:visible!important}.toc-frame-actions{display:none!important}'
+const SCREEN_CSS = 'html,body{height:auto!important;overflow:visible!important}'
 
 export function buildExportHtml(input: ExportDocInput): string {
   const { css, print } = input

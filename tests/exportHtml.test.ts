@@ -61,11 +61,6 @@ test('代码块行号开关会带到导出文档的根类', () => {
   assert.doesNotMatch(off, /code-block-line-numbers/)
 })
 
-test('静态 HTML 导出隐藏目录右上角开关（没有可用的点击处理器）', () => {
-  const html = buildExportHtml({ ...base })
-  assert.match(html, /\.toc-frame-actions\{display:none!important\}/)
-})
-
 test('打印时去掉 dark 类：暗色主题按主题自己的亮色配色导出（与 Word 一致）', () => {
   const html = buildExportHtml({ ...base, print: true })
   assert.match(html, /<html class="theme-tech"/)

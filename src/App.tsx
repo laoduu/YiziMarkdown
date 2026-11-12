@@ -38,7 +38,7 @@ import {
 } from './lib/editorStorage'
 import { loadPlugin, unloadPlugin, getEnabledExporters, getStartupPluginIds } from './plugins/registry'
 import { ensureCoreRenderers } from './renderers/index'
-import { useI18n, translate, getCurrentLang, type Language } from './i18n'
+import { useI18n, translate, getCurrentLang } from './i18n'
 import { refreshThemeCursorVars } from './lib/themeCursor'
 import { applyThemeStyles } from './lib/themeLoader'
 import { deriveDocumentTitle } from './lib/docTitle'
@@ -754,15 +754,6 @@ function App() {
   const uiLang = useSettingsStore((s) => s.language)
   useEffect(() => {
     document.documentElement.lang = uiLang || 'zh'
-  }, [uiLang])
-
-  // 实时模式的目录按钮由 CM widget 在创建时写入 title，切换语言不会重建 widget，
-  // 这里统一刷新所有已存在的目录开关文案，避免中文界面显示英文 tooltip。
-  useEffect(() => {
-    const title = translate((uiLang || 'zh') as Language, 'live.toggleTocFrame')
-    document.querySelectorAll<HTMLButtonElement>('.toc-frame-btn').forEach((btn) => {
-      btn.title = title
-    })
   }, [uiLang])
 
   const handleNewFile = useCallback(async () => {
