@@ -6,6 +6,7 @@
  * 预览/实时/演示/阅读/导出都直接使用同一份实现。
  */
 import type MarkdownIt from 'markdown-it'
+import { splitInlineMath } from '../lib/inlineMath.ts'
 
 let mkPlugin: any = null
 let katexModule: any = null
@@ -56,6 +57,44 @@ export async function postRenderKatex(container: HTMLElement): Promise<void> {
     } catch {
       el.textContent = tex
     }
+  }
+
+  // markdown-it-katex 在某些增量渲染 / 缓存路径里可能把 `$...$` 留成普通文本。
+  // 导出前补一次 DOM 转换，让后续场景采集始终能看到 `.katex`，而不是只拿到源码。
+  const walker = container.ownerDocument.createTreeWalker(container, NodeFilter.SHOW_TEXT)
+  const rawMathNodes: Text[] = []
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const text = node as Text
+    const parent = text.parentElement
+    if (!parent || parent.closest('pre, code, script, style, .katex')) continue
+    if (splitInlineMath(text.nodeValue || '').some((segment) => segment.kind === 'math')) {
+      rawMathNodes.push(text)
+    }
+  }
+
+  for (const node of rawMathNodes) {
+    const parent = node.parentNode
+    if (!parent) continue
+    const fragment = container.ownerDocument.createDocumentFragment()
+    for (const segment of splitInlineMath(node.nodeValue || '')) {
+      if (segment.kind === 'text') {
+        fragment.appendChild(container.ownerDocument.createTextNode(segment.text))
+        continue
+      }
+      const span = container.ownerDocument.createElement('span')
+      span.className = 'katex'
+      span.setAttribute('data-tex', segment.tex)
+      try {
+        span.innerHTML = katexModule.renderToString(segment.tex, {
+          displayMode: false,
+          throwOnError: false,
+        })
+      } catch {
+        span.textContent = `$${segment.tex}$`
+      }
+      fragment.appendChild(span)
+    }
+    parent.replaceChild(fragment, node)
   }
 }
 
