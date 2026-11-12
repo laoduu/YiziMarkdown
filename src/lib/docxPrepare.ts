@@ -12,7 +12,12 @@
 
 import MarkdownIt from 'markdown-it'
 import { splitFrontMatter } from './frontMatter.ts'
-import { collectTocItems, tocToMarkdownList, replaceTocPlaceholders } from './toc.ts'
+import {
+  collectTocItems,
+  hasTocPlaceholder,
+  tocToMarkdownList,
+  replaceTocPlaceholders,
+} from './toc.ts'
 
 /** UTF-8 字符串 → base64（浏览器与 Node 都有 TextEncoder / btoa） */
 export function utf8ToBase64(text: string): string {
@@ -149,4 +154,26 @@ export async function prepareMarkdownForDocx(
   // 导出的 DOCX 仍按旧规则把 `64K~512K、0~20` 与 `[^1]` 误判成下标/上标。
   if (renderMermaid) out = await replaceMermaidFences(out, renderMermaid)
   return out
+}
+
+/**
+ * Pandoc 导出前的预处理。
+ *
+ * Pandoc 自己支持提示块和常见 Markdown 扩展，所以这里不做 DOCX 生成器专用的
+ * 注释标记转换；只处理两类缺少 Pandoc 等价能力会明显丢效果的内容：
+ *   · 显式 `[toc]` → `--toc` 参数（同时移除占位行）；普通带标题文档绝不自动加目录
+ *   · Mermaid → SVG 图片，失败时仍保留原代码块
+ */
+export async function prepareMarkdownForPandoc(
+  markdown: string,
+  renderMermaid?: (code: string) => Promise<string | null>,
+  tocMaxLevel = 6,
+): Promise<{ markdown: string; includeToc: boolean }> {
+  const md = new MarkdownIt({ html: true })
+  const hasEligibleHeading = collectTocItems(md.parse(splitFrontMatter(markdown).body, {}))
+    .some((item) => item.level <= tocMaxLevel)
+  const includeToc = hasTocPlaceholder(markdown) && hasEligibleHeading
+  let out = replaceTocPlaceholders(markdown, '')
+  if (renderMermaid) out = await replaceMermaidFences(out, renderMermaid)
+  return { markdown: out, includeToc }
 }

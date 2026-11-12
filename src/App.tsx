@@ -51,7 +51,7 @@ import { windowOps } from './lib/windowOps'
 import { useWindowStateStore } from './stores/windowStateStore'
 import { buildDocxPalette } from './lib/docxPalette'
 import { collectCodeHighlights } from './lib/docxCodeHighlight'
-import { prepareMarkdownForDocx, DOCX_TOC_MARKER } from './lib/docxPrepare'
+import { prepareMarkdownForDocx, prepareMarkdownForPandoc, DOCX_TOC_MARKER } from './lib/docxPrepare'
 import { buildDocxLayout } from './lib/docxLayout'
 import { renderMermaidSvgForExport } from './renderers/mermaid'
 import { readThemePalette, type ThemePalette } from './lib/themePalette'
@@ -1782,20 +1782,6 @@ function App() {
         if (docxOptions?.themeColors === false) {
           palette = { text: '#000000', accent: '#000000', surface: '#f5f5f5', border: '#dddddd' }
         }
-        // Word 版式的单一事实源：标题比例、段距、引用/代码/表格间距、目录层级
-        // 都在这里定死，Rust 只负责序列化，不再自己猜一套值。
-        const docxLayout = buildDocxLayout(previewFontFamily, mono, {
-          // 弹窗「字体跟随预览」：关闭时由 layout 换成 Word 经典默认字体（含标题字体）
-          followPreviewFont: docxOptions?.followPreviewFont !== false,
-        })
-        // 弹窗「跟随预览」：字号与行距都取预览设置；关闭才用规范版式（A4 / 11pt / 1.5）
-        if (docxOptions?.followPreview !== false) {
-          docxLayout.body.followPreviewSize = true
-          docxLayout.body.lineHeight = previewLineHeight
-        }
-        // DOCX 只能读 Markdown：先把预览里已经「不是 Markdown」的内容落回可解析形式
-        //   · [toc] → DOCX_TOC_MARKER（Rust 侧输出真正的 TOC 域）
-        //   · ```mermaid → SVG data URL（白底 palette，Rust 转 PNG/SVG 嵌入）
         const docxMermaidPalette: ThemePalette = {
           bg: '#ffffff',
           text: palette.text,
@@ -1807,44 +1793,75 @@ function App() {
           fontMono: mono,
           isDark: false,
         }
-        const docxMd = await prepareMarkdownForDocx(
-          tab.content,
-          (code) => renderMermaidSvgForExport(code, docxMermaidPalette, false),
-          docxLayout.toc.maxLevel,
-        )
-        tocIncluded = docxMd.includes(DOCX_TOC_MARKER)
-        // 用 invokeTauriOrThrow：导出失败必须抛错显示，不能吞错假装成功
-        await invokeTauriOrThrow('export_docx', {
-          path: savedPath,
-          md: docxMd,
-          baseDir,
-          theme: {
-            accent: palette.accent,
-            text: palette.text,
-            font: previewFontFamily,
-            monoFont: mono,
-            surface: palette.surface,
-            border: palette.border,
-            // 预览字号/行高：docx 必须与用户设定的预览排版一致
-            // （此前固定 11pt / 1.5 倍行距，与预览的 20px / 2.0 完全不符）
-            fontSizePx: previewFontSize,
-            lineHeight: previewLineHeight,
-            // 代码块语法高亮：直接读预览 DOM（分词与颜色都与预览一致，见该函数注释）。
-            // 暗色主题的 token 是给深色页面配的亮色，导出到白底文档要压暗（同 palette 的处理）
-            codeHighlights: docxOptions?.themeColors === false
-              ? { styles: {}, blocks: {} }
-              : collectCodeHighlights(document.querySelector('.editor-content'), {
-                isDark,
-                baseColor: palette.text,
-              }),
-            // 目录标题同理跟随界面语言：Word 里 TOC 域上方那行字由 Rust 侧写出，
-            // 它看不到前端 i18n，只能由这里把词条传过去（`reader.toc`，与预览那块同一个键）
-            tocTitle: translate(getCurrentLang(), 'reader.toc'),
-            // 目录边框/背景：跟随右上角开关；关闭「导出主题色」时一律无框无背景
-            tocFrame: docxOptions?.themeColors !== false && tocFrame,
-            layout: docxLayout,
-          },
-        })
+        if (docxOptions?.engine === 'pandoc') {
+          // Pandoc 自己解析 Markdown；只把 Mermaid 预渲染成图片，并让 [toc] 走 --toc。
+          const pandocDoc = await prepareMarkdownForPandoc(
+            tab.content,
+            (code) => renderMermaidSvgForExport(code, docxMermaidPalette, false),
+            6,
+          )
+          tocIncluded = pandocDoc.includeToc
+          await invokeTauriOrThrow('export_docx_pandoc', {
+            path: savedPath,
+            md: pandocDoc.markdown,
+            baseDir,
+            templatePath: docxOptions.templatePath,
+            includeToc: pandocDoc.includeToc,
+          })
+        } else {
+          // Word 版式的单一事实源：标题比例、段距、引用/代码/表格间距、目录层级
+          // 都在这里定死，Rust 只负责序列化，不再自己猜一套值。
+          const docxLayout = buildDocxLayout(previewFontFamily, mono, {
+            // 弹窗「字体跟随预览」：关闭时由 layout 换成 Word 经典默认字体（含标题字体）
+            followPreviewFont: docxOptions?.followPreviewFont !== false,
+          })
+          // 弹窗「跟随预览」：字号与行距都取预览设置；关闭才用规范版式（A4 / 11pt / 1.5）
+          if (docxOptions?.followPreview !== false) {
+            docxLayout.body.followPreviewSize = true
+            docxLayout.body.lineHeight = previewLineHeight
+          }
+          // DOCX 只能读 Markdown：先把预览里已经「不是 Markdown」的内容落回可解析形式
+          //   · [toc] → DOCX_TOC_MARKER（Rust 侧输出真正的 TOC 域）
+          //   · ```mermaid → SVG data URL（白底 palette，Rust 转 PNG/SVG 嵌入）
+          const docxMd = await prepareMarkdownForDocx(
+            tab.content,
+            (code) => renderMermaidSvgForExport(code, docxMermaidPalette, false),
+            docxLayout.toc.maxLevel,
+          )
+          tocIncluded = docxMd.includes(DOCX_TOC_MARKER)
+          // 用 invokeTauriOrThrow：导出失败必须抛错显示，不能吞错假装成功
+          await invokeTauriOrThrow('export_docx', {
+            path: savedPath,
+            md: docxMd,
+            baseDir,
+            theme: {
+              accent: palette.accent,
+              text: palette.text,
+              font: previewFontFamily,
+              monoFont: mono,
+              surface: palette.surface,
+              border: palette.border,
+              // 预览字号/行高：docx 必须与用户设定的预览排版一致
+              // （此前固定 11pt / 1.5 倍行距，与预览的 20px / 2.0 完全不符）
+              fontSizePx: previewFontSize,
+              lineHeight: previewLineHeight,
+              // 代码块语法高亮：直接读预览 DOM（分词与颜色都与预览一致，见该函数注释）。
+              // 暗色主题的 token 是给深色页面配的亮色，导出到白底文档要压暗（同 palette 的处理）
+              codeHighlights: docxOptions?.themeColors === false
+                ? { styles: {}, blocks: {} }
+                : collectCodeHighlights(document.querySelector('.editor-content'), {
+                  isDark,
+                  baseColor: palette.text,
+                }),
+              // 目录标题同理跟随界面语言：Word 里 TOC 域上方那行字由 Rust 侧写出，
+              // 它看不到前端 i18n，只能由这里把词条传过去（`reader.toc`，与预览那块同一个键）
+              tocTitle: translate(getCurrentLang(), 'reader.toc'),
+              // 目录边框/背景：跟随右上角开关；关闭「导出主题色」时一律无框无背景
+              tocFrame: docxOptions?.themeColors !== false && tocFrame,
+              layout: docxLayout,
+            },
+          })
+        }
       } else if (format === 'pdf') {
         // 纸面不带 dark：Mermaid SVG 的颜色是渲染时写死的，必须在导出前用
         // 白底/亮色 palette 重新渲染，否则暗色主题会得到「白纸上的暗色图表」。
@@ -1922,7 +1939,16 @@ function App() {
       setExportResultPath(savedPath)
     } catch (e) {
       console.error('[export] failed:', e)
-      showToast(t('app.exportFailed'))
+      const error = e instanceof Error ? e.message : String(e)
+      if (error.includes('PANDOC_NOT_FOUND')) {
+        showToast(t('docxExport.pandocNotFound'), 6000)
+      } else if (error.includes('PANDOC_TEMPLATE_INVALID')) {
+        showToast(t('docxExport.pandocTemplateInvalid'), 6000)
+      } else if (error.includes('PANDOC_FAILED')) {
+        showToast(t('docxExport.pandocFailed'), 6000)
+      } else {
+        showToast(t('app.exportFailed'))
+      }
     }
   }, [currentTab, showToast, buildExportHtml, previewFontFamily, isDark, previewFontSize, previewLineHeight, enabledPlugins, pluginConfigs, currentTheme, tocFrame])
 

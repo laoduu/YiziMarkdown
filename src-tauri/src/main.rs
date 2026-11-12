@@ -17,6 +17,7 @@ mod ai_proxy;
 
 // 导出 DOCX / PDF
 mod docx_export;
+mod pandoc_export;
 mod pdf_export;
 
 // LaTeX 公式 → Word 原生公式（OMML）：vendor 的 tex2word-math（MIT），见 src/omml/
@@ -2202,6 +2203,54 @@ async fn export_docx(path: String, md: String, base_dir: Option<String>, theme: 
     std::fs::write(&path, &bytes).map_err(|e| format!("Failed to write docx: {}", e))
 }
 
+/// 使用本机 Pandoc 导出 DOCX；可选 Pandoc reference.docx 作为 Word 模板。
+#[tauri::command]
+async fn export_docx_pandoc(
+    path: String,
+    md: String,
+    base_dir: Option<String>,
+    template_path: Option<String>,
+    include_toc: bool,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let base = base_dir.map(PathBuf::from);
+        let template = template_path.map(PathBuf::from);
+        pandoc_export::markdown_to_docx(
+            &md,
+            Path::new(&path),
+            base.as_deref(),
+            template.as_deref(),
+            include_toc,
+        )
+    })
+    .await
+    .map_err(|e| format!("{}: task failed: {}", pandoc_export::PANDOC_FAILED, e))?
+}
+
+/// 选择 Pandoc 的 Word reference.docx 模板。
+#[tauri::command]
+async fn pick_docx_template_dialog(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    tauri::async_runtime::spawn_blocking(move || {
+        Ok(app
+            .dialog()
+            .file()
+            .add_filter("Word reference document", &["docx"])
+            .blocking_pick_file()
+            .and_then(|p| p.into_path().ok())
+            .map(|p| p.to_string_lossy().to_string()))
+    })
+    .await
+    .map_err(|e| format!("Dialog task failed: {}", e))?
+}
+
+/// 校验持久化的 Pandoc Word 模板是否仍然可用。
+#[tauri::command]
+fn validate_docx_template(path: String) -> bool {
+    pandoc_export::is_valid_template(Path::new(&path))
+}
+
 /// 导出 PDF 用的 HTML 共享状态（自定义协议 yiziexport 按请求返回当前内容）
 struct ExportHtmlState(pub std::sync::Mutex<String>);
 
@@ -2267,6 +2316,8 @@ fn main() {
             pick_and_read_file,
             pick_image_file,
             import_theme_dialog,
+            pick_docx_template_dialog,
+            validate_docx_template,
             get_config_dir,
             get_theme_catalog,
             list_themes,
@@ -2307,7 +2358,7 @@ fn main() {
             save_pasted_image, import_image_file, save_file_with_assets,
             stage_pending_assets, adopt_staged_assets, cleanup_pasted_assets,
             take_install_language,
-            export_docx, export_pdf,
+            export_docx, export_docx_pandoc, export_pdf,
             set_window_border_color,
             ai_set_key,
             ai_has_key,

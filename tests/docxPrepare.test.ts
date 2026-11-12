@@ -10,7 +10,13 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { replaceMermaidFences, prepareMarkdownForDocx, svgToDataUrl, DOCX_TOC_MARKER } from '../src/lib/docxPrepare.ts'
+import {
+  replaceMermaidFences,
+  prepareMarkdownForDocx,
+  prepareMarkdownForPandoc,
+  svgToDataUrl,
+  DOCX_TOC_MARKER,
+} from '../src/lib/docxPrepare.ts'
 
 const MERMAID = '```mermaid\ngraph LR\nA-->B\n```\n'
 
@@ -121,4 +127,41 @@ test('DOCX 预处理：无标题的提示块保持原样，嵌套提示块同样
 test('DOCX 预处理：代码围栏里的提示块示例不被改写', async () => {
   const src = '```markdown\n> [!TIP] 小技巧\n```\n'
   assert.equal(await prepareMarkdownForDocx(src), src)
+})
+
+test('Pandoc 预处理：目录转成 --toc，提示块保持 Pandoc 原生语法', async () => {
+  const src = '# 标题\n\n[toc]\n\n> [!TIP] 小技巧\n> 正文\n'
+  const out = await prepareMarkdownForPandoc(src)
+  assert.equal(out.includeToc, true)
+  assert.ok(!out.markdown.includes('[toc]'), out.markdown)
+  assert.ok(out.markdown.includes('> [!TIP] 小技巧'), out.markdown)
+  assert.ok(!out.markdown.includes('<!--yizi:'), out.markdown)
+})
+
+test('Pandoc 预处理：普通带标题文档不自动生成目录', async () => {
+  const out = await prepareMarkdownForPandoc('# 一级标题\n\n正文\n\n## 二级标题\n')
+  assert.equal(out.includeToc, false)
+  assert.ok(!out.markdown.includes('[toc]'), out.markdown)
+})
+
+test('Pandoc 预处理：代码块里的 [toc] 不启用目录', async () => {
+  const src = '# 标题\n\n```markdown\n[toc]\n```\n'
+  const out = await prepareMarkdownForPandoc(src)
+  assert.equal(out.includeToc, false)
+  assert.ok(out.markdown.includes('```markdown\n[toc]\n```'), out.markdown)
+})
+
+test('Pandoc 预处理：没有可用标题时不启用目录，仍清理占位行', async () => {
+  const out = await prepareMarkdownForPandoc('#### 太深的标题\n\n[toc]\n', undefined, 3)
+  assert.equal(out.includeToc, false)
+  assert.ok(!out.markdown.includes('[toc]'), out.markdown)
+})
+
+test('Pandoc 预处理：Mermaid 渲染为图片，失败时保留代码块', async () => {
+  const src = '# 标题\n\n```mermaid\ngraph LR\nA-->B\n```\n'
+  const rendered = await prepareMarkdownForPandoc(src, async () => '<svg></svg>')
+  assert.match(rendered.markdown, /!\[Mermaid diagram\]\(data:image\/svg\+xml;base64,/)
+
+  const fallback = await prepareMarkdownForPandoc(MERMAID, async () => null)
+  assert.equal(fallback.markdown, MERMAID)
 })

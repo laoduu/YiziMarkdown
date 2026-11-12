@@ -174,6 +174,10 @@ export interface SettingsState {
   /** 内容超页处理：warn = 照常导出并列出页码；shrink = 自动回缩字号重排 */
   pptxOverflowMode: 'warn' | 'shrink'
 
+  // DOCX / Pandoc 导出
+  /** Pandoc 使用的 Word reference.docx；空串 = 使用 Pandoc 默认样式 */
+  docxPandocTemplatePath: string
+
   // AI 面板运行时状态（不持久化）
   /** AI 面板是否打开 */
   aiPanelOpen: boolean
@@ -283,6 +287,9 @@ export const useSettingsStore = create<SettingsState>()(
       pptxIncludeFooter: true,
       pptxOverflowMode: 'warn',
 
+      // DOCX / Pandoc 导出
+      docxPandocTemplatePath: '',
+
       // AI 面板运行时状态
       aiPanelOpen: false,
       aiPendingAction: null,
@@ -314,15 +321,17 @@ export const useSettingsStore = create<SettingsState>()(
       // v20: 粘贴图片保存位置 —— 新增 imageSaveMode（local 文档默认文档旁 images/）
       // v21: 取消「粘贴图片保存位置」设置 —— 本地文档统一写用户目录 assets/，
       //      存档里的 imageSaveMode 直接删除（不再有两条路径分支）
-      version: 21,
-      migrate: (persisted: unknown) => {
+      // v22: Pandoc Word 导出模板选择持久化 —— 新增 docxPandocTemplatePath
+      version: 22,
+      migrate: (persisted: unknown, persistedVersion: number) => {
         // 自动迁移旧字体栈到 MiSans 方案
         const oldFont = "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
         const newFont = "'MiSans', 'Mi Sans', system-ui, -apple-system, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', 'Noto Sans SC', sans-serif"
         const state = persisted as Record<string, unknown>
+        const fromVersion = Number.isFinite(persistedVersion) ? persistedVersion : 0
         if (state) {
           // v16：光标默认改为原生；旧版本的 bold 是旧默认，统一迁移一次。
-          state.cursorStyle = 'text'
+          if (fromVersion < 16) state.cursorStyle = 'text'
           if (state.fontFamily === oldFont) state.fontFamily = newFont
           if (state.previewFontFamily === oldFont) state.previewFontFamily = newFont
           // 自动保存间隔迁移：旧范围 1s~10s，新范围 5s~180s，越界值重置为默认 60s
@@ -331,7 +340,7 @@ export const useSettingsStore = create<SettingsState>()(
             state.autoSaveInterval = 60000
           }
           // v2/v3：涟漪反馈默认开启（新功能默认值统一为开启；v3 对存量已关闭的存档再强制一次）
-          state.mouseSpotlight = true
+          if (fromVersion < 3) state.mouseSpotlight = true
           // v4：起始目录的旧默认值 '/' 迁移为 /yizimarkdown（坚果云预设目录）。
           // 只认旧默认值本身：用户手填过的路径（含其它值）一律不动。
           if (state.webdavRootPath === '/') state.webdavRootPath = '/yizimarkdown'
@@ -383,7 +392,7 @@ export const useSettingsStore = create<SettingsState>()(
             state.contentMaxWidth, CONTENT_WIDTH_MIN, CONTENT_WIDTH_MAX, CONTENT_WIDTH_DEFAULT
           )
           // v19：旧实验值使用绝对倍率，统一重置为新基准下的 100%（之后再按用户设置保存）
-          state.uiTextScale = UI_TEXT_SCALE_DEFAULT
+          if (fromVersion < 19) state.uiTextScale = UI_TEXT_SCALE_DEFAULT
           state.uiTextScale = clampNumber(state.uiTextScale, UI_TEXT_SCALE_MIN, UI_TEXT_SCALE_MAX, UI_TEXT_SCALE_DEFAULT)
           // v21：取消「粘贴图片保存位置」设置。本地文档统一写 ~/Documents/yizimarkdown/assets/，
           // 旧存档里的 imageSaveMode 已无消费点，直接删掉（留着只会被 persist 反复写回）。
@@ -395,6 +404,11 @@ export const useSettingsStore = create<SettingsState>()(
           if (typeof state.pptxIncludeFooter !== 'boolean') state.pptxIncludeFooter = true
           if (state.pptxOverflowMode !== 'warn' && state.pptxOverflowMode !== 'shrink') {
             state.pptxOverflowMode = 'warn'
+          }
+          // v22：Pandoc Word 模板路径。存量存档没有它 ⇒ 空串（Pandoc 默认样式）。
+          // 文件是否仍存在由导出弹窗打开时再校验，迁移阶段不做磁盘访问。
+          if (typeof state.docxPandocTemplatePath !== 'string') {
+            state.docxPandocTemplatePath = ''
           }
           // v15：数学公式 / Mermaid 不再是插件；清掉旧存档里的开关与配置。
           // 不影响未来真正的插件（如 epub）；只删除这两个已内置化的 id。

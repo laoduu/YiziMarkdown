@@ -152,9 +152,22 @@ export function tocToMarkdownList(items: TocItem[]): string {
  * 逐行扫描并跟踪围栏，代码块里的 `[toc]` 原样保留。
  */
 export function replaceTocPlaceholders(markdown: string, replacement: string): string {
+  return scanTocPlaceholders(markdown, replacement).text
+}
+
+/** 正文（围栏代码块之外）是否显式写了 `[toc]` / `[[toc]]`。 */
+export function hasTocPlaceholder(markdown: string): boolean {
+  return scanTocPlaceholders(markdown, null).found
+}
+
+function scanTocPlaceholders(
+  markdown: string,
+  replacement: string | null,
+): { text: string; found: boolean } {
   const lines = markdown.split('\n')
   let fence: '```' | '~~~' | null = null
-  return lines
+  let found = false
+  const text = lines
     .map((line) => {
       const trimmed = line.trim()
       const fenceMatch = /^(`{3,}|~{3,})/.exec(trimmed)
@@ -165,6 +178,8 @@ export function replaceTocPlaceholders(markdown: string, replacement: string): s
         return line
       }
       if (fence !== null || !TOC_PLACEHOLDER.test(trimmed)) return line
+      found = true
+      if (replacement === null) return line
       const indent = /^\s*/.exec(line)?.[0] ?? ''
       return replacement
         .split('\n')
@@ -172,6 +187,7 @@ export function replaceTocPlaceholders(markdown: string, replacement: string): s
         .join('\n')
     })
     .join('\n')
+  return { text, found }
 }
 
 /** markdown-it 插件：在 inline 解析之后把目录段落替换成 HTML 区块 */
