@@ -808,7 +808,7 @@ export const ru = {
     toggleWrap: 'Переключить перенос строк',
     toggleLineNumbers: 'Показывать номера строк',
     copyCode: 'Копировать код',
-    toggleTocFrame: 'Переключить рамку и фон оглавления',
+    toggleTocFrame: 'Скрыть рамку и фон оглавления',
     copyFailed: 'Не удалось скопировать',
     tocEmpty: '(В этом документе нет заголовков)',
     imageLoadFailed: 'Не удалось загрузить изображение',

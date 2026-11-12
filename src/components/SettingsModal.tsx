@@ -989,7 +989,7 @@ function EditorSettings() {
             </Row>
             <Row label={t('live.toggleTocFrame')}>
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={store.tocFrame} onChange={(e) => store.setField('tocFrame', e.target.checked)} className="settings-checkbox" />
+                <input type="checkbox" checked={!store.tocFrame} onChange={(e) => store.setField('tocFrame', !e.target.checked)} className="settings-checkbox" />
               </label>
             </Row>
           </Section>

@@ -809,7 +809,7 @@ export const de = {
     toggleWrap: 'Zeilenumbruch umschalten',
     toggleLineNumbers: 'Zeilennummern anzeigen',
     copyCode: 'Code kopieren',
-    toggleTocFrame: 'Rahmen und Hintergrund des Inhaltsverzeichnisses umschalten',
+    toggleTocFrame: 'Rahmen und Hintergrund des Inhaltsverzeichnisses ausblenden',
     copyFailed: 'Kopieren fehlgeschlagen',
     tocEmpty: '(Dieses Dokument hat keine Überschriften)',
     imageLoadFailed: 'Bild konnte nicht geladen werden',

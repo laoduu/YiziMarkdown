@@ -828,7 +828,7 @@ export const zh = {
     toggleWrap: '切换换行',
     toggleLineNumbers: '显示行号',
     copyCode: '复制代码',
-    toggleTocFrame: '切换目录边框与背景',
+    toggleTocFrame: '隐藏目录边框与背景',
     copyFailed: '复制失败',
     tocEmpty: '（当前文档没有标题）',
     imageLoadFailed: '图片加载失败',

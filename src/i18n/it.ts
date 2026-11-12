@@ -809,7 +809,7 @@ export const it = {
     toggleWrap: 'Attiva/disattiva a capo',
     toggleLineNumbers: 'Mostra numeri di riga',
     copyCode: 'Copia codice',
-    toggleTocFrame: "Mostra/nascondi bordo e sfondo dell'indice",
+    toggleTocFrame: "Nascondi bordo e sfondo dell'indice",
     copyFailed: 'Copia non riuscita',
     tocEmpty: '(Questo documento non ha titoli)',
     imageLoadFailed: 'Impossibile caricare l’immagine',

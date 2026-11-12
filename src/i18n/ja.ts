@@ -809,7 +809,7 @@ export const ja = {
     toggleWrap: '折り返しを切り替え',
     toggleLineNumbers: '行番号を表示',
     copyCode: 'コードをコピー',
-    toggleTocFrame: '目次の枠線と背景を切り替え',
+    toggleTocFrame: '目次の枠線と背景を非表示',
     copyFailed: 'コピーに失敗',
     tocEmpty: '（この文書に見出しはありません）',
     imageLoadFailed: '画像を読み込めません',

@@ -826,7 +826,7 @@ export const zhTW = {
     toggleWrap: '切換換行',
     toggleLineNumbers: '顯示行號',
     copyCode: '複製程式碼',
-    toggleTocFrame: '切換目錄邊框與背景',
+    toggleTocFrame: '隱藏目錄邊框與背景',
     copyFailed: '複製失敗',
     tocEmpty: '（目前文件沒有標題）',
     imageLoadFailed: '圖片載入失敗',

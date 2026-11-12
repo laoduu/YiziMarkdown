@@ -809,7 +809,7 @@ export const es = {
     toggleWrap: 'Alternar ajuste de línea',
     toggleLineNumbers: 'Mostrar números de línea',
     copyCode: 'Copiar código',
-    toggleTocFrame: 'Mostrar u ocultar el borde y el fondo del índice',
+    toggleTocFrame: 'Ocultar el borde y el fondo del índice',
     copyFailed: 'Error al copiar',
     tocEmpty: '(Este documento no tiene títulos)',
     imageLoadFailed: 'No se pudo cargar la imagen',

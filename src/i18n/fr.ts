@@ -809,7 +809,7 @@ export const fr = {
     toggleWrap: 'Basculer le retour à la ligne',
     toggleLineNumbers: 'Afficher les numéros de ligne',
     copyCode: 'Copier le code',
-    toggleTocFrame: 'Afficher/masquer la bordure et le fond du sommaire',
+    toggleTocFrame: 'Masquer la bordure et le fond du sommaire',
     copyFailed: 'Échec de la copie',
     tocEmpty: '(Ce document ne contient aucun titre)',
     imageLoadFailed: 'Échec du chargement de l’image',

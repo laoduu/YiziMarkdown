@@ -809,7 +809,7 @@ export const tr = {
     toggleWrap: 'Satır kaydırmayı aç/kapat',
     toggleLineNumbers: 'Satır numaralarını göster',
     copyCode: 'Kodu kopyala',
-    toggleTocFrame: 'İçindekiler kenarlığı ve arka planını aç/kapat',
+    toggleTocFrame: 'İçindekiler kenarlığını ve arka planını gizle',
     copyFailed: 'Kopyalama başarısız',
     tocEmpty: '(Bu belgede başlık yok)',
     imageLoadFailed: 'Görsel yüklenemedi',

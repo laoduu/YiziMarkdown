@@ -809,7 +809,7 @@ export const ko = {
     toggleWrap: '줄 바꿈 전환',
     toggleLineNumbers: '줄 번호 표시',
     copyCode: '코드 복사',
-    toggleTocFrame: '목차 테두리와 배경 전환',
+    toggleTocFrame: '목차 테두리 및 배경 숨기기',
     copyFailed: '복사 실패',
     tocEmpty: '(이 문서에는 제목이 없습니다)',
     imageLoadFailed: '이미지를 불러오지 못했습니다',

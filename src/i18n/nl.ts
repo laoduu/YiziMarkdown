@@ -809,7 +809,7 @@ export const nl = {
     toggleWrap: 'Regelafbreking aan/uit',
     toggleLineNumbers: 'Regelnummers tonen',
     copyCode: 'Code kopiëren',
-    toggleTocFrame: 'Rand en achtergrond van inhoudsopgave schakelen',
+    toggleTocFrame: 'Rand en achtergrond van inhoudsopgave verbergen',
     copyFailed: 'Kopiëren mislukt',
     tocEmpty: '(Dit document heeft geen koppen)',
     imageLoadFailed: 'Afbeelding kon niet worden geladen',

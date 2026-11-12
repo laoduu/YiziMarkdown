@@ -809,7 +809,7 @@ export const pl = {
     toggleWrap: 'Przełącz zawijanie wierszy',
     toggleLineNumbers: 'Pokaż numery wierszy',
     copyCode: 'Kopiuj kod',
-    toggleTocFrame: 'Przełącz obramowanie i tło spisu treści',
+    toggleTocFrame: 'Ukryj obramowanie i tło spisu treści',
     copyFailed: 'Kopiowanie nie powiodło się',
     tocEmpty: '(Ten dokument nie ma nagłówków)',
     imageLoadFailed: 'Nie udało się wczytać obrazu',

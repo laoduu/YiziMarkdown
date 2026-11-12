@@ -809,7 +809,7 @@ export const sv = {
     toggleWrap: 'Växla radbrytning',
     toggleLineNumbers: 'Visa radnummer',
     copyCode: 'Kopiera kod',
-    toggleTocFrame: 'Växla innehållsförteckningens ram och bakgrund',
+    toggleTocFrame: 'Dölj innehållsförteckningens ram och bakgrund',
     copyFailed: 'Kopieringen misslyckades',
     tocEmpty: '(Det här dokumentet har inga rubriker)',
     imageLoadFailed: 'Bilden kunde inte laddas',

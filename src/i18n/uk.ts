@@ -809,7 +809,7 @@ export const uk = {
     toggleWrap: 'Перемкнути перенесення рядків',
     toggleLineNumbers: 'Показати номери рядків',
     copyCode: 'Копіювати код',
-    toggleTocFrame: 'Показати/сховати рамку та фон змісту',
+    toggleTocFrame: 'Приховати рамку й фон змісту',
     copyFailed: 'Не вдалося скопіювати',
     tocEmpty: '(У цьому документі немає заголовків)',
     imageLoadFailed: 'Не вдалося завантажити зображення',

@@ -828,7 +828,7 @@ export const en = {
     toggleWrap: 'Toggle line wrap',
     toggleLineNumbers: 'Show line numbers',
     copyCode: 'Copy code',
-    toggleTocFrame: 'Toggle TOC border and background',
+    toggleTocFrame: 'Hide TOC border and background',
     copyFailed: 'Copy failed',
     tocEmpty: '(This document has no headings)',
     imageLoadFailed: 'Image failed to load',
