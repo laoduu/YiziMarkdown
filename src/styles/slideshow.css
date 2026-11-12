@@ -924,12 +924,18 @@
   background: var(--editor-surface, rgba(128, 128, 128, 0.12));
   border: 1px solid var(--editor-border, rgba(128, 128, 128, 0.2));
   padding: 1.4em 1.6em;
+  /* flex 子项之间不会折叠 margin；pre 若保持 0，会和相邻表格/代码块零间距。 */
+  margin: 0.7em 0;
   border-radius: 12px;
   overflow-x: auto;
   max-width: 100%;   /* 分栏/栅格内也能正常横向滚动，而不是撑破容器 */
   font-size: 0.72em;
   line-height: 1.6;
   text-align: left;   /* 代码块居中，内部内容左对齐 */
+}
+
+.ys-slide table {
+  margin: 0.7em 0;
 }
 
 .ys-slide pre code {
