@@ -1801,7 +1801,7 @@ function App() {
             6,
           )
           tocIncluded = pandocDoc.includeToc
-          const pandocTocTitle = translate(getCurrentLang(), 'reader.toc')
+          const pandocTocTitle = translate(getCurrentLang(), 'docx.tocTitle')
           await invokeTauriOrThrow('export_docx_pandoc', {
             path: savedPath,
             md: pandocDoc.markdown,
@@ -1857,7 +1857,7 @@ function App() {
                 }),
               // 目录标题同理跟随界面语言：Word 里 TOC 域上方那行字由 Rust 侧写出，
               // 它看不到前端 i18n，只能由这里把词条传过去（`reader.toc`，与预览那块同一个键）
-              tocTitle: translate(getCurrentLang(), 'reader.toc'),
+              tocTitle: translate(getCurrentLang(), 'docx.tocTitle'),
               // 目录边框/背景：跟随右上角开关；关闭「导出主题色」时一律无框无背景
               tocFrame: docxOptions?.themeColors !== false && tocFrame,
               layout: docxLayout,

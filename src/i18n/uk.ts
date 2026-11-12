@@ -921,6 +921,7 @@ export const uk = {
     followPreviewFontHint: 'Вимкнено: стандартні шрифти Word – текст Calibri / DengXian, заголовки Calibri Light / DengXian Light (запасні PingFang SC / Microsoft YaHei).',
   },
   docx: {
+    tocTitle: 'Зміст',
     tocHint: 'Клацніть правою кнопкою на змісті → Оновити поле (F9)',
   }
 }

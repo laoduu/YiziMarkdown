@@ -940,6 +940,7 @@ export const zh = {
     followPreviewFontHint: '关闭后使用 Word 默认字体：正文 Calibri / 等线，标题 Calibri Light / 等线 Light；缺字自动回退苹方 / 微软雅黑。',
   },
   docx: {
+    tocTitle: '目录',
     tocHint: '右键目录 → 更新域（或按 F9）',
   }
 }

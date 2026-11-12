@@ -921,6 +921,7 @@ export const de = {
     followPreviewFontHint: 'Aus: Word-Standardschriften – Text Calibri / DengXian, Überschriften Calibri Light / DengXian Light (Fallback PingFang SC / Microsoft YaHei).',
   },
   docx: {
+    tocTitle: 'Inhaltsverzeichnis',
     tocHint: 'Rechtsklick auf das Inhaltsverzeichnis → Feld aktualisieren (F9)',
   }
 }

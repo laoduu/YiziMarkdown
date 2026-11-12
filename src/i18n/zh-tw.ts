@@ -938,6 +938,7 @@ export const zhTW = {
     followPreviewFontHint: '關閉後使用 Word 預設字型：內文 Calibri / 等線，標題 Calibri Light / 等線 Light；缺字自動回退蘋方 / 微軟雅黑。',
   },
   docx: {
+    tocTitle: '目錄',
     tocHint: '右鍵目錄 → 更新功能變數（或按 F9）',
   }
 }

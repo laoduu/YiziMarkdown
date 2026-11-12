@@ -920,6 +920,7 @@ export const ru = {
     followPreviewFontHint: 'Если выключено, используются шрифты Word по умолчанию: основной текст Calibri / DengXian, заголовки Calibri Light / DengXian Light, с запасными PingFang SC / Microsoft YaHei.',
   },
   docx: {
+    tocTitle: 'Оглавление',
     tocHint: 'Щёлкните правой кнопкой по оглавлению → «Обновить поле» (F9)',
   }
 }

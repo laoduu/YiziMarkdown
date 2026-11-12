@@ -921,6 +921,7 @@ export const it = {
     followPreviewFontHint: 'Disattivato: font predefiniti di Word: testo Calibri / DengXian, titoli Calibri Light / DengXian Light (fallback PingFang SC / Microsoft YaHei).',
   },
   docx: {
+    tocTitle: 'Indice',
     tocHint: 'Fai clic con il pulsante destro sul sommario → Aggiorna campo (F9)',
   }
 }

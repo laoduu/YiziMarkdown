@@ -921,6 +921,7 @@ export const fr = {
     followPreviewFontHint: 'Désactivé : polices Word par défaut – texte Calibri / DengXian, titres Calibri Light / DengXian Light (repli PingFang SC / Microsoft YaHei).',
   },
   docx: {
+    tocTitle: 'Table des matières',
     tocHint: 'Clic droit sur la table des matières → Mettre à jour le champ (F9)',
   }
 }

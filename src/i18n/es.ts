@@ -921,6 +921,7 @@ export const es = {
     followPreviewFontHint: 'Desactivado: fuentes predeterminadas de Word: texto Calibri / DengXian, títulos Calibri Light / DengXian Light (respaldo PingFang SC / Microsoft YaHei).',
   },
   docx: {
+    tocTitle: 'Índice',
     tocHint: 'Haz clic derecho en el índice → Actualizar campo (F9)',
   }
 }

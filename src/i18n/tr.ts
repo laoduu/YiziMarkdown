@@ -921,6 +921,7 @@ export const tr = {
     followPreviewFontHint: 'Kapalı: Word varsayılan yazı tipleri – gövde Calibri / DengXian, başlıklar Calibri Light / DengXian Light (yedek PingFang SC / Microsoft YaHei).',
   },
   docx: {
+    tocTitle: 'İçindekiler',
     tocHint: 'İçindekiler tablosuna sağ tıklayın → Alanı güncelle (F9)',
   }
 }

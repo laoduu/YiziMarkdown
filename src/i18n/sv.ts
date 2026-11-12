@@ -921,6 +921,7 @@ export const sv = {
     followPreviewFontHint: 'Av: Words standardteckensnitt – brödtext Calibri / DengXian, rubriker Calibri Light / DengXian Light (reserv PingFang SC / Microsoft YaHei).',
   },
   docx: {
+    tocTitle: 'Innehållsförteckning',
     tocHint: 'Högerklicka på innehållsförteckningen → Uppdatera fält (F9)',
   }
 }

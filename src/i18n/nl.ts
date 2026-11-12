@@ -921,6 +921,7 @@ export const nl = {
     followPreviewFontHint: 'Uit: standaardlettertypen van Word – tekst Calibri / DengXian, koppen Calibri Light / DengXian Light (terugval PingFang SC / Microsoft YaHei).',
   },
   docx: {
+    tocTitle: 'Inhoudsopgave',
     tocHint: 'Rechtsklik op de inhoudsopgave → Veld bijwerken (F9)',
   }
 }

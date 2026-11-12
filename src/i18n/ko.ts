@@ -921,6 +921,7 @@ export const ko = {
     followPreviewFontHint: '끄면 Word 기본 글꼴 사용: 본문 Calibri / DengXian, 제목 Calibri Light / DengXian Light (대체 PingFang SC / Microsoft YaHei).',
   },
   docx: {
+    tocTitle: '목차',
     tocHint: '목차를 마우스 오른쪽 버튼으로 클릭 → 필드 업데이트(F9)',
   }
 }

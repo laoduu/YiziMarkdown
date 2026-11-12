@@ -921,6 +921,7 @@ export const pl = {
     followPreviewFontHint: 'Wyłączone: domyślne czcionki Word – tekst Calibri / DengXian, nagłówki Calibri Light / DengXian Light (zapasowe PingFang SC / Microsoft YaHei).',
   },
   docx: {
+    tocTitle: 'Spis treści',
     tocHint: 'Kliknij prawym przyciskiem myszy spis treści → Aktualizuj pole (F9)',
   }
 }

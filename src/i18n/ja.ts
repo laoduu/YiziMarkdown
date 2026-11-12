@@ -921,6 +921,7 @@ export const ja = {
     followPreviewFontHint: 'オフ時は Word 既定フォント（本文 Calibri / DengXian、見出し Calibri Light / DengXian Light、代替 PingFang SC / Microsoft YaHei）を使用。',
   },
   docx: {
+    tocTitle: '目次',
     tocHint: '目次を右クリック → フィールド更新（F9）',
   }
 }

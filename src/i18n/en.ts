@@ -940,6 +940,7 @@ export const en = {
     followPreviewFontHint: 'When off, uses Word default fonts: body Calibri / DengXian, headings Calibri Light / DengXian Light, with PingFang SC / Microsoft YaHei fallbacks.',
   },
   docx: {
+    tocTitle: 'Table of Contents',
     tocHint: 'Right-click the table of contents → Update Field (F9)',
   }
 }
