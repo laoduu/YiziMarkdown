@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react'
 import { EditorView, keymap, lineNumbers, drawSelection, highlightActiveLine } from '@codemirror/view'
-import { EditorState, Compartment, Extension, Transaction } from '@codemirror/state'
-import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
+import { EditorState, Compartment, Extension, Transaction, Prec } from '@codemirror/state'
+import { markdown, markdownLanguage, insertNewlineContinueMarkup } from '@codemirror/lang-markdown'
 import { defaultHighlightStyle, syntaxHighlighting, indentOnInput, bracketMatching, codeFolding, foldKeymap } from '@codemirror/language'
 import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo } from '@codemirror/commands'
 import { search, searchKeymap, highlightSelectionMatches, closeSearchPanel } from '@codemirror/search'
@@ -13,7 +13,8 @@ import { useEditorStore, type ViewMode } from '../stores/editorStore'
 import { findOutlineByLine, computeOutlineItems } from '../lib/headingId'
 import { numberOrderedLines } from '../lib/listFormat'
 import { findMarkerNbspOffsets } from '../lib/markdownMarkerNbsp'
-import { isTaskLine, toggleTaskAtLine } from '../lib/taskList'
+import { isTaskLine, toggleTaskAtLine, taskEnterAction } from '../lib/taskList'
+import { completeTaskContinuation } from '../lib/taskListEnter'
 import { decideClipboardPaste, imageMarkdownRef, LOCAL_IMAGE_PREFIX, materializePastedImages, planPasteInsert } from '../lib/clipboardMarkdown'
 import { collectClipboardImages, imageAltFromFile, readFileAsBase64 } from '../lib/clipboardImages'
 import {
@@ -765,6 +766,32 @@ function replaceBrokenImage(img: HTMLImageElement): void {
   img.replaceWith(span)
 }
 
+/**
+ * 回车续写任务列表：CodeMirror 的 `markdownKeymap` 只会续写 `- `，
+ * 不会补 `[ ] `，任务项回车后会退化成普通无序列表。
+ * 这里先让 CM 完成续行（保留缩进、有序列表重编号与非紧凑列表空行），
+ * 再在新行的列表标记后插入一个空的 checkbox。
+ */
+function taskListEnter(view: EditorView): boolean {
+  const { state } = view
+  // 只处理单光标、无选区的普通回车；多光标 / 选区交给默认逻辑
+  if (state.selection.ranges.length !== 1 || !state.selection.main.empty) return false
+  const line = state.doc.lineAt(state.selection.main.head)
+  if (taskEnterAction(line.text, state.selection.main.head - line.from) !== 'continue') return false
+
+  let tr: Transaction | undefined
+  const handled = insertNewlineContinueMarkup({
+    state,
+    dispatch: (t) => { tr = t },
+  })
+  if (!handled || !tr) return false
+
+  // 把 CM 的续行事务与 checkbox 插入合成**同一个**事务（基于当前 state）：
+  // 分两次 dispatch 会让两次变更落在不同事务里，撤销也要按两次走。
+  view.dispatch(completeTaskContinuation(state, tr))
+  return true
+}
+
 const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearchToggle, isSearchOpen: externalSearchOpen, viewMode: externalViewMode, onCursorChange, onToast, themeRevision = 0 }, ref) => {
   const { t } = useI18n()
 
@@ -1368,6 +1395,8 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         // 这里用 StateField 判定区间、并给区间内每行套类；源码与实时模式共用。
         frontMatterField,
         frontMatterLines,
+        // 任务列表回车续写：必须压过 markdownKeymap 自带的 Enter（只补 `- `）
+        Prec.highest(keymap.of([{ key: 'Enter', run: taskListEnter }])),
         keymap.of([
         ...defaultKeymap, ...historyKeymap, ...searchKeymap.filter(k => !(k.key === 'Mod-f' && 'run' in k)), ...completionKeymap, indentWithTab,
         

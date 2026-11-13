@@ -27,3 +27,20 @@ export function toggleTaskAtLine(content: string, lineNumber: number, checked: b
   lines[lineNumber - 1] = next
   return lines.join('\n')
 }
+
+/** 回车时任务列表续行的判定：
+ *  - continue：光标在**非空**任务项里，回车应续写 `- [ ] `（Editor 侧负责保留缩进 / 有序编号）
+ *  - exit：空任务项（如 `- [ ] `），回车应退出列表，交给 CodeMirror 默认逻辑删标记
+ *  - none：不是任务项，或光标在任务标记之前，走普通回车
+ */
+export type TaskEnterAction = 'continue' | 'exit' | 'none'
+
+export function taskEnterAction(lineText: string, posFromLineStart: number): TaskEnterAction {
+  const match = /^(\s*(?:[-*+]|\d+[.)])\s+\[[ xX]\])(\s*)(.*)$/.exec(lineText)
+  if (!match) return 'none'
+  // `- [ ]foo`（`]` 后没有空格）不是 GFM 任务项，按普通列表处理
+  if (!match[2] && match[3]) return 'none'
+  const markerEnd = match[1].length + match[2].length
+  if (posFromLineStart < markerEnd) return 'none'
+  return match[3].trim() ? 'continue' : 'exit'
+}

@@ -156,6 +156,28 @@
 - EPUB：取消「生成封面页」、阅读主题改为「深色阅读」→ 关闭重开均保持；「书名」仍自动取当前文档标题。
 - `tsc` 通过；`npm test` 499 项通过。
 
+### 任务列表回车续写退化成普通无序列表（2026-11-13）
+
+**现象**
+- 在 `- [ ] 文本` 的任务项末尾按回车，新行只生成 `- `，不会继续生成 `- [ ] `。
+
+**根因**
+- Enter 由 CodeMirror 的 `markdownKeymap`（`insertNewlineContinueMarkup`）处理；不同版本 / 文档状态下它可能只续写列表标记，不补任务 checkbox。
+- 续行还包含缩进、有序列表重编号、非紧凑列表空行等逻辑，不能简单手写 `\n- [ ] ` 替代。
+
+**修复**
+- 新增最高优先级的 Enter 命令（`Prec.highest`）：先让 CodeMirror 生成标准续行事务，再用 `completeTaskContinuation()` 检查新行 ——
+  - 新行已带 `- [ ]` → 原样采用，避免 `- [ ] [ ] `；
+  - 新行只有 `- ` → 在列表标记后补 `[ ] `；
+  - 两种情况都合成**同一个**事务，撤销一次即可回退，光标停在 checkbox 之后。
+- 空任务项（`- [ ] `）仍交给 CodeMirror 处理（退出列表 / 删标记）。
+- 缩进、`1. [ ]` 编号、嵌套层级全部由 CodeMirror 续行逻辑保留。
+- 新增 `lib/taskListEnter.ts` 与 `taskEnterAction()` 判定，配套 9 条单测。
+
+**验证**
+- dev 实测：ASCII 任务项 `- [ ] foo` 末尾回车，新行生成 `- [ ] `，光标位于第 7 列。
+- 有序任务、嵌套任务、CM 已补 checkbox 不重复插入均通过单测覆盖。
+
 ## v0.4.3
 
 > **已发布**（2026-11-09）：发布 tag `v0.4.3`。`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已同步到 `0.4.3`。用户向说明见 `docs/changelog/CHANGELOG-V0.4.3.md`。

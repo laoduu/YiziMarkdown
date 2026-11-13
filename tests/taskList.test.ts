@@ -12,7 +12,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { renderMarkdown } from '../src/lib/markdownRenderer.ts'
-import { isTaskLine, toggleTaskAtLine, toggleTaskLine } from '../src/lib/taskList.ts'
+import { isTaskLine, toggleTaskAtLine, toggleTaskLine, taskEnterAction } from '../src/lib/taskList.ts'
 
 const SRC = '- [x] 带 `行内代码` 与 **加粗** 的任务\n'
 
@@ -77,6 +77,31 @@ test('重复文案按行号互不串行（旧实现会永远改到第一行）',
   const rows = next.trimEnd().split('\n')
   assert.equal(rows[3], '- [ ] 重复文案')
   assert.equal(rows[4], '- [x] 重复文案')
+})
+
+// ---- 回车续行：任务项应继续补 `[ ] `，不能退化成普通无序列表 ----
+
+test('非空任务项回车续行（无序 / 有序 / 嵌套）', () => {
+  assert.equal(taskEnterAction('- [ ] foo', 9), 'continue')
+  assert.equal(taskEnterAction('* [x] done', 10), 'continue')
+  assert.equal(taskEnterAction('1. [ ] item', 10), 'continue')
+  assert.equal(taskEnterAction('  - [ ] nested', 12), 'continue')
+})
+
+test('空任务项回车退出列表，交给默认逻辑删标记', () => {
+  assert.equal(taskEnterAction('- [ ] ', 6), 'exit')
+  assert.equal(taskEnterAction('- [ ]', 5), 'exit')
+  assert.equal(taskEnterAction('  * [x]   ', 10), 'exit')
+})
+
+test('普通无序列表 / 非任务语法不接管', () => {
+  assert.equal(taskEnterAction('- foo', 5), 'none')
+  assert.equal(taskEnterAction('- [ ]foo', 8), 'none')
+  assert.equal(taskEnterAction('普通段落', 4), 'none')
+})
+
+test('光标停在任务标记之前时不接管（保留默认回车）', () => {
+  assert.equal(taskEnterAction('- [ ] foo', 2), 'none')
 })
 
 test('嵌套任务项只改自己那一行，父项状态不变', () => {
