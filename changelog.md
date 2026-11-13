@@ -134,6 +134,28 @@
 **验证**
 - 构造包含五类提示块 + 普通引用对照的文档，在阅读模式第 3 页确认：图标、标题文字、五种配色全部正确，普通引用块不受影响。
 
+### 导出弹窗不记住上次勾选（2026-11-13）
+
+**现象**
+- DOCX / EPUB 导出弹窗每次打开都回到默认勾选：上次取消的「导出主题色」「生成封面页」等，下次又变回勾选，需要重新设置。PPTX 弹窗的备注 / 页脚没有这个问题。
+
+**根因**
+- DOCX 弹窗的三个勾选项是组件内 `useState`，文件头注释也明确写着「选项不落盘」。
+- EPUB 走通用 `PluginExportDialog`：打开时只应用插件的 `getExportDefaults()`，从不读取任何存档；`pluginConfigs` 是 Markdown 渲染插件配置，不能复用为导出选项。
+- PPTX 的备注 / 页脚 / 超页策略早在 v0.4.0 就写进 settingsStore，因此一直能记住。
+
+**修复**
+- settingsStore 升到 v23：新增 `docxThemeColors` / `docxFollowPreview` / `docxFollowPreviewFont`，以及按 `${pluginId}:${format}` 分组的 `pluginExportOptions`；旧存档迁移补默认值。
+- DOCX 弹窗直接读写设置项，勾选立即落盘（取消导出也保留选择）。
+- `PluginExportDialog` 初始化顺序改为「上次记住的值 → getExportDefaults → 字段默认值」。
+- 只记住偏好型字段（checkbox / select）；书名、作者等 text 字段仍然跟随当前文档，避免把上一本书的标题带到下一篇。
+- 新增 `lib/exportOptions.ts`：读取存档时校验类型与选项合法性（插件升级删掉旧选项后自动回落默认，不会出现空白下拉），并配 5 条单测。
+
+**验证**
+- DOCX：取消「字体跟随预览」→ 关闭重开保持未勾选；重新勾选后保持勾选。
+- EPUB：取消「生成封面页」、阅读主题改为「深色阅读」→ 关闭重开均保持；「书名」仍自动取当前文档标题。
+- `tsc` 通过；`npm test` 499 项通过。
+
 ## v0.4.3
 
 > **已发布**（2026-11-09）：发布 tag `v0.4.3`。`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已同步到 `0.4.3`。用户向说明见 `docs/changelog/CHANGELOG-V0.4.3.md`。

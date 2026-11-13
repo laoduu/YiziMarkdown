@@ -192,6 +192,18 @@ export interface SettingsState {
   /** 内容超页处理：warn = 照常导出并列出页码；shrink = 自动回缩字号重排 */
   pptxOverflowMode: 'warn' | 'shrink'
 
+  // DOCX 导出（v0.4.4）：弹窗里的三个勾选项记住上次选择
+  /** 导出主题色（标题 / 表头 / 代码高亮） */
+  docxThemeColors: boolean
+  /** 字号与行距跟随预览 */
+  docxFollowPreview: boolean
+  /** 字体跟随预览 */
+  docxFollowPreviewFont: boolean
+
+  // 插件导出弹窗（EPUB 等，v0.4.4）
+  /** 按 `${pluginId}:${format}` 记住的偏好项（只存 checkbox / select，见 lib/exportOptions.ts） */
+  pluginExportOptions: Record<string, Record<string, unknown>>
+
   // AI 面板运行时状态（不持久化）
   /** AI 面板是否打开 */
   aiPanelOpen: boolean
@@ -304,6 +316,14 @@ export const useSettingsStore = create<SettingsState>()(
       pptxIncludeFooter: true,
       pptxOverflowMode: 'warn',
 
+      // DOCX 导出（v0.4.4）：三个勾选项默认开
+      docxThemeColors: true,
+      docxFollowPreview: true,
+      docxFollowPreviewFont: true,
+
+      // 插件导出弹窗（v0.4.4）：默认没有任何记住项
+      pluginExportOptions: {},
+
       // AI 面板运行时状态
       aiPanelOpen: false,
       aiPendingAction: null,
@@ -336,7 +356,9 @@ export const useSettingsStore = create<SettingsState>()(
       // v21: 取消「粘贴图片保存位置」设置 —— 本地文档统一写用户目录 assets/，
       //      存档里的 imageSaveMode 直接删除（不再有两条路径分支）
       // v22: 左侧边栏可拖拽调宽 —— 新增 sidebarWidth（默认 260，与改动前一致）
-      version: 22,
+      // v23: 导出弹窗记住勾选 —— 新增 docxThemeColors / docxFollowPreview /
+      //      docxFollowPreviewFont / pluginExportOptions（默认空）
+      version: 23,
       migrate: (persisted: unknown) => {
         // 自动迁移旧字体栈到 MiSans 方案
         const oldFont = "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
@@ -415,6 +437,17 @@ export const useSettingsStore = create<SettingsState>()(
           state.sidebarWidth = clampNumber(
             state.sidebarWidth, SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX, SIDEBAR_WIDTH_DEFAULT
           )
+          // v23：导出弹窗记住勾选。存量存档缺键 ⇒ 补默认全开；插件导出记住项缺省为空对象。
+          if (typeof state.docxThemeColors !== 'boolean') state.docxThemeColors = true
+          if (typeof state.docxFollowPreview !== 'boolean') state.docxFollowPreview = true
+          if (typeof state.docxFollowPreviewFont !== 'boolean') state.docxFollowPreviewFont = true
+          if (
+            !state.pluginExportOptions ||
+            typeof state.pluginExportOptions !== 'object' ||
+            Array.isArray(state.pluginExportOptions)
+          ) {
+            state.pluginExportOptions = {}
+          }
           // v14：PPTX 导出。存量存档没有这四个键 ⇒ 补默认值。
           // 超页策略只认枚举值（手改 localStorage 写入非法值会让分段按钮全灭）。
           if (typeof state.pptxExportHintSeen !== 'boolean') state.pptxExportHintSeen = false
