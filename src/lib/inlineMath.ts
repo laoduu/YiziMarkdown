@@ -15,6 +15,20 @@ function isEscaped(text: string, index: number): boolean {
   return slashes % 2 === 1
 }
 
+function canOpenDelimiter(text: string, index: number): boolean {
+  const next = text[index + 1]
+  return next !== undefined && next !== ' ' && next !== '\t'
+}
+
+function canCloseDelimiter(text: string, index: number): boolean {
+  const prev = text[index - 1]
+  const next = text[index + 1]
+  return prev !== undefined &&
+    prev !== ' ' &&
+    prev !== '\t' &&
+    !(next !== undefined && next >= '0' && next <= '9')
+}
+
 export function splitInlineMath(text: string): InlineMathSegment[] {
   const out: InlineMathSegment[] = []
   let cursor = 0
@@ -34,27 +48,41 @@ export function splitInlineMath(text: string): InlineMathSegment[] {
       i += 2
       continue
     }
-
-    let end = i + 1
-    while (end < text.length) {
-      if (text[end] === '\n') break
-      if (text[end] === '$' && !isEscaped(text, end)) break
-      end++
-    }
-    if (end >= text.length || text[end] !== '$') {
+    // 与 markdown-it-katex 的开闭边界一致：`$5`、`$10` 这类金额不能
+    // 因为后面恰好又出现一个 `$` 就被拼成公式。
+    if (!canOpenDelimiter(text, i)) {
       i++
       continue
     }
 
-    const tex = text.slice(i + 1, end).trim()
+    let end = i + 1
+    let close = -1
+    while (end < text.length) {
+      if (text[end] === '\n') break
+      if (text[end] === '$' && !isEscaped(text, end)) {
+        if (canCloseDelimiter(text, end)) {
+          close = end
+        }
+        // 第一个未转义 `$` 不能闭合时，当前 `$` 就不能作为起始符；
+        // 不能越过它继续找后面的 `$`，否则 `$5 和 $x$` 会被错误吞并。
+        break
+      }
+      end++
+    }
+    if (close < 0) {
+      i++
+      continue
+    }
+
+    const tex = text.slice(i + 1, close).trim()
     if (!tex) {
-      i = end + 1
+      i = close + 1
       continue
     }
 
     pushText(i)
     out.push({ kind: 'math', tex })
-    cursor = end + 1
+    cursor = close + 1
     i = cursor
   }
 

@@ -161,6 +161,16 @@ test('PPTX：KaTeX 未生成 DOM 时仍能识别正文原始 TeX', () => {
   assert.deepEqual(splitInlineMath('价格 \\$5，不是公式'), [
     { kind: 'text', text: '价格 \\$5，不是公式' },
   ])
+  assert.deepEqual(splitInlineMath('价格是 $5 和 $10，合计 $15'), [
+    { kind: 'text', text: '价格是 $5 和 $10，合计 $15' },
+  ])
+  assert.deepEqual(splitInlineMath('$5-$10、$1,000、$99.9'), [
+    { kind: 'text', text: '$5-$10、$1,000、$99.9' },
+  ])
+  assert.deepEqual(splitInlineMath('$5 和 $x$'), [
+    { kind: 'text', text: '$5 和 ' },
+    { kind: 'math', tex: 'x' },
+  ])
 })
 
 test('PPTX：公式 run 不能被合并成普通文本', () => {
