@@ -117,6 +117,23 @@
 - dev 实测：Markdown / EPUB 的勾选与取消均生效，`mimeapps.list` 与复选框状态同步；无桌面条目时会在面板内显示错误原因。
 - Rust 新增 5 个单元测试（默认列表解析、关联移除、段落保留）；`cargo test` 187 通过。`tsc` / `npm test` 494 通过。
 
+### 阅读模式五类提示块样式丢失（2026-11-13）
+
+**现象**
+- `> [!NOTE]` / `[!TIP]` / `[!IMPORTANT]` / `[!WARNING]` / `[!CAUTION]` 在预览、实时、演示模式下渲染正常；进入阅读模式后只剩普通引用块 —— 没有类型图标，标题也不着色。
+
+**根因**
+- `alert.ts` 产出的 HTML 是正确的（`blockquote.md-alert.md-alert-<type>` + `p.md-alert-title`），问题只在样式命中范围。
+- 提示块相关的选择器此前只覆盖 `.editor-content`（源码 / 预览）和 `.ys-slide`（演示）。阅读模式的正文容器是 `.reader-content`，所有规则都没匹配上，标题退化成普通段落。
+
+**修复**
+- 标题排版（flex + 图标 `::before`）与五类 `--alert-accent` / `--alert-icon` 变量的选择器全部增加 `.reader-content`；深色主题的配色覆盖同步增加。
+- 阅读模式的引用块默认是斜体，给提示块标题补 `font-style: normal`，标题保持直立，正文仍沿用阅读模式的引用排版。
+- 引用块本身的边框 / 底色仍由阅读模式自己的引用样式决定，与预览 / 演示的既有口径一致（只给标题与图标着色）。
+
+**验证**
+- 构造包含五类提示块 + 普通引用对照的文档，在阅读模式第 3 页确认：图标、标题文字、五种配色全部正确，普通引用块不受影响。
+
 ## v0.4.3
 
 > **已发布**（2026-11-09）：发布 tag `v0.4.3`。`package.json` / `package-lock.json` / `Cargo.toml` / `Cargo.lock` / `tauri.conf.json` 已同步到 `0.4.3`。用户向说明见 `docs/changelog/CHANGELOG-V0.4.3.md`。
