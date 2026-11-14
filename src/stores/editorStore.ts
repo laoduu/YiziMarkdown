@@ -61,6 +61,8 @@ interface EditorState {
   markAsSaved: () => void
   /** 按 tab id 标记已保存（保存流程可能不在该 tab 处于激活态时完成） */
   markTabSaved: (tabId: string) => void
+  /** 按 tab id 标记为未保存（例如用户选择保留本地版本、云端已有更新） */
+  markTabUnsaved: (tabId: string) => void
   clearJustSaved: (tabId: string) => void
   updateTabName: (tabId: string, name: string) => void
   updateTabFilePath: (tabId: string, filePath: string) => void
@@ -288,6 +290,13 @@ export const useEditorStore = create<EditorState>()(
         const { tabs } = get()
         set({
           tabs: tabs.map(t => t.id === tabId ? { ...t, isSaved: true, saveStatus: 'just-saved' } : t),
+        })
+      },
+
+      markTabUnsaved: (tabId) => {
+        const { tabs } = get()
+        set({
+          tabs: tabs.map(t => t.id === tabId ? { ...t, isSaved: false, saveStatus: 'unsaved' } : t),
         })
       },
 

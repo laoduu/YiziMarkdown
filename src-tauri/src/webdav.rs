@@ -86,6 +86,16 @@ pub struct SaveOutcome {
     pub etag: Option<String>,
 }
 
+/// 条件 GET 的结果：`not_modified` 为 true 时 `content` 为空。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConditionalReadOutcome {
+    pub not_modified: bool,
+    pub content: Option<String>,
+    pub etag: Option<String>,
+    pub size: u64,
+}
+
 // ---------------------------------------------------------------------------
 // HTTP 客户端
 // ---------------------------------------------------------------------------
@@ -582,6 +592,42 @@ impl Conn {
         })
     }
 
+    /// 条件 GET：带 `If-None-Match` 时，服务器内容没变会返回 304。
+    /// 用于「打开已缓存文档」时轻量校验云端版本，避免每次都完整下载正文。
+    pub(crate) async fn read_conditional(
+        &self,
+        path: &str,
+        if_none_match: Option<&str>,
+    ) -> Result<ConditionalReadOutcome, String> {
+        let url = self.url(path, false)?;
+        let mut extra: Vec<(&'static str, String)> = Vec::new();
+        let tag = if_none_match.map(str::trim).filter(|t| !t.is_empty());
+        if let Some(tag) = tag {
+            extra.push(("If-None-Match", tag.to_string()));
+        }
+        let (status, headers, body) = self.dav(Method::GET, &url, None, extra, None).await?;
+        if status == StatusCode::NOT_MODIFIED {
+            return Ok(ConditionalReadOutcome {
+                not_modified: true,
+                content: None,
+                etag: header_string(&headers, ETAG).or_else(|| tag.map(|t| t.to_string())),
+                size: 0,
+            });
+        }
+        if !Self::is_ok(status) {
+            return Err(self.describe(status, &Method::GET, path, &headers, &body));
+        }
+        let size = body.len() as u64;
+        let content = String::from_utf8(body)
+            .map_err(|_| format!("{path} 不是有效的 UTF-8 文本文件"))?;
+        Ok(ConditionalReadOutcome {
+            not_modified: false,
+            content: Some(content),
+            etag: header_string(&headers, ETAG),
+            size,
+        })
+    }
+
     /// 读取任意二进制内容（图片等），不做 UTF-8 校验。
     pub(crate) async fn read_bytes(&self, path: &str) -> Result<Vec<u8>, String> {
         let url = self.url(path, false)?;
@@ -799,6 +845,27 @@ pub async fn webdav_test_connection(base_url: String) -> Result<String, String> 
 #[tauri::command]
 pub async fn webdav_list(base_url: String, path: String) -> Result<Vec<RemoteEntry>, String> {
     Conn::from_keychain(&base_url)?.list(&path).await
+}
+
+/// 单个远程条目的元数据（PROPFIND Depth:0）；不存在返回 null。
+#[tauri::command]
+pub async fn webdav_stat(
+    base_url: String,
+    path: String,
+) -> Result<Option<RemoteEntry>, String> {
+    Conn::from_keychain(&base_url)?.stat(&path).await
+}
+
+/// 条件 GET：内容未变（304）时只返回 ETag，不下载正文。
+#[tauri::command]
+pub async fn webdav_read_conditional(
+    base_url: String,
+    path: String,
+    etag: Option<String>,
+) -> Result<ConditionalReadOutcome, String> {
+    Conn::from_keychain(&base_url)?
+        .read_conditional(&path, etag.as_deref())
+        .await
 }
 
 /// 保存到云端的低层入口（不含图片同步）。高层编排见 `remote_cache::webdav_save`。

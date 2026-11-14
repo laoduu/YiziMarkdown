@@ -49,6 +49,24 @@ export interface WebdavSyncResult {
   lastSyncAt: number
 }
 
+/** 条件 GET：`notModified` 时 `content` 为 null */
+export interface WebdavConditionalReadResult {
+  notModified: boolean
+  content: string | null
+  etag: string | null
+  size: number
+}
+
+/** 由本地缓存路径反查到的清单记录 */
+export interface WebdavCacheRef {
+  remotePath: string
+  etag: string | null
+  size: number
+  modified: string | null
+  contentHash: string | null
+  stale: boolean
+}
+
 // ===== 凭据（OS 凭据库）=====
 
 export function setCredentials(username: string, password: string): Promise<void> {
@@ -80,6 +98,35 @@ export function testConnection(baseUrl: string): Promise<string> {
 
 export function list(baseUrl: string, path: string): Promise<RemoteEntry[]> {
   return invokeTauriOrThrow<RemoteEntry[]>('webdav_list', { baseUrl, path })
+}
+
+/** 读取单个远程条目的元数据；文件不存在时返回 null。 */
+export function statRemote(baseUrl: string, path: string): Promise<RemoteEntry | null> {
+  return invokeTauriOrThrow<RemoteEntry | null>('webdav_stat', { baseUrl, path })
+}
+
+/**
+ * 条件 GET：带上已知 ETag 时，云端内容未变化会返回 `notModified`，不下载正文。
+ * 用于打开已缓存文档时做轻量版本校验。
+ */
+export function readConditional(
+  baseUrl: string,
+  path: string,
+  etag: string | null,
+): Promise<WebdavConditionalReadResult> {
+  return invokeTauriOrThrow<WebdavConditionalReadResult>('webdav_read_conditional', {
+    baseUrl,
+    path,
+    etag,
+  })
+}
+
+/** 缓存路径 → 远程路径反查（启动恢复的旧标签可能缺少 remote 身份）。 */
+export function lookupCache(baseUrl: string, cachePath: string): Promise<WebdavCacheRef | null> {
+  return invokeTauriOrThrow<WebdavCacheRef | null>('webdav_cache_lookup', {
+    baseUrl,
+    cachePath,
+  })
 }
 
 /**

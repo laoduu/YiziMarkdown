@@ -340,6 +340,50 @@ fn normalize_remote_root_path(root: &str) -> String {
     if body.is_empty() { "/".to_string() } else { format!("/{body}") }
 }
 
+fn normalize_local_for_compare(path: &str) -> String {
+    let s = path.replace('\\', "/");
+    if cfg!(windows) { s.to_lowercase() } else { s }
+}
+
+/// 清单里一条缓存记录（只读快照）。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CacheRef {
+    pub remote_path: String,
+    pub etag: Option<String>,
+    pub size: u64,
+    pub modified: Option<String>,
+    pub content_hash: Option<String>,
+    pub stale: bool,
+}
+
+/// 由本地缓存路径反查远程身份：启动恢复 / 旧标签没有 `FileTab.remote` 时用。
+#[tauri::command]
+pub fn webdav_cache_lookup(
+    base_url: String,
+    cache_path: String,
+) -> Result<Option<CacheRef>, String> {
+    let config = crate::get_user_config_dir()?;
+    let root = cache_root_in(&config, &base_url)?;
+    if !root.is_dir() {
+        return Ok(None);
+    }
+    let manifest = load_manifest(&root, "", "");
+    let needle = normalize_local_for_compare(&cache_path);
+    let found = manifest
+        .entries
+        .into_iter()
+        .find(|e| normalize_local_for_compare(&e.cache_path) == needle);
+    Ok(found.map(|e| CacheRef {
+        remote_path: e.remote_path,
+        etag: e.etag,
+        size: e.size,
+        modified: e.modified,
+        content_hash: e.content_hash,
+        stale: e.stale,
+    }))
+}
+
 /// 递归列出远端 root 下的全部文件（不含目录本身）。
 async fn collect_remote_files(
     conn: &Conn,
@@ -424,6 +468,9 @@ pub async fn webdav_sync_cache(
         if !expected.contains(local) {
             if fs::remove_file(local).is_ok() {
                 removed += 1;
+                if let Some(parent) = local.parent() {
+                    remove_empty_dirs(parent, &root_cache);
+                }
             }
         }
     }

@@ -22,8 +22,9 @@ import {
   easeInOutCubic, ZEN_TIMING, zenEnterTotalMs, zenExitTotalMs,
   type ZenRegion, type ZenRect,
 } from './lib/zenMode'
-import { openRemote, save as saveToCloud, notifyRemoteDirChanged, hasCredentials } from './lib/webdav'
+import { openRemote, save as saveToCloud, notifyRemoteDirChanged, hasCredentials, statRemote, readConditional, lookupCache } from './lib/webdav'
 import { runCloudCacheSync } from './lib/webdavSync'
+import { compareContent, byteLength, formatByteCount, type RemoteVersionPrompt } from './lib/remoteVersion'
 import { parentPath, joinPath, baseName, canonicalRemotePath } from './lib/remotePath'
 import { saveActiveTab, markConflictResolved, dirOf } from './lib/saveRouter'
 import { adoptStagedAssets, cleanupPastedAssets, saveFileWithAssets, stagePendingAssets, type StagedAssets } from './lib/docAssets'
@@ -31,7 +32,7 @@ import Dialog from './components/Dialog'
 import { useSettingsStore, UI_TEXT_SCALE_BASE, UI_TEXT_SCALE_DEFAULT } from './stores/settingsStore'
 import { useUpdateStore } from './stores/updateStore'
 import { loadKeybindings, resolveAction, getKeybindingsMap, formatKey, SHORTCUT_ACTIONS } from './lib/keybindings'
-import { useEditorStore, editorStorage } from './stores/editorStore'
+import { useEditorStore, editorStorage, type FileTab } from './stores/editorStore'
 import {
   onEditorStorageWarning, getLastEditorStorageWarning, resetEditorStorageWarning,
   WEBVIEW2_QUOTA_CHARS,
@@ -323,6 +324,14 @@ function App() {
   const [currentFolder, setCurrentFolder] = useState<string | null>(null)
   /** 远程冲突待用户决策 */
   const [conflict, setConflict] = useState<{ tabId: string; name: string; remotePath: string } | null>(null)
+  /** 打开已缓存云端文档时发现云端有新版本：由用户决定用哪一份，绝不静默覆盖 */
+  const [remoteVersion, setRemoteVersion] = useState<RemoteVersionPrompt | null>(null)
+  const remoteVersionOpenRef = useRef(false)
+  /** 每个 tab 上次版本校验时间（毫秒），避免切换标签时频繁请求 */
+  const remoteCheckAtRef = useRef<Map<string, number>>(new Map())
+  const remoteCheckBusyRef = useRef<Set<string>>(new Set())
+  /** 用户选择「取消」的版本标识：同一版本在当前会话内不再重复弹窗 */
+  const remoteDismissedRef = useRef<Set<string>>(new Set())
   /** 另存到云端的路径输入 */
   const [cloudSave, setCloudSave] = useState<{ tabId: string; path: string } | null>(null)
   const [cloudSaveBusy, setCloudSaveBusy] = useState(false)
@@ -807,6 +816,107 @@ function App() {
     setToast({ message, visible: true })
     setTimeout(() => setToast({ message: '', visible: false }), duration)
   }, [])
+
+  /**
+   * 轻量校验云端版本：
+   * - 先 PROPFIND 取 ETag/大小，完全一致直接返回（不发 GET）；
+   * - 有变化时带 If-None-Match 条件 GET，304 视为未变化；
+   * - 正文确有差异才弹窗，由用户选「用云端 / 保留本地 / 另存副本」。
+   */
+  const checkRemoteVersion = useCallback(async (tab: FileTab, opts?: { force?: boolean }) => {
+    const baseUrl = useSettingsStore.getState().webdavBaseUrl
+    if (!baseUrl) return
+    if (remoteVersionOpenRef.current) return
+    const now = Date.now()
+    const last = remoteCheckAtRef.current.get(tab.id) ?? 0
+    if (!opts?.force && now - last < 20000) return
+    remoteCheckAtRef.current.set(tab.id, now)
+    if (remoteCheckBusyRef.current.has(tab.id)) return
+    remoteCheckBusyRef.current.add(tab.id)
+    try {
+      let remote = tab.remote
+      // 旧版本持久化的标签可能只有缓存路径：用清单反查远程身份
+      if (!remote && tab.filePath && /[\\/]webdav[\\/]/i.test(tab.filePath)) {
+        const ref = await lookupCache(baseUrl, tab.filePath)
+        if (ref?.remotePath) {
+          remote = { path: ref.remotePath, etag: ref.etag }
+          useEditorStore.getState().setTabRemote(tab.id, remote)
+        }
+      }
+      if (!remote?.path) return
+
+      const stat = await statRemote(baseUrl, remote.path)
+      if (!stat) {
+        const key = `${tab.id}|${remote.path}|missing`
+        if (remoteDismissedRef.current.has(key)) return
+        remoteVersionOpenRef.current = true
+        setRemoteVersion({
+          tabId: tab.id,
+          remotePath: remote.path,
+          name: tab.name || baseName(remote.path),
+          localContent: tab.content,
+          remoteContent: null,
+          remoteEtag: null,
+          remoteSize: 0,
+          localDirty: !tab.isSaved,
+          missing: true,
+          comparison: null,
+        })
+        return
+      }
+
+      const localBytes = byteLength(tab.content)
+      if (remote.etag && stat.etag === remote.etag && stat.size === localBytes) return
+
+      const read = await readConditional(baseUrl, remote.path, remote.etag ?? null)
+      if (read.notModified) return
+      const remoteContent = read.content ?? ''
+      const cmp = await compareContent(tab.content, remoteContent)
+
+      // 逐行内容一致（含仅行尾差异）：静默刷新 ETag，避免以后保存误判冲突
+      if (cmp.identical) {
+        const latest = read.etag ?? stat.etag
+        if (latest && latest !== remote.etag) {
+          useEditorStore.getState().setTabRemote(tab.id, { path: remote.path, etag: latest })
+        }
+        return
+      }
+
+      const latestEtag = read.etag ?? stat.etag
+      const remoteSize = read.size > 0 ? read.size : stat.size
+      const key = `${tab.id}|${remote.path}|${latestEtag ?? remoteSize}`
+      if (remoteDismissedRef.current.has(key)) return
+      remoteVersionOpenRef.current = true
+      setRemoteVersion({
+        tabId: tab.id,
+        remotePath: remote.path,
+        name: tab.name || baseName(remote.path),
+        localContent: tab.content,
+        remoteContent,
+        remoteEtag: latestEtag,
+        remoteSize,
+        localDirty: !tab.isSaved,
+        missing: false,
+        comparison: cmp,
+      })
+    } catch (e) {
+      // 离线 / 401 等不应打断阅读：下次激活标签时再试
+      console.error('[webdav] version check failed:', e)
+    } finally {
+      remoteCheckBusyRef.current.delete(tab.id)
+    }
+  }, [])
+
+  // 启动恢复与标签切换：稍等片刻再校验，避免与打开流程 / 自动保存抢网络
+  useEffect(() => {
+    if (!activeTabId) return
+    const timer = setTimeout(() => {
+      const store = useEditorStore.getState()
+      const tab = store.tabs.find(t => t.id === activeTabId)
+      if (tab) checkRemoteVersion(tab)
+    }, 1200)
+    return () => clearTimeout(timer)
+  }, [activeTabId, checkRemoteVersion])
 
   /**
    * 禅模式开关（F9 / 工具栏 / 右键）。
@@ -1398,12 +1508,45 @@ function App() {
     showToast(t('cloud.opening', { name }))
     try {
       const result = await openRemote(webdavBaseUrl, remotePath)
-      openRemoteFile(
+
+      // 已打开且本地有未保存修改：先比较正文。
+      // 不同则交给版本决策弹窗 —— 不静默覆盖编辑，也不静默忽略云端新版本。
+      if (!opts?.reload) {
+        const store = useEditorStore.getState()
+        const target = canonicalRemotePath(remotePath) ?? remotePath
+        const existing = store.tabs.find(t =>
+          t.remote && (canonicalRemotePath(t.remote.path) ?? t.remote.path) === target
+        )
+        if (existing && !existing.isSaved) {
+          const cmp = await compareContent(existing.content, result.content)
+          if (!cmp.identical) {
+            remoteCheckAtRef.current.set(existing.id, Date.now())
+            remoteVersionOpenRef.current = true
+            setRemoteVersion({
+              tabId: existing.id,
+              remotePath,
+              name: existing.name,
+              localContent: existing.content,
+              remoteContent: result.content,
+              remoteEtag: result.etag,
+              remoteSize: byteLength(result.content),
+              localDirty: true,
+              missing: false,
+              comparison: cmp,
+            })
+            return
+          }
+        }
+      }
+
+      const tabId = openRemoteFile(
         result.cachePath,
         result.content,
         { path: remotePath, etag: result.etag },
         { forceReload: opts?.reload }
       )
+      // 刚拿到服务器最新内容，短时间内不必再校验
+      remoteCheckAtRef.current.set(tabId, Date.now())
       if (result.imagesFailed > 0) {
         showToast(t('cloud.imagesFailed', { count: result.imagesFailed }))
       }
@@ -1412,6 +1555,94 @@ function App() {
       showToast(t('cloud.openFailed', { name }))
     }
   }, [openRemoteFile, showToast, t])
+
+  const closeRemoteVersion = useCallback(() => {
+    remoteVersionOpenRef.current = false
+    setRemoteVersion(null)
+  }, [])
+
+  /** 版本决策：用云端正文覆盖本地（下载镜像 + 图片） */
+  const handleRemoteVersionUseCloud = useCallback(async () => {
+    const prompt = remoteVersion
+    if (!prompt || prompt.missing) return
+    closeRemoteVersion()
+    const baseUrl = useSettingsStore.getState().webdavBaseUrl
+    const store = useEditorStore.getState()
+    const tab = store.tabs.find(t => t.id === prompt.tabId)
+    if (!tab) return
+    try {
+      const opened = await openRemote(baseUrl, prompt.remotePath)
+      const isActive = useEditorStore.getState().activeTabId === prompt.tabId
+      store.updateTabFilePath(prompt.tabId, opened.cachePath)
+      store.setTabRemote(prompt.tabId, { path: prompt.remotePath, etag: opened.etag })
+      store.setTabContent(prompt.tabId, opened.content)
+      store.markTabSaved(prompt.tabId)
+      if (isActive) editorRef.current?.replaceContent(opened.content)
+      if (opened.imagesFailed > 0) {
+        showToast(t('cloud.imagesFailed', { count: opened.imagesFailed }))
+      }
+      showToast(t('cloud.versionApplied', { name: prompt.name }))
+    } catch (e) {
+      console.error('[webdav] apply cloud version failed:', e)
+      showToast(t('cloud.openFailed', { name: prompt.name }))
+    }
+  }, [remoteVersion, closeRemoteVersion, showToast, t])
+
+  /**
+   * 版本决策：保留本地。
+   * 不动 ETag —— 下次保存仍会触发冲突弹窗，由用户显式选择覆盖，避免静默改写云端。
+   */
+  const handleRemoteVersionKeepLocal = useCallback(() => {
+    const prompt = remoteVersion
+    if (!prompt) return
+    remoteDismissedRef.current.add(`${prompt.tabId}|${prompt.remotePath}|${prompt.remoteEtag ?? prompt.remoteSize}`)
+    useEditorStore.getState().markTabUnsaved(prompt.tabId)
+    closeRemoteVersion()
+  }, [remoteVersion, closeRemoteVersion])
+
+  /** 版本决策：另存为云端副本（本地正文保留，云端原文件不动） */
+  const handleRemoteVersionSaveCopy = useCallback(() => {
+    const prompt = remoteVersion
+    if (!prompt) return
+    remoteDismissedRef.current.add(`${prompt.tabId}|${prompt.remotePath}|${prompt.remoteEtag ?? prompt.remoteSize}`)
+    closeRemoteVersion()
+    const file = baseName(prompt.remotePath)
+    const dot = file.lastIndexOf('.')
+    const stem = dot > 0 ? file.slice(0, dot) : file
+    const ext = dot > 0 ? file.slice(dot) : '.md'
+    setCloudSave({
+      tabId: prompt.tabId,
+      path: joinPath(parentPath(prompt.remotePath), `${stem} (${t('cloud.copySuffix')})${ext}`),
+    })
+  }, [remoteVersion, closeRemoteVersion, t])
+
+  /** 版本决策：取消（本次不提醒，同一版本不再重复弹） */
+  const handleRemoteVersionDismiss = useCallback(() => {
+    const prompt = remoteVersion
+    if (prompt) {
+      remoteDismissedRef.current.add(`${prompt.tabId}|${prompt.remotePath}|${prompt.remoteEtag ?? prompt.remoteSize}`)
+    }
+    closeRemoteVersion()
+  }, [remoteVersion, closeRemoteVersion])
+
+  /** 云端文件已被删除：把本地缓存重新上传回原路径 */
+  const handleRemoteVersionReupload = useCallback(async () => {
+    const prompt = remoteVersion
+    if (!prompt) return
+    closeRemoteVersion()
+    const store = useEditorStore.getState()
+    const tab = store.tabs.find(t => t.id === prompt.tabId)
+    if (!tab) return
+    store.setTabRemote(prompt.tabId, { path: prompt.remotePath, etag: null })
+    // etag=null + create=false → 无条件 PUT，可在缺失路径上重新创建
+    const result = await saveActiveTab({ ...tab, remote: { path: prompt.remotePath, etag: null } })
+    if (result.ok) {
+      if (result.content) editorRef.current?.replaceContent(result.content)
+      showToast(t('cloud.savedToCloud', { name: prompt.name }))
+    } else if (result.error) {
+      showToast(t('cloud.saveFailed', { msg: result.error }))
+    }
+  }, [remoteVersion, closeRemoteVersion, showToast, t])
 
   /** 冲突处理：用本地版本覆盖服务器 */
   const handleConflictOverwrite = useCallback(async () => {
@@ -2247,6 +2478,109 @@ function App() {
             {t('cloud.conflictReload')}
           </button>
         </div>
+      </Dialog>
+
+      {/* 打开已缓存云端文档时的版本决策：不静默覆盖，也不用旧内容盖掉新云端版本 */}
+      <Dialog
+        open={remoteVersion !== null}
+        onClose={handleRemoteVersionDismiss}
+        title={t(remoteVersion?.missing ? 'cloud.versionMissingTitle' : 'cloud.versionTitle')}
+        width={470}
+      >
+        {remoteVersion && (
+          <>
+            <p className="text-[0.8125rem] text-[var(--editor-text)] mb-2">
+              {t(remoteVersion.missing ? 'cloud.versionMissingBody' : 'cloud.versionBody', {
+                name: remoteVersion.name,
+              })}
+            </p>
+
+            {remoteVersion.comparison && (
+              <>
+                <p className="text-[0.6875rem] font-medium text-[var(--sidebar-text)] mb-1.5">
+                  {t('cloud.versionCompareTitle')}
+                </p>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  {([
+                    {
+                      label: t('cloud.versionLocalLabel'),
+                      bytes: remoteVersion.comparison.localBytes,
+                      lines: remoteVersion.comparison.localLines,
+                      hash: remoteVersion.comparison.localHash,
+                    },
+                    {
+                      label: t('cloud.versionCloudLabel'),
+                      bytes: remoteVersion.comparison.remoteBytes,
+                      lines: remoteVersion.comparison.remoteLines,
+                      hash: remoteVersion.comparison.remoteHash,
+                    },
+                  ] as const).map((side) => (
+                    <div
+                      key={side.label}
+                      className="rounded px-2.5 py-2 text-[0.6875rem] text-[var(--sidebar-text)]"
+                      style={{ background: 'var(--editor-hover)' }}
+                    >
+                      <div className="font-medium text-[var(--editor-text)] mb-1">{side.label}</div>
+                      <div className="flex justify-between gap-2">
+                        <span>{t('cloud.versionBytes')}</span>
+                        <span className="tabular-nums">{formatByteCount(side.bytes)}</span>
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <span>{t('cloud.versionLines')}</span>
+                        <span className="tabular-nums">{side.lines}</span>
+                      </div>
+                      <div className="mt-1 break-all">
+                        {t('cloud.versionHash', { hash: side.hash.slice(0, 16) })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[0.6875rem] text-[var(--sidebar-text)] mb-2">
+                  {remoteVersion.comparison.firstDiffLine != null
+                    ? t('cloud.versionFirstDiff', { line: remoteVersion.comparison.firstDiffLine })
+                    : t('cloud.versionNoLineDiff')}
+                </p>
+              </>
+            )}
+
+            {remoteVersion.localDirty && !remoteVersion.missing && (
+              <p className="text-[0.6875rem] mb-2" style={{ color: 'var(--danger)' }}>
+                {t('cloud.versionDirty')}
+              </p>
+            )}
+
+            <div className="flex flex-col gap-2 mt-3">
+              {remoteVersion.missing ? (
+                <>
+                  <button onClick={handleRemoteVersionReupload} className="settings-btn-primary">
+                    {t('cloud.versionReupload')}
+                  </button>
+                  <button onClick={handleRemoteVersionSaveCopy} className="settings-btn-secondary">
+                    {t('cloud.versionSaveCopy')}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button onClick={handleRemoteVersionUseCloud} className="settings-btn-primary">
+                    {t('cloud.versionUseCloud')}
+                  </button>
+                  <button onClick={handleRemoteVersionKeepLocal} className="settings-btn-secondary">
+                    {t('cloud.versionKeepLocal')}
+                  </button>
+                  <button onClick={handleRemoteVersionSaveCopy} className="settings-btn-secondary">
+                    {t('cloud.versionSaveCopy')}
+                  </button>
+                </>
+              )}
+              <button
+                onClick={handleRemoteVersionDismiss}
+                className="text-[0.75rem] text-[var(--sidebar-text)] hover:text-[var(--editor-accent)] underline"
+              >
+                {t('cloud.versionCancel')}
+              </button>
+            </div>
+          </>
+        )}
       </Dialog>
 
       {/* 清理本地缓存：状态栏那个 ⚠ 点开。「清理已保存文件的缓存」是安全动作；

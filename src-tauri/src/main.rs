@@ -41,10 +41,11 @@ use theme_layer::{
 };
 
 use ai_proxy::{ai_cancel, ai_chat, ai_clear_key, ai_has_key, ai_list_models, ai_set_key, ai_verify_key};
-use remote_cache::{ensure_remote_assets_readme, webdav_open, webdav_save, webdav_sync_cache};
+use remote_cache::{ensure_remote_assets_readme, webdav_cache_lookup, webdav_open, webdav_save, webdav_sync_cache};
 use webdav::{
     webdav_clear_credentials, webdav_delete, webdav_get_username, webdav_has_credentials,
-    webdav_list, webdav_mkdir, webdav_move, webdav_set_credentials, webdav_test_connection,
+    webdav_list, webdav_mkdir, webdav_move, webdav_read_conditional, webdav_set_credentials,
+    webdav_stat, webdav_test_connection,
 };
 
 
@@ -2399,12 +2400,15 @@ fn main() {
             webdav_clear_credentials,
             webdav_test_connection,
             webdav_list,
+            webdav_stat,
+            webdav_read_conditional,
             webdav_open,
             webdav_save,
             webdav_mkdir,
             webdav_delete,
             webdav_move,
             webdav_sync_cache,
+            webdav_cache_lookup,
             ensure_remote_assets_readme,
         ])
                 .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
