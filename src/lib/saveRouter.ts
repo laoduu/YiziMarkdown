@@ -10,6 +10,7 @@
  */
 import { invokeTauriOrThrow } from './tauri'
 import { save as saveToCloud } from './webdav'
+import { adoptStagedAssets, cleanupPastedAssets, stagePendingAssets } from './docAssets'
 import { useEditorStore, type FileTab } from '../stores/editorStore'
 import { useSettingsStore } from '../stores/settingsStore'
 
@@ -20,6 +21,8 @@ export interface SaveOutcome {
   error?: string
   imagesUploaded: number
   imagesFailed: number
+  /** 图片迁移后重写过的正文（调用方需要同步到编辑器） */
+  content?: string
 }
 
 /** 同一远程路径同时只允许一次 PUT —— 慢网络下自动保存的防抖可能叠加 */
@@ -81,19 +84,48 @@ export async function saveActiveTab(
     if (remote) {
       const baseUrl = useSettingsStore.getState().webdavBaseUrl
       if (!baseUrl) return failed('not-configured')
+      const remoteRoot = useSettingsStore.getState().webdavRootPath
+
+      let content = tab.content
+      let stagedLocalDir: string | null = null
+      try {
+        const staged = await stagePendingAssets(
+          tab.id,
+          tab.content,
+          remote.path,
+          remoteRoot,
+          dirOf(tab.filePath),
+        )
+        if (staged.changed) {
+          content = staged.content
+          stagedLocalDir = staged.localDir
+          store.setTabContent(tab.id, content)
+        }
+      } catch (e) {
+        console.error('[cloud-save] stage assets failed:', e)
+      }
 
       const result = await saveToCloud(
         baseUrl,
         remote.path,
-        tab.content,
+        content,
         remote.etag,
         false,
-        dirOf(tab.filePath)
+        stagedLocalDir ?? dirOf(tab.filePath)
       )
 
       if (result.conflict) {
         conflicted.add(remote.path)
         return { ok: false, conflict: true, imagesUploaded: 0, imagesFailed: 0 }
+      }
+
+      if (stagedLocalDir) {
+        try {
+          await adoptStagedAssets(tab.id, tab.filePath, baseUrl, remoteRoot)
+        } catch (e) {
+          console.error('[cloud-save] adopt staged assets failed:', e)
+        }
+        cleanupPastedAssets(tab.id)
       }
 
       conflicted.delete(remote.path)
@@ -103,6 +135,7 @@ export async function saveActiveTab(
       return {
         ok: true,
         conflict: false,
+        content: stagedLocalDir ? content : undefined,
         imagesUploaded: result.imagesUploaded ?? 0,
         imagesFailed: result.imagesFailed ?? 0,
       }

@@ -101,12 +101,14 @@ export function stagePendingAssets(
   content: string,
   remotePath: string,
   remoteRoot: string,
+  sourceDir?: string | null,
 ): Promise<StagedAssets> {
   return invokeTauriOrThrow<StagedAssets>('stage_pending_assets', {
     tabId,
     content,
     remotePath,
     remoteRoot,
+    sourceDir: sourceDir ?? null,
   })
 }
 

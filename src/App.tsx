@@ -438,6 +438,7 @@ function App() {
         translate(getCurrentLang(), key, params)
       const result = await saveActiveTab(tab, { auto: true })
       if (result.ok) {
+        if (result.content) editorRef.current?.replaceContent(result.content)
         if (result.imagesFailed > 0) showToast(tr('cloud.imagesFailed', { count: result.imagesFailed }))
       } else if (result.conflict) {
         // 自动保存遇冲突不弹窗打断输入，提示用户手动保存以决策
@@ -1307,6 +1308,7 @@ function App() {
 
     const result = await saveActiveTab(tab)
     if (result.ok) {
+      if (result.content) editorRef.current?.replaceContent(result.content)
       showToast(tab.remote ? t('cloud.savedToCloud', { name: tab.name }) : t('app.saved'))
       if (result.imagesFailed > 0) {
         showToast(t('cloud.imagesFailed', { count: result.imagesFailed }))
@@ -1480,7 +1482,7 @@ function App() {
       let staged: StagedAssets | null = null
       try {
         const root = useSettingsStore.getState().webdavRootPath
-        staged = await stagePendingAssets(tab.id, tab.content, remotePath, root)
+        staged = await stagePendingAssets(tab.id, tab.content, remotePath, root, tab.filePath ? dirOf(tab.filePath) : null)
         if (staged.changed) {
           putContent = staged.content
           if (staged.localDir) localDir = staged.localDir

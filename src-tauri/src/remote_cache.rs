@@ -323,7 +323,7 @@ async fn mirror_images_down(conn: &Conn, root: &Path, doc_dir: &str, md: &str) -
 /// `max_up` 是允许上跳的最大层数 —— 取**远程文档目录的层级**，
 /// 这样本地与远程两侧的边界完全对称：远程能到哪一层，本地就允许读到哪一层，
 /// 既支持 `../assets/x.png` 这类跨目录引用，又不会顺着 `..` 读到无关目录。
-fn resolve_local_file(doc_dir: &Path, rel: &str, max_up: usize) -> Option<PathBuf> {
+pub(crate) fn resolve_local_file(doc_dir: &Path, rel: &str, max_up: usize) -> Option<PathBuf> {
     let mut stack: Vec<&str> = Vec::new();
     let mut ups: usize = 0;
     for seg in rel.split('/') {

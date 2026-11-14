@@ -25,6 +25,7 @@ use serde::Serialize;
 use sha2::{Digest, Sha256};
 
 use crate::get_user_config_dir;
+use crate::remote_cache::{classify_image_ref, resolve_local_file, ImageRef};
 
 /// 与 `remote_cache::MAX_IMAGE_BYTES` 对齐：超过这个大小的粘贴图会被拒绝，
 /// 否则即便落到本地，云端单图同步也会被跳过（表现为换设备裂图）。
@@ -707,6 +708,7 @@ pub fn stage_pending_assets(
     content: String,
     remote_path: Option<String>,
     remote_root: Option<String>,
+    source_dir: Option<String>,
 ) -> Result<StagedAssets, String> {
     let config = get_user_config_dir()?;
     stage_assets_in(
@@ -715,6 +717,7 @@ pub fn stage_pending_assets(
         content,
         remote_path.as_deref(),
         remote_root.as_deref(),
+        source_dir.as_deref(),
     )
 }
 
@@ -724,6 +727,7 @@ pub(crate) fn stage_assets_in(
     content: String,
     remote_path: Option<&str>,
     remote_root: Option<&str>,
+    source_dir: Option<&str>,
 ) -> Result<StagedAssets, String> {
     let pending = pending_dir_in(config_dir, tab_id);
     let assets = assets_dir_in(config_dir);
@@ -746,26 +750,54 @@ pub(crate) fn stage_assets_in(
     let mut out = content;
     let mut changed = false;
     let mut seen: HashSet<String> = HashSet::new();
+    let source_root = source_dir.map(str::trim).filter(|s| !s.is_empty()).map(Path::new);
+    // 与 upload_images_up 的边界一致：相对引用最多上跳到远程文档目录层级
+    let remote_doc_dir = remote_path.map(remote_dir_of).unwrap_or_default();
+    let max_up = remote_doc_dir.split('/').filter(|s| !s.is_empty()).count();
     for src in crate::collect_image_urls(&out) {
         if !seen.insert(src.clone()) {
             continue;
         }
         // 两个托管目录都可能是绝对引用来源：早期版本的 pending 暂存、本地用户 assets 目录
         let found = asset_ref_path(&pending, &src).or_else(|| asset_ref_path(&assets, &src));
-        let Some((path, name)) = found else {
+        if let Some((path, name)) = found {
+            if !path.is_file() {
+                continue;
+            }
+            fs::create_dir_all(&images)
+                .map_err(|e| format!("创建上传暂存目录失败 {}：{e}", images.display()))?;
+            let dst = images.join(&name);
+            if !dst.exists() {
+                fs::copy(&path, &dst).map_err(|e| format!("复制图片失败 {}：{e}", path.display()))?;
+            }
+            out = replace_image_ref(&out, &src, &format!("{ref_prefix}{name}"));
+            changed = true;
+            continue;
+        }
+
+        // 任意相对引用（历史文档 / 手动填写 / 其它编辑器）：在文档来源目录里找到图片，
+        // 统一复制到云端 assets 并重写引用，避免在文档旁产生 images/、assets/ 子目录。
+        let ImageRef::Relative(rel) = classify_image_ref(&src) else {
             continue;
         };
-        if !path.is_file() {
+        let Some(source) = source_root.and_then(|root| resolve_local_file(root, &rel, max_up)) else {
+            continue;
+        };
+        let Ok(bytes) = fs::read(&source) else {
+            continue;
+        };
+        if bytes.len() > MAX_PASTED_IMAGE_BYTES {
             continue;
         }
-        fs::create_dir_all(&images)
-            .map_err(|e| format!("创建上传暂存目录失败 {}：{e}", images.display()))?;
-        let dst = images.join(&name);
-        if !dst.exists() {
-            fs::copy(&path, &dst).map_err(|e| format!("复制图片失败 {}：{e}", path.display()))?;
+        let Some(mime) = crate::sniff_image_mime(&bytes) else {
+            continue;
+        };
+        let (_, name) = write_image(&images, &bytes, mime)?;
+        let new_ref = format!("{ref_prefix}{name}");
+        if new_ref != src {
+            out = replace_image_ref(&out, &src, &new_ref);
+            changed = true;
         }
-        out = replace_image_ref(&out, &src, &format!("{ref_prefix}{name}"));
-        changed = true;
     }
 
     Ok(StagedAssets {
@@ -971,6 +1003,7 @@ mod tests {
             md,
             Some("/yizimarkdown/Notes/doc.md"),
             Some("/yizimarkdown"),
+            None,
         )
         .unwrap();
         assert!(staged.changed);
@@ -986,6 +1019,32 @@ mod tests {
             Path::new(&local_dir).ends_with("Notes"),
             "staging 目录层级应与远程文档目录一致：{local_dir}"
         );
+    }
+
+    #[test]
+    fn migrates_relative_assets_to_cloud_assets() {
+        let config = temp_dir("config-relative");
+        let doc_dir = temp_dir("doc-relative");
+        fs::create_dir_all(doc_dir.join("images")).unwrap();
+        fs::write(doc_dir.join("images/x.png"), PNG).unwrap();
+
+        let staged = stage_assets_in(
+            &config,
+            "tab",
+            "![x](images/x.png)".to_string(),
+            Some("/yizimarkdown/Notes/doc.md"),
+            Some("/yizimarkdown"),
+            Some(doc_dir.to_str().unwrap()),
+        )
+        .unwrap();
+        assert!(staged.changed);
+        assert!(staged.content.starts_with("![x](../assets/image-"), "{}", staged.content);
+        assert!(staged.content.ends_with(".png)"), "{}", staged.content);
+        let staging_images = staging_dir_in(&config, "tab").join(ASSETS_DIR);
+        let name = staged.content
+            .trim_start_matches("![x](../assets/")
+            .trim_end_matches(')');
+        assert!(staging_images.join(name).is_file());
     }
 
     #[test]
