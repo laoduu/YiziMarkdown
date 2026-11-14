@@ -8,11 +8,15 @@
 //! 本模块的路径运算全部是纯函数（`*_in` 变体接收显式根目录，便于单测且不碰全局环境变量）。
 
 use std::collections::hash_map::DefaultHasher;
+use std::collections::{HashMap, HashSet, VecDeque};
+use std::fs;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use percent_encoding::percent_decode_str;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use url::Url;
 
 use crate::webdav::Conn;
@@ -107,6 +111,421 @@ pub(crate) fn remote_to_cache_in(root: &Path, remote_path: &str) -> PathBuf {
     }
     p
 }
+
+// ---------------------------------------------------------------------------
+// 缓存清单（remote path <-> cache path / etag / hash）
+// ---------------------------------------------------------------------------
+
+const MANIFEST_NAME: &str = "manifest.json";
+const MANIFEST_VERSION: u32 = 1;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CacheEntry {
+    pub remote_path: String,
+    pub cache_path: String,
+    pub etag: Option<String>,
+    pub size: u64,
+    pub modified: Option<String>,
+    pub content_hash: Option<String>,
+    pub last_sync_at: u64,
+    /// 本地缓存是否落后于远端（仅一致性模式会标记）
+    #[serde(default)]
+    pub stale: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CacheManifest {
+    version: u32,
+    base_url: String,
+    remote_root: String,
+    last_sync_at: u64,
+    entries: Vec<CacheEntry>,
+}
+
+impl Default for CacheManifest {
+    fn default() -> Self {
+        Self {
+            version: MANIFEST_VERSION,
+            base_url: String::new(),
+            remote_root: String::new(),
+            last_sync_at: 0,
+            entries: Vec::new(),
+        }
+    }
+}
+
+fn manifest_path_in(root: &Path) -> PathBuf {
+    root.join(MANIFEST_NAME)
+}
+
+fn now_secs() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+fn hash_bytes(bytes: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    format!("{:x}", hasher.finalize())
+}
+
+fn load_manifest(root: &Path, base_url: &str, remote_root: &str) -> CacheManifest {
+    let path = manifest_path_in(root);
+    let mut manifest = fs::read_to_string(&path)
+        .ok()
+        .and_then(|s| serde_json::from_str::<CacheManifest>(&s).ok())
+        .unwrap_or_default();
+    manifest.version = MANIFEST_VERSION;
+    if !base_url.is_empty() {
+        manifest.base_url = base_url.to_string();
+    }
+    if !remote_root.is_empty() {
+        manifest.remote_root = remote_root.to_string();
+    }
+    manifest
+}
+
+fn save_manifest(root: &Path, manifest: &CacheManifest) -> Result<(), String> {
+    let path = manifest_path_in(root);
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("创建缓存清单目录失败 {}：{e}", parent.display()))?;
+    }
+    let json = serde_json::to_vec_pretty(manifest)
+        .map_err(|e| format!("序列化缓存清单失败：{e}"))?;
+    fs::write(&path, json).map_err(|e| format!("写入缓存清单失败 {}：{e}", path.display()))
+}
+
+/// 记录/更新一条缓存清单；缓存目录不可用时静默跳过（镜像是派生物）。
+pub(crate) fn record_cache_entry(
+    base_url: &str,
+    remote_path: &str,
+    cache_path: &Path,
+    etag: Option<String>,
+    size: u64,
+    modified: Option<String>,
+    content_hash: Option<String>,
+    stale: bool,
+) {
+    let Ok(root) = ensure_cache_root(base_url) else { return };
+    record_cache_entry_in(
+        &root,
+        base_url,
+        remote_path,
+        cache_path,
+        etag,
+        size,
+        modified,
+        content_hash,
+        stale,
+    );
+}
+
+fn record_cache_entry_in(
+    root: &Path,
+    base_url: &str,
+    remote_path: &str,
+    cache_path: &Path,
+    etag: Option<String>,
+    size: u64,
+    modified: Option<String>,
+    content_hash: Option<String>,
+    stale: bool,
+) {
+    let mut manifest = load_manifest(root, base_url, "");
+    let now = now_secs();
+    let cache = cache_path.to_string_lossy().to_string();
+    if let Some(entry) = manifest.entries.iter_mut().find(|e| e.remote_path == remote_path) {
+        entry.cache_path = cache;
+        entry.etag = etag;
+        entry.size = size;
+        entry.modified = modified;
+        if content_hash.is_some() {
+            entry.content_hash = content_hash;
+        }
+        entry.last_sync_at = now;
+        entry.stale = stale;
+    } else {
+        manifest.entries.push(CacheEntry {
+            remote_path: remote_path.to_string(),
+            cache_path: cache,
+            etag,
+            size,
+            modified,
+            content_hash,
+            last_sync_at: now,
+            stale,
+        });
+    }
+    let _ = save_manifest(root, &manifest);
+}
+
+fn within_root(path: &Path, root: &Path) -> bool {
+    path.starts_with(root)
+}
+
+fn remove_empty_dirs(dir: &Path, root: &Path) {
+    if dir == root || !within_root(dir, root) {
+        return;
+    }
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            if entry.path().is_dir() {
+                remove_empty_dirs(&entry.path(), root);
+            }
+        }
+    }
+    if fs::read_dir(dir).map(|mut d| d.next().is_none()).unwrap_or(false) {
+        let _ = fs::remove_dir(dir);
+    }
+}
+
+/// 远端删除后同步清理本地镜像与清单。
+pub(crate) fn remove_cache_for_remote(base_url: &str, remote_path: &str) {
+    let Ok(root) = ensure_cache_root(base_url) else { return };
+    remove_cache_in(&root, remote_path);
+}
+
+fn remove_cache_in(root: &Path, remote_path: &str) {
+    let local = remote_to_cache_in(root, remote_path);
+    if local.is_dir() {
+        let _ = fs::remove_dir_all(&local);
+    } else {
+        let _ = fs::remove_file(&local);
+    }
+    if let Some(parent) = local.parent() {
+        remove_empty_dirs(parent, root);
+    }
+    let mut manifest = load_manifest(root, "", "");
+    let prefix = format!("{remote_path}/");
+    manifest.entries.retain(|e| e.remote_path != remote_path && !e.remote_path.starts_with(&prefix));
+    let _ = save_manifest(root, &manifest);
+}
+
+/// 远端移动/改名后同步移动本地镜像与清单。
+pub(crate) fn move_cache_for_remote(base_url: &str, from: &str, to: &str) {
+    let Ok(root) = ensure_cache_root(base_url) else { return };
+    move_cache_in(&root, from, to);
+}
+
+fn move_cache_in(root: &Path, from: &str, to: &str) {
+    let from_local = remote_to_cache_in(root, from);
+    let to_local = remote_to_cache_in(root, to);
+    if from_local.exists() {
+        if let Some(parent) = to_local.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        let _ = fs::rename(&from_local, &to_local);
+    }
+    let mut manifest = load_manifest(root, "", "");
+    let from_prefix = format!("{from}/");
+    for entry in &mut manifest.entries {
+        if entry.remote_path == from {
+            entry.remote_path = to.to_string();
+        } else if let Some(rest) = entry.remote_path.strip_prefix(&from_prefix) {
+            entry.remote_path = format!("{to}/{rest}");
+        }
+        entry.cache_path = remote_to_cache_in(root, &entry.remote_path).to_string_lossy().to_string();
+    }
+    let _ = save_manifest(root, &manifest);
+}
+
+fn normalize_remote_root_path(root: &str) -> String {
+    let trimmed = root.trim().replace('\\', "/");
+    let body = trimmed.trim_matches('/');
+    if body.is_empty() { "/".to_string() } else { format!("/{body}") }
+}
+
+/// 递归列出远端 root 下的全部文件（不含目录本身）。
+async fn collect_remote_files(
+    conn: &Conn,
+    root: &str,
+    out: &mut HashMap<String, crate::webdav::RemoteEntry>,
+) -> Result<(), String> {
+    let mut queue: VecDeque<String> = VecDeque::new();
+    queue.push_back(root.to_string());
+    let mut visited: HashSet<String> = HashSet::new();
+    while let Some(dir) = queue.pop_front() {
+        if !visited.insert(dir.clone()) {
+            continue;
+        }
+        let entries = conn.list(&dir).await?;
+        for entry in entries {
+            if entry.is_dir {
+                queue.push_back(entry.path);
+            } else {
+                out.insert(entry.path.clone(), entry);
+            }
+        }
+    }
+    Ok(())
+}
+
+fn collect_local_files(dir: &Path, root: &Path, out: &mut Vec<PathBuf>) {
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                collect_local_files(&path, root, out);
+            } else if path.is_file() && path.file_name().map(|n| n != MANIFEST_NAME).unwrap_or(false) {
+                if within_root(&path, root) {
+                    out.push(path);
+                }
+            }
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncOutcome {
+    pub removed: usize,
+    pub downloaded: usize,
+    pub updated: usize,
+    pub failed: usize,
+    pub total: usize,
+    pub last_sync_at: u64,
+}
+
+/// 只同步配置根目录下的缓存：
+/// - 远端已删除 → 清理本地镜像；
+/// - `mirror_all=true` → 下载缺失/变化的 Markdown 及其引用图片；
+/// - 否则只更新清单与删除孤儿，不主动下载未打开文档。
+#[tauri::command]
+pub async fn webdav_sync_cache(
+    base_url: String,
+    remote_root: String,
+    mirror_all: bool,
+) -> Result<SyncOutcome, String> {
+    let conn = Conn::from_keychain(&base_url)?;
+    let root = normalize_remote_root_path(&remote_root);
+    let cache_root = ensure_cache_root(&base_url)?;
+    let root_cache = remote_to_cache_in(&cache_root, &root);
+
+    let mut remote_files: HashMap<String, crate::webdav::RemoteEntry> = HashMap::new();
+    collect_remote_files(&conn, &root, &mut remote_files).await?;
+
+    let expected: HashSet<PathBuf> = remote_files
+        .keys()
+        .map(|p| remote_to_cache_in(&cache_root, p))
+        .collect();
+
+    let mut locals: Vec<PathBuf> = Vec::new();
+    if root_cache.is_dir() {
+        collect_local_files(&root_cache, &root_cache, &mut locals);
+    }
+
+    let mut removed = 0usize;
+    for local in &locals {
+        if !expected.contains(local) {
+            if fs::remove_file(local).is_ok() {
+                removed += 1;
+            }
+        }
+    }
+    if root_cache.is_dir() {
+        remove_empty_dirs(&root_cache, &root_cache);
+    }
+
+    let mut manifest = load_manifest(&cache_root, &base_url, &root);
+    let now = now_secs();
+    manifest.remote_root = root.clone();
+    manifest.last_sync_at = now;
+    let mut downloaded = 0usize;
+    let mut updated = 0usize;
+    let mut failed = 0usize;
+
+    for (remote_path, entry) in &remote_files {
+        let local = remote_to_cache_in(&cache_root, remote_path);
+        let exists = local.is_file();
+        let local_size = fs::metadata(&local).map(|m| m.len()).unwrap_or(0);
+        let is_markdown = remote_path.to_ascii_lowercase().ends_with(".md")
+            || remote_path.to_ascii_lowercase().ends_with(".markdown");
+        let size_changed = exists && local_size != entry.size;
+
+        let mut content_hash: Option<String> = None;
+        let mut stale = !exists || size_changed;
+        if mirror_all && is_markdown && (!exists || size_changed) {
+            match conn.read(remote_path).await {
+                Ok(doc) => {
+                    if let Err(e) = write_mirror(&local, doc.content.as_bytes()) {
+                        eprintln!("[webdav] 镜像下载失败 {remote_path}: {e}");
+                        failed += 1;
+                    } else {
+                        content_hash = Some(hash_bytes(doc.content.as_bytes()));
+                        downloaded += 1;
+                        stale = false;
+                        let (_, image_failed) = mirror_images_down(
+                            &conn,
+                            &cache_root,
+                            &dir_of(remote_path),
+                            &doc.content,
+                        )
+                        .await;
+                        failed += image_failed;
+                    }
+                }
+                Err(e) => {
+                    eprintln!("[webdav] 下载失败 {remote_path}: {e}");
+                    failed += 1;
+                }
+            }
+        } else if exists {
+            if let Ok(bytes) = fs::read(&local) {
+                content_hash = Some(hash_bytes(&bytes));
+            }
+        }
+
+        let cache_str = local.to_string_lossy().to_string();
+        if let Some(existing) = manifest.entries.iter_mut().find(|e| e.remote_path == *remote_path) {
+            existing.cache_path = cache_str;
+            existing.etag = entry.etag.clone();
+            existing.size = entry.size;
+            existing.modified = entry.modified.clone();
+            existing.last_sync_at = now;
+            existing.stale = stale;
+            if content_hash.is_some() {
+                existing.content_hash = content_hash;
+            }
+            updated += 1;
+        } else {
+            manifest.entries.push(CacheEntry {
+                remote_path: remote_path.clone(),
+                cache_path: cache_str,
+                etag: entry.etag.clone(),
+                size: entry.size,
+                modified: entry.modified.clone(),
+                content_hash,
+                last_sync_at: now,
+                stale,
+            });
+            updated += 1;
+        }
+    }
+
+    // 删除远端已不存在的清单条目（只清理 root 下的；root 外条目保持不动）
+    let root_prefix = format!("{}/", root.trim_end_matches('/'));
+    manifest.entries.retain(|e| {
+        let inside = root == "/" || e.remote_path == root || e.remote_path.starts_with(&root_prefix);
+        !inside || remote_files.contains_key(&e.remote_path)
+    });
+
+    save_manifest(&cache_root, &manifest)?;
+
+    Ok(SyncOutcome {
+        removed,
+        downloaded,
+        updated,
+        failed,
+        total: remote_files.len(),
+        last_sync_at: now,
+    })
+}
+
 
 // ---------------------------------------------------------------------------
 // 公开包装（基于真实用户配置目录）
@@ -257,6 +676,17 @@ pub async fn webdav_open(base_url: String, remote_path: String) -> Result<OpenOu
 
     let (images_ok, images_failed) =
         mirror_images_down(&conn, &root, &dir_of(&remote_path), &doc.content).await;
+
+    record_cache_entry(
+        &base_url,
+        &remote_path,
+        &cache_path,
+        doc.etag.clone(),
+        doc.content.len() as u64,
+        None,
+        Some(hash_bytes(doc.content.as_bytes())),
+        false,
+    );
 
     Ok(OpenOutcome {
         content: doc.content,
@@ -427,6 +857,22 @@ pub async fn webdav_save(
         create,
     )
     .await?;
+
+    if !outcome.conflict {
+        if let Ok(root) = ensure_cache_root(&base_url) {
+            let cache_path = remote_to_cache_in(&root, &remote_path);
+            record_cache_entry(
+                &base_url,
+                &remote_path,
+                &cache_path,
+                outcome.etag.clone(),
+                content.len() as u64,
+                None,
+                Some(hash_bytes(content.as_bytes())),
+                false,
+            );
+        }
+    }
 
     Ok(CloudSaveOutcome {
         conflict: outcome.conflict,
@@ -922,5 +1368,177 @@ mod tests {
         assert_eq!(assets_dir_of("/Notes/images/x.png"), None);
         assert_eq!(assets_dir_of("/Notes/Assets/x.png"), None);
         assert_eq!(assets_dir_of("/Notes/doc.md"), None);
+    }
+
+    // ---- 缓存清单 / 删除 / 移动 ----
+
+    fn entry(remote: &str, root: &Path) -> CacheEntry {
+        CacheEntry {
+            remote_path: remote.to_string(),
+            cache_path: remote_to_cache_in(root, remote).to_string_lossy().to_string(),
+            etag: Some("\"v1\"".to_string()),
+            size: 3,
+            modified: None,
+            content_hash: Some(hash_bytes(b"abc")),
+            last_sync_at: 1,
+            stale: false,
+        }
+    }
+
+    #[test]
+    fn manifest_records_and_updates_entries_without_duplicates() {
+        let root = temp_root("manifest");
+        let local = remote_to_cache_in(&root, "/Notes/a.md");
+        record_cache_entry_in(
+            &root, "https://dav.example/dav/", "/Notes/a.md", &local,
+            Some("\"e1\"".into()), 3, None, Some(hash_bytes(b"abc")), false,
+        );
+        record_cache_entry_in(
+            &root, "https://dav.example/dav/", "/Notes/a.md", &local,
+            Some("\"e2\"".into()), 5, None, None, true,
+        );
+        let manifest = load_manifest(&root, "https://dav.example/dav/", "/root");
+        assert_eq!(manifest.version, MANIFEST_VERSION);
+        assert_eq!(manifest.base_url, "https://dav.example/dav/");
+        assert_eq!(manifest.remote_root, "/root");
+        assert_eq!(manifest.entries.len(), 1, "同一远程路径只能有一条");
+        let e = &manifest.entries[0];
+        assert_eq!(e.etag.as_deref(), Some("\"e2\""));
+        assert_eq!(e.size, 5);
+        assert!(e.stale);
+        // content_hash 为 None 时保留旧值
+        assert_eq!(e.content_hash.as_deref(), Some(hash_bytes(b"abc").as_str()));
+        // 落盘是合法 JSON
+        let raw = std::fs::read_to_string(manifest_path_in(&root)).unwrap();
+        assert!(raw.contains("remotePath"));
+    }
+
+    #[test]
+    fn corrupt_manifest_falls_back_to_empty() {
+        let root = temp_root("manifest-corrupt");
+        std::fs::write(manifest_path_in(&root), b"{ not json").unwrap();
+        let manifest = load_manifest(&root, "", "");
+        assert!(manifest.entries.is_empty());
+        assert_eq!(manifest.version, MANIFEST_VERSION);
+    }
+
+    #[test]
+    fn remove_cache_in_deletes_file_entry_and_empty_parents() {
+        let root = temp_root("remove-file");
+        let dir = root.join("Notes");
+        std::fs::create_dir_all(&dir).unwrap();
+        let a = remote_to_cache_in(&root, "/Notes/a.md");
+        let b = remote_to_cache_in(&root, "/Notes/b.md");
+        std::fs::write(&a, b"a").unwrap();
+        std::fs::write(&b, b"b").unwrap();
+        let mut manifest = CacheManifest::default();
+        manifest.entries.push(entry("/Notes/a.md", &root));
+        manifest.entries.push(entry("/Notes/b.md", &root));
+        save_manifest(&root, &manifest).unwrap();
+
+        remove_cache_in(&root, "/Notes/a.md");
+        assert!(!a.exists(), "远端已删除的缓存文件必须清理");
+        assert!(b.exists(), "同目录其它文件不得误删");
+        assert!(dir.exists(), "目录里还有文件时不能删目录");
+        let manifest = load_manifest(&root, "", "");
+        assert_eq!(manifest.entries.len(), 1);
+        assert_eq!(manifest.entries[0].remote_path, "/Notes/b.md");
+
+        remove_cache_in(&root, "/Notes/b.md");
+        assert!(!b.exists());
+        assert!(!dir.exists(), "清空后空目录应一并回收");
+        assert!(load_manifest(&root, "", "").entries.is_empty());
+    }
+
+    #[test]
+    fn remove_cache_in_does_not_match_prefix_lookalikes() {
+        let root = temp_root("remove-prefix");
+        let keep = remote_to_cache_in(&root, "/Notes/a.md2");
+        std::fs::create_dir_all(keep.parent().unwrap()).unwrap();
+        std::fs::write(&keep, b"x").unwrap();
+        record_cache_entry_in(
+            &root, "", "/Notes/a.md2", &keep, None, 1, None, None, false,
+        );
+        // 删除 a.md 不应影响 a.md2（前缀重名）
+        remove_cache_in(&root, "/Notes/a.md");
+        assert!(keep.exists());
+        assert_eq!(load_manifest(&root, "", "").entries.len(), 1);
+    }
+
+    #[test]
+    fn remove_cache_in_cleans_all_entries_under_a_deleted_directory() {
+        let root = temp_root("remove-dir");
+        let folder = root.join("Notes");
+        std::fs::create_dir_all(folder.join("sub")).unwrap();
+        std::fs::write(folder.join("a.md"), b"a").unwrap();
+        std::fs::write(folder.join("sub/b.md"), b"b").unwrap();
+        let mut manifest = CacheManifest::default();
+        manifest.entries.push(entry("/Notes/a.md", &root));
+        manifest.entries.push(entry("/Notes/sub/b.md", &root));
+        manifest.entries.push(entry("/Other/keep.md", &root));
+        save_manifest(&root, &manifest).unwrap();
+
+        remove_cache_in(&root, "/Notes");
+        assert!(!folder.exists(), "目录删除后镜像应整体移除");
+        let manifest = load_manifest(&root, "", "");
+        assert_eq!(manifest.entries.len(), 1);
+        assert_eq!(manifest.entries[0].remote_path, "/Other/keep.md");
+    }
+
+    #[test]
+    fn move_cache_in_moves_file_and_rewrites_entries() {
+        let root = temp_root("move-file");
+        let from = remote_to_cache_in(&root, "/Notes/a.md");
+        let to = remote_to_cache_in(&root, "/Archive/a.md");
+        std::fs::create_dir_all(from.parent().unwrap()).unwrap();
+        std::fs::write(&from, b"a").unwrap();
+        let mut manifest = CacheManifest::default();
+        manifest.entries.push(entry("/Notes/a.md", &root));
+        manifest.entries.push(entry("/Other/x.md", &root));
+        save_manifest(&root, &manifest).unwrap();
+
+        move_cache_in(&root, "/Notes/a.md", "/Archive/a.md");
+        assert!(to.exists(), "移动后缓存文件应在目标位置");
+        assert!(!from.exists());
+        let manifest = load_manifest(&root, "", "");
+        assert_eq!(manifest.entries.len(), 2);
+        let moved = manifest.entries.iter().find(|e| e.remote_path == "/Archive/a.md").unwrap();
+        assert_eq!(moved.cache_path, to.to_string_lossy().to_string());
+        assert!(manifest.entries.iter().any(|e| e.remote_path == "/Other/x.md"));
+    }
+
+    #[test]
+    fn move_cache_in_moves_directory_and_child_entries() {
+        let root = temp_root("move-dir");
+        let from_dir = root.join("Notes");
+        std::fs::create_dir_all(from_dir.join("sub")).unwrap();
+        std::fs::write(from_dir.join("a.md"), b"a").unwrap();
+        std::fs::write(from_dir.join("sub/b.md"), b"b").unwrap();
+        let mut manifest = CacheManifest::default();
+        manifest.entries.push(entry("/Notes/a.md", &root));
+        manifest.entries.push(entry("/Notes/sub/b.md", &root));
+        save_manifest(&root, &manifest).unwrap();
+
+        move_cache_in(&root, "/Notes", "/Workspace/Notes");
+        assert!(!from_dir.exists());
+        assert!(root.join("Workspace/Notes/a.md").exists());
+        assert!(root.join("Workspace/Notes/sub/b.md").exists());
+        let manifest = load_manifest(&root, "", "");
+        let paths: Vec<&str> = manifest.entries.iter().map(|e| e.remote_path.as_str()).collect();
+        assert!(paths.contains(&"/Workspace/Notes/a.md"), "{paths:?}");
+        assert!(paths.contains(&"/Workspace/Notes/sub/b.md"), "{paths:?}");
+        for e in &manifest.entries {
+            assert_eq!(e.cache_path, remote_to_cache_in(&root, &e.remote_path).to_string_lossy());
+        }
+    }
+
+    #[test]
+    fn sync_root_path_is_normalized() {
+        assert_eq!(normalize_remote_root_path("/yizimarkdown"), "/yizimarkdown");
+        assert_eq!(normalize_remote_root_path("yizimarkdown/"), "/yizimarkdown");
+        assert_eq!(normalize_remote_root_path("  /a/b/  "), "/a/b");
+        assert_eq!(normalize_remote_root_path("\\a\\b"), "/a/b");
+        assert_eq!(normalize_remote_root_path(""), "/");
+        assert_eq!(normalize_remote_root_path("/"), "/");
     }
 }

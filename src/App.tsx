@@ -22,7 +22,8 @@ import {
   easeInOutCubic, ZEN_TIMING, zenEnterTotalMs, zenExitTotalMs,
   type ZenRegion, type ZenRect,
 } from './lib/zenMode'
-import { openRemote, save as saveToCloud, notifyRemoteDirChanged } from './lib/webdav'
+import { openRemote, save as saveToCloud, notifyRemoteDirChanged, hasCredentials } from './lib/webdav'
+import { runCloudCacheSync } from './lib/webdavSync'
 import { parentPath, joinPath, baseName, canonicalRemotePath } from './lib/remotePath'
 import { saveActiveTab, markConflictResolved, dirOf } from './lib/saveRouter'
 import { adoptStagedAssets, cleanupPastedAssets, saveFileWithAssets, stagePendingAssets, type StagedAssets } from './lib/docAssets'
@@ -328,6 +329,23 @@ function App() {
   const [cloudSaveError, setCloudSaveError] = useState<string | null>(null)
   const editorRef = useRef<EditorRef>(null)
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // 启动后只对当前 WebDAV 地址/根目录跑一次缓存同步（手动同步不受此限制）
+  const cloudSyncOnceRef = useRef<string | null>(null)
+  useEffect(() => {
+    const { webdavBaseUrl, webdavRootPath } = useSettingsStore.getState()
+    if (!webdavBaseUrl) return
+    const key = `${webdavBaseUrl}|${webdavRootPath}`
+    if (cloudSyncOnceRef.current === key) return
+    cloudSyncOnceRef.current = key
+    const timer = setTimeout(() => {
+      hasCredentials()
+        .then((ok) => {
+          if (ok) return runCloudCacheSync(webdavBaseUrl, webdavRootPath)
+        })
+        .catch((e) => console.error('[webdav] startup cache sync failed:', e))
+    }, 4000)
+    return () => clearTimeout(timer)
+  }, [])
   const startupDone = useRef(false)
   const prevPluginsRef = useRef<string[]>([])
   const pluginsReadyRef = useRef(false)

@@ -21,6 +21,7 @@ import {
   clearCredentials,
   testConnection,
 } from '../lib/webdav'
+import { runCloudCacheSync } from '../lib/webdavSync'
 import { normalizeBaseUrl } from '../lib/remotePath'
 import { liveAnimPreviewCss } from '../lib/liveAnimKeyframes'
 import { DEFAULT_THEME } from '../lib/themeOrder'
@@ -2290,6 +2291,8 @@ function CloudSettings() {
   const [hasCred, setHasCred] = useState(false)
   const [testing, setTesting] = useState(false)
   const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMsg, setSyncMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
   // 回填已保存的用户名（密码永不回传，只能显示"已保存"）
   useEffect(() => {
@@ -2343,6 +2346,26 @@ function CloudSettings() {
       setTestMsg({ ok: false, text: e instanceof Error ? e.message : String(e) })
     }
     setTesting(false)
+  }
+
+  const handleSyncCache = async () => {
+    setSyncing(true)
+    setSyncMsg(null)
+    try {
+      const result = await runCloudCacheSync(baseUrl, rootPath)
+      setSyncMsg({
+        ok: true,
+        text: t('settings.cloudSyncSummary', {
+          removed: result.removed,
+          downloaded: result.downloaded,
+          updated: result.updated,
+          failed: result.failed,
+        }),
+      })
+    } catch (e) {
+      setSyncMsg({ ok: false, text: e instanceof Error ? e.message : String(e) })
+    }
+    setSyncing(false)
   }
 
   return (
@@ -2456,6 +2479,45 @@ function CloudSettings() {
                 </p>
               )}
               <p className="text-[0.6875rem] text-[var(--sidebar-text)]">{t('settings.cloudCredentialsNote')}</p>
+            </Row>
+          </Section>
+
+          <Section title={t('settings.cloudSectionSync')}>
+            <Row label={t('settings.cloudMirrorAll')} hint={t('settings.cloudMirrorAllHint')}>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={store.webdavMirrorAll}
+                  onChange={(e) => store.setField('webdavMirrorAll', e.target.checked)}
+                />
+              </label>
+            </Row>
+            <Row label={t('settings.cloudSyncNow')} hint={t('settings.cloudSyncHint')}>
+              <div className="flex items-center gap-3 flex-wrap justify-end">
+                <span className="text-[0.6875rem] text-[var(--sidebar-text)]">
+                  {store.webdavLastSyncAt
+                    ? `${t('settings.cloudSyncLastAt', { time: new Date(store.webdavLastSyncAt).toLocaleString() })} · ${t('settings.cloudSyncSummary', {
+                      removed: store.webdavLastSyncRemoved,
+                      downloaded: store.webdavLastSyncDownloaded,
+                      updated: store.webdavLastSyncUpdated,
+                      failed: store.webdavLastSyncFailed,
+                    })}`
+                    : t('settings.cloudSyncNever')}
+                </span>
+                <button
+                  onClick={handleSyncCache}
+                  disabled={syncing || !baseUrl.trim()}
+                  className="settings-btn-primary"
+                  style={syncing || !baseUrl.trim() ? { opacity: 0.5 } : undefined}
+                >
+                  {syncing ? t('settings.cloudSyncing') : t('settings.cloudSyncNow')}
+                </button>
+              </div>
+              {syncMsg && (
+                <p className={`text-[0.6875rem] break-all ${syncMsg.ok ? 'text-emerald-500' : 'text-red-500'}`}>
+                  {syncMsg.ok ? syncMsg.text : t('settings.cloudSyncFailed', { msg: syncMsg.text })}
+                </p>
+              )}
             </Row>
           </Section>
         </div>

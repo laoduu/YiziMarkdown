@@ -521,7 +521,7 @@ impl Conn {
         status.is_success() || status.as_u16() == 207
     }
 
-    async fn list(&self, path: &str) -> Result<Vec<RemoteEntry>, String> {
+    pub(crate) async fn list(&self, path: &str) -> Result<Vec<RemoteEntry>, String> {
         let url = self.url(path, true)?;
         let pf = method(b"PROPFIND");
         let (status, headers, body) = self
@@ -821,12 +821,16 @@ pub async fn webdav_mkdir(base_url: String, path: String) -> Result<(), String> 
 
 #[tauri::command]
 pub async fn webdav_delete(base_url: String, path: String) -> Result<(), String> {
-    Conn::from_keychain(&base_url)?.delete(&path).await
+    Conn::from_keychain(&base_url)?.delete(&path).await?;
+    crate::remote_cache::remove_cache_for_remote(&base_url, &path);
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn webdav_move(base_url: String, from: String, to: String) -> Result<(), String> {
-    Conn::from_keychain(&base_url)?.rename(&from, &to).await
+    Conn::from_keychain(&base_url)?.rename(&from, &to).await?;
+    crate::remote_cache::move_cache_for_remote(&base_url, &from, &to);
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------

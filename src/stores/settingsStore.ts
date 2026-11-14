@@ -135,6 +135,15 @@ export interface SettingsState {
   webdavLastPath: string
   /** 「保存到云端」对话框上次成功保存到的目录，重新打开时作为默认落点 */
   webdavSaveLastDir: string
+  /** 云端缓存全量镜像（默认关闭）：同步时下载 root 下所有 Markdown 及其引用图片 */
+  webdavMirrorAll: boolean
+  /** 上次缓存同步时间（ISO 字符串，空 = 从未同步） */
+  webdavLastSyncAt: string
+  webdavLastSyncRemoved: number
+  webdavLastSyncDownloaded: number
+  webdavLastSyncUpdated: number
+  webdavLastSyncFailed: number
+  webdavLastSyncTotal: number
 
   // 演示模式（v0.3.1）
   /** 切换动画变体：在演示模式 HUD 里选择，立即持久化 */
@@ -282,6 +291,13 @@ export const useSettingsStore = create<SettingsState>()(
       webdavLastPath: '',
       // 空串表示"还没云端保存过"：保存对话框据此回落到浏览器目录
       webdavSaveLastDir: '',
+      webdavMirrorAll: false,
+      webdavLastSyncAt: '',
+      webdavLastSyncRemoved: 0,
+      webdavLastSyncDownloaded: 0,
+      webdavLastSyncUpdated: 0,
+      webdavLastSyncFailed: 0,
+      webdavLastSyncTotal: 0,
 
       // 演示模式（v0.3.1）
       slideAnim: 'cube',

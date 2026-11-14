@@ -39,6 +39,16 @@ export interface WebdavSaveResult {
   imagesFailed?: number
 }
 
+export interface WebdavSyncResult {
+  removed: number
+  downloaded: number
+  updated: number
+  failed: number
+  total: number
+  /** Unix 秒 */
+  lastSyncAt: number
+}
+
 // ===== 凭据（OS 凭据库）=====
 
 export function setCredentials(username: string, password: string): Promise<void> {
@@ -122,7 +132,18 @@ export function move(baseUrl: string, from: string, to: string): Promise<void> {
   return invokeTauriOrThrow<void>('webdav_move', { baseUrl, from, to })
 }
 
-// ===== 目录变更广播 =====
+/** 同步配置根目录下的云端缓存（只清理/下载已缓存范围，`mirrorAll` 可开启全量镜像） */
+export function syncCache(
+  baseUrl: string,
+  rootPath: string,
+  mirrorAll: boolean,
+): Promise<WebdavSyncResult> {
+  return invokeTauriOrThrow<WebdavSyncResult>('webdav_sync_cache', {
+    baseUrl,
+    remoteRoot: rootPath,
+    mirrorAll,
+  })
+}
 
 /**
  * 云端目录内容已变更时广播（新建文件夹、上传新文档等）。
