@@ -78,6 +78,13 @@
   /* 字号：clamp 的下限/上限整体乘缩放系数 —— 保持"窗口越大字号越大"，只换档位 */
   font-size: clamp(calc(18px * var(--ys-font-scale, 1)), calc(2.1vw * var(--ys-font-scale, 1)), calc(30px * var(--ys-font-scale, 1)));
   line-height: 1.7;
+  /* ===== 垂直节奏令牌 =====
+     与正文 font-size 同源（含 --ys-font-scale），但用长度而不是 em：
+     margin 的 em 会按「使用元素自身的字号」解析（pre 0.72em / table 0.85em /
+     标题 2.4em），同样写 0.7em 会得到完全不同的实际间距。 */
+  --ys-u: clamp(calc(18px * var(--ys-font-scale, 1)), calc(2.1vw * var(--ys-font-scale, 1)), calc(30px * var(--ys-font-scale, 1)));
+  --ys-gap-sm: calc(0.55 * var(--ys-u));
+  --ys-gap-md: calc(0.7 * var(--ys-u));
   text-align: left;
   /* 内容字体 / 字重：默认值来自 globals.css 的 --ys-*（= 预览字体 / 400），HUD 可覆盖。
      只写在 .ys-slide 上（而不是根节点）—— HUD / 页脚 / 备注面板属于界面外壳，
@@ -681,7 +688,7 @@
   letter-spacing: -0.02em;
   text-align: left;
   color: var(--editor-h1, var(--editor-accent, #4f46e5));
-  margin: 0 0 0.6em;
+  margin: 0 0 calc(1.4 * var(--ys-u));
 }
 
 /* 正文页标题的唯一字号来源。各版式只负责位置/下划线，不再各自改字号。 */
@@ -691,7 +698,7 @@
   letter-spacing: -0.01em;
   text-align: left;
   color: var(--editor-h2, var(--editor-accent, #4f46e5));
-  margin: 0 0 0.5em;
+  margin: 0 0 var(--ys-u);
 }
 
 .ys-slide h3 {
@@ -699,7 +706,7 @@
   font-weight: 600;
   text-align: left;
   color: var(--editor-h3, var(--editor-accent, #4f46e5));
-  margin: 0.8em 0 0.4em;
+  margin: calc(1.2 * var(--ys-u)) 0 calc(0.6 * var(--ys-u));
 }
 
 .ys-slide h4 {
@@ -707,7 +714,7 @@
   font-weight: 600;
   text-align: left;
   color: var(--editor-h4, var(--editor-accent, #4f46e5));
-  margin: 0.8em 0 0.4em;
+  margin: var(--ys-u) 0 calc(0.5 * var(--ys-u));
 }
 
 .ys-slide h5 {
@@ -715,7 +722,7 @@
   font-weight: 600;
   text-align: left;
   color: var(--editor-h5, var(--editor-accent, #4f46e5));
-  margin: 0.7em 0 0.3em;
+  margin: calc(0.8 * var(--ys-u)) 0 calc(0.35 * var(--ys-u));
 }
 
 .ys-slide h6 {
@@ -723,7 +730,7 @@
   font-weight: 600;
   text-align: left;
   color: var(--editor-h6, var(--editor-accent, #4f46e5));
-  margin: 0.6em 0 0.3em;
+  margin: calc(0.6 * var(--ys-u)) 0 calc(0.3 * var(--ys-u));
   letter-spacing: 0.03em;
 }
 
@@ -731,7 +738,7 @@
 .ys-slide ul,
 .ys-slide ol,
 .ys-slide blockquote {
-  margin: 0.7em 0;
+  margin: var(--ys-gap-md) 0;
 }
 
 /* 列表/引用：块居中，内容左对齐（段落、标题等默认居中） */
@@ -746,7 +753,6 @@
 .ys-slide ol {
   list-style: none;
   padding-left: 0;
-  margin: 0.7em 0;
 }
 
 .ys-slide ul {
@@ -760,7 +766,7 @@
 .ys-slide li {
   position: relative;
   padding-left: 1.5em;
-  margin: 0.55em 0;
+  margin: var(--ys-gap-sm) 0;
 }
 
 /* 无序列表：主题强调色圆点。
@@ -869,7 +875,7 @@
 
 .ys-slide li > ul,
 .ys-slide li > ol {
-  margin: 0.25em 0;
+  margin: calc(0.25 * var(--ys-u)) 0;
 }
 
 /* ===== 片段逐步显示 =====
@@ -923,7 +929,8 @@
 .ys-slide pre {
   background: var(--editor-surface, rgba(128, 128, 128, 0.12));
   border: 1px solid var(--editor-border, rgba(128, 128, 128, 0.2));
-  padding: 1.4em 1.6em;
+  padding: calc(1 * var(--ys-u)) calc(1.15 * var(--ys-u));
+  margin: var(--ys-gap-md) 0;
   border-radius: 12px;
   overflow-x: auto;
   max-width: 100%;   /* 分栏/栅格内也能正常横向滚动，而不是撑破容器 */
@@ -962,7 +969,7 @@
 /* 引用 */
 .ys-slide blockquote {
   border-left: 4px solid var(--editor-accent, #4f46e5);
-  padding: 0.15em 0 0.15em 1.2em;
+  padding: calc(0.15 * var(--ys-u)) 0 calc(0.15 * var(--ys-u)) 1.2em;
   color: var(--sidebar-text, inherit);
 }
 
@@ -973,7 +980,7 @@
   gap: 0.4em;
   /* 标题是块内第一个段落：恢复普通段落原有的段前距，
      否则会显得比 [!NOTE] 作为普通文字时更贴顶 */
-  margin: 0.7em 0 0.35em;
+  margin: calc(0.65 * var(--ys-u)) 0 calc(0.35 * var(--ys-u));
   font-style: normal;
   font-weight: 600;
   font-size: 0.92em;
@@ -994,14 +1001,14 @@
 .ys-slide table {
   border-collapse: collapse;
   width: 100%;
-  margin: 1em 0;
+  margin: var(--ys-gap-md) 0;
   font-size: 0.85em;
 }
 
 .ys-slide th,
 .ys-slide td {
   border: 1px solid var(--editor-border, rgba(128, 128, 128, 0.25));
-  padding: 0.6em 1em;
+  padding: calc(0.5 * var(--ys-u)) calc(0.85 * var(--ys-u));
   text-align: left;
 }
 
@@ -1050,6 +1057,7 @@
 .ys-slide hr {
   border: none;
   border-top: 1px solid var(--editor-border, rgba(128, 128, 128, 0.25));
+  margin: var(--ys-gap-md) 0;
 }
 
 /* ===== 脚注区：与编辑器预览/live 的脚注规格同款（小字号、紧行距）=====
@@ -1058,21 +1066,21 @@
   font-size: 0.85em;
   line-height: 1.55;
 }
-.ys-slide .footnotes-sep { margin-top: 1.2em; }
-.ys-slide .footnotes-list { margin: 0.6em 0 0; padding-left: 1.6em; }
+.ys-slide .footnotes-sep { margin-top: var(--ys-u); }
+.ys-slide .footnotes-list { margin: calc(0.5 * var(--ys-u)) 0 0; padding-left: 1.6em; }
 .ys-slide .footnote-item { margin: 0; }
-.ys-slide .footnote-item p { margin: 0 0 0.1em; line-height: 1.55; }
+.ys-slide .footnote-item p { margin: 0 0 calc(0.1 * var(--ys-u)); line-height: 1.55; }
 .ys-slide .footnote-backref,
 .ys-slide .footnote-backref:hover { text-decoration: none; }
 
 .ys-slide .mermaid {
   display: flex;
   justify-content: center;
-  margin: 1.5em 0;
+  margin: calc(1.5 * var(--ys-u)) 0;
 }
 
 .ys-slide .katex-display {
-  margin: 1.5em 0;
+  margin: calc(1.5 * var(--ys-u)) 0;
   overflow-x: auto;
 }
 
