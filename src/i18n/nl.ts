@@ -470,7 +470,6 @@ export const nl = {
     skillIdInvalid: "Skill-ID mag alleen letters, cijfers, - en _ bevatten",
     skillIdDuplicate: "Deze skill-ID is al in gebruik",
     skillFileCollision: "Deze promptbestandsnaam is al in gebruik",
-    mdSource: "Bron",
     pluginMgmt: 'Pluginbeheer',
     pluginHint: 'Plugins breiden de Markdown-rendering uit. Uitgeschakelde plugins worden niet geladen en verbruiken niets.',
     slogan: 'Mooi en krachtig!',

@@ -385,7 +385,6 @@ export const zh = {
     skillIdInvalid: "技能 ID 只能包含字母、数字、- 和 _",
     skillIdDuplicate: "该技能 ID 已被占用",
     skillFileCollision: "提示词文件名已被占用",
-    mdSource: "源码",
     // 插件
     pluginMgmt: '插件管理',
     pluginHint: '插件提供可选的渲染或导出能力；未启用的插件不会加载，不占用系统资源。公式与 Mermaid 已内置，无需在此开启。',

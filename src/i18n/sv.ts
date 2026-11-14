@@ -470,7 +470,6 @@ export const sv = {
     skillIdInvalid: "Skill-ID får bara innehålla bokstäver, siffror, - och _",
     skillIdDuplicate: "Detta skill-ID används redan",
     skillFileCollision: "Detta promptfilnamn används redan",
-    mdSource: "Källa",
     pluginMgmt: 'Pluginhantering',
     pluginHint: 'Plugin utökar Markdown-renderingen. Inaktiverade plugin laddas inte och förbrukar inga resurser.',
     slogan: 'Vacker och kraftfull!',

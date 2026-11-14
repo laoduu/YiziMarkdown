@@ -439,7 +439,6 @@ export const pl = {
     skillIdInvalid: "ID może zawierać tylko litery, cyfry, - i _",
     skillIdDuplicate: "To ID skilla jest już używane",
     skillFileCollision: "Ta nazwa pliku promptu jest już używana",
-    mdSource: "Źródło",
     pluginMgmt: 'Zarządzanie wtyczkami',
     pluginHint: 'Wtyczki rozszerzają renderowanie Markdown. Wyłączone wtyczki nie są ładowane i nie zużywają zasobów.',
     slogan: 'Piękny i potężny!',

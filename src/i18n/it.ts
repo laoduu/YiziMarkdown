@@ -439,7 +439,6 @@ export const it = {
     skillIdInvalid: "L’ID può contenere solo lettere, cifre, - e _",
     skillIdDuplicate: "Questo ID skill è già in uso",
     skillFileCollision: "Questo nome di file prompt è già in uso",
-    mdSource: "Sorgente",
     pluginMgmt: 'Gestione plugin',
     pluginHint: 'I plugin estendono il rendering Markdown. I plugin disattivati non vengono caricati e non consumano risorse.',
     slogan: 'Bello e feroce!',

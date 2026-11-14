@@ -3,7 +3,7 @@
  *
  * 模板管理与 Skill 管理使用同一套交互：
  * - 可编辑：`编辑` / `预览` 两个标签；
- * - 只读：`预览` / `源码` 两个标签，默认预览。
+ * - 只读：直接显示渲染后的预览（查看源码请点「编辑」）。
  */
 import { useMemo, useState } from 'react'
 import { Code, Eye } from 'lucide-react'
@@ -32,24 +32,38 @@ export default function MarkdownEditPreview({
   const [mode, setMode] = useState<'edit' | 'preview'>(readOnly ? 'preview' : 'edit')
 
   const html = useMemo(
-    () => (mode === 'preview' ? renderMarkdown(value) : ''),
-    [mode, value],
+    () => (readOnly || mode === 'preview' ? renderMarkdown(value) : ''),
+    [readOnly, mode, value],
   )
 
-  const tabs = readOnly
-    ? [
-        { key: 'preview' as const, label: t('settings.preview'), icon: <Eye size={12} /> },
-        { key: 'edit' as const, label: t('settings.mdSource'), icon: <Code size={12} /> },
-      ]
-    : [
-        { key: 'edit' as const, label: t('settings.edit'), icon: <Code size={12} /> },
-        { key: 'preview' as const, label: t('settings.preview'), icon: <Eye size={12} /> },
-      ]
+  const preview = (
+    <div
+      className={`settings-md-preview editor-content prose max-w-none theme-${currentTheme} overflow-x-hidden overflow-y-auto`}
+      style={{
+        minHeight,
+        maxHeight: minHeight,
+        padding: '10px 12px',
+        fontSize: '0.8125rem',
+        lineHeight: 1.6,
+        background: 'var(--editor-surface)',
+        border: '1px solid var(--editor-border)',
+        borderRadius: 'var(--radius-sm)',
+        overflowWrap: 'anywhere',
+        wordBreak: 'break-word',
+      }}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  )
+
+  if (readOnly) return <div className="min-w-0">{preview}</div>
 
   return (
     <div className="min-w-0">
       <div className="flex items-center justify-end gap-1 mb-1">
-        {tabs.map((tab) => {
+        {[
+          { key: 'edit' as const, label: t('settings.edit'), icon: <Code size={12} /> },
+          { key: 'preview' as const, label: t('settings.preview'), icon: <Eye size={12} /> },
+        ].map((tab) => {
           const active = mode === tab.key
           return (
             <button
@@ -70,28 +84,12 @@ export default function MarkdownEditPreview({
         })}
       </div>
 
-      {mode === 'preview' ? (
-        <div
-          className={`editor-content prose max-w-none theme-${currentTheme} overflow-y-auto`}
-          style={{
-            minHeight,
-            maxHeight: minHeight,
-            padding: '10px 12px',
-            fontSize: '0.8125rem',
-            lineHeight: 1.6,
-            background: 'var(--editor-surface)',
-            border: '1px solid var(--editor-border)',
-            borderRadius: 'var(--radius-sm)',
-          }}
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
-      ) : (
+      {mode === 'preview' ? preview : (
         <textarea
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
-          readOnly={readOnly}
           placeholder={placeholder}
-          className={`settings-textarea font-mono ${readOnly ? 'opacity-80' : ''}`}
+          className="settings-textarea font-mono"
           style={{ minHeight, height: minHeight }}
         />
       )}

@@ -439,7 +439,6 @@ export const ja = {
     skillIdInvalid: "スキル ID は英数字、-、_ のみ使用できます",
     skillIdDuplicate: "このスキル ID は既に使用されています",
     skillFileCollision: "このプロンプトファイル名は既に使用されています",
-    mdSource: "ソース",
     pluginMgmt: 'プラグイン管理',
     pluginHint: 'プラグインで Markdown のレンダリングを拡張できます。無効なプラグインは読み込まれず、リソースも使いません。',
     slogan: '美しく、そして強烈に！',

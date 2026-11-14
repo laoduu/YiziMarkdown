@@ -439,7 +439,6 @@ export const ko = {
     skillIdInvalid: "스킬 ID는 영문, 숫자, - 및 _만 사용할 수 있습니다",
     skillIdDuplicate: "이 스킬 ID는 이미 사용 중입니다",
     skillFileCollision: "이 프롬프트 파일 이름은 이미 사용 중입니다",
-    mdSource: "소스",
     pluginMgmt: '플러그인 관리',
     pluginHint: '플러그인으로 Markdown 렌더링을 확장할 수 있습니다. 비활성 플러그인은 로드되지 않아 리소스를 차지하지 않습니다.',
     slogan: '예쁘고, 또 강력합니다!',

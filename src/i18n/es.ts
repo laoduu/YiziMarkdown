@@ -439,7 +439,6 @@ export const es = {
     skillIdInvalid: "El ID solo puede contener letras, números, - y _",
     skillIdDuplicate: "Este ID de skill ya está en uso",
     skillFileCollision: "El nombre del archivo de prompt ya está en uso",
-    mdSource: "Código",
     pluginMgmt: 'Gestión de complementos',
     pluginHint: 'Los complementos amplían el renderizado de Markdown. Los desactivados no se cargan y no consumen recursos.',
     slogan: '¡Hermosa y feroz!',

@@ -385,7 +385,6 @@ export const zhTW = {
     skillIdInvalid: "技能 ID 只能包含字母、數字、- 和 _",
     skillIdDuplicate: "此技能 ID 已被使用",
     skillFileCollision: "此提示詞檔名已被使用",
-    mdSource: "原始碼",
     // 外掛
     pluginMgmt: '外掛管理',
     pluginHint: '啟用外掛後可增強 Markdown 的渲染能力。未啟用的外掛不會載入，不佔用系統資源。',

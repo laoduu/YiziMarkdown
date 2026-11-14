@@ -15,7 +15,8 @@
 - 新增 `SkillsSettings`：左侧技能列表，右侧查看 / 编辑；保存后写入 `~/Documents/yizimarkdown/skills/skills.json` 与同名 `.md` 提示词文件。
 - 新增后端命令 `write_skills_manifest` / `write_skill_file` / `delete_skill_file`，校验 ID / 文件唯一性与文件名安全，拒绝路径穿越。
 - 新增 `src/lib/skillsManifest.ts` 纯逻辑：解析清单、ID 校验、文件派生、保存 / 删除计划；`src/lib/skillsAdmin.ts` 负责 Tauri 读写。
-- 新增共用组件 `MarkdownEditPreview`：可编辑时「编辑 / 预览」标签，只读时「预览 / 源码」标签；模板管理与 Skill 管理复用同一组件。
+- 新增共用组件 `MarkdownEditPreview`：可编辑时「编辑 / 预览」标签；列表页查看态直接显示渲染后的预览，不提供源码 / 预览切换（需要源码时点「编辑」）。模板管理与 Skill 管理复用同一组件。
+- 设置页预览禁止横向滚动：代码块自动换行、表格按容器宽度折行、图片限制为 100% 宽。
 - 技能保存后广播 `skills-changed`：AI 面板立即重新加载清单、清空提示词缓存；被删除的当前技能会自动移除输入区胶囊。
 - AI 面板「管理技能」改为直接打开「设置 → Skill 管理」。
 

@@ -439,7 +439,6 @@ export const tr = {
     skillIdInvalid: "Skill ID yalnızca harf, rakam, - ve _ içerebilir",
     skillIdDuplicate: "Bu skill ID zaten kullanılıyor",
     skillFileCollision: "Bu prompt dosya adı zaten kullanılıyor",
-    mdSource: "Kaynak",
     pluginMgmt: 'Eklenti yönetimi',
     pluginHint: 'Eklentiler Markdown işlemeyi genişletir. Devre dışı eklentiler yüklenmez ve kaynak tüketmez.',
     slogan: 'Güzel ve güçlü!',

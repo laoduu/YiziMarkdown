@@ -439,7 +439,6 @@ export const fr = {
     skillIdInvalid: "L’ID ne peut contenir que des lettres, chiffres, - et _",
     skillIdDuplicate: "Cet ID de skill est déjà utilisé",
     skillFileCollision: "Ce nom de fichier de prompt est déjà utilisé",
-    mdSource: "Source",
     pluginMgmt: 'Gestion des extensions',
     pluginHint: 'Les extensions enrichissent le rendu Markdown. Les extensions désactivées ne sont pas chargées et ne consomment rien.',
     slogan: 'Belle et féroce !',

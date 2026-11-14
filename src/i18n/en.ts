@@ -385,7 +385,6 @@ export const en = {
     skillIdInvalid: "Skill ID can only contain letters, digits, - and _",
     skillIdDuplicate: "This Skill ID is already in use",
     skillFileCollision: "The prompt file name is already in use",
-    mdSource: "Source",
     // 插件
     pluginMgmt: 'Plugin Management',
     pluginHint: 'Plugins add optional rendering or export capabilities. Disabled plugins are not loaded. Math and Mermaid are built in and do not need to be enabled here.',

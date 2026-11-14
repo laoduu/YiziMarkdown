@@ -470,7 +470,6 @@ export const de = {
     skillIdInvalid: "Skill-ID darf nur Buchstaben, Ziffern, - und _ enthalten",
     skillIdDuplicate: "Diese Skill-ID wird bereits verwendet",
     skillFileCollision: "Der Prompt-Dateiname wird bereits verwendet",
-    mdSource: "Quelltext",
     pluginMgmt: 'Plugin-Verwaltung',
     pluginHint: 'Plugins erweitern die Markdown-Renderfähigkeit. Deaktivierte Plugins werden nicht geladen und verbrauchen keine Ressourcen.',
     slogan: 'Schön und kraftvoll!',

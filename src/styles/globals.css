@@ -2236,6 +2236,31 @@ a {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--editor-border) 50%, transparent);
 }
 
+/* 设置页 Markdown 预览：窄面板内不出现横向滚动条。
+   代码块与表格按宽度换行；选择器层级足够压过主题里的 .editor-content.theme-x 规则。 */
+.settings-modal-container .settings-content-scroll .settings-md-preview.editor-content pre,
+.settings-modal-container .settings-content-scroll .settings-md-preview.editor-content pre code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  overflow-x: hidden;
+}
+.settings-modal-container .settings-content-scroll .settings-md-preview.editor-content table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+}
+.settings-modal-container .settings-content-scroll .settings-md-preview.editor-content table th,
+.settings-modal-container .settings-content-scroll .settings-md-preview.editor-content table td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.settings-modal-container .settings-content-scroll .settings-md-preview.editor-content img {
+  max-width: 100%;
+  height: auto;
+}
+
 /* 临时状态未保存提示 */
 .settings-unsaved-dot {
   display: inline-block;
