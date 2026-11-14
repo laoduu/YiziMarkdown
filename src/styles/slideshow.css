@@ -12,24 +12,29 @@
   font-family: var(--font-preview, var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif));
   overflow: hidden;
 
-  /* ===== 标题规格（不参与 --ys-font-scale 缩放）=====
-     标题使用 px/vw 表达，只随视口大小变化，不随 HUD「字号」和导出自动压缩变化：
-       · 正文页 h2 统一到 --ys-page-title-size；
-       · 封面/章节/致谢保留各自版式的大字号，但同样不乘 --ys-font-scale。
-     这里的 px 下限 / 上限对应原 em 公式在 .ys-slide 基础字号 clamp(18px, 2.1vw, 30px)
-     时的极值（2em = 36~60px、2.4em = 43.2~72px 等），默认 1280×720 下观感不变。 */
-  --ys-page-title-size: clamp(36px, 4.2vw, 60px);
-  --ys-title-h1-size: clamp(43.2px, 5.04vw, 72px);
-  --ys-title-h3-size: clamp(27px, 3.15vw, 45px);
-  --ys-title-h4-size: clamp(22.5px, 2.625vw, 37.5px);
-  --ys-title-h5-size: clamp(20.16px, 2.352vw, 33.6px);
-  --ys-title-h6-size: clamp(18px, 2.1vw, 30px);
-  --ys-title-cover-size: clamp(50.4px, 6vw, 135px);
-  --ys-title-section-size: clamp(36px, 4.5vw, 90px);
-  --ys-title-thanks-size: clamp(46.8px, 6vw, 120px);
-  --ys-section-number-size: clamp(54px, 10vw, 180px);
-  /* 正文页标题左上角位置：与内容区左右内边距、顶部额外 2vh 对齐 */
-  --ys-page-title-top: calc(50vh * (1 - var(--ys-fill-h, 0.84)) + 2vh);
+  /* ===== 固定 1280×720 逻辑画布 =====
+     演示端不再按真实窗口排版：整份 deck 画在 1280×720 画布上，再整体缩放到窗口。
+     这样 1280 / 1920 / 2560 / 3840、以及 100% / 150% / 200% 系统缩放下，
+     幻灯片内部的相对版式完全一致；导出 PPTX 也使用同一块 1280×720。
+     画布外的 HUD / 备注 / 目录仍使用真实视口单位。 */
+}
+
+.ys-stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #000;
+}
+
+.ys-canvas {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1280px;
+  height: 720px;
+  overflow: hidden;
+  transform-origin: center center;
+  background: var(--editor-bg, #ffffff);
 }
 
 /* 退出按钮：右上角，半透明 */
@@ -69,22 +74,32 @@
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-  /* 内容区占比（HUD「内容填充宽度 / 高度」）：--ys-fill-w/h 是**小数**占比（0.50~0.95），
-     由 slideshow.css 这里的 padding 把「内容区」收缩成整屏的对应比例。
-     默认 0.82 / 0.84 ⇒ 左右 9vw、上下 8vh，与加入该旋钮前逐像素一致。
-     ⚠️ 用 vw/vh 而不是 %：padding 的纵向百分比是按**宽度**解析的，拿不到高度占比。 */
-  padding: calc(50vh * (1 - var(--ys-fill-h, 0.84))) calc(50vw * (1 - var(--ys-fill-w, 0.82)));
+  /* 内容区占比（HUD「内容填充宽度 / 高度」）：--ys-fill-w/h 是**小数**占比（0.50~0.95）。
+     画布固定 1280×720，所以这里直接用画布 px：
+     默认 0.82 / 0.84 ⇒ 左右 115.2px、上下 57.6px，与 1280 逐像素一致。 */
+  padding: calc(360px * (1 - var(--ys-fill-h, 0.84))) calc(640px * (1 - var(--ys-fill-w, 0.82)));
   overflow: auto;
-  /* 字号：clamp 的下限/上限整体乘缩放系数 —— 保持"窗口越大字号越大"，只换档位 */
-  font-size: clamp(calc(18px * var(--ys-font-scale, 1)), calc(2.1vw * var(--ys-font-scale, 1)), calc(30px * var(--ys-font-scale, 1)));
-  line-height: 1.7;
-  /* ===== 垂直节奏令牌 =====
-     与正文 font-size 同源（含 --ys-font-scale），但用长度而不是 em：
-     margin 的 em 会按「使用元素自身的字号」解析（pre 0.72em / table 0.85em /
-     标题 2.4em），同样写 0.7em 会得到完全不同的实际间距。 */
-  --ys-u: clamp(calc(18px * var(--ys-font-scale, 1)), calc(2.1vw * var(--ys-font-scale, 1)), calc(30px * var(--ys-font-scale, 1)));
+  /* ===== 画布字号 =====
+     设计比例：正文 = 画布宽度的 1.8% = 23.04px @1280。
+     所有标题/封面都从 --ys-u 派生（倍数取自 1920 演示的现有层级），
+     因此字号、间距、自动压缩都只依赖一个基准。 */
+  --ys-u: calc(23.04px * var(--ys-font-scale, 1));
   --ys-gap-sm: calc(0.55 * var(--ys-u));
   --ys-gap-md: calc(0.7 * var(--ys-u));
+  --ys-page-title-size: calc(2 * var(--ys-u));
+  --ys-title-h1-size: calc(2.4 * var(--ys-u));
+  --ys-title-h3-size: calc(1.5 * var(--ys-u));
+  --ys-title-h4-size: calc(1.25 * var(--ys-u));
+  --ys-title-h5-size: calc(1.12 * var(--ys-u));
+  --ys-title-h6-size: var(--ys-u);
+  --ys-title-cover-size: calc(3.84 * var(--ys-u));
+  --ys-title-section-size: calc(2.88 * var(--ys-u));
+  --ys-title-thanks-size: calc(3.84 * var(--ys-u));
+  --ys-section-number-size: calc(6 * var(--ys-u));
+  /* 正文页标题左上角位置：与内容区左右内边距、顶部额外 2vh（14.4px）对齐 */
+  --ys-page-title-top: calc(360px * (1 - var(--ys-fill-h, 0.84)) + 14.4px);
+  font-size: var(--ys-u);
+  line-height: 1.7;
   text-align: left;
   /* 内容字体 / 字重：默认值来自 globals.css 的 --ys-*（= 预览字体 / 400），HUD 可覆盖。
      只写在 .ys-slide 上（而不是根节点）—— HUD / 页脚 / 备注面板属于界面外壳，
@@ -171,12 +186,12 @@
    keyframes 无法感知方向，由 deck 级方向类切换（Slideshow.tsx 注入
    ys-dir-fwd / ys-dir-back）。柔和型背景同色 → 视觉上只有内容滑入。 ---- */
 @keyframes ys-slide-fwd {
-  from { transform: translateX(100vw); }
+  from { transform: translateX(1280px); }
   to { transform: none; }
 }
 
 @keyframes ys-slide-back {
-  from { transform: translateX(-100vw); }
+  from { transform: translateX(-1280px); }
   to { transform: none; }
 }
 
@@ -612,30 +627,30 @@
 @keyframes ys-cube-out-fwd {
   0% { transform: scale(1); opacity: 1; border-radius: 0; box-shadow: none; }
   28% { transform: scale(0.8); opacity: 1; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
-  72% { transform: scale(0.8) translateX(-45vw); opacity: 0.9; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
-  100% { transform: scale(0.8) translateX(-60vw); opacity: 0; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+  72% { transform: scale(0.8) translateX(-576px); opacity: 0.9; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+  100% { transform: scale(0.8) translateX(-768px); opacity: 0; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
 }
 
 /* 旧页（后退）：镜像——向右移出 */
 @keyframes ys-cube-out-back {
   0% { transform: scale(1); opacity: 1; border-radius: 0; box-shadow: none; }
   28% { transform: scale(0.8); opacity: 1; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
-  72% { transform: scale(0.8) translateX(45vw); opacity: 0.9; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
-  100% { transform: scale(0.8) translateX(60vw); opacity: 0; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+  72% { transform: scale(0.8) translateX(576px); opacity: 0.9; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+  100% { transform: scale(0.8) translateX(768px); opacity: 0; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
 }
 
 /* 新页（前进）：卡片从右缘进入 → 移到中间 → 放大落定 */
 @keyframes ys-cube-in-fwd {
-  0% { transform: translateX(100vw) scale(0.8); opacity: 0; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
-  28% { transform: translateX(55vw) scale(0.8); opacity: 1; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+  0% { transform: translateX(1280px) scale(0.8); opacity: 0; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+  28% { transform: translateX(704px) scale(0.8); opacity: 1; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
   72% { transform: translateX(0) scale(0.8); opacity: 1; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
   100% { transform: none; opacity: 1; border-radius: 0; box-shadow: none; }
 }
 
 /* 新页（后退）：镜像——从左缘进入 */
 @keyframes ys-cube-in-back {
-  0% { transform: translateX(-100vw) scale(0.8); opacity: 0; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
-  28% { transform: translateX(-55vw) scale(0.8); opacity: 1; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+  0% { transform: translateX(-1280px) scale(0.8); opacity: 0; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+  28% { transform: translateX(-704px) scale(0.8); opacity: 1; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
   72% { transform: translateX(0) scale(0.8); opacity: 1; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
   100% { transform: none; opacity: 1; border-radius: 0; box-shadow: none; }
 }
@@ -1043,7 +1058,7 @@
      留 22% 给同页其它内容。
      这是**唯一**的高度上限来源：图片页原先写死的 `max-height:76vh` 已并入这里 ——
      那个值是「内容填充高度」旋钮加入之前写的，不跟旋钮走，而且图片页后面跟文字时照样会挤出画面。 */
-  max-height: calc(var(--ys-fill-h, 0.84) * 78vh);
+  max-height: calc(var(--ys-fill-h, 0.84) * 561.6px);
 }
 
 .ys-slide a {
@@ -1236,7 +1251,7 @@
 .ys-layout-content {
   justify-content: flex-start;
   /* 正文整体下压一点（原 10vh）：跟随「内容填充高度」缩放，默认值下仍等于 10vh */
-  padding-top: calc(50vh * (1 - var(--ys-fill-h, 0.84)) + 2vh);
+  padding-top: calc(360px * (1 - var(--ys-fill-h, 0.84)) + 14.4px);
 }
 
 .ys-layout-content > * {
@@ -1268,7 +1283,7 @@
 .ys-layout-content-list {
   justify-content: flex-start;
   /* 正文整体下压一点（原 10vh）：跟随「内容填充高度」缩放，默认值下仍等于 10vh */
-  padding-top: calc(50vh * (1 - var(--ys-fill-h, 0.84)) + 2vh);
+  padding-top: calc(360px * (1 - var(--ys-fill-h, 0.84)) + 14.4px);
 }
 
 .ys-layout-content-list h2 {
@@ -1297,7 +1312,7 @@
 .ys-layout-table {
   justify-content: flex-start;
   /* 正文整体下压一点（原 10vh）：跟随「内容填充高度」缩放，默认值下仍等于 10vh */
-  padding-top: calc(50vh * (1 - var(--ys-fill-h, 0.84)) + 2vh);
+  padding-top: calc(360px * (1 - var(--ys-fill-h, 0.84)) + 14.4px);
 }
 
 .ys-layout-table h2 {
@@ -1329,7 +1344,7 @@
 .ys-layout-roadmap {
   justify-content: flex-start;
   /* 正文整体下压一点（原 10vh）：跟随「内容填充高度」缩放，默认值下仍等于 10vh */
-  padding-top: calc(50vh * (1 - var(--ys-fill-h, 0.84)) + 2vh);
+  padding-top: calc(360px * (1 - var(--ys-fill-h, 0.84)) + 14.4px);
 }
 
 .ys-layout-roadmap h2 {
@@ -1390,7 +1405,7 @@
   /* 行间距按段落节奏（0.7em，与 .ys-slide p 的 margin 一致）、列间距是图文之间的栏距。
      写成两值是因为右栏现在可能有多个块（见下方 :not(:first-child)），它们之间靠 row-gap 分开；
      若沿用单一 gap，段落之间会被拉开 2.5vw 那么宽。 */
-  gap: 0.7em 2.5vw;
+  gap: 0.7em 32px;
   align-items: center;
   width: 100%;
 }
@@ -1466,9 +1481,9 @@
   overflow: visible;
   /* 与原 `8vh 11vw 14vh` 等价：上下多留 6vh（大引号空间）、左右多留 2vw，
      并同样跟随「内容填充比例」缩放，否则金句页上该旋钮静默失效。 */
-  padding: calc(50vh * (1 - var(--ys-fill-h, 0.84)))
-    calc(50vw * (1 - var(--ys-fill-w, 0.82)) + 2vw)
-    calc(50vh * (1 - var(--ys-fill-h, 0.84)) + 6vh);
+  padding: calc(360px * (1 - var(--ys-fill-h, 0.84)))
+    calc(640px * (1 - var(--ys-fill-w, 0.82)) + 25.6px)
+    calc(360px * (1 - var(--ys-fill-h, 0.84)) + 43.2px);
 }
 
 /* 去掉 blockquote 默认左边竖线、边距与灰化色（基础规则特异性更高，需显式覆盖） */
@@ -1629,7 +1644,7 @@
 .ys-cols {
   display: grid;
   grid-template-columns: repeat(var(--ys-cols, 2), minmax(0, 1fr));
-  gap: 2.4vw;
+  gap: 30.72px;
   align-items: start;
   width: 100%;
   max-width: none;   /* 页边距已提供呼吸空间；66rem 会把 3~4 栏压得过窄 */
@@ -1779,7 +1794,7 @@
 .ys-col-style-line .ys-cols > .ys-col + .ys-col::before {
   content: '';
   position: absolute;
-  left: -1.2vw;
+  left: -15.36px;
   top: 0;
   bottom: 0;
   width: 1px;
@@ -1851,14 +1866,14 @@
   font-family: var(--font-mono, ui-monospace, monospace);
   pointer-events: none;
   z-index: 100;
-  max-width: 70vw;
+  max-width: 896px;
 }
 
 .ys-chapter {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 45vw;
+  max-width: 576px;
 }
 
 .ys-progress {

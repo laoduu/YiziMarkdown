@@ -14,7 +14,7 @@ function rule(selector: string): string {
 
 test('垂直节奏：正文字号基准与间距令牌存在', () => {
   const slide = rule('.ys-slide {\n  position: absolute;')
-  assert.match(slide, /--ys-u:\s*clamp\(/)
+  assert.match(slide, /--ys-u:\s*calc\(23\.04px \* var\(--ys-font-scale, 1\)\)/)
   assert.match(slide, /--ys-gap-sm:\s*calc\(0\.55 \* var\(--ys-u\)\)/)
   assert.match(slide, /--ys-gap-md:\s*calc\(0\.7 \* var\(--ys-u\)\)/)
 })

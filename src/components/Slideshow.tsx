@@ -108,6 +108,18 @@ export default function Slideshow({
   const customCssBase = useSettingsStore((s) => s.customCssBase)
   const [hasUserCss, setHasUserCss] = useState(false)
   const deckRef = useRef<HTMLDivElement>(null)
+  // 1280×720 逻辑画布：按窗口大小整体缩放，保证任何视口 / 系统缩放下版式一致
+  const [canvasScale, setCanvasScale] = useState(1)
+  useLayoutEffect(() => {
+    const update = () => {
+      const w = Math.max(1, window.innerWidth)
+      const h = Math.max(1, window.innerHeight)
+      setCanvasScale(Math.min(w / 1280, h / 720))
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
 
   // 退出相关
   const exitingRef = useRef(false)
@@ -785,7 +797,9 @@ export default function Slideshow({
         <span>{t('slideshow.exit')}</span>
       </button>
 
-      <div className={`ys-deck ys-dir-${dir}${anim !== 'slide' ? ` ys-anim-${anim}` : ''}${isMac ? ' ys-mac' : ''}`} ref={deckRef} onClick={onDeckClick}>
+      <div className="ys-stage">
+        <div className="ys-canvas" style={{ transform: `translate(-50%, -50%) scale(${canvasScale})` }}>
+          <div className={`ys-deck ys-dir-${dir}${anim !== 'slide' ? ` ys-anim-${anim}` : ''}${isMac ? ' ys-mac' : ''}`} ref={deckRef} onClick={onDeckClick}>
         {slides.map((slide, i) => {
           const active = i === h
           const past = i < h
@@ -833,6 +847,8 @@ export default function Slideshow({
         <span className="ys-pos">{total === 0 ? 0 : h + 1} / {total}</span>
       </div>
       <div className="ys-progress" style={{ width: `${total ? ((h + 1) / total) * 100 : 0}%` }} />
+        </div>
+      </div>
 
       {/* HUD */}
       <div className="ys-hud">
