@@ -367,19 +367,8 @@ export const en = {
     // 插件
     pluginMgmt: 'Plugin Management',
     pluginHint: 'Plugins add optional rendering or export capabilities. Disabled plugins are not loaded. Math and Mermaid are built in and do not need to be enabled here.',
-    // 插件名称/描述（katex / mermaid）
-    pluginKatexName: 'Math Formulas',
-    pluginKatexDesc: 'Render LaTeX math with KaTeX, supporting inline $...$ and block $$...$$',
-    pluginMermaidName: 'Mermaid Diagrams',
-    pluginMermaidDesc: 'Render flowcharts, sequence diagrams, Gantt charts and more with Mermaid.js',
     pluginEpubName: 'EPUB 3 eBook',
     pluginEpubDesc: 'Export the current document as an EPUB 3 eBook',
-    pluginMermaidTheme: 'Theme',
-    pluginMermaidThemeDefault: 'Default',
-    pluginMermaidThemeDark: 'Dark',
-    pluginMermaidThemeForest: 'Forest',
-    pluginMermaidThemeNeutral: 'Neutral',
-    pluginMermaidThemeHint: 'Color theme for Mermaid diagrams',
     // AI 设置（v0.2.0）
     ai: 'AI Assistant',
     aiProvider: 'Provider',

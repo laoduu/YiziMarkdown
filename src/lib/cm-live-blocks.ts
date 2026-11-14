@@ -228,8 +228,8 @@ function loadKatexCss(): Promise<string> {
  * `$…$` 单独走 KaTeX。这样「一行里有公式 + 其它行内语法」时不会像旧实现那样
  * 整行只剩公式、其它标记全部裸露。
  */
-async function renderInlineRich(text: string, withMath: boolean): Promise<string> {
-  const segments = withMath ? splitInlineMath(text) : null
+async function renderInlineRich(text: string): Promise<string> {
+  const segments = splitInlineMath(text)
   const md = getMarkdownIt()
   if (!segments) return md.renderInline(text)
 
@@ -265,7 +265,7 @@ class KatexInlineLineWidget extends WidgetType {
   }
   private async renderLine(el: HTMLElement): Promise<void> {
     try {
-      el.innerHTML = await renderInlineRich(this._lineText, true)
+      el.innerHTML = await renderInlineRich(this._lineText)
     } catch (e) {
       el.textContent = this._lineText
     }
@@ -522,17 +522,16 @@ class LinkDefinitionWidget extends WidgetType {
 class FnBodyWidget extends WidgetType {
   constructor(
     private readonly text: string,
-    private readonly withMath: boolean,
     private readonly pos: number,
   ) { super() }
   eq(other: FnBodyWidget): boolean {
-    return other.text === this.text && other.withMath === this.withMath && other.pos === this.pos
+    return other.text === this.text && other.pos === this.pos
   }
   toDOM(view: EditorView): HTMLElement {
     const wrap = document.createElement('div')
     wrap.className = 'cm-live-block cm-live-block--fn-body'
     revealSourceOnClick(wrap, view, this.pos)
-    renderInlineRich(this.text, this.withMath)
+    renderInlineRich(this.text)
       .then((html) => { wrap.innerHTML = html })
       .catch(() => { wrap.textContent = this.text })
     return wrap
@@ -701,9 +700,6 @@ class EditableTableWidget extends WidgetType {
     // Shadow DOM: CM6 的 input/beforeinput 监听器在 light DOM，
     // 看不到 shadow root 内部的事件，避免 CM6 抢占输入
     const shadow = host.attachShadow({ mode: 'open' })
-
-    // 公式是核心能力，不再按插件开关判断
-    const katexEnabled = true
 
     const style = document.createElement('style')
     style.textContent = `
@@ -888,8 +884,8 @@ class EditableTableWidget extends WidgetType {
       })
     }
 
-    const renderCell = (td: HTMLElement, text: string, withMath: boolean): void => {
-      renderInlineRich(text, withMath)
+    const renderCell = (td: HTMLElement, text: string): void => {
+      renderInlineRich(text)
         .then((html) => {
           if (shadow.activeElement !== td) {
             td.innerHTML = html
@@ -1082,7 +1078,7 @@ class EditableTableWidget extends WidgetType {
               })
             })
           } else {
-            renderCell(td, cell.text, katexEnabled)
+            renderCell(td, cell.text)
           }
         })
 
@@ -1652,12 +1648,12 @@ class EditableTableWidget extends WidgetType {
     // 单元格内容按行内 Markdown 渲染（加粗 / 行内代码 / 链接 / 公式）
     for (const row of cellMatrix) {
       for (const { td, cell } of row) {
-        if (cell) renderCell(td, cell.text, katexEnabled)
+        if (cell) renderCell(td, cell.text)
       }
     }
 
-    // KaTeX 的 CSS 不穿透 Shadow DOM，启用插件时单独注入一份
-    if (katexEnabled && this.data.cells.some((c) => c?.text.includes('$'))) {
+    // KaTeX 的 CSS 不穿透 Shadow DOM，单元格含公式时单独注入一份
+    if (this.data.cells.some((c) => c?.text.includes('$'))) {
       loadKatexCss().then((css) => {
         if (!css) return
         const katexStyle = document.createElement('style')
@@ -1744,8 +1740,6 @@ function buildBlockDecorations(state: EditorState): DecorationSet {
   const ranges: Range<Decoration>[] = []
 
   // 数学公式 / Mermaid 是核心能力，永远可用；Mermaid 模块本身仍按需加载。
-  const mermaidEnabled = true
-  const katexEnabled = true
   const settings = useSettingsStore.getState()
   const themeKey = `${settings.currentTheme}:${settings.isDark ? 'dark' : 'light'}:${liveThemeEpoch}`
 
@@ -1831,20 +1825,18 @@ function buildBlockDecorations(state: EditorState): DecorationSet {
   })
 
   // --- Mermaid blocks ---
-  if (mermaidEnabled) {
-    for (const block of codeBlocks) {
-      if (!block.fenced || block.lang.toLowerCase() !== 'mermaid') continue
-      if (isCaretInside(block.start, block.end)) continue
-      ranges.push(Decoration.replace({
-        widget: new MermaidWidget(block.code, doc.line(block.start).from, themeKey),
-        block: true,
-      }).range(doc.line(block.start).from, doc.line(block.end).to))
-    }
+  for (const block of codeBlocks) {
+    if (!block.fenced || block.lang.toLowerCase() !== 'mermaid') continue
+    if (isCaretInside(block.start, block.end)) continue
+    ranges.push(Decoration.replace({
+      widget: new MermaidWidget(block.code, doc.line(block.start).from, themeKey),
+      block: true,
+    }).range(doc.line(block.start).from, doc.line(block.end).to))
   }
 
   // --- 普通代码块：高亮 + 语言标签 + 复制按钮（光标进入块内恢复源码） ---
   for (const block of codeBlocks) {
-    if (mermaidEnabled && block.fenced && block.lang.toLowerCase() === 'mermaid') continue
+    if (block.fenced && block.lang.toLowerCase() === 'mermaid') continue
     if (isCaretInside(block.start, block.end)) continue
     const contentLine = block.fenced && block.start < block.end ? block.start + 1 : block.start
     ranges.push(Decoration.replace({
@@ -1884,7 +1876,7 @@ function buildBlockDecorations(state: EditorState): DecorationSet {
     const text = line.text.replace(/^[ \t]{1,4}/, '')
     if (!text.trim()) continue
     ranges.push(Decoration.replace({
-      widget: new FnBodyWidget(text, katexEnabled, line.from),
+      widget: new FnBodyWidget(text, line.from),
       block: true,
     }).range(line.from, line.to))
   }
@@ -1892,87 +1884,83 @@ function buildBlockDecorations(state: EditorState): DecorationSet {
   // --- KaTeX block math ($$...$$) ---
   // 编辑态（光标落在公式块内任意一行）不替换源码，只在闭合 `$$` 下方追加预览；
   // 这样光标可以从第一行自由移到第二行、第三行继续改，不会一挪就弹回渲染态。
-  if (katexEnabled) {
-    const consumed = new Set<number>()
-    for (let i = 1; i <= doc.lines; i++) {
-      if (consumed.has(i)) continue
-      if (htmlBlockLines.has(i)) continue
-      if (codeLines.has(i)) continue
-      if (tableLines.has(i)) continue
-      if (fn.continuationLines.has(i - 1)) continue
-      const line = doc.line(i)
-      // 单行块级公式: $$formula$$（允许行首有列表标记 -/1. 等）
-      const singleMatch = line.text.match(/^(?:\s*(?:[-*+]|\d+\.\s))?\s*\$\$(.+?)\$\$\s*$/)
-      if (singleMatch) {
-        if (isCaretInside(i, i)) {
-          ranges.push(Decoration.widget({
-            widget: new KatexPreviewWidget(singleMatch[1].trim()),
-            block: true,
-            side: 1,
-          }).range(line.to))
-        } else {
-          ranges.push(Decoration.replace({
-            widget: new KatexBlockWidget(singleMatch[1], line.from),
-            block: true,
-          }).range(line.from, line.to))
-        }
-        continue
-      }
-      // 多行块级公式: $$\nformula\n$$
-      if (!/^(?:\s*(?:[-*+]|\d+\.\s))?\s*\$\$\s*$/.test(line.text)) continue
-      // 闭合行 = 「整行是 $$」或「行尾是 $$」（`\sqrt{\pi}$$` 这种写法也要认）。
-      // 找不到闭合就**不生成替换** —— 早先这里有个 `endLine = j` 兜底，会让 endLine
-      // 一路推到文档最后一行，把公式之后的全部内容都盖掉（就是"公式后面没渲染出来"）。
-      let endLine = -1
-      for (let j = i + 1; j <= doc.lines; j++) {
-        if (codeLines.has(j)) break
-        if (/\$\$\s*$/.test(doc.line(j).text)) { endLine = j; break }
-      }
-      if (endLine <= i) continue
-      for (let j = i; j <= endLine; j++) consumed.add(j)
-      const endDocLine = doc.line(endLine)
-      const tex = doc.sliceString(line.from, endDocLine.to)
-        // 去掉开头 `$$`（含列表标记）与结尾 `$$`，中间换行原样保留给 KaTeX
-        .replace(/^\s*(?:[-*+]|\d+\.\s)?\s*\$\$\s*\n?/, '')
-        .replace(/\n?\s*\$\$\s*$/, '')
-        .trim()
-      if (isCaretInside(i, endLine)) {
+  const consumed = new Set<number>()
+  for (let i = 1; i <= doc.lines; i++) {
+    if (consumed.has(i)) continue
+    if (htmlBlockLines.has(i)) continue
+    if (codeLines.has(i)) continue
+    if (tableLines.has(i)) continue
+    if (fn.continuationLines.has(i - 1)) continue
+    const line = doc.line(i)
+    // 单行块级公式: $$formula$$（允许行首有列表标记 -/1. 等）
+    const singleMatch = line.text.match(/^(?:\s*(?:[-*+]|\d+\.\s))?\s*\$\$(.+?)\$\$\s*$/)
+    if (singleMatch) {
+      if (isCaretInside(i, i)) {
         ranges.push(Decoration.widget({
-          widget: new KatexPreviewWidget(tex),
+          widget: new KatexPreviewWidget(singleMatch[1].trim()),
           block: true,
           side: 1,
-        }).range(endDocLine.to))
+        }).range(line.to))
       } else {
         ranges.push(Decoration.replace({
-          widget: new KatexBlockWidget(tex, line.from),
+          widget: new KatexBlockWidget(singleMatch[1], line.from),
           block: true,
-        }).range(line.from, endDocLine.to))
+        }).range(line.from, line.to))
       }
+      continue
+    }
+    // 多行块级公式: $$\nformula\n$$
+    if (!/^(?:\s*(?:[-*+]|\d+\.\s))?\s*\$\$\s*$/.test(line.text)) continue
+    // 闭合行 = 「整行是 $$」或「行尾是 $$」（`\sqrt{\pi}$$` 这种写法也要认）。
+    // 找不到闭合就**不生成替换** —— 早先这里有个 `endLine = j` 兜底，会让 endLine
+    // 一路推到文档最后一行，把公式之后的全部内容都盖掉（就是"公式后面没渲染出来"）。
+    let endLine = -1
+    for (let j = i + 1; j <= doc.lines; j++) {
+      if (codeLines.has(j)) break
+      if (/\$\$\s*$/.test(doc.line(j).text)) { endLine = j; break }
+    }
+    if (endLine <= i) continue
+    for (let j = i; j <= endLine; j++) consumed.add(j)
+    const endDocLine = doc.line(endLine)
+    const tex = doc.sliceString(line.from, endDocLine.to)
+      // 去掉开头 `$$`（含列表标记）与结尾 `$$`，中间换行原样保留给 KaTeX
+      .replace(/^\s*(?:[-*+]|\d+\.\s)?\s*\$\$\s*\n?/, '')
+      .replace(/\n?\s*\$\$\s*$/, '')
+      .trim()
+    if (isCaretInside(i, endLine)) {
+      ranges.push(Decoration.widget({
+        widget: new KatexPreviewWidget(tex),
+        block: true,
+        side: 1,
+      }).range(endDocLine.to))
+    } else {
+      ranges.push(Decoration.replace({
+        widget: new KatexBlockWidget(tex, line.from),
+        block: true,
+      }).range(line.from, endDocLine.to))
     }
   }
 
   // --- KaTeX inline math ($...$) ---
   // 行级渲染：整行换成 HTML，但非公式片段交给 markdown-it inline 渲染 ——
   // 同一行的 **加粗**、`代码`、链接、删除线都保留（旧实现只转义成纯文本）。
-  if (katexEnabled) {
-    for (let i = 1; i <= doc.lines; i++) {
-      if (i >= curLineStart && i <= curLineEnd) continue
-      if (htmlBlockLines.has(i)) continue
-      if (codeLines.has(i)) continue
-      if (tableLines.has(i)) continue
-      if (fn.continuationLines.has(i - 1)) continue
-      const line = doc.line(i)
-      const text = line.text
-      // 跳过含有 $$ 块级标记的行（由块级公式检测处理）
-      if (/\$\$/.test(text)) continue
-      // 独占一行的图片由 ImageWidget 处理
-      if (parseImageMarkdown(text)) continue
-      if (!splitInlineMath(text)) continue
-      ranges.push(Decoration.replace({
-        widget: new KatexInlineLineWidget(text, line.from),
-        block: true,
-      }).range(line.from, line.to))
-    }
+  for (let i = 1; i <= doc.lines; i++) {
+    if (i >= curLineStart && i <= curLineEnd) continue
+    if (htmlBlockLines.has(i)) continue
+    if (codeLines.has(i)) continue
+    if (tableLines.has(i)) continue
+    if (fn.continuationLines.has(i - 1)) continue
+    const line = doc.line(i)
+    const text = line.text
+    // 跳过含有 $$ 块级标记的行（由块级公式检测处理）
+    if (/\$\$/.test(text)) continue
+    // 独占一行的图片由 ImageWidget 处理
+    if (parseImageMarkdown(text)) continue
+    if (!splitInlineMath(text)) continue
+    ranges.push(Decoration.replace({
+      widget: new KatexInlineLineWidget(text, line.from),
+      block: true,
+    }).range(line.from, line.to))
   }
 
   // --- Images ---

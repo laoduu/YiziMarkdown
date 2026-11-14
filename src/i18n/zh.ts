@@ -367,19 +367,8 @@ export const zh = {
     // 插件
     pluginMgmt: '插件管理',
     pluginHint: '插件提供可选的渲染或导出能力；未启用的插件不会加载，不占用系统资源。公式与 Mermaid 已内置，无需在此开启。',
-    // 插件名称/描述（katex / mermaid）
-    pluginKatexName: '数学公式',
-    pluginKatexDesc: '使用 KaTeX 渲染 LaTeX 数学公式，支持行内 $...$ 和块级 $$...$$',
-    pluginMermaidName: 'Mermaid 图表',
-    pluginMermaidDesc: '使用 Mermaid.js 渲染流程图、时序图、甘特图等图表',
     pluginEpubName: 'EPUB 电子书',
     pluginEpubDesc: '将当前文档导出为 EPUB 3 电子书（实验性）',
-    pluginMermaidTheme: '主题',
-    pluginMermaidThemeDefault: '默认',
-    pluginMermaidThemeDark: '深色',
-    pluginMermaidThemeForest: '森林',
-    pluginMermaidThemeNeutral: '中性',
-    pluginMermaidThemeHint: 'Mermaid 图表的配色主题',
     // AI 设置（v0.2.0）
     ai: 'AI 助手',
     aiProvider: '供应商',

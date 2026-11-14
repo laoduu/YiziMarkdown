@@ -367,19 +367,8 @@ export const zhTW = {
     // 外掛
     pluginMgmt: '外掛管理',
     pluginHint: '啟用外掛後可增強 Markdown 的渲染能力。未啟用的外掛不會載入，不佔用系統資源。',
-    // 外掛名稱/描述（katex / mermaid）
-    pluginKatexName: '數學公式',
-    pluginKatexDesc: '使用 KaTeX 渲染 LaTeX 數學公式，支援行內 $...$ 和塊級 $$...$$',
-    pluginMermaidName: 'Mermaid 圖表',
-    pluginMermaidDesc: '使用 Mermaid.js 渲染流程圖、時序圖、甘特圖等圖表',
     pluginEpubName: 'EPUB 電子書',
     pluginEpubDesc: '將目前文件匯出為 EPUB 3 電子書（實驗性）',
-    pluginMermaidTheme: '主題',
-    pluginMermaidThemeDefault: '預設',
-    pluginMermaidThemeDark: '深色',
-    pluginMermaidThemeForest: '森林',
-    pluginMermaidThemeNeutral: '中性',
-    pluginMermaidThemeHint: 'Mermaid 圖表的配色主題',
     // AI 設定（v0.2.0）
     ai: 'AI 助手',
     aiProvider: '供應商',
