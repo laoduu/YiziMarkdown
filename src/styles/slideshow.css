@@ -688,7 +688,7 @@
   letter-spacing: -0.02em;
   text-align: left;
   color: var(--editor-h1, var(--editor-accent, #4f46e5));
-  margin: 0 0 calc(1.4 * var(--ys-u));
+  margin: 0 0 calc(2.1 * var(--ys-u));
 }
 
 /* 正文页标题的唯一字号来源。各版式只负责位置/下划线，不再各自改字号。 */
@@ -698,7 +698,7 @@
   letter-spacing: -0.01em;
   text-align: left;
   color: var(--editor-h2, var(--editor-accent, #4f46e5));
-  margin: 0 0 var(--ys-u);
+  margin: 0 0 calc(1.7 * var(--ys-u));
 }
 
 .ys-slide h3 {
@@ -706,7 +706,7 @@
   font-weight: 600;
   text-align: left;
   color: var(--editor-h3, var(--editor-accent, #4f46e5));
-  margin: calc(1.2 * var(--ys-u)) 0 calc(0.6 * var(--ys-u));
+  margin: calc(1.2 * var(--ys-u)) 0 calc(1.3 * var(--ys-u));
 }
 
 .ys-slide h4 {
@@ -714,7 +714,7 @@
   font-weight: 600;
   text-align: left;
   color: var(--editor-h4, var(--editor-accent, #4f46e5));
-  margin: var(--ys-u) 0 calc(0.5 * var(--ys-u));
+  margin: var(--ys-u) 0 calc(1.2 * var(--ys-u));
 }
 
 .ys-slide h5 {
@@ -722,7 +722,7 @@
   font-weight: 600;
   text-align: left;
   color: var(--editor-h5, var(--editor-accent, #4f46e5));
-  margin: calc(0.8 * var(--ys-u)) 0 calc(0.35 * var(--ys-u));
+  margin: calc(0.8 * var(--ys-u)) 0 calc(1.05 * var(--ys-u));
 }
 
 .ys-slide h6 {
@@ -730,7 +730,7 @@
   font-weight: 600;
   text-align: left;
   color: var(--editor-h6, var(--editor-accent, #4f46e5));
-  margin: calc(0.6 * var(--ys-u)) 0 calc(0.3 * var(--ys-u));
+  margin: calc(0.6 * var(--ys-u)) 0 calc(1.0 * var(--ys-u));
   letter-spacing: 0.03em;
 }
 
@@ -738,7 +738,8 @@
 .ys-slide ul,
 .ys-slide ol,
 .ys-slide blockquote {
-  margin: var(--ys-gap-md) 0;
+  /* 只写 bottom：flex 列的双 margin 会相加，分栏内 block 流会折叠；单边 margin 两种语境一致。 */
+  margin: 0 0 var(--ys-gap-md);
 }
 
 /* 列表/引用：块居中，内容左对齐（段落、标题等默认居中） */
@@ -766,7 +767,7 @@
 .ys-slide li {
   position: relative;
   padding-left: 1.5em;
-  margin: var(--ys-gap-sm) 0;
+  margin: 0 0 var(--ys-gap-sm);
 }
 
 /* 无序列表：主题强调色圆点。
@@ -875,7 +876,7 @@
 
 .ys-slide li > ul,
 .ys-slide li > ol {
-  margin: calc(0.25 * var(--ys-u)) 0;
+  margin: 0 0 calc(0.25 * var(--ys-u));
 }
 
 /* ===== 片段逐步显示 =====
@@ -930,7 +931,7 @@
   background: var(--editor-surface, rgba(128, 128, 128, 0.12));
   border: 1px solid var(--editor-border, rgba(128, 128, 128, 0.2));
   padding: calc(1 * var(--ys-u)) calc(1.15 * var(--ys-u));
-  margin: var(--ys-gap-md) 0;
+  margin: 0 0 var(--ys-gap-md);
   border-radius: 12px;
   overflow-x: auto;
   max-width: 100%;   /* 分栏/栅格内也能正常横向滚动，而不是撑破容器 */
@@ -980,7 +981,7 @@
   gap: 0.4em;
   /* 标题是块内第一个段落：恢复普通段落原有的段前距，
      否则会显得比 [!NOTE] 作为普通文字时更贴顶 */
-  margin: calc(0.65 * var(--ys-u)) 0 calc(0.35 * var(--ys-u));
+  margin: calc(0.65 * var(--ys-u)) 0 calc(1.05 * var(--ys-u));
   font-style: normal;
   font-weight: 600;
   font-size: 0.92em;
@@ -1001,7 +1002,7 @@
 .ys-slide table {
   border-collapse: collapse;
   width: 100%;
-  margin: var(--ys-gap-md) 0;
+  margin: 0 0 var(--ys-gap-md);
   font-size: 0.85em;
 }
 
@@ -1057,7 +1058,7 @@
 .ys-slide hr {
   border: none;
   border-top: 1px solid var(--editor-border, rgba(128, 128, 128, 0.25));
-  margin: var(--ys-gap-md) 0;
+  margin: 0 0 var(--ys-gap-md);
 }
 
 /* ===== 脚注区：与编辑器预览/live 的脚注规格同款（小字号、紧行距）=====

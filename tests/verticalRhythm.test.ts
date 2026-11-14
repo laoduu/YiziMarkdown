@@ -19,19 +19,24 @@ test('垂直节奏：正文字号基准与间距令牌存在', () => {
   assert.match(slide, /--ys-gap-md:\s*calc\(0\.7 \* var\(--ys-u\)\)/)
 })
 
-test('垂直节奏：代码块 / 表格 / 分隔线使用同一间距令牌', () => {
+test('垂直节奏：代码块 / 表格 / 分隔线使用同一边距令牌', () => {
   for (const selector of ['.ys-slide pre {', '.ys-slide table {', '.ys-slide hr {']) {
-    assert.match(rule(selector), /margin:\s*var\(--ys-gap-md\) 0/, selector)
+    assert.match(rule(selector), /margin:\s*0 0 var\(--ys-gap-md\)/, selector)
   }
 })
 
-test('垂直节奏：正文块不再按自身 em 解析垂直 margin', () => {
+test('垂直节奏：正文块只写 bottom margin，避免 flex 相加 / block 折叠差异', () => {
   const body = rule('.ys-slide p,\n.ys-slide ul,\n.ys-slide ol,\n.ys-slide blockquote {')
-  assert.match(body, /margin:\s*var\(--ys-gap-md\) 0/)
+  assert.match(body, /margin:\s*0 0 var\(--ys-gap-md\)/)
+  assert.doesNotMatch(body, /margin:\s*var\(--ys-gap-md\) 0/)
 })
 
-test('垂直节奏：标题上下间距按正文基准，不随标题字号放大', () => {
-  for (const level of ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']) {
-    assert.match(rule(`.ys-slide ${level} {`), /margin:.*var\(--ys-u\)/, level)
+test('垂直节奏：标题下边距补偿正文顶部 margin（0.7u）', () => {
+  const expected = {
+    h1: '2.1', h2: '1.7', h3: '1.3', h4: '1.2', h5: '1.05', h6: '1.0',
+  }
+  for (const [level, factor] of Object.entries(expected)) {
+    const margin = rule(`.ys-slide ${level} {`).match(/margin:\s*[^;]+;/)?.[0] || ''
+    assert.ok(margin.includes(`calc(${factor} * var(--ys-u))`), `${level}: ${margin}`)
   }
 })
