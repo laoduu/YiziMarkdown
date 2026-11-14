@@ -2434,6 +2434,7 @@ function App() {
           docName={tab?.name || ''}
           onInsert={handleAIInsert}
           onNewDoc={handleAINewDoc}
+          onManageSkills={() => { setSettingsDefaultTab('skills'); setIsSettingsOpen(true) }}
         />
       </div>
       

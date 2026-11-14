@@ -5,6 +5,7 @@ import { useSettingsStore } from '../stores/settingsStore'
 import { providerById } from '../lib/ai-providers'
 import { invokeTauriOrThrow } from '../lib/tauri'
 import { loadSkills, loadSkillPrompt, type Skill } from '../lib/ai-skills'
+import { SKILLS_CHANGED_EVENT } from '../lib/skillsAdmin'
 import { useI18n } from '../i18n'
 
 interface ChatMessage {
@@ -22,6 +23,8 @@ interface AIChatPanelProps {
   docName: string
   onInsert: (text: string) => void
   onNewDoc: (text: string) => void
+  /** 打开「设置 → Skill 管理」 */
+  onManageSkills: () => void
 }
 
 const EVT_CHUNK = 'yizi://ai-chunk'
@@ -33,7 +36,7 @@ interface ChunkPayload { request_id: string; chunk: string }
 interface DonePayload { request_id: string; full_text: string; full_thinking?: string }
 interface ErrorPayload { request_id: string; error: string }
 
-export default function AIChatPanel({ open, onClose, docContent, docName, onInsert, onNewDoc }: AIChatPanelProps) {
+export default function AIChatPanel({ open, onClose, docContent, docName, onInsert, onNewDoc, onManageSkills }: AIChatPanelProps) {
   const { t } = useI18n()
   const { aiProvider, aiModel, aiBaseUrl, aiApiFormat, aiSystemPrompt, aiDocLimit, aiContextTurns, aiChatWidth, aiPendingAction, updateSettings } = useSettingsStore()
   const provider = providerById(aiProvider)
@@ -94,7 +97,27 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
   }, [activeSkill])
 
   useEffect(() => {
-    loadSkills().then(setSkills)
+    const reload = () => {
+      // 管理页改过正文 / 清单：清缓存并重新加载，下一次发送立即使用新提示词
+      skillPromptCache.current = {}
+      loadSkills().then((list) => {
+        setSkills(list)
+        const current = activeSkillRef.current
+        if (!current) return
+        const next = list.find((s) => s.id === current.id) ?? null
+        activeSkillRef.current = next
+        setActiveSkill(next)
+        if (!next) {
+          // 当前技能被删除：移除输入区里的技能胶囊
+          editorRef.current?.querySelectorAll('.skill-tag').forEach((n) => n.remove())
+          if (current.needsDoc) setUseDoc(prevUseDocRef.current)
+          setSkillMenuOpen(false)
+        }
+      })
+    }
+    reload()
+    window.addEventListener(SKILLS_CHANGED_EVENT, reload)
+    return () => window.removeEventListener(SKILLS_CHANGED_EVENT, reload)
   }, [])
 
   // 技能 tag 被当作文字删除（退格/删除键）时，同步取消技能
@@ -735,14 +758,9 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
               ))
             )}
             <button
-              onClick={async () => {
-                try {
-                  const guidePath = await invokeTauriOrThrow<string>('get_skill_guide_path')
-                  await invokeTauriOrThrow('open_in_app', { filePath: guidePath })
-                } catch (e) {
-                  console.error('[AI Chat] Failed to open skill guide:', e)
-                }
+              onClick={() => {
                 setSkillMenuOpen(false)
+                onManageSkills()
               }}
               className="flex items-center gap-1.5 w-full text-left px-3 py-1.5 text-[0.75rem] text-[var(--sidebar-text)] hover:bg-[var(--editor-hover)] border-t border-[var(--editor-border)]"
             >

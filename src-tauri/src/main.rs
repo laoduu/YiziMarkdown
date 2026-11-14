@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tauri::Manager;
 use std::fs;
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;
@@ -724,9 +725,146 @@ fn sync_legacy_user_files_at(
     Ok(())
 }
 
+/// 技能提示词文件名只允许 basename，且必须是 Markdown 文件。
+fn safe_skill_file_name(name: &str) -> Result<String, String> {
+    let clean = Path::new(name)
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .ok_or_else(|| "Invalid skill file name".to_string())?;
+    if clean.is_empty() || clean.starts_with('.') {
+        return Err("Invalid skill file name".to_string());
+    }
+    if !(clean.ends_with(".md") || clean.ends_with(".markdown")) {
+        return Err("Skill file must end with .md or .markdown".to_string());
+    }
+    Ok(clean)
+}
+
+/// 校验技能清单（纯 JSON，便于单测；不读写文件系统）。
+fn validate_skills_manifest(value: &serde_json::Value) -> Result<(), String> {
+    let skills = value
+        .get("skills")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "skills 必须是数组".to_string())?;
+    let mut ids: HashSet<String> = HashSet::new();
+    let mut files: HashSet<String> = HashSet::new();
+    for (i, skill) in skills.iter().enumerate() {
+        let id = skill
+            .get("id")
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .ok_or_else(|| format!("第 {} 个技能缺少 id", i + 1))?;
+        if !ids.insert(id.to_string()) {
+            return Err(format!("技能 ID 重复：{id}"));
+        }
+        let name = skill
+            .get("name")
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .ok_or_else(|| format!("技能「{id}」缺少名称"))?;
+        let file = skill
+            .get("file")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| format!("技能「{name}」缺少提示词文件"))?;
+        let clean = safe_skill_file_name(file)?;
+        if clean != file.trim() {
+            return Err(format!("提示词文件名不能包含路径分隔符：{file}"));
+        }
+        if !files.insert(clean.clone()) {
+            return Err(format!("提示词文件被多个技能重复引用：{clean}"));
+        }
+    }
+    if let Some(hidden) = value.get("hiddenIds") {
+        let ids = hidden
+            .as_array()
+            .ok_or_else(|| "hiddenIds 必须是数组".to_string())?;
+        if ids.iter().any(|v| !v.is_string()) {
+            return Err("hiddenIds 只能包含字符串".to_string());
+        }
+    }
+    Ok(())
+}
+
+/// 合并内置技能与用户技能清单。
+///
+/// 规则：
+/// - `hiddenIds` 里的内置技能不再恢复（用户删除 / 改 ID 后生效）；
+/// - `customized: true` 的同 ID 条目保留用户版本，且不复制内置 `.md`；
+/// - 其余内置技能用新版覆盖，与旧行为一致；
+/// - 用户自建（id 不在内置列表）的技能原样保留。
+///
+/// 返回 `(合并后的清单, 需要从内置目录复制的提示词文件)`。
+fn merge_skill_manifests(
+    builtin: &serde_json::Value,
+    user: &serde_json::Value,
+) -> (serde_json::Value, Vec<String>) {
+    let hidden: Vec<&str> = user
+        .get("hiddenIds")
+        .and_then(|v| v.as_array())
+        .map(|a| a.iter().filter_map(|v| v.as_str()).collect())
+        .unwrap_or_default();
+    let user_skills = user
+        .get("skills")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    let builtin_skills = builtin
+        .get("skills")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    let builtin_ids: HashSet<String> = builtin_skills
+        .iter()
+        .filter_map(|s| s.get("id").and_then(|v| v.as_str()).map(String::from))
+        .collect();
+
+    let mut merged_skills: Vec<serde_json::Value> = Vec::new();
+    let mut copy_files: Vec<String> = Vec::new();
+
+    for builtin_skill in &builtin_skills {
+        let id = builtin_skill
+            .get("id")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        if hidden.contains(&id) {
+            continue;
+        }
+        let customized = user_skills.iter().find(|s| {
+            s.get("id").and_then(|v| v.as_str()) == Some(id)
+                && s.get("customized").and_then(|v| v.as_bool()) == Some(true)
+        });
+        if let Some(custom) = customized {
+            merged_skills.push(custom.clone());
+            continue;
+        }
+        merged_skills.push(builtin_skill.clone());
+        if let Some(file) = builtin_skill.get("file").and_then(|v| v.as_str()) {
+            copy_files.push(file.to_string());
+        }
+    }
+
+    for skill in &user_skills {
+        let id = skill.get("id").and_then(|v| v.as_str()).unwrap_or("");
+        if hidden.contains(&id) || builtin_ids.contains(id) {
+            continue;
+        }
+        merged_skills.push(skill.clone());
+    }
+
+    let mut merged = builtin.clone();
+    merged["skills"] = serde_json::Value::Array(merged_skills);
+    merged["hiddenIds"] = user
+        .get("hiddenIds")
+        .cloned()
+        .unwrap_or_else(|| serde_json::json!([]));
+    (merged, copy_files)
+}
+
 /// 将内置技能从应用目录同步到用户文档目录。
 /// - 首次运行：全量复制
-/// - 版本更新：覆盖内置技能文件，合并 manifest（保留用户自定义技能）
+/// - 版本更新：覆盖未被用户改过的内置技能，合并 manifest（保留用户改动）
 fn sync_builtin_skills() -> Result<(), String> {
     let app_root = get_app_root()?;
     let builtin_dir = app_root.join("skills");
@@ -773,45 +911,16 @@ fn sync_builtin_skills() -> Result<(), String> {
         return Ok(()); // 版本一致，无需同步
     }
 
-    // 版本不同：覆盖内置技能 .md 文件
-    let builtin_skills = builtin_manifest["skills"].as_array();
-    if let Some(skills) = builtin_skills {
-        for skill in skills {
-            if let Some(file) = skill["file"].as_str() {
-                let src = builtin_dir.join(file);
-                let dst = user_dir.join(file);
-                if src.exists() {
-                    let _ = fs::copy(&src, &dst);
-                }
-            }
+    let (merged, copy_files) = merge_skill_manifests(&builtin_manifest, &user_manifest);
+
+    // 只覆盖未被用户改过、且未被隐藏的内置技能文件
+    for file in copy_files {
+        let src = builtin_dir.join(&file);
+        let dst = user_dir.join(&file);
+        if src.exists() {
+            let _ = fs::copy(&src, &dst);
         }
     }
-
-    // 合并 manifest：内置技能 + 用户自定义技能
-    let mut merged_skills: Vec<serde_json::Value> = Vec::new();
-
-    // 先放内置技能（使用新版 manifest）
-    if let Some(skills) = builtin_manifest["skills"].as_array() {
-        merged_skills.extend(skills.iter().cloned());
-    }
-
-    // 追加用户自定义技能（id 不在内置列表中的）
-    if let Some(user_skills) = user_manifest["skills"].as_array() {
-        let builtin_ids: Vec<String> = merged_skills
-            .iter()
-            .filter_map(|s| s["id"].as_str().map(|s| s.to_string()))
-            .collect();
-        for skill in user_skills {
-            if let Some(id) = skill["id"].as_str() {
-                if !builtin_ids.contains(&id.to_string()) {
-                    merged_skills.push(skill.clone());
-                }
-            }
-        }
-    }
-
-    let mut merged = builtin_manifest.clone();
-    merged["skills"] = serde_json::Value::Array(merged_skills);
 
     fs::write(
         &user_manifest_path,
@@ -1456,6 +1565,46 @@ fn read_skill_file(file_name: String) -> Result<String, String> {
         }
     }
     Err(format!("Skill file not found: {}", clean))
+}
+
+/// 写回技能清单（用户文档目录）。前端负责合并内容，后端只做结构校验与落盘。
+#[tauri::command]
+fn write_skills_manifest(manifest: String) -> Result<(), String> {
+    let value: serde_json::Value = serde_json::from_str(&manifest)
+        .map_err(|e| format!("Failed to parse skills manifest: {}", e))?;
+    validate_skills_manifest(&value)?;
+    let dir = get_user_skills_dir()?;
+    fs::create_dir_all(&dir)
+        .map_err(|e| format!("Failed to create user skills dir: {}", e))?;
+    fs::write(
+        dir.join("skills.json"),
+        serde_json::to_string_pretty(&value).map_err(|e| e.to_string())?,
+    )
+    .map_err(|e| format!("Failed to write skills.json: {}", e))
+}
+
+/// 写入单个技能提示词正文（用户文档目录）。
+#[tauri::command]
+fn write_skill_file(file_name: String, content: String) -> Result<(), String> {
+    let clean = safe_skill_file_name(&file_name)?;
+    let dir = get_user_skills_dir()?;
+    fs::create_dir_all(&dir)
+        .map_err(|e| format!("Failed to create user skills dir: {}", e))?;
+    fs::write(dir.join(&clean), content)
+        .map_err(|e| format!("Failed to write skill file: {}", e))
+}
+
+/// 删除用户目录中的技能提示词文件；文件已不存在视为成功。
+#[tauri::command]
+fn delete_skill_file(file_name: String) -> Result<(), String> {
+    let clean = safe_skill_file_name(&file_name)?;
+    let dir = get_user_skills_dir()?;
+    let path = dir.join(&clean);
+    if path.is_file() {
+        fs::remove_file(&path)
+            .map_err(|e| format!("Failed to delete skill file: {}", e))?;
+    }
+    Ok(())
 }
 
 /// 获取 skill-guide.md 的完整路径（供前端打开说明文档）
@@ -2370,6 +2519,9 @@ fn main() {
             delete_template,
             list_skills,
             read_skill_file,
+            write_skills_manifest,
+            write_skill_file,
+            delete_skill_file,
             get_skill_guide_path,
             read_keybindings,
             write_keybindings,
@@ -2902,5 +3054,111 @@ mod tests {
         );
         let plain = PathBuf::from("/usr/lib/YiziMarkdown");
         assert_eq!(normalize_app_path(plain.clone()), plain);
+    }
+
+    // ---- Skill 清单校验与升级合并 ----
+
+    fn skill(id: &str, file: &str) -> serde_json::Value {
+        serde_json::json!({
+            "id": id,
+            "name": id,
+            "summary": "",
+            "description": "",
+            "file": file,
+            "needsDoc": false
+        })
+    }
+
+    #[test]
+    fn validates_skills_manifest_structure() {
+        let ok = serde_json::json!({
+            "version": 6,
+            "skills": [skill("a", "a.md"), skill("b", "b.md")],
+            "hiddenIds": ["c"]
+        });
+        assert!(validate_skills_manifest(&ok).is_ok());
+
+        let duplicate_id = serde_json::json!({
+            "skills": [skill("a", "a.md"), skill("a", "b.md")]
+        });
+        assert!(validate_skills_manifest(&duplicate_id).unwrap_err().contains("重复"));
+
+        let duplicate_file = serde_json::json!({
+            "skills": [skill("a", "same.md"), skill("b", "same.md")]
+        });
+        assert!(validate_skills_manifest(&duplicate_file).unwrap_err().contains("重复引用"));
+
+        let unsafe_file = serde_json::json!({
+            "skills": [skill("a", "../evil.md")]
+        });
+        assert!(validate_skills_manifest(&unsafe_file).is_err(), "路径穿越必须被拒绝");
+
+        let missing_name = serde_json::json!({
+            "skills": [{ "id": "a", "name": "", "file": "a.md" }]
+        });
+        assert!(validate_skills_manifest(&missing_name).is_err());
+
+        let bad_hidden = serde_json::json!({
+            "skills": [],
+            "hiddenIds": [1]
+        });
+        assert!(validate_skills_manifest(&bad_hidden).is_err());
+    }
+
+    #[test]
+    fn safe_skill_file_name_rejects_traversal_and_non_markdown() {
+        assert_eq!(safe_skill_file_name("a.md").unwrap(), "a.md");
+        assert_eq!(safe_skill_file_name("dir/a.md").unwrap(), "a.md");
+        assert!(safe_skill_file_name("..").is_err());
+        assert!(safe_skill_file_name(".hidden.md").is_err());
+        assert!(safe_skill_file_name("a.txt").is_err());
+        assert!(safe_skill_file_name("").is_err());
+    }
+
+    #[test]
+    fn merge_keeps_user_customized_skill_and_skips_its_file_copy() {
+        let builtin = serde_json::json!({
+            "version": 2,
+            "skills": [skill("builtin", "builtin.md"), skill("plain", "plain.md")]
+        });
+        let mut edited = skill("builtin", "builtin.md");
+        edited["name"] = serde_json::json!("我的版本");
+        edited["customized"] = serde_json::json!(true);
+        let user = serde_json::json!({
+            "version": 1,
+            "skills": [edited],
+            "hiddenIds": []
+        });
+
+        let (merged, copy) = merge_skill_manifests(&builtin, &user);
+        let skills = merged["skills"].as_array().unwrap();
+        assert_eq!(skills.len(), 2, "自定义条目不能重复");
+        let custom = skills.iter().find(|s| s["id"] == "builtin").unwrap();
+        assert_eq!(custom["name"], "我的版本");
+        assert!(!copy.contains(&"builtin.md".to_string()), "自定义技能的正文不能被覆盖");
+        assert!(copy.contains(&"plain.md".to_string()));
+    }
+
+    #[test]
+    fn merge_respects_hidden_ids_and_appends_new_user_skills() {
+        let builtin = serde_json::json!({
+            "version": 2,
+            "skills": [skill("gone", "gone.md"), skill("keep", "keep.md")]
+        });
+        let user = serde_json::json!({
+            "version": 1,
+            "skills": [skill("mine", "mine.md")],
+            "hiddenIds": ["gone"]
+        });
+
+        let (merged, copy) = merge_skill_manifests(&builtin, &user);
+        let skills = merged["skills"].as_array().unwrap();
+        let ids: Vec<&str> = skills.iter().filter_map(|s| s["id"].as_str()).collect();
+        assert_eq!(ids.len(), 2);
+        assert!(ids.contains(&"keep"));
+        assert!(ids.contains(&"mine"));
+        assert!(!ids.contains(&"gone"), "被删除的内置技能不能在升级后复活");
+        assert!(!copy.contains(&"gone.md".to_string()));
+        assert_eq!(merged["hiddenIds"], serde_json::json!(["gone"]));
     }
 }

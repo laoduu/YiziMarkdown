@@ -4,6 +4,28 @@
 
 > **开发中**：0.4.3 发布后的修复与新功能，随下一版本发布。用户向说明见 `docs/changelog/CHANGELOG-V0.4.4.md`。
 
+### Skill 管理 + 模板 / Skill 共用 Markdown 预览（2026-11-15）
+
+**需求**
+- 设置侧栏在「AI 助手」下面新增「Skill 管理」，像模板管理一样支持新增、编辑、删除技能。
+- 可修改技能名称、ID、简介、详细说明、是否需要当前文档，以及 Markdown 提示词正文。
+- 模板管理与 Skill 管理都需要 Markdown 预览，并共用同一套编辑 / 预览逻辑。
+
+**实现**
+- 新增 `SkillsSettings`：左侧技能列表，右侧查看 / 编辑；保存后写入 `~/Documents/yizimarkdown/skills/skills.json` 与同名 `.md` 提示词文件。
+- 新增后端命令 `write_skills_manifest` / `write_skill_file` / `delete_skill_file`，校验 ID / 文件唯一性与文件名安全，拒绝路径穿越。
+- 新增 `src/lib/skillsManifest.ts` 纯逻辑：解析清单、ID 校验、文件派生、保存 / 删除计划；`src/lib/skillsAdmin.ts` 负责 Tauri 读写。
+- 新增共用组件 `MarkdownEditPreview`：可编辑时「编辑 / 预览」标签，只读时「预览 / 源码」标签；模板管理与 Skill 管理复用同一组件。
+- 技能保存后广播 `skills-changed`：AI 面板立即重新加载清单、清空提示词缓存；被删除的当前技能会自动移除输入区胶囊。
+- AI 面板「管理技能」改为直接打开「设置 → Skill 管理」。
+
+**内置技能升级保护**
+- 管理页保存过的技能标记 `customized: true`；删除或改 ID 时把旧 ID 记入 `hiddenIds`。
+- `sync_builtin_skills` 升级时跳过 `hiddenIds`，保留自定义条目的正文与字段；未被改动的内置技能仍按新版覆盖。
+
+**验证**
+- `cargo test` 195 通过 / 6 忽略；`npm test` 545 通过；`npx tsc --noEmit`、`npm run build`、`check-i18n --strict` 通过。
+
 ### 云端存储专项：图片路径 / 缓存同步 / 打开时版本校验（2026-11-14）
 
 **图片路径统一**

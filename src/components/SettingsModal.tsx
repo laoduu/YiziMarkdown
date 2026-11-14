@@ -29,6 +29,25 @@ import { CUSTOM_THEME, applyThemeStyles, readUserCss } from '../lib/themeLoader'
 import { sanitizeUserCss } from '../lib/userCss'
 import { loadThemeCatalog, type ThemeEntry } from '../lib/themeCatalog'
 import { buildThemePreviewCss } from '../lib/themePreview'
+import MarkdownEditPreview from './MarkdownEditPreview'
+import {
+  parseSkillManifest,
+  validateSkillDraft,
+  planSkillSave,
+  planSkillDelete,
+  type Skill,
+  type SkillDraft,
+  type SkillManifest,
+  type SkillValidationError,
+} from '../lib/skillsManifest'
+import {
+  loadSkillManifestRaw,
+  readSkillContent,
+  writeSkillFile,
+  deleteSkillFile,
+  writeSkillManifest,
+  notifySkillsChanged,
+} from '../lib/skillsAdmin'
 
 const fallbackFonts = [
   'Consolas', 'Courier New', 'Lucida Console', 'Monaco', 'Menlo',
@@ -65,7 +84,7 @@ interface SettingsModalProps {
   defaultTab?: CategoryKey
 }
 
-type CategoryKey = 'general' | 'appearance' | 'editor' | 'liveMode' | 'ai' | 'cloud' | 'plugins' | 'shortcuts' | 'templates' | 'docs' | 'about' | 'products'
+type CategoryKey = 'general' | 'appearance' | 'editor' | 'liveMode' | 'ai' | 'skills' | 'cloud' | 'plugins' | 'shortcuts' | 'templates' | 'docs' | 'about' | 'products'
 
 const categories: Array<{ key: CategoryKey; labelKey: string; icon: React.ReactNode }> = [
   { key: 'general', labelKey: 'settings.general', icon: <Settings2 size={16} /> },
@@ -73,6 +92,7 @@ const categories: Array<{ key: CategoryKey; labelKey: string; icon: React.ReactN
   { key: 'editor', labelKey: 'settings.editor', icon: <FileText size={16} /> },
   { key: 'liveMode', labelKey: 'settings.liveMode', icon: <Zap size={16} /> },
   { key: 'ai', labelKey: 'settings.ai', icon: <Bot size={16} /> },
+  { key: 'skills', labelKey: 'settings.skills', icon: <Sparkles size={16} /> },
   { key: 'cloud', labelKey: 'settings.cloud', icon: <Cloud size={16} /> },
   { key: 'plugins', labelKey: 'settings.plugins', icon: <Puzzle size={16} /> },
   { key: 'shortcuts', labelKey: 'settings.shortcuts', icon: <Keyboard size={16} /> },
@@ -1340,7 +1360,7 @@ function TemplatesSettings() {
           {editing ? (
             <div className="space-y-2">
               <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="settings-input" placeholder={t('settings.templateName')} />
-              <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} className="settings-textarea font-mono" rows={10} />
+              <MarkdownEditPreview value={editContent} onChange={setEditContent} minHeight={240} />
               <div className="flex gap-2">
                 <button onClick={handleSave} className="settings-btn-primary">{t('common.save')}</button>
                 <button onClick={() => setEditing(false)} className="settings-btn-secondary">{t('common.cancel')}</button>
@@ -1363,7 +1383,7 @@ function TemplatesSettings() {
                     <button onClick={openDelete} className="text-[0.6875rem] text-red-500 hover:underline px-2 py-1">{t('settings.deleteTemplate')}</button>
                   </div>
                 )}
-                {selected ? <textarea value={tContent} readOnly className="settings-textarea font-mono opacity-80" rows={12} />
+                {selected ? <MarkdownEditPreview value={tContent} readOnly minHeight={240} />
                   : <div className="flex items-center justify-center h-36 text-xs text-[var(--sidebar-text)] border border-[var(--editor-border)] rounded-lg bg-[var(--editor-surface)]">{t('settings.selectToPreview')}</div>}
                 {selected && deleteOpen && (
                   <div
@@ -1395,6 +1415,305 @@ function TemplatesSettings() {
     </div>
   )
 }
+
+// ===================== Skill 管理 =====================
+
+function SkillsSettings() {
+  const { t } = useI18n()
+  const [manifest, setManifest] = useState<SkillManifest | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [content, setContent] = useState('')
+  const [editing, setEditing] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [draft, setDraft] = useState<SkillDraft>({
+    id: '', name: '', summary: '', description: '', needsDoc: false,
+  })
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteBusy, setDeleteBusy] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    loadSkillManifestRaw()
+      .then((raw) => { if (alive) setManifest(parseSkillManifest(raw)) })
+      .catch((e) => { if (alive) setError(e instanceof Error ? e.message : String(e)) })
+    return () => { alive = false }
+  }, [])
+
+  const selected = manifest?.skills.find((s) => s.id === selectedId) ?? null
+
+  const errorText = (code: SkillValidationError | string): string => {
+    switch (code) {
+      case 'name-required': return t('settings.skillNameRequired')
+      case 'id-required': return t('settings.skillIdRequired')
+      case 'id-invalid': return t('settings.skillIdInvalid')
+      case 'id-duplicate': return t('settings.skillIdDuplicate')
+      case 'file-collision': return t('settings.skillFileCollision')
+      default: return code
+    }
+  }
+
+  const selectSkill = async (skill: Skill) => {
+    setSelectedId(skill.id)
+    setEditing(false)
+    setEditingId(null)
+    setDeleteOpen(false)
+    setError(null)
+    try {
+      setContent(await readSkillContent(skill.file))
+    } catch (e) {
+      setContent('')
+      setError(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  const beginNew = () => {
+    setEditing(true)
+    setEditingId(null)
+    setSelectedId(null)
+    setContent('')
+    setDraft({ id: '', name: '', summary: '', description: '', needsDoc: false })
+    setError(null)
+    setDeleteOpen(false)
+  }
+
+  const beginEdit = () => {
+    if (!selected) return
+    setEditing(true)
+    setEditingId(selected.id)
+    setDraft({
+      id: selected.id,
+      name: selected.name,
+      summary: selected.summary,
+      description: selected.description,
+      needsDoc: selected.needsDoc === true,
+    })
+    setError(null)
+    setDeleteOpen(false)
+  }
+
+  const handleSave = async () => {
+    if (!manifest || busy) return
+    const validation = validateSkillDraft(draft, manifest.skills, editingId)
+    if (validation) {
+      setError(errorText(validation))
+      return
+    }
+    const plan = planSkillSave(manifest, draft, content, editingId)
+    setBusy(true)
+    setError(null)
+    try {
+      // 先写正文，再写清单：即使第二步失败，也只是多一个无引用文件，不会出现指向空文件的条目
+      await writeSkillFile(plan.file, plan.content)
+      await writeSkillManifest(plan.manifest)
+      if (plan.deleteFile && plan.deleteFile !== plan.file) {
+        await deleteSkillFile(plan.deleteFile).catch((e) => {
+          console.error('[skills] delete old file failed:', e)
+        })
+      }
+      setManifest(plan.manifest)
+      setSelectedId(draft.id.trim())
+      setEditing(false)
+      setEditingId(null)
+      notifySkillsChanged()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    }
+    setBusy(false)
+  }
+
+  const handleDelete = async () => {
+    if (!manifest || !selectedId || deleteBusy) return
+    const plan = planSkillDelete(manifest, selectedId)
+    setDeleteBusy(true)
+    setDeleteError(null)
+    try {
+      await writeSkillManifest(plan.manifest)
+      if (plan.deleteFile) {
+        await deleteSkillFile(plan.deleteFile).catch((e) => {
+          console.error('[skills] delete file failed:', e)
+        })
+      }
+      setManifest(plan.manifest)
+      setSelectedId(null)
+      setContent('')
+      setEditing(false)
+      setEditingId(null)
+      setDeleteOpen(false)
+      notifySkillsChanged()
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : String(e))
+    }
+    setDeleteBusy(false)
+  }
+
+  return (
+    <div className="settings-content-scroll">
+      <div className="space-y-4">
+        <Section title={t('settings.skills')}>
+          <div className="flex items-center justify-between pb-2">
+            <p className="text-[0.6875rem] text-[var(--sidebar-text)]">{t('settings.skillHint')}</p>
+            <button onClick={beginNew} className="text-[0.6875rem] text-[var(--editor-accent)] hover:underline">
+              {t('settings.newSkill')}
+            </button>
+          </div>
+
+          {editing ? (
+            <div className="space-y-2.5">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[0.6875rem] text-[var(--sidebar-text)] mb-1">{t('settings.skillName')}</label>
+                  <input
+                    type="text"
+                    value={draft.name}
+                    onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                    className="settings-input"
+                    placeholder={t('settings.skillName')}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[0.6875rem] text-[var(--sidebar-text)] mb-1">{t('settings.skillId')}</label>
+                  <input
+                    type="text"
+                    value={draft.id}
+                    onChange={(e) => setDraft({ ...draft, id: e.target.value })}
+                    className="settings-input font-mono"
+                    placeholder="e.g. doc-summary"
+                  />
+                </div>
+              </div>
+              <p className="text-[0.6875rem] text-[var(--sidebar-text)]">{t('settings.skillIdHint')}</p>
+              <div>
+                <label className="block text-[0.6875rem] text-[var(--sidebar-text)] mb-1">{t('settings.skillSummary')}</label>
+                <input
+                  type="text"
+                  value={draft.summary}
+                  onChange={(e) => setDraft({ ...draft, summary: e.target.value })}
+                  className="settings-input"
+                />
+              </div>
+              <div>
+                <label className="block text-[0.6875rem] text-[var(--sidebar-text)] mb-1">{t('settings.skillDescription')}</label>
+                <textarea
+                  value={draft.description}
+                  onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+                  className="settings-textarea"
+                  rows={2}
+                />
+              </div>
+              <label className="flex items-center gap-2 text-[0.75rem] text-[var(--editor-text)] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={draft.needsDoc}
+                  onChange={(e) => setDraft({ ...draft, needsDoc: e.target.checked })}
+                  className="settings-checkbox"
+                />
+                {t('settings.skillNeedsDoc')}
+              </label>
+
+              <div>
+                <label className="block text-[0.6875rem] text-[var(--sidebar-text)] mb-1">{t('settings.skillContent')}</label>
+                <MarkdownEditPreview
+                  value={content}
+                  onChange={setContent}
+                  placeholder={t('settings.skillContentPlaceholder')}
+                  minHeight={260}
+                />
+              </div>
+
+              {error && <p className="text-[0.6875rem] text-red-500 break-words">{error}</p>}
+              <div className="flex gap-2">
+                <button onClick={handleSave} disabled={busy} className="settings-btn-primary" style={busy ? { opacity: 0.5 } : undefined}>
+                  {t('common.save')}
+                </button>
+                <button
+                  onClick={() => { setEditing(false); setEditingId(null); setError(null) }}
+                  disabled={busy}
+                  className="settings-btn-secondary"
+                >
+                  {t('common.cancel')}
+                </button>
+                {editingId && <span className="ml-auto text-[0.6875rem] text-[var(--sidebar-text)] font-mono self-center">{editingId}</span>}
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-3">
+              <div className="w-56 border border-[var(--editor-border)] rounded-lg overflow-hidden bg-[var(--editor-surface)]" style={{ maxHeight: '320px', overflowY: 'auto' }}>
+                {(manifest?.skills ?? []).map((skill) => (
+                  <button
+                    key={skill.id}
+                    onClick={() => selectSkill(skill)}
+                    className={`w-full px-3 py-1.5 text-left hover:bg-[var(--editor-hover)] flex flex-col gap-0.5 ${selectedId === skill.id ? 'bg-[var(--editor-accent)] text-white' : 'text-[var(--editor-text)]'}`}
+                  >
+                    <span className="truncate text-xs">{skill.name}</span>
+                    <span className={`truncate text-[0.625rem] font-mono ${selectedId === skill.id ? 'text-white/75' : 'text-[var(--sidebar-text)]'}`}>{skill.id}</span>
+                  </button>
+                ))}
+                {(!manifest || manifest.skills.length === 0) && (
+                  <div className="px-3 py-3 text-xs text-[var(--sidebar-text)] text-center">{t('settings.noSkills')}</div>
+                )}
+              </div>
+
+              <div className="flex-1 flex flex-col min-w-0">
+                {selected && (
+                  <div className="flex items-center justify-end gap-1 mb-1 -mt-1">
+                    <button onClick={beginEdit} className="text-[0.6875rem] text-[var(--editor-accent)] hover:underline px-2 py-1">{t('settings.edit')}</button>
+                    <button onClick={() => { setDeleteOpen(true); setDeleteError(null) }} className="text-[0.6875rem] text-red-500 hover:underline px-2 py-1">{t('settings.deleteSkill')}</button>
+                  </div>
+                )}
+
+                {selected ? (
+                  <>
+                    <div className="mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[0.8125rem] font-medium text-[var(--editor-text)] truncate">{selected.name}</span>
+                        <span className="text-[0.625rem] font-mono text-[var(--editor-accent)]">{selected.id}</span>
+                        {selected.needsDoc && (
+                          <span className="text-[0.625rem] px-1.5 py-0.5 rounded bg-[var(--editor-hover)] text-[var(--sidebar-text)]">{t('settings.skillNeedsDocShort')}</span>
+                        )}
+                      </div>
+                      {selected.summary && <p className="text-[0.6875rem] text-[var(--sidebar-text)] mt-0.5">{selected.summary}</p>}
+                      {selected.description && <p className="text-[0.6875rem] text-[var(--sidebar-text)] mt-1 whitespace-pre-wrap">{selected.description}</p>}
+                    </div>
+                    <MarkdownEditPreview value={content} readOnly minHeight={240} />
+                  </>
+                ) : (
+                  <div className="flex items-center justify-center h-36 text-xs text-[var(--sidebar-text)] border border-[var(--editor-border)] rounded-lg bg-[var(--editor-surface)]">{t('settings.selectSkillToEdit')}</div>
+                )}
+
+                {selected && deleteOpen && (
+                  <div
+                    className="mt-2 rounded-lg border border-red-400/50 p-2.5"
+                    style={{ background: 'color-mix(in srgb, var(--editor-surface) 80%, transparent)' }}
+                  >
+                    <p className="text-[0.75rem] text-[var(--editor-text)] mb-1">
+                      {t('settings.deleteSkillConfirm', { name: selected.name })}
+                    </p>
+                    {deleteError && <p className="text-[0.6875rem] text-red-500 mb-1 break-words">{deleteError}</p>}
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => setDeleteOpen(false)} disabled={deleteBusy} className="settings-btn-secondary">{t('common.cancel')}</button>
+                      <button
+                        onClick={handleDelete}
+                        disabled={deleteBusy}
+                        className="settings-btn-primary"
+                        style={{ background: '#dc2626', ...(deleteBusy ? { opacity: 0.5 } : {}) }}
+                      >
+                        {t('common.delete')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </Section>
+      </div>
+    </div>
+  )
+}
+
 
 // ===================== 插件设置 =====================
 function PluginsSettings() {
@@ -2539,7 +2858,7 @@ export default function SettingsModal({ isOpen, onClose, defaultTab }: SettingsM
 
   const content: Record<CategoryKey, React.ReactNode> = {
     general: <GeneralSettings />, appearance: <AppearanceSettings />, editor: <EditorSettings />,
-    liveMode: <LiveModeSettings />, ai: <AISettings />, cloud: <CloudSettings />,
+    liveMode: <LiveModeSettings />, ai: <AISettings />, skills: <SkillsSettings />, cloud: <CloudSettings />,
     plugins: <PluginsSettings />,
     shortcuts: <ShortcutsSettings />, templates: <TemplatesSettings />, docs: <DocumentationSettings />,
     about: <AboutSettings />, products: <OtherProductsSettings />,
