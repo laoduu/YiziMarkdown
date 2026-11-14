@@ -148,6 +148,39 @@ function sameStyle(a: SceneRunStyle, b: SceneRunStyle): boolean {
     a.highlight === b.highlight && a.link === b.link && !a.mathTex
 }
 
+/**
+ * 代码行按可用宽度折行（按字符，不依赖空格）。
+ *
+ * PowerPoint 没有“元素内部横向滚动条”，长代码行只能折行。这里在场景层
+ * 直接切成多行，避免依赖 PowerPoint 的断词规则（长串下划线/路径通常不会断）。
+ */
+export function wrapCodeRuns(
+  line: SceneRun[],
+  availPx: number,
+  measure: (ch: string) => number,
+): SceneRun[][] {
+  const out: SceneRun[][] = []
+  let current: SceneRun[] = []
+  let width = 0
+  const flush = () => {
+    if (current.length) out.push(current)
+    current = []
+    width = 0
+  }
+  for (const run of line) {
+    for (const ch of run.text) {
+      const w = measure(ch)
+      if (current.length && width + w > availPx) flush()
+      const prev = current[current.length - 1]
+      if (prev && sameStyle(prev.style, run.style)) prev.text += ch
+      else current.push({ text: ch, style: run.style })
+      width += w
+    }
+  }
+  flush()
+  return out.length ? out : [line]
+}
+
 /** `annotation[encoding="application/x-tex"]` → TeX；KaTeX 的可见 HTML 不可信，必须取源。 */
 function katexTex(el: Element): string {
   const ann = el.querySelector('annotation[encoding="application/x-tex"]')
@@ -518,15 +551,43 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
       if (!line.length) line.push({ text: ' ', style: trimRun(runStyleOf(code, slideBg)) })
     })
 
-    const naturalW = Math.max(box.w, code.scrollWidth, pre.scrollWidth - (r.w - box.w))
-    const scale = naturalW > box.w + 1 ? Math.max(0.6, Math.min(1, box.w / naturalW)) : 1
-    if (scale < 0.999) {
-      warnings.push({
-        kind: 'shrink',
-        messageKey: 'pptxExport.warnCodeShrink',
-        messageArgs: { percent: Math.round(scale * 100) },
-      })
+    const fontPx = fontSizePx(codeCS)
+    const linePx = lineHeightPx(codeCS)
+    let measureChar: (ch: string) => number
+    try {
+      const ctx = win.document.createElement('canvas').getContext('2d')
+      if (ctx) {
+        ctx.font = `${fontPx}px ${codeCS.fontFamily}`
+        const probe = ctx.measureText('M').width
+        const fontOk = probe > fontPx * 0.2 && probe < fontPx * 1.6
+        const fallback = (ch: string) => {
+          const cp = ch.codePointAt(0) ?? 0
+          return cp >= 0x2e80 ? fontPx : fontPx * 0.6
+        }
+        const cache = new Map<string, number>()
+        measureChar = (ch) => {
+          if (!fontOk) return fallback(ch)
+          let w = cache.get(ch)
+          if (w === undefined) {
+            w = ctx.measureText(ch).width
+            if (!(w > 0) || w > fontPx * 2) w = fallback(ch)
+            cache.set(ch, w)
+          }
+          return w
+        }
+      } else {
+        measureChar = (_ch) => fontPx * 0.6
+      }
+    } catch {
+      measureChar = (_ch) => fontPx * 0.6
     }
+
+    // PowerPoint 没有元素内部横向滚动条：长代码行按内容盒宽度折行，
+    // 并同步放大代码块高度（后续内容可能因此进入页底预留区 / 红区）。
+    const availPx = Math.max(1, box.w - 8)
+    const wrappedLines = lines.flatMap((line) => wrapCodeRuns(line, availPx, measureChar))
+    const extraPx = Math.max(0, wrappedLines.length - lines.length) * linePx
+    // 不再横向缩小代码：缩到 60% 仍放不下的长行改为折行，避免导出后横向溢出。
 
     const font = resolveFontStack(codeCS.fontFamily)
     // 背景/边框按**边框盒**（含 pre 的内边距）单独画，文本仍按内容盒排 ——
@@ -537,7 +598,7 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
     if (fill || linePt) {
       nodes.push({
         t: 'rect',
-        x: pxToIn(r.x), y: pxToIn(r.y), w: pxToIn(r.w), h: pxToIn(r.h),
+        x: pxToIn(r.x), y: pxToIn(r.y), w: pxToIn(r.w), h: pxToIn(r.h + extraPx),
         fill,
         lineColor: linePt ? flattenColor(cs.borderTopColor, slideBg) : undefined,
         linePt,
@@ -546,13 +607,13 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
     }
     nodes.push({
       t: 'code',
-      x: pxToIn(box.x), y: pxToIn(box.y), w: pxToIn(box.w), h: pxToIn(box.h),
-      lines,
+      x: pxToIn(box.x), y: pxToIn(box.y), w: pxToIn(box.w), h: pxToIn(box.h + extraPx),
+      lines: wrappedLines,
       sizePt: pxToPt(fontSizePx(codeCS)),
       lineSpacingPt: round2(lineHeightPx(codeCS) * 0.75),
       latin: font.latin,
       ea: font.ea,
-      scale,
+      scale: 1,
     })
   }
 
