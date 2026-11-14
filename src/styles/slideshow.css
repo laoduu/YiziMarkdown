@@ -1854,6 +1854,18 @@
   right: 0;
 }
 
+/* 标题装饰线跟随标题对齐：居右时贴右、居中时居中（左侧默认 left:0） */
+.ys-slide.ys-align-center h2::after {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.ys-slide.ys-align-right h2::after {
+  left: auto;
+  right: 0;
+  background: linear-gradient(270deg, var(--editor-accent, #4f46e5), transparent);
+}
+
 /* ===== 页脚（章节名 + 页码）与进度条 ===== */
 .ys-footer {
   position: fixed;
