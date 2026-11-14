@@ -23,7 +23,8 @@
   position: fixed;
   inset: 0;
   overflow: hidden;
-  background: #000;
+  /* 与画布同色：即使窗口不是精确 16:9、出现 letterbox，也不会露出黑边 */
+  background: var(--editor-bg, #ffffff);
 }
 
 .ys-canvas {

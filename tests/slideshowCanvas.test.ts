@@ -7,10 +7,11 @@ const slideshow = fs.readFileSync(new URL('../src/components/Slideshow.tsx', imp
 
 test('演示模式：1280×720 固定画布 + 整体缩放', () => {
   assert.match(css, /\.ys-stage\s*\{[^}]*position:\s*fixed;[^}]*overflow:\s*hidden;/s)
+  assert.match(css, /\.ys-stage\s*\{[^}]*background:\s*var\(--editor-bg, #ffffff\);/s)
   assert.match(css, /\.ys-canvas\s*\{[^}]*width:\s*1280px;[^}]*height:\s*720px;/s)
   assert.match(css, /\.ys-canvas\s*\{[^}]*overflow:\s*hidden;/s)
 
-  assert.match(slideshow, /className="ys-stage"/)
+  assert.match(slideshow, /className="ys-stage" ref=\{stageRef\}/)
   assert.match(slideshow, /className="ys-canvas"/)
   assert.match(slideshow, /Math\.min\(w \/ 1280, h \/ 720\)/)
 })
