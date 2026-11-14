@@ -8,6 +8,7 @@ import { normalizeMarkdownMarkers } from './markdownMarkerNbsp.ts'
 import { tocPlugin } from './toc.ts'
 import { alertPlugin } from './alert.ts'
 import { extendCoreMarkdownIt } from '../renderers/index.ts'
+import { isKatexReady } from '../renderers/katex.ts'
 
 // ---- Core ruler：给块级元素注入 data-source-line 属性 ----
 const BLOCK_OPEN_TYPES = new Set([
@@ -236,19 +237,26 @@ export function createMarkdownIt(
 // 默认实例（无插件）
 let defaultMd: MarkdownIt | null = null
 let lastPluginKey: string | null = null
+let lastKatexReady = false
 
 /**
  * 获取 markdown-it 实例
  * @param pluginExtenders 插件扩展列表，变化时自动重建
+ *
+ * KaTeX 是异步加载的，首次渲染可能早于插件就绪。若只按插件扩展缓存，
+ * 那一次渲染出来的实例会把 `$...$` 永久固化成语源。因此就绪状态变化时
+ * 也必须重建一次。
  */
 export function getMarkdownIt(
   pluginExtenders?: Array<(md: MarkdownIt) => void>
 ): MarkdownIt {
   const key = pluginExtenders ? pluginExtenders.map(() => '1').join('') : ''
-  if (defaultMd && lastPluginKey === key) return defaultMd
+  const katexReady = isKatexReady()
+  if (defaultMd && lastPluginKey === key && lastKatexReady === katexReady) return defaultMd
 
   defaultMd = createMarkdownIt(pluginExtenders)
   lastPluginKey = key
+  lastKatexReady = katexReady
   return defaultMd
 }
 

@@ -17,8 +17,9 @@ export function ensureKatex(): Promise<boolean> {
   loadPromise = Promise.all([
     import('@traptitech/markdown-it-katex'),
     import('katex'),
-    // 动态导入 CSS，Vite 会将其作为独立 CSS chunk 按需加载
-    import('katex/dist/katex.min.css'),
+    // 动态导入 CSS，Vite 会将其作为独立 CSS chunk 按需加载。
+    // CSS 加载失败不应阻塞公式渲染（Node 测试环境没有 CSS loader）。
+    import('katex/dist/katex.min.css').catch(() => null),
   ]).then(([mkMod, ktMod]) => {
     mkPlugin = (mkMod as any).default || (mkMod as any).i || mkMod
     katexModule = (ktMod as any).default || ktMod
