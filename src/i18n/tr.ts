@@ -840,6 +840,7 @@ export const tr = {
     cancelled: "Dışa aktarma iptal edildi",
     warnings: "Uyarılar",
     overflowPages: "Taşan sayfalar:",
+    tightPages: "Sayfa altına yakın sayfalar:",
     pageN: "Sayfa {n}",
     jump: "Sunumda bu sayfaya git",
     warnImageNotEmbedded: "Görsel dosyaya gömülmedi, atlandı: {src}",

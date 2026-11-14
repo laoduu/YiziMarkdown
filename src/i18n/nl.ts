@@ -840,6 +840,7 @@ export const nl = {
     cancelled: "Export geannuleerd",
     warnings: "Waarschuwingen",
     overflowPages: "Overlopende dia’s:",
+    tightPages: "Pagina's bijna onderaan:",
     pageN: "Pagina {n}",
     jump: "Naar deze pagina in de presentatie",
     warnImageNotEmbedded: "Afbeelding is niet ingebed en overgeslagen: {src}",

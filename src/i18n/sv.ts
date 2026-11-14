@@ -840,6 +840,7 @@ export const sv = {
     cancelled: "Exporten avbröts",
     warnings: "Varningar",
     overflowPages: "Sidor som inte får plats:",
+    tightPages: "Sidor nära sidans nederkant:",
     pageN: "Sida {n}",
     jump: "Gå till denna sida i bildspelet",
     warnImageNotEmbedded: "Bilden bäddades inte in och hoppades över: {src}",

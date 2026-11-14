@@ -840,6 +840,7 @@ export const es = {
     cancelled: "Exportación cancelada",
     warnings: "Advertencias",
     overflowPages: "Páginas desbordadas:",
+    tightPages: "Páginas cerca del borde inferior:",
     pageN: "Página {n}",
     jump: "Ir a esta página en la presentación",
     warnImageNotEmbedded: "La imagen no se incrustó, se omitió: {src}",

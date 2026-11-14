@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { measureSceneOverflow } from '../src/lib/pptxScene.ts'
+import { measureSceneOverflow, measureSceneTightPx, sceneReserveIn } from '../src/lib/pptxScene.ts'
 import type { SceneNode } from '../src/lib/pptxTypes.ts'
 
 const W = 13.333
@@ -55,4 +55,52 @@ test('PPTX 超页：装饰元素（金句引号/章节序号）不参与超页�
   assert.deepEqual(measureSceneOverflow([decorative], W, H), {
     top: 0, right: 0, bottom: 0, left: 0,
   })
+})
+
+test('PPTX 余量：按正文/代码/表格行高预留一行，限制在 0.3~0.5in', () => {
+  const t = text(1, 1, 4, 1)
+  t.lineSpacingPt = 18
+  assert.equal(sceneReserveIn([t]), 0.3)
+
+  t.lineSpacingPt = 24
+  assert.equal(sceneReserveIn([t]), 0.333)
+
+  t.lineSpacingPt = 48
+  assert.equal(sceneReserveIn([t]), 0.5)
+
+  const decorative = text(1, 1, 4, 1)
+  decorative.decorative = true
+  assert.equal(sceneReserveIn([decorative]), 0)
+
+  const table: SceneNode = {
+    t: 'table', x: 1, y: 1, w: 8, h: 2, colW: [4, 4], rowH: [1, 1],
+    rows: [[
+      { text: 'a', color: '000000', sizePt: 40, latin: 'Arial', ea: 'Arial', borders: [null, null, null, null], align: 'left', valign: 'top', margin: [0, 0, 0, 0] },
+    ]],
+  }
+  assert.equal(sceneReserveIn([table]), 0.5)
+  assert.equal(sceneReserveIn([]), 0)
+})
+
+test('PPTX 余量：内容进入页底预留区时返回像素量，纯图形页不预留', () => {
+  const t = text(1, 6.4, 4, 1) // 底部 7.4in，距页底 0.1in
+  assert.equal(measureSceneTightPx([t], H, 0.3), Math.round(0.2 * 96))
+
+  t.y = 7.0 // 底部 8.0in，真实溢出 0.5in；预留后为 0.8in
+  assert.equal(measureSceneTightPx([t], H, 0.3), Math.round(0.8 * 96))
+
+  const decorative = text(1, 7.2, 4, 1)
+  decorative.decorative = true
+  assert.equal(measureSceneTightPx([decorative], H, 0.3), 0)
+
+  const footer = text(1, 7.2, 4, 1)
+  footer.footer = true
+  assert.equal(sceneReserveIn([footer]), 0)
+  assert.equal(measureSceneTightPx([footer], H, 0.3), 0)
+
+  const image: SceneNode = { t: 'image', x: 1, y: 7.0, w: 4, h: 1, src: 'data:image/png;base64,' }
+  assert.equal(measureSceneTightPx([image], H, 0.3), 0)
+
+  assert.equal(measureSceneTightPx([t], H, 0), 0)
+  assert.equal(measureSceneTightPx([], H, 0.3), 0)
 })

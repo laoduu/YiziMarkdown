@@ -840,6 +840,7 @@ export const ja = {
     cancelled: "書き出しをキャンセルしました",
     warnings: "警告",
     overflowPages: "はみ出したページ：",
+    tightPages: "ページ下端に近いページ：",
     pageN: "{n} ページ",
     jump: "スライドショーでこのページへ移動",
     warnImageNotEmbedded: "画像を埋め込めなかったためスキップしました：{src}",

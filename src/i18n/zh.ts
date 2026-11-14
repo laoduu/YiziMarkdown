@@ -858,6 +858,7 @@ export const zh = {
     cancelled: "已取消导出",
     warnings: "告警",
     overflowPages: "超页页码：",
+    tightPages: "接近页底：",
     pageN: "第 {n} 页",
     jump: "跳转到演示中的这一页",
     warnImageNotEmbedded: "图片未转成内嵌数据，已跳过：{src}",

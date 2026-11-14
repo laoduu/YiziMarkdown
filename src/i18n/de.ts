@@ -840,6 +840,7 @@ export const de = {
     cancelled: "Export abgebrochen",
     warnings: "Warnungen",
     overflowPages: "Überlaufende Seiten:",
+    tightPages: "Seiten nahe dem unteren Rand:",
     pageN: "Seite {n}",
     jump: "In der Präsentation zu dieser Seite springen",
     warnImageNotEmbedded: "Bild wurde nicht eingebettet, übersprungen: {src}",

@@ -103,6 +103,7 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
   const [result, setResult] = useState<{ path: string; count: number } | null>(null)
   const [warnings, setWarnings] = useState<PptxWarning[]>([])
   const [overflowSlides, setOverflowSlides] = useState<number[]>([])
+  const [tightSlides, setTightSlides] = useState<number[]>([])
   const abortRef = useRef<AbortController | null>(null)
 
   const hasCurrent = typeof source.currentSlide === 'number'
@@ -119,6 +120,7 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
     setResult(null)
     setWarnings([])
     setOverflowSlides([])
+    setTightSlides([])
     abortRef.current = null
   }, [open, totalSlides])
 
@@ -225,6 +227,7 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
       setProgress({ pct: 100, text: t('pptxExport.done') })
       setWarnings(res.warnings)
       setOverflowSlides(res.overflowSlides)
+      setTightSlides(res.tightSlides)
       setResult({ path, count: res.slideCount })
     } catch (e) {
       const err = e as Error
@@ -436,7 +439,7 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
             </div>
           )}
 
-          {(warnings.length > 0 || overflowSlides.length > 0) && (
+          {(warnings.length > 0 || overflowSlides.length > 0 || tightSlides.length > 0) && (
             <div className="mt-3">
               <div className="font-semibold flex items-center gap-1.5 mb-1">
                 <AlertTriangle size={13} style={{ color: 'var(--editor-warning,#d97706)' }} />
@@ -446,6 +449,21 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
                 <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
                   <span className="text-[var(--sidebar-text)]">{t('pptxExport.overflowPages')}</span>
                   {overflowSlides.map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => jump(p)}
+                      className="px-1.5 py-0.5 rounded border border-[var(--editor-border)] hover:bg-[var(--editor-hover)]"
+                      title={t('pptxExport.jump')}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {tightSlides.length > 0 && (
+                <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[var(--sidebar-text)]">{t('pptxExport.tightPages')}</span>
+                  {tightSlides.map((p) => (
                     <button
                       key={p}
                       onClick={() => jump(p)}

@@ -840,6 +840,7 @@ export const ko = {
     cancelled: "내보내기를 취소했습니다",
     warnings: "경고",
     overflowPages: "넘치는 페이지:",
+    tightPages: "페이지 아래쪽에 가까운 페이지:",
     pageN: "{n}페이지",
     jump: "슬라이드쇼에서 이 페이지로 이동",
     warnImageNotEmbedded: "이미지가 파일에 포함되지 않아 건너뛰었습니다: {src}",

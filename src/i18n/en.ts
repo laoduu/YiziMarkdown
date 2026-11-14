@@ -858,6 +858,7 @@ export const en = {
     cancelled: "Export cancelled",
     warnings: "Warnings",
     overflowPages: "Overflowing pages:",
+    tightPages: "Pages near the bottom:",
     pageN: "Page {n}",
     jump: "Jump to this page in the slideshow",
     warnImageNotEmbedded: "Image was not embedded in the file, skipped: {src}",

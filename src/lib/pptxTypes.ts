@@ -78,6 +78,11 @@ export interface TextNode {
   ea: string
   /** 装饰性文本（大序号 / 引号 / agenda 数字）：不参与超页检测的编辑性修正 */
   decorative?: boolean
+  /**
+   * 页脚等辅助文本：参与真实超页检测，但不计入“页底预留”行高。
+   * 否则页脚本身贴近页底，会让每一页都被判定为“接近页底”。
+   */
+  footer?: boolean
   /** 文本框不换行（代码块：用横向滚动语义，宁可溢出也不折行） */
   noWrap?: boolean
 }
@@ -232,6 +237,16 @@ export interface SlideScene {
   nodes: SceneNode[]
   /** 内容超出可视区的最大像素量（top/right/bottom/left 取最大），0 = 不溢出 */
   overflowPx: number
+  /**
+   * 为 PowerPoint 二次折行预留的底部余量（inch）。
+   * 仅统计正文/代码/表格；装饰元素与纯图形页为 0。
+   */
+  reserveIn?: number
+  /**
+   * 内容底部进入“预留区”的像素数；0 = 距页底仍有余量。
+   * 与 overflowPx 不同：它表示“还没真超，但 PowerPoint 多折一行就会超”。
+   */
+  tightPx?: number
   /** 四边精确溢出量（px）；旧数据可缺省 */
   overflow?: SceneOverflow
   warnings: PptxWarning[]

@@ -856,6 +856,7 @@ export const zhTW = {
     cancelled: "已取消匯出",
     warnings: "警告",
     overflowPages: "超頁頁碼：",
+    tightPages: "接近頁底：",
     pageN: "第 {n} 頁",
     jump: "跳轉到演示中的這一頁",
     warnImageNotEmbedded: "圖片未轉成內嵌資料，已略過：{src}",

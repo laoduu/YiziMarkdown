@@ -62,6 +62,8 @@ export interface PptxExportResult {
   slideCount: number
   /** 内容溢出可视区的页码（1 起，按**整副演示**编号） */
   overflowSlides: number[]
+  /** 未溢出、但内容进入页底预留区的页码（1 起） */
+  tightSlides: number[]
 }
 
 function throwIfAborted(signal?: AbortSignal): void {
@@ -148,6 +150,14 @@ function attachOmml(scenes: SlideScene[], ommlMap: Map<string, string>): void {
 }
 
 /**
+ * 是否需要重排：真实溢出，或内容进入页底预留区（PowerPoint 多折一行就可能超）。
+ * 预留值由场景层按正文 / 代码 / 表格的行高计算。
+ */
+function needsFit(scene: SlideScene): boolean {
+  return Math.max(scene.overflowPx, scene.tightPx ?? 0) > 2
+}
+
+/**
  * 让浏览器按缩小后的字号重新排版，直到内容装进 1280×720 的可视区。
  *
  * `initial` 必须是**在当前页基础字号下**测出来的场景（调用方已先 setFontScale(1)），
@@ -163,14 +173,14 @@ async function shrinkToFit(
 ): Promise<{ scene: SlideScene; factor: number }> {
   const factors = [0.94, 0.88, 0.82, 0.76, 0.70, 0.64, 0.6]
   let last = initial
-  if (last.overflowPx <= 2) return { scene: last, factor: 1 }
+  if (!needsFit(last)) return { scene: last, factor: 1 }
   for (const f of factors) {
     throwIfAborted(signal)
     frame.setFontScale(f)
     await render()
     throwIfAborted(signal)
     last = build()
-    if (last.overflowPx <= 2) return { scene: last, factor: f }
+    if (!needsFit(last)) return { scene: last, factor: f }
   }
   return { scene: last, factor: factors[factors.length - 1] }
 }
@@ -223,6 +233,7 @@ export async function exportPptx(opts: PptxExportOptions): Promise<PptxExportRes
   const scenes: SlideScene[] = []
   const warnings: PptxWarning[] = []
   const overflowSlides: number[] = []
+  const tightSlides: number[] = []
 
   try {
     for (let k = 0; k < indices.length; k++) {
@@ -266,7 +277,7 @@ export async function exportPptx(opts: PptxExportOptions): Promise<PptxExportRes
       })
 
       let scene = buildScene()
-      if (opts.overflowMode === 'shrink' && scene.overflowPx > 2) {
+      if (opts.overflowMode === 'shrink' && needsFit(scene)) {
         const fitted = await shrinkToFit(frame, render, buildScene, scene, opts.signal)
         scene = fitted.scene
         scene.fontScale = fitted.factor
@@ -280,6 +291,7 @@ export async function exportPptx(opts: PptxExportOptions): Promise<PptxExportRes
         }
       }
       if (scene.overflowPx > 2) overflowSlides.push(i + 1)
+      else if ((scene.tightPx ?? 0) > 2) tightSlides.push(i + 1)
       scene.warnings.forEach((w) => warnings.push({ ...w, slide: w.slide ?? i + 1 }))
       scenes.push(scene)
       opts.onProgress?.(k + 1, indices.length, 'render')
@@ -340,6 +352,7 @@ export async function exportPptx(opts: PptxExportOptions): Promise<PptxExportRes
       warnings: dedupeWarnings(warnings),
       slideCount: scenes.length,
       overflowSlides,
+      tightSlides,
     }
   } finally {
     frame.destroy()
