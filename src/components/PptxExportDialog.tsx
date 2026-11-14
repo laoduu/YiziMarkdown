@@ -102,8 +102,8 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<{ path: string; count: number } | null>(null)
   const [warnings, setWarnings] = useState<PptxWarning[]>([])
-  const [overflowSlides, setOverflowSlides] = useState<number[]>([])
-  const [tightSlides, setTightSlides] = useState<number[]>([])
+  const [redSlides, setRedSlides] = useState<number[]>([])
+  const [yellowSlides, setYellowSlides] = useState<number[]>([])
   const abortRef = useRef<AbortController | null>(null)
 
   const hasCurrent = typeof source.currentSlide === 'number'
@@ -119,8 +119,8 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
     setError(null)
     setResult(null)
     setWarnings([])
-    setOverflowSlides([])
-    setTightSlides([])
+    setRedSlides([])
+    setYellowSlides([])
     abortRef.current = null
   }, [open, totalSlides])
 
@@ -151,7 +151,8 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
     setError(null)
     setResult(null)
     setWarnings([])
-    setOverflowSlides([])
+    setRedSlides([])
+    setYellowSlides([])
 
     const total = Math.max(1, totalSlides)
     // 默认文件名与其它导出同一口径：已保存文件的文件名 → 文档标题 → slides
@@ -226,8 +227,8 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
 
       setProgress({ pct: 100, text: t('pptxExport.done') })
       setWarnings(res.warnings)
-      setOverflowSlides(res.overflowSlides)
-      setTightSlides(res.tightSlides)
+      setRedSlides(res.redSlides)
+      setYellowSlides(res.yellowSlides)
       setResult({ path, count: res.slideCount })
     } catch (e) {
       const err = e as Error
@@ -439,16 +440,16 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
             </div>
           )}
 
-          {(warnings.length > 0 || overflowSlides.length > 0 || tightSlides.length > 0) && (
+          {(warnings.length > 0 || redSlides.length > 0 || yellowSlides.length > 0) && (
             <div className="mt-3">
               <div className="font-semibold flex items-center gap-1.5 mb-1">
                 <AlertTriangle size={13} style={{ color: 'var(--editor-warning,#d97706)' }} />
                 {t('pptxExport.warnings')}
               </div>
-              {overflowSlides.length > 0 && (
+              {redSlides.length > 0 && (
                 <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-                  <span className="text-[var(--sidebar-text)]">{t('pptxExport.overflowPages')}</span>
-                  {overflowSlides.map((p) => (
+                  <span className="text-[var(--sidebar-text)]">{t('pptxExport.redPages')}</span>
+                  {redSlides.map((p) => (
                     <button
                       key={p}
                       onClick={() => jump(p)}
@@ -460,10 +461,12 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
                   ))}
                 </div>
               )}
-              {tightSlides.length > 0 && (
+              {yellowSlides.length > 0 && (
                 <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-                  <span className="text-[var(--sidebar-text)]">{t('pptxExport.tightPages')}</span>
-                  {tightSlides.map((p) => (
+                  <span className="text-[var(--sidebar-text)]">
+                    {t(overflowMode === 'shrink' ? 'pptxExport.compressedPages' : 'pptxExport.shrinkablePages')}
+                  </span>
+                  {yellowSlides.map((p) => (
                     <button
                       key={p}
                       onClick={() => jump(p)}
