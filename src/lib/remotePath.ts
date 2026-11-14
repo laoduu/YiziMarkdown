@@ -81,6 +81,16 @@ export function isRemotePathWithin(path: string, ancestor: string): boolean {
   return a === '/' ? true : p === a || p.startsWith(`${a}/`)
 }
 
+/**
+ * 云端标签页的悬浮提示路径：`☁️/yizimarkdown/Notes/doc.md`。
+ * 本地文档继续显示绝对路径，用户一眼能区分云端与本地。
+ */
+export function remoteTooltipPath(remotePath: string): string {
+  const canonical = canonicalRemotePath(remotePath) ?? remotePath.trim()
+  const body = canonical.replace(/^\/+/, '')
+  return body ? `☁️/${body}` : '☁️'
+}
+
 /** 人类可读的文件大小。 */
 export function formatSize(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes < 0) return '—'

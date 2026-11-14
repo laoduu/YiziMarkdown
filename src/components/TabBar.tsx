@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { X, Home, Code, Columns2, Eye, Check, Sparkles, Presentation, ChevronsRight, FilePlus2 } from 'lucide-react'
 import { useEditorStore, SaveStatus } from '../stores/editorStore'
 import { useI18n } from '../i18n'
+import { remoteTooltipPath } from '../lib/remotePath'
 import { openContextMenu } from './ContextMenu'
 
 interface TabBarProps {
@@ -303,7 +304,7 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
             className={`tab-item ${activeTabId === tab.id ? 'tab-item-active' : ''}${
               drag?.id === tab.id ? ' tab-item-dragging' : ''}${
               dropTarget?.id === tab.id ? (dropTarget.after ? ' tab-drop-after' : ' tab-drop-before') : ''}`}
-            title={tab.filePath || t('tabbar.untitled')}
+            title={tab.remote ? remoteTooltipPath(tab.remote.path) : (tab.filePath || t('tabbar.untitled'))}
           >
             <span className="tab-title truncate max-w-[120px] min-w-0">{tab.name}</span>
             <StatusDot status={tab.saveStatus} />
@@ -341,7 +342,7 @@ export default function TabBar({ onNew, onPresent }: TabBarProps) {
                     setMenuOpen(false)
                   }}
                   onAuxClick={(e) => handleAuxClick(tab.id, e)}
-                  title={tab.filePath || t('tabbar.untitled')}
+                  title={tab.remote ? remoteTooltipPath(tab.remote.path) : (tab.filePath || t('tabbar.untitled'))}
                 >
                   <span className="truncate flex-1 min-w-0 text-left">{tab.name}</span>
                   <StatusDot status={tab.saveStatus} />

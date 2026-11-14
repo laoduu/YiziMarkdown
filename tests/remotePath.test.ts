@@ -20,6 +20,7 @@ import {
   normalizeRemotePath,
   canonicalRemotePath,
   isRemotePathWithin,
+  remoteTooltipPath,
   formatSize,
 } from '../src/lib/remotePath.ts'
 
@@ -168,4 +169,11 @@ test('回归：不同文件/目录规范化后仍必须可区分', () => {
   assert.notEqual(canonicalRemotePath('/Notes/a.md'), canonicalRemotePath('/Other/a.md'))
   // 但同一目标的不同写法必须折叠
   assert.equal(canonicalRemotePath('/Notes/a.md'), canonicalRemotePath('//Notes//a.md'))
+})
+
+test('remoteTooltipPath 用 ☁️ + 正斜杠显示云端路径', () => {
+  assert.equal(remoteTooltipPath('/yizimarkdown/Notes/doc.md'), '☁️/yizimarkdown/Notes/doc.md')
+  assert.equal(remoteTooltipPath('//yizimarkdown//assets/a.png'), '☁️/yizimarkdown/assets/a.png')
+  assert.equal(remoteTooltipPath('/'), '☁️')
+  assert.equal(remoteTooltipPath('/yizimarkdown/'), '☁️/yizimarkdown')
 })
