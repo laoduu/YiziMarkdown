@@ -12,6 +12,7 @@
 
 import MarkdownIt from 'markdown-it'
 import { splitFrontMatter } from './frontMatter.ts'
+import { normalizeMarkdownMarkers } from './markdownMarkerNbsp.ts'
 import { collectTocItems, tocToMarkdownList, replaceTocPlaceholders } from './toc.ts'
 
 /** UTF-8 字符串 → base64（浏览器与 Node 都有 TextEncoder / btoa） */
@@ -137,6 +138,8 @@ export async function prepareMarkdownForDocx(
   renderMermaid?: (code: string) => Promise<string | null>,
   tocMaxLevel = 6,
 ): Promise<string> {
+  // 输入法 NBSP 兜底：Rust 侧直接解析 Markdown，`- [ ]\u00a0...` 会被当成普通列表。
+  markdown = normalizeMarkdownMarkers(markdown)
   // 目录域只收 1..tocMaxLevel 级；如果文档只有更深的标题，域结果会是空的，
   // 这时不生成目录（与 Word 里的实际结果一致，避免只留一个空「目录」标题）。
   const md = new MarkdownIt({ html: true })

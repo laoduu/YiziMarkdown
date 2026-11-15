@@ -6,16 +6,20 @@
  * 都会让文本匹配失败。渲染时 `<li>` 已带 `data-source-line`，这里只负责改那一行。
  */
 
+import { normalizeMarkdownMarkers } from './markdownMarkerNbsp.ts'
+
 /** 是否是任务列表项行（支持缩进 / `*` / `+`；有序列表的 `1. [ ]` 也兼容） */
 export function isTaskLine(line: string): boolean {
-  return /^\s*(?:[-*+]|\d+[.)])\s+\[[ xX]\](?:\s|$)/.test(line)
+  return /^\s*(?:[-*+]|\d+[.)])\s+\[[ xX\u00a0]\](?:\s|$)/.test(line)
 }
 
 /** 修改单行任务状态；不是任务行返回 null */
 export function toggleTaskLine(line: string, checked: boolean): string | null {
-  const re = /^(\s*(?:[-*+]|\d+[.)])\s+\[)([ xX])(\])/
+  const re = /^(\s*(?:[-*+]|\d+[.)])\s+\[)([ xX\u00a0])(\])/
   if (!re.test(line)) return null
-  return line.replace(re, (_m, head) => `${head}${checked ? 'x' : ' '}]`)
+  const next = line.replace(re, (_m, head) => `${head}${checked ? 'x' : ' '}]`)
+  // 顺手把任务标记里的 NBSP 归一化，避免点击勾选后旧文档继续保留输入法空格
+  return normalizeMarkdownMarkers(next)
 }
 
 /** 按 1-based 行号修改任务状态；行号越界或该行不是任务行返回 null */
@@ -36,7 +40,7 @@ export function toggleTaskAtLine(content: string, lineNumber: number, checked: b
 export type TaskEnterAction = 'continue' | 'exit' | 'none'
 
 export function taskEnterAction(lineText: string, posFromLineStart: number): TaskEnterAction {
-  const match = /^(\s*(?:[-*+]|\d+[.)])\s+\[[ xX]\])(\s*)(.*)$/.exec(lineText)
+  const match = /^(\s*(?:[-*+]|\d+[.)])\s+\[[ xX\u00a0]\])(\s*)(.*)$/.exec(lineText)
   if (!match) return 'none'
   // `- [ ]foo`（`]` 后没有空格）不是 GFM 任务项，按普通列表处理
   if (!match[2] && match[3]) return 'none'

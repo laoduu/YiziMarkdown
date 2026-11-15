@@ -125,3 +125,26 @@ test('任务行识别覆盖缩进 / * / + / 有序列表；非任务行返回 nu
   assert.equal(toggleTaskLine('- 普通项目', true), null)
   assert.equal(toggleTaskAtLine('- [ ] a', 2, true), null)
 })
+
+// ---- 输入法 NBSP（U+00A0）：Linux 实时模式能识别，但预览插件只认 ASCII 空格 ----
+
+const NBSP = '\u00a0'
+
+test('任务项 ] 后的 NBSP 归一化后能渲染为 checkbox', () => {
+  const html = renderMarkdown(`- [ ]${NBSP}NBSP 任务\n- [x]${NBSP}NBSP 完成\n`)
+  assert.equal((html.match(/task-list-item-checkbox/g) || []).length, 2, html)
+  assert.match(html, /NBSP 任务/, html)
+  assert.match(html, /NBSP 完成/, html)
+})
+
+test('任务行识别与回写兼容括号内 NBSP', () => {
+  assert.equal(isTaskLine(`- [${NBSP}] a`), true)
+  assert.equal(isTaskLine(`- [${NBSP}]${NBSP}a`), true)
+  assert.equal(toggleTaskLine(`- [${NBSP}] a`, true), '- [x] a')
+  assert.equal(toggleTaskLine(`- [x]${NBSP}a`, false), '- [ ] a')
+})
+
+test('回车续行判定兼容 ] 后 NBSP', () => {
+  assert.equal(taskEnterAction(`- [ ]${NBSP}foo`, 9), 'continue')
+  assert.equal(taskEnterAction(`- [ ]${NBSP}`, 6), 'exit')
+})

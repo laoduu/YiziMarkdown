@@ -8,7 +8,7 @@
 import { ChangeSet, EditorSelection, EditorState, Transaction } from '@codemirror/state'
 
 /** 新行已经带上任务标记（`- [ ]` / `1. [ ]` 等） */
-const HAS_TASK_MARKER = /^\s*(?:[-*+]|\d+[.)])\s+\[[ xX]\]\s/
+const HAS_TASK_MARKER = /^\s*(?:[-*+]|\d+[.)])\s+\[[ xX\u00a0]\]\s/
 /** 普通列表标记前缀（缩进 + bullet / 有序编号 + 空格） */
 const LIST_MARKER = /^(\s*(?:[-*+]|\d+[.)])\s+)/
 

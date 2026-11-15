@@ -56,3 +56,36 @@ test('全角标点（＃ / －）也不做转换', () => {
   const src = `＃\u3000全角标题`
   assert.equal(normalizeMarkdownMarkers(src), src)
 })
+
+test('任务 checkbox 的 ] 后 NBSP 会被修掉', () => {
+  assert.equal(normalizeMarkdownMarkers(`- [ ]${NBSP}任务`), '- [ ] 任务')
+  assert.equal(normalizeMarkdownMarkers(`- [x]${NBSP}完成`), '- [x] 完成')
+  assert.equal(normalizeMarkdownMarkers(`1. [ ]${NBSP}有序任务`), '1. [ ] 有序任务')
+  assert.equal(normalizeMarkdownMarkers(`  - [ ]${NBSP}嵌套任务`), '  - [ ] 嵌套任务')
+})
+
+test('任务 checkbox 括号内的 NBSP 会被修掉', () => {
+  assert.equal(normalizeMarkdownMarkers(`- [${NBSP}] 任务`), '- [ ] 任务')
+  assert.equal(normalizeMarkdownMarkers(`- [${NBSP}]${NBSP}任务`), '- [ ] 任务')
+})
+
+test('任务 NBSP 偏移精确且不重复', () => {
+  const src = `- [ ]${NBSP}任务`
+  const offsets = findMarkerNbspOffsets(src)
+  assert.equal(offsets.length, 1)
+  assert.equal(src[offsets[0]], NBSP)
+})
+
+test('围栏代码块里的任务 NBSP 不处理', () => {
+  const src = ['```md', `- [ ]${NBSP}代码`, '```', `- [ ]${NBSP}正文`].join('\n')
+  assert.equal(
+    normalizeMarkdownMarkers(src),
+    ['```md', `- [ ]${NBSP}代码`, '```', '- [ ] 正文'].join('\n'),
+  )
+})
+
+test('普通链接与正文里的 NBSP 不动', () => {
+  const src = `[链接]${NBSP}后面${NBSP}文字`
+  assert.equal(normalizeMarkdownMarkers(src), src)
+  assert.deepEqual(findMarkerNbspOffsets(src), [])
+})

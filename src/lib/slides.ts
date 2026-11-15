@@ -369,7 +369,7 @@ export interface BlockInfo {
 }
 
 const isListLine = (t: string): BlockType | null => {
-  if (/^[-*+]\s+\[[ xX]\]/.test(t)) return 'task'
+  if (/^[-*+]\s+\[[ xX\u00a0]\]/.test(t)) return 'task'
   if (/^[-*+]\s/.test(t)) return 'ul'
   if (/^\d+[.)]\s/.test(t)) return 'ol'
   return null

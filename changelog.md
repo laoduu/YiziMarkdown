@@ -1,5 +1,28 @@
 # YiziMarkdown 开发日志
 
+## v0.4.6
+
+> **开发中**：任务列表输入法 NBSP 修复。用户向说明待发布时整理。
+
+### 任务列表输入法 NBSP（2026-11-15）
+
+**问题**
+- Linux 输入法在任务 checkbox 的 `]` 后写入 U+00A0（NBSP）：`- [ ]\u00a0任务`。
+- 实时模式用 JS `\s`，而 `\s` 包含 NBSP，所以 Linux 实时模式能识别；预览的 `markdown-it-task-lists` 只认字面量 `[ ] `（ASCII 空格），Windows 预览把整行当普通列表项。
+- 现有 `markdownMarkerNbsp` 只修 `#` / `-` / `>` / `1.` 后的 NBSP，没有覆盖任务 checkbox，因此旧文档也不会自动修复。
+
+**实现**
+- `findMarkerNbspOffsets` 扩展：识别 `]` 后 NBSP 与括号内 NBSP，偏移去重并保持等长替换。
+- `scheduleMarkerNbspFix` 自动复用该函数，打开 / 外部同步 / 输入后把旧文档里的 NBSP 改成 ASCII 空格。
+- `liveSyntax.planListLine`、`taskList.ts`、`taskListEnter.ts`、`slides.ts` 增加 NBSP 兼容，旧文档打开即可正常显示与点击。
+- `prepareMarkdownForDocx` 导出前归一化，避免 Word 侧直接解析原始 Markdown 时漏判。
+- 新增单测覆盖预览渲染、实时模式、回车续写、勾选回写、代码围栏与 DOCX 预处理。
+
+**验证**
+- `npx tsc --noEmit` 通过
+- `npm test`：567 通过
+- `npm run build` 通过
+
 ## v0.4.5
 
 > **预发布**（2026-11-15）：Linux 专用修复版。用户向说明见 `docs/changelog/CHANGELOG-V0.4.5.md`。

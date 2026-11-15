@@ -628,7 +628,7 @@ export interface ListLinePlan {
  */
 export function planListLine(lineText: string, caretOnLine: boolean): ListLinePlan | null {
   // 无序任务：- [ ] / * [x] / + [ ]（保留行首缩进，嵌套任务靠它定位）
-  const bulletTask = /^(\s*)([-*+]\s)(\[[ xX]\])(\s|$)/.exec(lineText)
+  const bulletTask = /^(\s*)([-*+]\s)(\[[ xX\u00a0]\])(\s|$)/.exec(lineText)
   if (bulletTask) {
     const indent = bulletTask[1].length
     return {
@@ -643,7 +643,7 @@ export function planListLine(lineText: string, caretOnLine: boolean): ListLinePl
   }
 
   // 有序任务：1. [ ] / 2. [x]（编号保留 —— 预览里 <ol> 编号同样在 checkbox 前面）
-  const orderedTask = /^(\s*\d+[.)]\s+)(\[[ xX]\])(\s|$)/.exec(lineText)
+  const orderedTask = /^(\s*\d+[.)]\s+)(\[[ xX\u00a0]\])(\s|$)/.exec(lineText)
   if (orderedTask) {
     const markerFrom = orderedTask[1].length
     return {

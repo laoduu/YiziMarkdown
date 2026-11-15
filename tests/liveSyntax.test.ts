@@ -326,6 +326,18 @@ test('planListLine：任务列表——光标不在本行才渲染 checkbox', ()
   assert.deepEqual(planListLine('  - [ ] 子任务', false)?.checkbox, 2)
 })
 
+test('planListLine：输入法 NBSP 也能识别为任务项', () => {
+  const NBSP = '\u00a0'
+  // Linux 输入法会把 ] 后的空格写成 NBSP；实时模式不能因此退化成普通列表
+  const after = planListLine(`- [ ]${NBSP}待办`, false)
+  assert.equal(after?.kind, 'task-bullet')
+  assert.deepEqual(after?.marker, { from: 0, to: 6 })
+
+  const inside = planListLine(`- [${NBSP}] 待办`, false)
+  assert.equal(inside?.kind, 'task-bullet')
+  assert.deepEqual(inside?.marker, { from: 0, to: 6 })
+})
+
 test('planListLine：有序任务保留编号，只隐藏 [ ]', () => {
   const away = planListLine('1. [ ] 有序任务', false)
   assert.equal(away?.kind, 'task-ordered')

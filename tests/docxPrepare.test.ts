@@ -122,3 +122,8 @@ test('DOCX 预处理：代码围栏里的提示块示例不被改写', async () 
   const src = '```markdown\n> [!TIP] 小技巧\n```\n'
   assert.equal(await prepareMarkdownForDocx(src), src)
 })
+
+test('DOCX 预处理：任务 checkbox 后的 NBSP 归一化为普通空格', async () => {
+  const src = `- [ ]\u00a0任务\n- [x]\u00a0完成\n`
+  assert.equal(await prepareMarkdownForDocx(src), '- [ ] 任务\n- [x] 完成\n')
+})
