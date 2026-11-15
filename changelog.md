@@ -2,7 +2,8 @@
 
 ## v0.4.5
 
-> **开发中**：修复 Linux 文件关联。用户向说明见 `docs/changelog/CHANGELOG-V0.4.5.md`。
+> **预发布**（2026-11-15）：Linux 专用修复版。用户向说明见 `docs/changelog/CHANGELOG-V0.4.5.md`。
+> **发布范围**：仅发布 Linux 包（deb / AppImage）；Windows / macOS 保持 v0.4.4 为 Latest，不生成 `latest.json`。
 
 ### Linux 文件关联修复（2026-11-15）
 
