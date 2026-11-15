@@ -399,7 +399,7 @@ export const zh = {
     selectionMoveDown: "下移",
     selectionRemove: "删除",
     selectionDisplayName: "显示名称",
-    selectionEditName: "编辑显示名称",
+    selectionEditName: "修改显示名称",
     selectionRestoreDefault: "恢复默认",
     selectionAdd: "添加",
     selectionSystem: "系统功能",
