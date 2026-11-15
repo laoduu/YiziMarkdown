@@ -1,0 +1,263 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-labelledby="t d">
+<title id="t">YiziMarkdown — 七种模式</title>
+<desc id="d">同一份 Markdown 文档的七种呈现方式。源码、并排、实时、预览四种编辑视图共享 CodeMirror 6 内核，由 F3 循环切换；演示、阅读、禅三种独立场景各有专属入口。</desc>
+<defs>
+  <radialGradient id="hubGlow" cx="50%" cy="50%" r="50%">
+    <stop offset="0" stop-color="#002FA7" stop-opacity=".18"/>
+    <stop offset="1" stop-color="#002FA7" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="sweepG" x1="0" x2="1">
+    <stop offset="0" stop-color="#002FA7" stop-opacity="0"/>
+    <stop offset=".5" stop-color="#002FA7" stop-opacity=".12"/>
+    <stop offset="1" stop-color="#002FA7" stop-opacity="0"/>
+  </linearGradient>
+  <clipPath id="hubClip"><rect x="380" y="300" width="440" height="88" rx="44"/></clipPath>
+  <style>
+    .pop{transform-box:fill-box;transform-origin:center;animation:pop .7s cubic-bezier(.2,1.4,.4,1) both}
+    @keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+    .beat{opacity:0;animation:beat 12s ease-in-out infinite}
+    @keyframes beat{0%,100%{opacity:0}4%{opacity:1}13%{opacity:0}}
+    .pulse{animation:pulse 2.6s ease-in-out infinite}
+    @keyframes pulse{0%,100%{opacity:.35}50%{opacity:.9}}
+    .march{animation:march 1.4s linear infinite}
+    @keyframes march{to{stroke-dashoffset:-18}}
+    .comet{animation:comet 6s linear infinite}
+    @keyframes comet{to{stroke-dashoffset:-175.9}}
+    .sweep{animation:sweep 3.6s ease-in-out infinite}
+    @keyframes sweep{0%{transform:translateX(-90px)}60%,100%{transform:translateX(440px)}}
+    .draw{stroke-dasharray:999;stroke-dashoffset:999;animation:draw 4s ease-in-out infinite}
+    @keyframes draw{0%{stroke-dashoffset:999}50%{stroke-dashoffset:0}100%{stroke-dashoffset:0}}
+    @media (prefers-reduced-motion: reduce){*{animation:none!important}.motion{display:none}}
+  </style>
+</defs>
+
+<rect width="1200" height="675" rx="16" fill="#f7f8fc"/>
+
+<g font-family="Inter, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif">
+  <text x="600" y="60" text-anchor="middle" font-size="30" font-weight="800" fill="#1b2340"><tspan fill="#F37021">Yizi</tspan><tspan fill="#002FA7">Markdown</tspan> · 七种模式</text>
+  <text x="600" y="90" text-anchor="middle" font-size="13" letter-spacing=".5" fill="#5a6480">同一份文档，七种呈现 —— 前四种编辑视图用 F3 循环，后三种独立场景各有入口</text>
+</g>
+
+<!-- 上排容器：编辑视图 -->
+<rect x="60" y="96" width="1080" height="160" rx="14" fill="#ffffff" stroke="#e8ecf4" stroke-width="1.2"/>
+<g font-family="Inter, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif">
+  <text x="84" y="122" font-size="12" font-weight="800" fill="#8a93ad" letter-spacing="1.2">编辑视图 · F3 循环切换</text>
+</g>
+<g class="draw" transform="translate(256 110) scale(0.8)" fill="none" stroke="#F37021" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.8 4.5v3.6h-3.6"/>
+</g>
+<text x="282" y="124" font-size="10" font-weight="700" fill="#F37021" font-family="Inter, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif">F3</text>
+
+<!-- 下排容器：独立场景 -->
+<rect x="60" y="432" width="1080" height="160" rx="14" fill="#ffffff" stroke="#e8ecf4" stroke-width="1.2"/>
+<g font-family="Inter, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif">
+  <text x="84" y="458" font-size="12" font-weight="800" fill="#8a93ad" letter-spacing="1.2">独立场景 · 各自入口</text>
+</g>
+
+<!-- 连线（蚂蚁线） -->
+<g fill="none" stroke="#c7cfe0" stroke-width="1.5" stroke-dasharray="3 5" class="march">
+  <path d="M 206 244 L 420 300"/>
+  <path d="M 469 244 L 520 300"/>
+  <path d="M 732 244 L 680 300"/>
+  <path d="M 995 244 L 780 300"/>
+  <path d="M 420 388 L 249 472"/>
+  <path d="M 600 388 L 599 472"/>
+  <path d="M 780 388 L 949 472"/>
+</g>
+
+<!-- 卡片 1：源码 -->
+<g class="pop" style="animation-delay:0s">
+  <rect x="84" y="136" width="243" height="108" rx="12" fill="#ffffff" stroke="#e8ecf4" stroke-width="1.2"/>
+  <rect x="96" y="136.8" width="219" height="3" rx="1.5" fill="#4f6ef7"/>
+  <circle cx="114" cy="166" r="14" fill="#4f6ef7" fill-opacity=".12"/>
+  <g transform="translate(102 154)" fill="none" stroke="#4f6ef7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 7l-5 5 5 5M15 7l5 5-5 5"/>
+  </g>
+  <g font-family="Inter, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif">
+    <text x="136" y="170" font-size="14" font-weight="700" fill="#1b2340">源码</text>
+    <text x="102" y="202" font-size="11" fill="#5a6480">直接编辑原始 Markdown</text>
+    <text x="102" y="226" font-size="10" font-weight="600" fill="#4f6ef7">CodeMirror 6 · 语法高亮</text>
+  </g>
+</g>
+
+<!-- 卡片 2：并排 -->
+<g class="pop" style="animation-delay:.08s">
+  <rect x="347" y="136" width="243" height="108" rx="12" fill="#ffffff" stroke="#e8ecf4" stroke-width="1.2"/>
+  <rect x="359" y="136.8" width="219" height="3" rx="1.5" fill="#0ea5b7"/>
+  <circle cx="377" cy="166" r="14" fill="#0ea5b7" fill-opacity=".12"/>
+  <g transform="translate(365 154)" fill="none" stroke="#0ea5b7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M9.5 4v16M9.5 10h11"/>
+  </g>
+  <g font-family="Inter, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif">
+    <text x="399" y="170" font-size="14" font-weight="700" fill="#1b2340">并排</text>
+    <text x="365" y="202" font-size="11" fill="#5a6480">左写右对，滚动同步</text>
+    <text x="365" y="226" font-size="10" font-weight="600" fill="#0ea5b7">大纲驱动 · 即时对照</text>
+  </g>
+</g>
+
+<!-- 卡片 3：实时 -->
+<g class="pop" style="animation-delay:.16s">
+  <rect x="610" y="136" width="243" height="108" rx="12" fill="#ffffff" stroke="#e8ecf4" stroke-width="1.2"/>
+  <rect x="622" y="136.8" width="219" height="3" rx="1.5" fill="#8b5cf6"/>
+  <circle cx="640" cy="166" r="14" fill="#8b5cf6" fill-opacity=".12"/>
+  <g transform="translate(628 154)" fill="none" stroke="#8b5cf6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M18 16v4M16 18h4"/>
+  </g>
+  <g font-family="Inter, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif">
+    <text x="662" y="170" font-size="14" font-weight="700" fill="#1b2340">实时</text>
+    <text x="628" y="202" font-size="11" fill="#5a6480">标记自动隐藏，专注内容</text>
+    <text x="628" y="226" font-size="10" font-weight="600" fill="#8b5cf6">4 种显现动画 · 属性面板</text>
+  </g>
+</g>
+
+<!-- 卡片 4：预览 -->
+<g class="pop" style="animation-delay:.24s">
+  <rect x="873" y="136" width="243" height="108" rx="12" fill="#ffffff" stroke="#e8ecf4" stroke-width="1.2"/>
+  <rect x="885" y="136.8" width="219" height="3" rx="1.5" fill="#10b981"/>
+  <circle cx="903" cy="166" r="14" fill="#10b981" fill-opacity=".12"/>
+  <g transform="translate(891 154)" fill="none" stroke="#10b981" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="5.5" y="3.5" width="13" height="17" rx="2"/><path d="M9 9h6M9 12.5h6M9 16h4"/>
+  </g>
+  <g font-family="Inter, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif">
+    <text x="925" y="170" font-size="14" font-weight="700" fill="#1b2340">预览</text>
+    <text x="891" y="202" font-size="11" fill="#5a6480">只看成品，即写即渲染</text>
+    <text x="891" y="226" font-size="10" font-weight="600" fill="#10b981">KaTeX · Mermaid · 图片</text>
+  </g>
+</g>
+
+<!-- 卡片 5：演示 -->
+<g class="pop" style="animation-delay:.32s">
+  <rect x="84" y="472" width="330" height="108" rx="12" fill="#ffffff" stroke="#e8ecf4" stroke-width="1.2"/>
+  <rect x="96" y="472.8" width="306" height="3" rx="1.5" fill="#f59e0b"/>
+  <circle cx="114" cy="502" r="14" fill="#f59e0b" fill-opacity=".12"/>
+  <g transform="translate(102 490)" fill="none" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="5" width="18" height="12" rx="2"/><path d="M10 9l4 3-4 3z"/>
+  </g>
+  <g font-family="Inter, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif">
+    <text x="136" y="506" font-size="14" font-weight="700" fill="#1b2340">演示</text>
+    <text x="102" y="538" font-size="11" fill="#5a6480">文档直接当幻灯片放</text>
+    <text x="102" y="562" font-size="10" font-weight="600" fill="#f59e0b">Ctrl+Alt+P · 14 种版式</text>
+  </g>
+</g>
+
+<!-- 卡片 6：阅读 -->
+<g class="pop" style="animation-delay:.40s">
+  <rect x="434" y="472" width="330" height="108" rx="12" fill="#ffffff" stroke="#e8ecf4" stroke-width="1.2"/>
+  <rect x="446" y="472.8" width="306" height="3" rx="1.5" fill="#4f6ef7"/>
+  <circle cx="464" cy="502" r="14" fill="#4f6ef7" fill-opacity=".12"/>
+  <g transform="translate(452 490)" fill="none" stroke="#4f6ef7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 5h5.5A2.5 2.5 0 0 1 12 7.5V20a2 2 0 0 0-2-2H4z"/><path d="M20 5h-5.5A2.5 2.5 0 0 0 12 7.5V20a2 2 0 0 1 2-2h6z"/>
+  </g>
+  <g font-family="Inter, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif">
+    <text x="486" y="506" font-size="14" font-weight="700" fill="#1b2340">阅读</text>
+    <text x="452" y="538" font-size="11" fill="#5a6480">排成可翻的书，支持 EPUB</text>
+    <text x="452" y="562" font-size="10" font-weight="600" fill="#4f6ef7">Ctrl+Alt+R · 4 种翻页</text>
+  </g>
+</g>
+
+<!-- 卡片 7：禅 -->
+<g class="pop" style="animation-delay:.48s">
+  <rect x="784" y="472" width="330" height="108" rx="12" fill="#ffffff" stroke="#e8ecf4" stroke-width="1.2"/>
+  <rect x="796" y="472.8" width="306" height="3" rx="1.5" fill="#64748b"/>
+  <circle cx="814" cy="502" r="14" fill="#64748b" fill-opacity=".12"/>
+  <g transform="translate(802 490)" fill="none" stroke="#64748b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>
+  </g>
+  <g font-family="Inter, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif">
+    <text x="836" y="506" font-size="14" font-weight="700" fill="#1b2340">禅模式</text>
+    <text x="802" y="538" font-size="11" fill="#5a6480">隐藏界面，专注创作，随呼随出</text>
+    <text x="802" y="562" font-size="10" font-weight="600" fill="#64748b">F9 · 不改布局</text>
+  </g>
+</g>
+
+<!-- 枢纽：同一份文档 -->
+<g class="pop" style="animation-delay:.55s">
+  <rect x="380" y="300" width="440" height="88" rx="44" fill="#ffffff" stroke="#e8ecf4" stroke-width="1.2"/>
+  <g clip-path="url(#hubClip)">
+    <rect class="sweep" x="380" y="300" width="90" height="88" fill="url(#sweepG)"/>
+  </g>
+  <circle cx="600" cy="344" r="44" fill="url(#hubGlow)" class="pulse"/>
+  <circle cx="600" cy="344" r="28" fill="#eef1ff" stroke="#002FA7" stroke-opacity=".35" stroke-width="1.4"/>
+  <circle cx="600" cy="344" r="28" fill="none" stroke="#F37021" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="44 131.9" class="comet"/>
+  <g transform="translate(588 332)" fill="none" stroke="#002FA7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.8 4.5v3.6h-3.6"/>
+  </g>
+  <g font-family="Inter, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif">
+    <text x="410" y="338" font-size="13" font-weight="700" fill="#1b2340">同一份 .md 文档</text>
+    <text x="410" y="356" font-size="10" fill="#8a93ad">markdown-it 渲染 · 即写即显</text>
+    <text x="636" y="338" font-size="13" font-weight="700" fill="#1b2340">CodeMirror 6 内核</text>
+    <text x="636" y="356" font-size="10" fill="#8a93ad">Zustand 状态持久化</text>
+  </g>
+</g>
+
+<!-- 粒子流 -->
+<g class="motion" fill="#F37021" opacity="0">
+  <circle r="5" opacity=".18"/><circle r="2"/>
+  <animateMotion path="M 206 244 L 420 300" dur="1.2s" begin="0.3s" repeatCount="indefinite"/>
+  <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.12;.85;1" dur="1.2s" begin="0.3s" repeatCount="indefinite"/>
+</g>
+<g class="motion" fill="#F37021" opacity="0">
+  <circle r="5" opacity=".18"/><circle r="2"/>
+  <animateMotion path="M 469 244 L 520 300" dur="1.2s" begin="0.6s" repeatCount="indefinite"/>
+  <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.12;.85;1" dur="1.2s" begin="0.6s" repeatCount="indefinite"/>
+</g>
+<g class="motion" fill="#F37021" opacity="0">
+  <circle r="5" opacity=".18"/><circle r="2"/>
+  <animateMotion path="M 732 244 L 680 300" dur="1.2s" begin="0.9s" repeatCount="indefinite"/>
+  <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.12;.85;1" dur="1.2s" begin="0.9s" repeatCount="indefinite"/>
+</g>
+<g class="motion" fill="#F37021" opacity="0">
+  <circle r="5" opacity=".18"/><circle r="2"/>
+  <animateMotion path="M 995 244 L 780 300" dur="1.2s" begin="1.2s" repeatCount="indefinite"/>
+  <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.12;.85;1" dur="1.2s" begin="1.2s" repeatCount="indefinite"/>
+</g>
+<g class="motion" fill="#002FA7" opacity="0">
+  <circle r="5" opacity=".18"/><circle r="2"/>
+  <animateMotion path="M 420 388 L 249 472" dur="1.6s" begin="1.5s" repeatCount="indefinite"/>
+  <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.12;.85;1" dur="1.6s" begin="1.5s" repeatCount="indefinite"/>
+</g>
+<g class="motion" fill="#002FA7" opacity="0">
+  <circle r="5" opacity=".18"/><circle r="2"/>
+  <animateMotion path="M 600 388 L 599 472" dur="1.6s" begin="1.8s" repeatCount="indefinite"/>
+  <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.12;.85;1" dur="1.6s" begin="1.8s" repeatCount="indefinite"/>
+</g>
+<g class="motion" fill="#002FA7" opacity="0">
+  <circle r="5" opacity=".18"/><circle r="2"/>
+  <animateMotion path="M 780 388 L 949 472" dur="1.6s" begin="2.1s" repeatCount="indefinite"/>
+  <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.12;.85;1" dur="1.6s" begin="2.1s" repeatCount="indefinite"/>
+</g>
+
+<!-- 叙事点亮层 -->
+<g class="beat" style="animation-delay:0s" fill="none" stroke="#F37021">
+  <rect x="84" y="136" width="243" height="108" rx="12" stroke-width="6" stroke-opacity=".16"/>
+  <rect x="84" y="136" width="243" height="108" rx="12" stroke-width="1.6"/>
+</g>
+<g class="beat" style="animation-delay:1.5s" fill="none" stroke="#002FA7">
+  <rect x="347" y="136" width="243" height="108" rx="12" stroke-width="6" stroke-opacity=".16"/>
+  <rect x="347" y="136" width="243" height="108" rx="12" stroke-width="1.6"/>
+</g>
+<g class="beat" style="animation-delay:3s" fill="none" stroke="#F37021">
+  <rect x="610" y="136" width="243" height="108" rx="12" stroke-width="6" stroke-opacity=".16"/>
+  <rect x="610" y="136" width="243" height="108" rx="12" stroke-width="1.6"/>
+</g>
+<g class="beat" style="animation-delay:4.5s" fill="none" stroke="#002FA7">
+  <rect x="873" y="136" width="243" height="108" rx="12" stroke-width="6" stroke-opacity=".16"/>
+  <rect x="873" y="136" width="243" height="108" rx="12" stroke-width="1.6"/>
+</g>
+<g class="beat" style="animation-delay:6s" fill="none" stroke="#F37021">
+  <rect x="84" y="472" width="330" height="108" rx="12" stroke-width="6" stroke-opacity=".16"/>
+  <rect x="84" y="472" width="330" height="108" rx="12" stroke-width="1.6"/>
+</g>
+<g class="beat" style="animation-delay:7.5s" fill="none" stroke="#002FA7">
+  <rect x="434" y="472" width="330" height="108" rx="12" stroke-width="6" stroke-opacity=".16"/>
+  <rect x="434" y="472" width="330" height="108" rx="12" stroke-width="1.6"/>
+</g>
+<g class="beat" style="animation-delay:9s" fill="none" stroke="#F37021">
+  <rect x="784" y="472" width="330" height="108" rx="12" stroke-width="6" stroke-opacity=".16"/>
+  <rect x="784" y="472" width="330" height="108" rx="12" stroke-width="1.6"/>
+</g>
+
+<g font-family="Inter, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif">
+  <text x="60" y="622" font-size="10.5" fill="#8a93ad">F3 在源码 / 并排 / 实时 / 预览间循环 · Ctrl+Alt+P 演示 · Ctrl+Alt+R 阅读 · F9 禅模式</text>
+</g>
+</svg>

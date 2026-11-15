@@ -29,6 +29,7 @@
     var LINKS = [
         { label: '首页', page: HOME },
         { label: '功能', hash: 'features' },
+        { label: '七种模式', hash: 'modes' },
         { label: '演示模式', hash: 'slideshow' },
         { label: 'AI 助手', hash: 'ai' },
         { label: '主题', hash: 'themes' },

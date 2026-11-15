@@ -371,6 +371,49 @@
             font-size: 13px; color: var(--blue); font-weight: 600;
         }
 
+        /* ===== SEVEN MODES ===== */
+        .modes {
+            padding: 100px clamp(16px, 4vw, 32px);
+            max-width: 1200px; margin: 0 auto;
+        }
+        .modes-visual {
+            max-width: 1100px; margin: 0 auto 36px;
+        }
+        .modes-visual img {
+            display: block; width: 100%; height: auto;
+            border-radius: 16px; border: 1px solid #eef0f4;
+            background: var(--white);
+            box-shadow: 0 10px 30px rgba(0, 47, 167, 0.05);
+        }
+        .modes-grid {
+            max-width: 1100px; margin: 0 auto;
+            display: grid; grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+        }
+        .mode-item {
+            display: flex; align-items: flex-start; gap: 14px;
+            padding: 18px 20px; border-radius: 14px;
+            border: 1px solid #eef0f4; background: var(--white);
+        }
+        .mode-index {
+            flex: 0 0 38px; width: 38px; height: 38px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 800; color: var(--blue);
+            background: rgba(0, 47, 167, 0.07);
+        }
+        .mode-body { min-width: 0; }
+        .mode-head {
+            display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+            margin-bottom: 4px;
+        }
+        .mode-head strong { font-size: 15px; color: var(--dark); font-weight: 700; }
+        .mode-key {
+            font-size: 11px; font-weight: 600; color: var(--blue);
+            background: var(--light); border-radius: 5px; padding: 2px 6px;
+            white-space: nowrap;
+        }
+        .mode-item p { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--gray); }
+
         /* ===== THEME SHOWCASE — Magazine Stack ===== */
         .themes {
             padding: 100px clamp(16px, 4vw, 32px);
@@ -911,6 +954,7 @@
         }
         @media (max-width: 900px) {
             .features-grid { grid-template-columns: repeat(2, 1fr); }
+            .modes-grid { grid-template-columns: 1fr; }
             .shortcut-grid { grid-template-columns: repeat(2, 1fr); }
             .theme-stage { grid-template-columns: 1fr; gap: 32px; }
             .theme-stack { max-width: 560px; margin: 0 auto; }
