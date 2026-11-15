@@ -28,6 +28,12 @@
 - 新增 `tests/selectionActions.test.ts`：默认配置、非法项清理、去重、排序、名称回退、缺失技能。
 - `npx tsc --noEmit`、`npm test` 554 通过、`npm run build`、`check-i18n --strict` 通过。
 
+### 界面细节修复（2026-11-15）
+
+- **云端标签悬浮提示** — 云端文档的标题改为显示 `☁️/yizimarkdown/...` 远程路径，不再显示本地缓存绝对路径；本地文档仍显示本地路径，便于区分。新增 `remoteTooltipPath` 纯函数与单测。
+- **AI 助手 Skill 下拉列表** — 弹层宽度限制在面板内（`max-width: calc(100% - 16px)`），窄面板时右侧保留余量，不再贴着屏幕边缘。
+- **Skill 管理列表** — 图标与技能名称同一行对齐，ID 缩进在名称下方，不再让图标相对两行文本垂直居中。
+
 ### Skill 管理 + 模板 / Skill 共用 Markdown 预览（2026-11-15）
 
 **需求**
