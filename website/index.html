@@ -430,6 +430,9 @@
                         <li><span class="changelog-tag improve">优化</span><strong>PPTX 兼容性</strong>：页底预留余量并自动压缩到最低 14pt；放不下的页明确列入「超出兼容上限」；长代码行按栏宽自动折行</li>
                         <li><span class="changelog-tag fix">修复</span><strong>云端标签悬浮提示</strong>：改为显示 <code>☁️/yizimarkdown/...</code> 云端路径，不再显示本地缓存绝对路径；AI 助手技能下拉也不再贴屏幕右缘</li>
                         <li><span class="changelog-tag fix">修复</span><strong>跨平台与界面细节</strong>：Windows 程序路径前缀、Linux 安装版名称 / 文件关联、AI 面板拖动滚动条错位、阅读提示块样式、任务列表回车、公式源码、幻灯片间距等</li>
+                        <li><span class="changelog-tag fix">修复</span><strong>PPTX 导出范围不记住</strong>：全部页 / 当前页 / 自定义起止页会持久化，重新打开导出弹窗仍保留上次选择</li>
+                        <li><span class="changelog-tag fix">修复</span><strong>演示模式代码块注释误判标题</strong>：代码块里的 <code>#</code> 注释不再影响页标题和目录层级，标题级别按真实 Markdown 标题识别</li>
+                        <li><span class="changelog-tag fix">修复</span><strong>阅读模式任务列表多圆点</strong>：顶层任务列表去掉圆点并与正文对齐，嵌套任务列表保留缩进，勾选框与文本同行</li>
                         <li><span class="changelog-tag platform">其他</span><strong>升级说明</strong>：划词助手配置自动补齐，内置技能改动随升级保留；WebDAV 仍使用 TLS + 系统凭据库，暂未提供端到端加密</li>
                     </ul>
                 </div>
