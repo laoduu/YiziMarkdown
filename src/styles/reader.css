@@ -197,6 +197,45 @@
 .reader-content li { margin: 0.32em 0; }
 .reader-content li > ul,
 .reader-content li > ol { margin: 0.25em 0 0.4em; }
+
+/* 任务列表：与编辑器共用 markdown-it-task-lists 的 label 结构。
+   阅读模式的 ul 默认带圆点且 reader.css 后加载，必须在这里显式关掉；
+   顶层去掉列表缩进与正文对齐，嵌套任务列表保留一级缩进。 */
+.reader-content .contains-task-list {
+  list-style: none;
+  padding-left: 0;
+}
+.reader-content .task-list-item {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  column-gap: 0.5em;
+  row-gap: 0.15em;
+  margin-left: 0;
+  line-height: inherit;
+}
+.reader-content .task-list-item > ul,
+.reader-content .task-list-item > ol {
+  flex: 1 0 100%;
+  margin: 0.15em 0 0;
+  padding-left: 1.45em;
+}
+.reader-content .task-list-item > .contains-task-list {
+  padding-left: 1.45em;
+  list-style: none;
+}
+.reader-content .task-list-item > label {
+  min-width: 0;
+}
+.reader-content .task-list-item-checkbox {
+  appearance: auto;
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  accent-color: var(--reader-accent);
+  margin: 0.15em 0 0;
+}
 .reader-content blockquote {
   margin: 0 0 1em;
   padding: 0.15em 0 0.15em 0.9em;

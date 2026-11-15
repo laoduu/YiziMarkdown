@@ -51,8 +51,6 @@ interface Props {
   onJumpToSlide?: (index: number) => void
 }
 
-type RangeMode = 'all' | 'current' | 'custom'
-
 interface Progress {
   pct: number
   text: string
@@ -80,6 +78,9 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
   const includeNotes = useSettingsStore((s) => s.pptxIncludeNotes)
   const includeFooter = useSettingsStore((s) => s.pptxIncludeFooter)
   const overflowMode = useSettingsStore((s) => s.pptxOverflowMode)
+  const rangeMode = useSettingsStore((s) => s.pptxRangeMode)
+  const customStart = useSettingsStore((s) => s.pptxRangeStart)
+  const customEnd = useSettingsStore((s) => s.pptxRangeEnd)
   const setField = useSettingsStore((s) => s.setField)
   const slideFontFamily = useSettingsStore((s) => s.slideFontFamily)
   const slideFontWeight = useSettingsStore((s) => s.slideFontWeight)
@@ -94,9 +95,6 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
     [source.content, source.title],
   )
 
-  const [rangeMode, setRangeMode] = useState<RangeMode>('all')
-  const [customStart, setCustomStart] = useState(1)
-  const [customEnd, setCustomEnd] = useState(Math.max(1, totalSlides))
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState<Progress | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -111,12 +109,9 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
 
   const hasCurrent = typeof source.currentSlide === 'number'
 
-  // 每次打开重置
+  // 每次打开重置运行态；导出范围来自设置，跨打开保留
   useEffect(() => {
     if (!open) return
-    setRangeMode('all')
-    setCustomStart(1)
-    setCustomEnd(Math.max(1, totalSlides))
     setBusy(false)
     setProgress(null)
     setError(null)
@@ -127,7 +122,22 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
     setDetected(null)
     setExportFontScale(slideFontScale)
     abortRef.current = null
-  }, [open, totalSlides, slideFontScale])
+  }, [open, slideFontScale])
+
+  // 自定义范围按当前总页数收敛（文档换页数时不让旧范围越界）
+  useEffect(() => {
+    if (!open) return
+    if (!hasCurrent && rangeMode === 'current') {
+      setField('pptxRangeMode', 'all')
+      return
+    }
+    const maxPage = Math.max(1, totalSlides)
+    const start = Math.min(maxPage, Math.max(1, Math.trunc(customStart)))
+    const endRaw = customEnd >= 1 ? Math.trunc(customEnd) : maxPage
+    const end = Math.min(maxPage, Math.max(1, endRaw))
+    if (start !== customStart) setField('pptxRangeStart', start)
+    if (end !== customEnd) setField('pptxRangeEnd', end)
+  }, [open, hasCurrent, rangeMode, totalSlides, customStart, customEnd, setField])
 
   // 任何影响版式的选项变化后，旧检测结果立即失效
   useEffect(() => {
@@ -163,7 +173,8 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
       range = { start: source.currentSlide, end: source.currentSlide }
     } else if (rangeMode === 'custom') {
       const s = Math.max(1, Math.min(totalSlides, customStart))
-      const e = Math.max(1, Math.min(totalSlides, customEnd))
+      const rawEnd = customEnd >= 1 ? customEnd : totalSlides
+      const e = Math.max(1, Math.min(totalSlides, rawEnd))
       range = { start: Math.min(s, e) - 1, end: Math.max(s, e) - 1 }
     }
     return range
@@ -376,17 +387,17 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
             <div className="font-semibold mb-1.5">{t('pptxExport.range')}</div>
             <div className="flex flex-wrap items-center gap-3">
               <label className="flex items-center gap-1.5 cursor-pointer">
-                <input type="radio" checked={rangeMode === 'all'} onChange={() => setRangeMode('all')} />
+                <input type="radio" checked={rangeMode === 'all'} onChange={() => setField('pptxRangeMode', 'all')} />
                 {t('pptxExport.rangeAll', { n: totalSlides })}
               </label>
               {hasCurrent && (
                 <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="radio" checked={rangeMode === 'current'} onChange={() => setRangeMode('current')} />
+                  <input type="radio" checked={rangeMode === 'current'} onChange={() => setField('pptxRangeMode', 'current')} />
                   {t('pptxExport.rangeCurrent', { n: (source.currentSlide || 0) + 1 })}
                 </label>
               )}
               <label className="flex items-center gap-1.5 cursor-pointer">
-                <input type="radio" checked={rangeMode === 'custom'} onChange={() => setRangeMode('custom')} />
+                <input type="radio" checked={rangeMode === 'custom'} onChange={() => setField('pptxRangeMode', 'custom')} />
                 {t('pptxExport.rangeCustom')}
               </label>
               {rangeMode === 'custom' && (
@@ -396,7 +407,7 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
                     min={1}
                     max={totalSlides}
                     value={customStart}
-                    onChange={(e) => setCustomStart(Number(e.target.value) || 1)}
+                    onChange={(e) => setField('pptxRangeStart', Math.max(1, Number(e.target.value) || 1))}
                     className="w-14 px-1.5 py-0.5 rounded border border-[var(--editor-border)] bg-[var(--editor-bg)]"
                   />
                   <span className="opacity-60">–</span>
@@ -404,8 +415,8 @@ export default function PptxExportDialog({ open, onClose, source, onPreview, onJ
                     type="number"
                     min={1}
                     max={totalSlides}
-                    value={customEnd}
-                    onChange={(e) => setCustomEnd(Number(e.target.value) || 1)}
+                    value={customEnd >= 1 ? customEnd : Math.max(1, totalSlides)}
+                    onChange={(e) => setField('pptxRangeEnd', Math.max(0, Number(e.target.value) || 0))}
                     className="w-14 px-1.5 py-0.5 rounded border border-[var(--editor-border)] bg-[var(--editor-bg)]"
                   />
                 </span>

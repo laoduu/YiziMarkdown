@@ -205,6 +205,12 @@ export interface SettingsState {
   pptxIncludeFooter: boolean
   /** 内容超页处理：warn = 照常导出并列出页码；shrink = 自动回缩字号重排 */
   pptxOverflowMode: 'warn' | 'shrink'
+  /** PPTX 导出范围：all = 全部；current = 当前页；custom = 自定义起止页 */
+  pptxRangeMode: 'all' | 'current' | 'custom'
+  /** 自定义范围起始页（1-based） */
+  pptxRangeStart: number
+  /** 自定义范围结束页（1-based）；0 = 未设置，按总页数处理 */
+  pptxRangeEnd: number
 
   // DOCX 导出（v0.4.4）：弹窗里的三个勾选项记住上次选择
   /** 导出主题色（标题 / 表头 / 代码高亮） */
@@ -340,6 +346,10 @@ export const useSettingsStore = create<SettingsState>()(
       pptxIncludeNotes: true,
       pptxIncludeFooter: true,
       pptxOverflowMode: 'warn',
+      // PPTX 导出范围（v0.4.4）：默认全部页；自定义结束页 0 = 按总页数
+      pptxRangeMode: 'all',
+      pptxRangeStart: 1,
+      pptxRangeEnd: 0,
 
       // DOCX 导出（v0.4.4）：三个勾选项默认开
       docxThemeColors: true,
@@ -387,7 +397,8 @@ export const useSettingsStore = create<SettingsState>()(
       // v23: 导出弹窗记住勾选 —— 新增 docxThemeColors / docxFollowPreview /
       //      docxFollowPreviewFont / pluginExportOptions（默认空）
       // v24: 划词助手可配置 —— 新增 selectionActions（默认旧版 6 个按钮）
-      version: 24,
+      // v25: PPTX 导出范围持久化 —— 新增 pptxRangeMode / pptxRangeStart / pptxRangeEnd
+      version: 25,
       migrate: (persisted: unknown) => {
         // 自动迁移旧字体栈到 MiSans 方案
         const oldFont = "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
@@ -480,6 +491,12 @@ export const useSettingsStore = create<SettingsState>()(
           // v24：划词助手。存量存档没有该字段 ⇒ 默认旧版 6 个按钮；
           // 已有配置则清掉非法 / 重复项（空的 [] 是用户主动删空，必须保留）。
           state.selectionActions = normalizeSelectionActions(state.selectionActions)
+          // v25：PPTX 导出范围。旧存档没有 → 全部页；自定义起止页做整数与边界收敛。
+          if (state.pptxRangeMode !== 'all' && state.pptxRangeMode !== 'current' && state.pptxRangeMode !== 'custom') {
+            state.pptxRangeMode = 'all'
+          }
+          state.pptxRangeStart = Math.trunc(clampNumber(state.pptxRangeStart, 1, 9999, 1))
+          state.pptxRangeEnd = Math.trunc(clampNumber(state.pptxRangeEnd, 0, 9999, 0))
           // v14：PPTX 导出。存量存档没有这四个键 ⇒ 补默认值。
           // 超页策略只认枚举值（手改 localStorage 写入非法值会让分段按钮全灭）。
           if (typeof state.pptxExportHintSeen !== 'boolean') state.pptxExportHintSeen = false
