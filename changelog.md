@@ -1,8 +1,30 @@
 # YiziMarkdown 开发日志
 
+## v0.4.5
+
+> **开发中**：修复 Linux 文件关联。用户向说明见 `docs/changelog/CHANGELOG-V0.4.5.md`。
+
+### Linux 文件关联修复（2026-11-15）
+
+**问题**
+- elementary OS 8.1 上双击 `.md` 或在文件管理器里选「用 YiziMarkdown 打开」，只启动应用，不打开选中的文档。
+- 下载 v0.4.4 的 deb / AppImage 后解包检查：`usr/share/applications/YiziMarkdown.desktop` 的 `Exec=yizimarkdown` 没有带 `%F` / `%U` 文件参数，文件管理器没有可传路径的位置，只能启动应用。
+- `linux_file_assoc` 的 `xdg-mime default` 本身没有写错；问题出在桌面条目的启动命令。
+
+**实现**
+- 新增自定义桌面条目模板 `src-tauri/linux/yizimarkdown.desktop`，`Exec={{exec}} %F`，保留 `MimeType={{mime_type}}`、`StartupWMClass`、图标与分类。
+- `tauri.conf.json` 增加 `bundle.linux.deb.desktopTemplate`。Tauri 的 AppImage 打包复用 deb 的 `generate_data`，因此 deb 与 AppImage 会使用同一份带 `%F` 的桌面条目。
+- AppImage 的 AppRun 明确支持 `%f` / `%F` / `%u` / `%U`；即使集成工具改写了 `Exec`，未消费的参数也会追加给应用进程。
+- 命令行参数统一改走 `cli_arg_to_open_path`：支持 `file://` URI、`localhost` 前缀与百分号解码（中文 / 空格路径），拒绝以 `-` 开头的应用选项和非文件协议。
+- 启动参数与 `tauri-plugin-single-instance` 第二实例共用同一套解析，已运行时再次双击文档也会打开文件。
+- 新增 Rust 单测覆盖本地路径、大小写扩展名、`file://` 中文 / 空格解码、非法转义、非文件协议与选项过滤。
+
+**发布注意**
+- 桌面条目属于安装包内容，必须重新安装新版本才生效；升级后若关联仍未刷新，在设置里关闭再打开一次文件关联即可。
+
 ## v0.4.4
 
-> **开发中**：0.4.3 发布后的修复与新功能，随下一版本发布。用户向说明见 `docs/changelog/CHANGELOG-V0.4.4.md`。
+> **已发布**（2026-11-15）：发布 tag `v0.4.4`。用户向说明见 `docs/changelog/CHANGELOG-V0.4.4.md`。
 
 ### 导出范围 / 演示代码块 / 阅读任务列表修复（2026-11-15）
 

@@ -1,0 +1,17 @@
+[Desktop Entry]
+Categories={{categories}}
+{{#if comment}}
+Comment={{comment}}
+{{/if}}
+# %F is mandatory: without a file field code the file manager only launches
+# the app and drops the path, so double-click / "Open with" opens an empty
+# window. AppImage's AppRun also forwards %F arguments to the app.
+Exec={{exec}} %F
+StartupWMClass=yizimarkdown
+Icon={{icon}}
+Name={{name}}
+Terminal=false
+Type=Application
+{{#if mime_type}}
+MimeType={{mime_type}}
+{{/if}}

@@ -178,6 +178,22 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
 
+      - name: Verify Linux desktop entry forwards files
+        if: matrix.platform == 'ubuntu-22.04'
+        shell: bash
+        run: |
+          set -euo pipefail
+          deb=$(ls src-tauri/target/release/bundle/deb/*.deb)
+          tmp=$(mktemp -d)
+          dpkg-deb -x "$deb" "$tmp"
+          desktop="$tmp/usr/share/applications/YiziMarkdown.desktop"
+          if ! grep -Eq '^Exec=.*%[fFuU]' "$desktop"; then
+            echo "::error::deb 的桌面条目缺少文件参数（%F），双击 / 右键打开只会启动应用"
+            cat "$desktop"
+            exit 1
+          fi
+          echo "::notice::Linux 桌面条目已携带文件参数：$(grep '^Exec=' "$desktop")"
+
       # 便携版 + 源码包：仓库自定义产物，tauri-action 不会生成
       # 必须 pwsh（PS5.1 会按 ANSI 读脚本里的中文注释，见 MEMORY 硬约束）
       - name: Assemble portable + source zip

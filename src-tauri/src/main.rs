@@ -2097,15 +2097,77 @@ struct AppState {
 
 /// 解析命令行参数，提取要打开的文件
 fn parse_cli_args() -> Option<String> {
-    let args: Vec<String> = std::env::args().collect();
-    // args[0] 是 exe 路径，args[1] 是第一个参数（文件路径）
-    for arg in args.iter().skip(1) {
-        let lower = arg.to_lowercase();
-        if lower.ends_with(".md") || lower.ends_with(".markdown") || lower.ends_with(".txt") || lower.ends_with(".epub") {
-            return Some(arg.clone());
-        }
+    std::env::args()
+        .skip(1)
+        .find_map(|arg| cli_arg_to_open_path(&arg))
+}
+
+/// 命令行/文件管理器传入的参数 → 本地文件路径。
+///
+/// 文件管理器大多按 `%F` 传本地路径，但 `%U` 或 `xdg-open` 可能传
+/// `file:///home/me/文档.md` 这类 URI；这里统一解码百分号并去掉 `localhost`。
+/// 以 `-` 开头的参数是应用自己的选项（如 `--no-sandbox`），不当作文件。
+fn cli_arg_to_open_path(arg: &str) -> Option<String> {
+    let trimmed = arg.trim();
+    if trimmed.is_empty() || trimmed.starts_with('-') {
+        return None;
     }
-    None
+
+    #[allow(unused_mut)]
+    let mut path = if let Some(rest) = trimmed.strip_prefix("file://") {
+        let rest = rest.strip_prefix("localhost").unwrap_or(rest);
+        percent_decode(rest)
+    } else if trimmed.contains("://") {
+        // http(s) / custom scheme 不是本地文档
+        return None;
+    } else {
+        trimmed.to_string()
+    };
+
+    // Windows 的 file URI 是 file:///C:/...，上面会得到 /C:/...；去掉多余的根斜杠。
+    #[cfg(target_os = "windows")]
+    if path.starts_with('/') && path.as_bytes().get(2) == Some(&b':') {
+        path.remove(0);
+    }
+
+    let lower = path.to_lowercase();
+    if lower.ends_with(".md")
+        || lower.ends_with(".markdown")
+        || lower.ends_with(".txt")
+        || lower.ends_with(".epub")
+    {
+        Some(path)
+    } else {
+        None
+    }
+}
+
+/// 解码 URI 里的 `%XX`（UTF-8）。非法转义原样保留，避免把一个正常路径改坏。
+fn percent_decode(input: &str) -> String {
+    let bytes = input.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            if let (Some(high), Some(low)) = (hex_digit(bytes[i + 1]), hex_digit(bytes[i + 2])) {
+                out.push(high << 4 | low);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+fn hex_digit(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
 }
 
 /// 获取启动时通过命令行传入的文件路径
@@ -2565,10 +2627,10 @@ fn main() {
         ])
                 .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             // 从命令行参数中提取文件路径，通过 eval 直接调用前端全局函数
-            let file_path = args.iter().skip(1).find(|a| {
-                let lower = a.to_lowercase();
-                lower.ends_with(".md") || lower.ends_with(".markdown") || lower.ends_with(".txt") || lower.ends_with(".epub")
-            }).cloned();
+            let file_path = args
+                .iter()
+                .skip(1)
+                .find_map(|a| cli_arg_to_open_path(a));
 
             if let Some(path) = file_path {
                 // JSON 序列化路径，自动处理所有特殊字符转义
@@ -3160,5 +3222,40 @@ mod tests {
         assert!(!ids.contains(&"gone"), "被删除的内置技能不能在升级后复活");
         assert!(!copy.contains(&"gone.md".to_string()));
         assert_eq!(merged["hiddenIds"], serde_json::json!(["gone"]));
+    }
+
+    #[test]
+    fn cli_open_path_accepts_document_paths_and_skips_options() {
+        assert_eq!(cli_arg_to_open_path("notes.md").as_deref(), Some("notes.md"));
+        assert_eq!(
+            cli_arg_to_open_path("C:\\docs\\book.epub").as_deref(),
+            Some("C:\\docs\\book.epub")
+        );
+        assert_eq!(cli_arg_to_open_path("README.MD").as_deref(), Some("README.MD"));
+        assert_eq!(cli_arg_to_open_path("--no-sandbox"), None);
+        assert_eq!(cli_arg_to_open_path("photo.png"), None);
+        assert_eq!(cli_arg_to_open_path(""), None);
+    }
+
+    #[test]
+    fn cli_open_path_decodes_file_uris() {
+        // 文件管理器用 %U / xdg-open 时可能传 URI，空格与中文都是百分号编码
+        assert_eq!(
+            cli_arg_to_open_path("file:///home/me/%E6%96%87%E6%A1%A3.md").as_deref(),
+            Some("/home/me/文档.md")
+        );
+        assert_eq!(
+            cli_arg_to_open_path("file://localhost/tmp/a%20b.md").as_deref(),
+            Some("/tmp/a b.md")
+        );
+        // 非文件协议不参与文件关联
+        assert_eq!(cli_arg_to_open_path("https://example.com/a.md"), None);
+    }
+
+    #[test]
+    fn percent_decode_keeps_invalid_escapes() {
+        assert_eq!(percent_decode("100%25"), "100%");
+        assert_eq!(percent_decode("%ZZ"), "%ZZ");
+        assert_eq!(percent_decode("%4"), "%4");
     }
 }
