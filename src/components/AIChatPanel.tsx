@@ -721,7 +721,7 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
           <div
             onMouseEnter={() => { clearTimeout(skillMenuTimer.current!) }}
             onMouseLeave={() => { skillMenuTimer.current = setTimeout(() => setSkillMenuOpen(false), 150) }}
-            className="absolute bottom-full left-2 mb-1 w-[300px] max-h-[280px] overflow-y-auto rounded-lg border border-[var(--editor-border)] bg-[var(--editor-surface)] shadow-xl z-10"
+            className="absolute bottom-full left-2 mb-1 w-[300px] max-w-[calc(100%-16px)] max-h-[280px] overflow-y-auto rounded-lg border border-[var(--editor-border)] bg-[var(--editor-surface)] shadow-xl z-10"
           >
             {skills.length === 0 ? (
               <p className="px-3 py-3 text-[0.75rem] text-[var(--sidebar-text)]">{t('ai.skillEmpty')}</p>
