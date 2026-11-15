@@ -4,18 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>技能（Skill）规范 - YiziMarkdown 文档</title>
-    <meta name="description" content="YiziMarkdown 技能（Skill）规范：skills.json 字段与逗号规则、提示词编写技巧、自定义技能创建步骤、存储位置与版本更新覆盖机制，以及修改后不生效等常见问题。">
-    <meta name="keywords" content="YiziMarkdown,Skill,技能,自定义技能,skills.json,提示词,AI助手">
+    <meta name="description" content="YiziMarkdown 技能（Skill）规范：skills.json 字段与提示词编写技巧、图标选择、可视化 Skill 管理、自定义技能创建步骤、存储位置与升级保留策略，以及常见问题。">
+    <meta name="keywords" content="YiziMarkdown,Skill,技能,自定义技能,skills.json,提示词,图标,AI助手">
     <meta name="author" content="YiziPaper">
     <meta name="robots" content="index, follow">
     <meta name="docs-src" content="src-tauri/skill-guide.md">
-    <meta name="docs-hash" content="062b7185429aa0fef35097c3dd77a7dcf4e494885322b6176a4467b0e984f91e">
+    <meta name="docs-hash" content="a195f9aff89bb2037b21c39def4ba12e457bf32a2f91caeb94592406d456e920">
     <link rel="canonical" href="https://md.yizigpt.com/skill-spec.html">
 
     <!-- Open Graph -->
     <meta property="og:type" content="article">
     <meta property="og:title" content="技能（Skill）规范 - YiziMarkdown 文档">
-    <meta property="og:description" content="YiziMarkdown 技能（Skill）规范：skills.json 字段与逗号规则、提示词编写技巧、自定义技能创建步骤、存储位置与版本更新覆盖机制，以及修改后不生效等常见问题。">
+    <meta property="og:description" content="YiziMarkdown 技能（Skill）规范：skills.json 字段与提示词编写技巧、图标选择、可视化 Skill 管理、自定义技能创建步骤、存储位置与升级保留策略，以及常见问题。">
     <meta property="og:url" content="https://md.yizigpt.com/skill-spec.html">
     <meta property="og:site_name" content="YiziMarkdown">
     <meta property="og:locale" content="zh_CN">
@@ -70,7 +70,7 @@
         <h1 class="help-title">技能（Skill）规范</h1>
         <p class="docs-subtitle">skills.json 字段、提示词写法与自定义技能的完整说明。</p>
         
-        <div class="docs-meta"><span>适用版本 v0.4.3</span><span>用户目录可改</span></div>
+        <div class="docs-meta"><span>适用版本 v0.4.4</span><span>设置内可管理</span></div>
         <div class="help-search">
             <svg class="help-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
             <input type="text" class="help-search-input" id="helpSearch" placeholder="搜索技能配置，例如「needsDoc」" autocomplete="off">
@@ -89,7 +89,7 @@
 
     <!-- 正文 -->
     <main class="help-content docs-content">
-<section class="help-section" id="什么是-skill" data-icon="zap" data-kw="什么是 Skill？ Skill（技能）是 YiziMarkdown AI 对话面板中的预设提示词模板。选择一个 Skill 后，AI 会按照该技能的提示词执行特定任务，例如： 演示稿提炼 — 将文档转为幻灯片格式的 Markdown 文档摘要 — 快速总结文档核心内容 润色改写 — 优化文字表达 全文翻译 — 翻译文档内容 Markdown格式化 — 把任意文本整理成规范的 Markdown 文档（只调格式，不改文字） 每个 Skill 由两部分组成： skills.json — 技能清单（元数据：名称、描述、是">
+<section class="help-section" id="什么是-skill" data-icon="zap" data-kw="什么是 Skill？ Skill（技能）是 YiziMarkdown AI 对话面板中的预设提示词模板。选择一个 Skill 后，AI 会按照该技能的提示词执行特定任务，例如： 演示稿提炼 — 将文档转为幻灯片格式的 Markdown 文档摘要 — 快速总结文档核心内容 润色改写 — 优化文字表达 全文翻译 — 翻译文档内容 Markdown格式化 — 把任意文本整理成规范的 Markdown 文档（只调格式，不改文字） 每个 Skill 由两部分组成： skills.json — 技能清单（元数据：名称、图标、描">
 <h2><a class="anchor" href="#什么是-skill">#</a>什么是 Skill？</h2>
 <p>Skill（技能）是 YiziMarkdown AI 对话面板中的预设提示词模板。选择一个 Skill 后，AI 会按照该技能的提示词执行特定任务，例如：</p>
 <ul>
@@ -101,13 +101,26 @@
 </ul>
 <p>每个 Skill 由两部分组成：</p>
 <ol>
-<li><strong><code>skills.json</code></strong> — 技能清单（元数据：名称、描述、是否需要文档等）</li>
+<li><strong><code>skills.json</code></strong> — 技能清单（元数据：名称、图标、描述、是否需要文档等）</li>
 <li><strong><code>&lt;file&gt;.md</code></strong> — 提示词正文（告诉 AI 具体如何执行）</li>
 </ol>
 
 </section>
 
-<section class="help-section" id="存储位置" data-icon="folder-open" data-kw="存储位置 Skill 文件存储在用户文档目录下： 系统 路径 Windows C:\Users\&lt;用户名&gt;\Documents\yizimarkdown\skills\ macOS /Users/&lt;用户名&gt;/Documents/yizimarkdown/skills/ 目录结构： yizimarkdown/ └── skills/ ├── skills.json ← 技能清单 ├── slides-outline.md ← 演示稿提炼提示词 ├── doc-summary.md ← 文档摘要提示词 ├── poli">
+<section class="help-section" id="可视化-skill-管理v044" data-icon="folder-open" data-kw="可视化 Skill 管理（v0.4.4） 打开 设置 → Skill 管理 可直接新增、编辑、删除技能，不需要手动改 JSON： 修改名称、ID、图标、简介、详细说明与是否需要当前文档 提供 Markdown 提示词编辑与预览 保存后 AI 面板立即刷新 改过或删除的内置技能会记录为自定义 / 隐藏状态，应用升级时保留用户版本 手动编辑 skills.json 仍然可用，适合批量维护或导入已有技能。">
+<h2><a class="anchor" href="#可视化-skill-管理v044">#</a>可视化 Skill 管理（v0.4.4）</h2>
+<p>打开 <strong>设置 → Skill 管理</strong> 可直接新增、编辑、删除技能，不需要手动改 JSON：</p>
+<ul>
+<li>修改名称、ID、图标、简介、详细说明与是否需要当前文档</li>
+<li>提供 Markdown 提示词编辑与预览</li>
+<li>保存后 AI 面板立即刷新</li>
+<li>改过或删除的内置技能会记录为自定义 / 隐藏状态，应用升级时保留用户版本</li>
+</ul>
+<p>手动编辑 <code>skills.json</code> 仍然可用，适合批量维护或导入已有技能。</p>
+
+</section>
+
+<section class="help-section" id="存储位置" data-icon="settings" data-kw="存储位置 Skill 文件存储在用户文档目录下： 系统 路径 Windows C:\Users\&lt;用户名&gt;\Documents\yizimarkdown\skills\ macOS /Users/&lt;用户名&gt;/Documents/yizimarkdown/skills/ 目录结构： yizimarkdown/ └── skills/ ├── skills.json ← 技能清单 ├── slides-outline.md ← 演示稿提炼提示词 ├── doc-summary.md ← 文档摘要提示词 ├── poli">
 <h2><a class="anchor" href="#存储位置">#</a>存储位置</h2>
 <p>Skill 文件存储在用户文档目录下：</p>
 <div class="help-table-wrap"><table class="docs-table docs-table--nowrap-first">
@@ -141,7 +154,7 @@
 
 </section>
 
-<section class="help-section" id="更新覆盖机制" data-icon="settings" data-kw="更新覆盖机制 YiziMarkdown 更新版本时，会自动处理 Skill 文件： 场景 行为 首次安装 所有内置 Skill 复制到用户文档目录 版本更新（ skills.json 中 version 变化） 内置 Skill 的 .md 文件被覆盖（提示词同步更新），用户自定义的 Skill 保留不动 版本一致 不做任何操作 注意 ：如果你修改了内置 Skill 的 .md 文件，下次版本更新时会被覆盖。建议通过复制一份来创建自定义 Skill。">
+<section class="help-section" id="更新覆盖机制" data-icon="pencil-line" data-kw="更新覆盖机制 YiziMarkdown 更新版本时，会自动处理 Skill 文件： 场景 行为 首次安装 所有内置 Skill 复制到用户文档目录 版本更新（ skills.json 中 version 变化） 未被用户改过的内置 Skill 用新版覆盖；通过设置改过 / 删除的内置 Skill 保留用户版本 版本一致 不做任何操作 注意 ：通过「设置 → Skill 管理」保存或删除内置技能后，升级时会保留你的版本；如果只是手动改 .md 文件而没有在管理页保存，内置技能仍可能在下次版本更新时被覆盖。建议用管理页">
 <h2><a class="anchor" href="#更新覆盖机制">#</a>更新覆盖机制</h2>
 <p>YiziMarkdown 更新版本时，会自动处理 Skill 文件：</p>
 <div class="help-table-wrap"><table class="docs-table">
@@ -158,7 +171,7 @@
 </tr>
 <tr>
 <td>版本更新（<code>skills.json</code> 中 <code>version</code> 变化）</td>
-<td>内置 Skill 的 <code>.md</code> 文件被覆盖（提示词同步更新），用户自定义的 Skill 保留不动</td>
+<td>未被用户改过的内置 Skill 用新版覆盖；通过设置改过 / 删除的内置 Skill 保留用户版本</td>
 </tr>
 <tr>
 <td>版本一致</td>
@@ -166,11 +179,11 @@
 </tr>
 </tbody>
 </table></div>
-<p><strong>注意</strong>：如果你修改了内置 Skill 的 <code>.md</code> 文件，下次版本更新时会被覆盖。建议通过复制一份来创建自定义 Skill。</p>
+<p><strong>注意</strong>：通过「设置 → Skill 管理」保存或删除内置技能后，升级时会保留你的版本；如果只是手动改 <code>.md</code> 文件而没有在管理页保存，内置技能仍可能在下次版本更新时被覆盖。建议用管理页编辑，或复制一份创建自定义 Skill。</p>
 
 </section>
 
-<section class="help-section" id="如何创建自定义-skill" data-icon="pencil-line" data-kw="如何创建自定义 Skill ">
+<section class="help-section" id="如何创建自定义-skill" data-icon="code" data-kw="如何创建自定义 Skill ">
 <h2><a class="anchor" href="#如何创建自定义-skill">#</a>如何创建自定义 Skill</h2>
 
 <div class="help-sub" id="方法一手动创建" data-kw="方法一：手动创建 第 1 步：编写提示词文件 在 skills/ 目录下新建一个 .md 文件，例如 my-skill.md ： 你是一个专业的代码审查助手。 请按照以下步骤审查用户提供的代码： 1. 检查代码风格是否一致 2. 识别潜在的 Bug 和逻辑错误 3. 评估性能和可读性 4. 给出具体的改进建议 输出格式： - 问题列表（按严重程度排序） - 每个问题的具体位置和修复建议 第 2 步：在 skills.json 中注册 打开 skills.json ，在 skills 数组中添加一项。具体格式和逗号规">
@@ -204,7 +217,7 @@
 </div>
 </section>
 
-<section class="help-section" id="skillsjson-完整格式" data-icon="code" data-kw="skills.json 完整格式 skills.json 是标准 JSON 文件，遵循以下语法规则： 所有字符串用 双引号 &quot; 包裹，不能用单引号 键值对之间用 逗号 , 分隔 skills 数组中的每个技能对象之间用 逗号 , 分隔 最后一个技能对象后面不加逗号 （尾逗号会导致解析失败） 文件编码必须为 UTF-8">
+<section class="help-section" id="skillsjson-完整格式" data-icon="sparkles" data-kw="skills.json 完整格式 skills.json 是标准 JSON 文件，遵循以下语法规则： 所有字符串用 双引号 &quot; 包裹，不能用单引号 键值对之间用 逗号 , 分隔 skills 数组中的每个技能对象之间用 逗号 , 分隔 最后一个技能对象后面不加逗号 （尾逗号会导致解析失败） 文件编码必须为 UTF-8">
 <h2><a class="anchor" href="#skillsjson-完整格式">#</a><code>skills.json</code> 完整格式</h2>
 <p><code>skills.json</code> 是标准 JSON 文件，遵循以下语法规则：</p>
 <ul>
@@ -360,6 +373,11 @@
 <td>否</td>
 <td>是否需要引用当前文档。<code>true</code> = AI 会自动读取当前打开的文档内容</td>
 </tr>
+<tr>
+<td><code>icon</code></td>
+<td>否</td>
+<td>图标名称，可选。常用值：<code>sparkles</code>、<code>file-text</code>、<code>pencil</code>、<code>presentation</code>、<code>languages</code>、<code>code2</code>、<code>rocket</code>。省略时按内置 ID 回退到语义图标</td>
+</tr>
 </tbody>
 </table></div>
 <p><strong>第 3 步：重启应用</strong></p>
@@ -367,7 +385,7 @@
 </div>
 </section>
 
-<section class="help-section" id="提示词编写技巧" data-icon="sparkles" data-kw="提示词编写技巧 明确角色 ：告诉 AI 它扮演什么角色（如&quot;你是一个专业的翻译&quot;） 分步骤 ：用编号列出执行步骤，AI 更容易遵循 指定格式 ：说明输出的格式要求（Markdown、列表、表格等） 设置约束 ：告诉 AI 什么不该做（如&quot;不要添加额外解释&quot;） 利用文档 ：设置 needsDoc: true 后，AI 可以读取当前文档内容作为上下文">
+<section class="help-section" id="提示词编写技巧" data-icon="circle-help" data-kw="提示词编写技巧 明确角色 ：告诉 AI 它扮演什么角色（如&quot;你是一个专业的翻译&quot;） 分步骤 ：用编号列出执行步骤，AI 更容易遵循 指定格式 ：说明输出的格式要求（Markdown、列表、表格等） 设置约束 ：告诉 AI 什么不该做（如&quot;不要添加额外解释&quot;） 利用文档 ：设置 needsDoc: true 后，AI 可以读取当前文档内容作为上下文">
 <h2><a class="anchor" href="#提示词编写技巧">#</a>提示词编写技巧</h2>
 <ol>
 <li><strong>明确角色</strong>：告诉 AI 它扮演什么角色（如&quot;你是一个专业的翻译&quot;）</li>
@@ -379,14 +397,14 @@
 
 </section>
 
-<section class="help-section" id="常见问题" data-icon="circle-help" data-kw="常见问题 Q: 修改后没有生效？ A: 请重启 YiziMarkdown。技能列表在应用启动时加载。 Q: 不小心删除了内置 Skill 怎么办？ A: 删除 skills.json 文件，重启应用会自动重新生成（从内置资源复制）。 Q: 能否删除不需要的内置 Skill？ A: 可以。在 skills.json 中删除对应条目即可。但下次版本更新时可能会重新出现。 Q: needsDoc 设为 true 但没有打开文档？ A: AI 会正常执行，只是没有文档上下文。建议在打开文档后使用需要文档的 Skill。">
+<section class="help-section" id="常见问题" data-icon="file-text" data-kw="常见问题 Q: 修改后没有生效？ A: 在「设置 → Skill 管理」保存后会立即刷新 AI 面板；如果手动改文件，请重启 YiziMarkdown 或重新打开设置页让清单重新加载。 Q: 不小心删除了内置 Skill 怎么办？ A: 如果是在设置页删除，旧 ID 会记入 hiddenIds ，升级时不会自动恢复；想恢复时可重新新建同 ID 技能，或删除 skills.json 后重启，让内置资源重新同步。 Q: 能否删除不需要的内置 Skill？ A: 可以。通过「设置 → Skill 管理」删除会保留删除状态">
 <h2><a class="anchor" href="#常见问题">#</a>常见问题</h2>
 <p><strong>Q: 修改后没有生效？</strong>
-A: 请重启 YiziMarkdown。技能列表在应用启动时加载。</p>
+A: 在「设置 → Skill 管理」保存后会立即刷新 AI 面板；如果手动改文件，请重启 YiziMarkdown 或重新打开设置页让清单重新加载。</p>
 <p><strong>Q: 不小心删除了内置 Skill 怎么办？</strong>
-A: 删除 <code>skills.json</code> 文件，重启应用会自动重新生成（从内置资源复制）。</p>
+A: 如果是在设置页删除，旧 ID 会记入 <code>hiddenIds</code>，升级时不会自动恢复；想恢复时可重新新建同 ID 技能，或删除 <code>skills.json</code> 后重启，让内置资源重新同步。</p>
 <p><strong>Q: 能否删除不需要的内置 Skill？</strong>
-A: 可以。在 <code>skills.json</code> 中删除对应条目即可。但下次版本更新时可能会重新出现。</p>
+A: 可以。通过「设置 → Skill 管理」删除会保留删除状态；如果只是手动从 <code>skills.json</code> 移除条目，下次版本更新时可能会重新出现。</p>
 <p><strong>Q: <code>needsDoc</code> 设为 <code>true</code> 但没有打开文档？</strong>
 A: AI 会正常执行，只是没有文档上下文。建议在打开文档后使用需要文档的 Skill。</p>
 

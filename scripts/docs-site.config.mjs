@@ -21,12 +21,12 @@ export const DOC_PAGES = [
     out: 'slideshow-syntax.html',
     src: 'docs/slideshow-style-mapping.md',
     title: '演示模式语法',
-    subtitle: '翻页、分栏、版式、动画与快捷键的完整对照表 —— 不需要额外格式，写 Markdown 就是写幻灯片。',
-    notice: '本页演示语法无需手动编辑维护；软件内置 AI 助手与「演示稿提炼」Skill，可以用 AI 一键将复杂文档提炼成演示模式，并可导出可编辑修改的 PPTX。',
+    subtitle: '翻页、分栏、版式、动画与快捷键的完整对照表 —— 统一 1280×720 逻辑画布，写 Markdown 就是写幻灯片。',
+    notice: '本页演示语法无需手动编辑维护；软件内置 AI 助手与「演示稿提炼」Skill，可以用 AI 一键将复杂文档提炼成演示模式，并可先「检测版式」再导出可编辑修改的 PPTX。',
     description:
-      'YiziMarkdown 演示模式语法完整参考：用 --- 分页、*** 分栏，自动版式推断规则，显式 layout / align / fragments 指令，片段逐步显示、切换动画、演讲者备注与播放快捷键。',
+      'YiziMarkdown 演示模式语法完整参考：用 --- 分页、*** 分栏，自动版式推断规则，显式 layout / align / fragments 指令，片段逐步显示、切换动画、演讲者备注与播放快捷键；统一 1280×720 逻辑画布，PPTX 导出支持字号调整与版式检测。',
     keywords: 'YiziMarkdown,演示模式,幻灯片语法,Markdown分页,分栏,自动版式,演讲者备注',
-    meta: ['适用版本 v0.4.3', '纯 Markdown', '零标记'],
+    meta: ['适用版本 v0.4.4', '纯 Markdown', '零标记'],
     searchPlaceholder: '搜索语法，例如「分栏」「指令」',
     icons: [
       'file-text', 'presentation', 'settings', 'list', 'sparkles', 'file-text',
@@ -41,7 +41,7 @@ export const DOC_PAGES = [
     description:
       'YiziMarkdown 主题设计规范：主题令牌分层（基础 / 区域 / 装饰 / 效果）、文件与命名、明暗双模式、builtin.json / themes.user.json 元数据、check-themes 校验门禁、从零写一个主题的完整示例与令牌总表。',
     keywords: 'YiziMarkdown,主题设计,主题规范,CSS变量,令牌,builtin.json,自定义主题',
-    meta: ['基线 v0.4.3+', '更新 2026-11-09', '面向主题作者'],
+    meta: ['基线 v0.4.4+', '更新 2026-11-15', '面向主题作者'],
     searchPlaceholder: '搜索令牌或规则，例如「--editor-bg」',
     skipSections: ['目录'],
     dropLeadingQuote: true,
@@ -57,9 +57,9 @@ export const DOC_PAGES = [
     title: '技能（Skill）规范',
     subtitle: 'skills.json 字段、提示词写法与自定义技能的完整说明。',
     description:
-      'YiziMarkdown 技能（Skill）规范：skills.json 字段与逗号规则、提示词编写技巧、自定义技能创建步骤、存储位置与版本更新覆盖机制，以及修改后不生效等常见问题。',
-    keywords: 'YiziMarkdown,Skill,技能,自定义技能,skills.json,提示词,AI助手',
-    meta: ['适用版本 v0.4.3', '用户目录可改'],
+      'YiziMarkdown 技能（Skill）规范：skills.json 字段与提示词编写技巧、图标选择、可视化 Skill 管理、自定义技能创建步骤、存储位置与升级保留策略，以及常见问题。',
+    keywords: 'YiziMarkdown,Skill,技能,自定义技能,skills.json,提示词,图标,AI助手',
+    meta: ['适用版本 v0.4.4', '设置内可管理'],
     searchPlaceholder: '搜索技能配置，例如「needsDoc」',
     icons: ['zap', 'folder-open', 'settings', 'pencil-line', 'code', 'sparkles', 'circle-help']
   }

@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YiziMarkdown - 免费开源 Markdown 编辑器（Windows / macOS / Linux） | 七种模式、免安装、多主题</title>
-    <meta name="description" content="YiziMarkdown 是一款免费开源、跨平台的 Markdown 编辑器（Windows 便携 / macOS 原生 / Linux deb 与 AppImage），基于 Tauri + React + CodeMirror 6 构建。内置 AI 大模型助手（18 家供应商 + 自定义接入 + 技能 Skill 系统）、七种模式（源码 / 并排 / 实时 / 预览 / 演示 / 阅读 / 禅）、类 PPT 演示（纯 Markdown 自动版式）、成书阅读、15 套精美主题、KaTeX 公式、Mermaid 图表、EPUB 导出与阅读。免安装，解压即用。">
-    <meta name="keywords" content="Markdown编辑器,AI写作,AI编辑器,大模型,演示模式,幻灯片,PPT,Skill,技能,禅模式,阅读模式,Linux编辑器,deb,AppImage,Windows编辑器,macOS编辑器,跨平台编辑器,便携编辑器,免安装编辑器,Markdown,实时预览,Tauri,开源编辑器,免费编辑器,KaTeX,Mermaid,EPUB,电子书,主题编辑器,品牌自定义,用户主题">
+    <meta name="description" content="YiziMarkdown 是一款免费开源、跨平台的 Markdown 编辑器（Windows 便携 / macOS 原生 / Linux deb 与 AppImage），基于 Tauri + React + CodeMirror 6 构建。内置 AI 大模型助手（18 家供应商 + 自定义接入 + 可管理 Skill 系统 + 可配置划词助手）、WebDAV 云端文档、七种模式（源码 / 并排 / 实时 / 预览 / 演示 / 阅读 / 禅）、类 PPT 演示（纯 Markdown 自动版式）、成书阅读、15 套精美主题、KaTeX 公式、Mermaid 图表、EPUB 导出与阅读。免安装，解压即用。">
+    <meta name="keywords" content="Markdown编辑器,AI写作,AI编辑器,大模型,演示模式,幻灯片,PPT,Skill,技能,划词助手,WebDAV,禅模式,阅读模式,Linux编辑器,deb,AppImage,Windows编辑器,macOS编辑器,跨平台编辑器,便携编辑器,免安装编辑器,Markdown,实时预览,Tauri,开源编辑器,免费编辑器,KaTeX,Mermaid,EPUB,电子书,主题编辑器,品牌自定义,用户主题">
     <meta name="author" content="YiziPaper">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://md.yizigpt.com/">
@@ -13,7 +13,7 @@
     <!-- Open Graph -->
     <meta property="og:type" content="website">
     <meta property="og:title" content="YiziMarkdown - AI 加持的 Markdown 编辑器（Windows / macOS / Linux）">
-    <meta property="og:description" content="内置 AI 大模型助手、技能系统与 EPUB 导出/阅读，笔记一键变演示；七种模式覆盖写作、放映、成书阅读与禅模式。15 套主题、便携免安装，开源免费。">
+    <meta property="og:description" content="内置 AI 大模型助手、可管理 Skill 系统、可配置划词助手与 WebDAV 云端文档；笔记一键变演示，EPUB 导出/阅读。七种模式覆盖写作、放映、成书阅读与禅模式，15 套主题、便携免安装，开源免费。">
     <meta property="og:url" content="https://md.yizigpt.com/">
     <meta property="og:site_name" content="YiziMarkdown">
     <meta property="og:locale" content="zh_CN">
@@ -22,7 +22,7 @@
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="YiziMarkdown - AI 加持的 Markdown 编辑器（Windows / macOS / Linux）">
-    <meta name="twitter:description" content="内置 AI 大模型助手、技能系统与 EPUB 导出/阅读，笔记一键变演示；七种模式覆盖写作、放映、成书阅读与禅模式。15 套主题、便携免安装，开源免费。">
+    <meta name="twitter:description" content="内置 AI 大模型助手、可管理 Skill 系统、可配置划词助手与 WebDAV 云端文档；笔记一键变演示，EPUB 导出/阅读。七种模式覆盖写作、放映、成书阅读与禅模式，15 套主题、便携免安装，开源免费。">
 
     <link rel="icon" type="image/png" href="assets/icon.png">
     <link rel="shortcut icon" href="assets/favicon.ico">
@@ -46,7 +46,7 @@
         "license": "https://github.com/laoduu/YiziMarkdown/blob/main/LICENSE",
         "programmingLanguage": ["TypeScript", "Rust"],
         "screenshot": "https://md.yizigpt.com/assets/index.webp",
-        "version": "0.4.3",
+        "version": "0.4.4",
         "author": {
             "@type": "Organization",
             "name": "YiziPaper",
@@ -74,30 +74,30 @@
 <!-- Hero -->
 <section class="hero">
     <div class="hero-content">
-        <div class="hero-badge"><span class="dot"></span> V0.4.3 · 禅模式 · Linux 首次发布</div>
+        <div class="hero-badge"><span class="dot"></span> V0.4.4 · 云端文档 · Skill 管理 · 划词助手</div>
         <h1>既<span style="color: var(--orange);">好看</span>，又<span class="highlight">彪悍</span></h1>
-        <p class="hero-sub">一款 AI 加持的跨平台 Markdown 编辑器<br>七种模式覆盖写作、放映、成书阅读与禅模式<br>Windows / macOS / Linux 全平台可用</p>
+        <p class="hero-sub">一款 AI 加持的跨平台 Markdown 编辑器<br>七种模式覆盖写作、放映、成书阅读与禅模式<br>可管理 Skill / 可配置划词助手，WebDAV 云端同步<br>Windows / macOS / Linux 全平台可用</p>
         <div class="hero-actions">
             <div class="hero-actions-row">
-                <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.3/YiziMarkdown_0.4.3_x64-setup.exe" target="_blank" class="btn-primary">
+                <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.4/YiziMarkdown_0.4.4_x64-setup.exe" target="_blank" class="btn-primary">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.55 10.5 4.5v6.8H3V5.55zm0 12.9 7.5-1.05v-6.3H3v7.35zM11.5 4.3 21 3v8.3h-9.5V4.3zm0 15.4 9.5-1.3V12.7h-9.5v7z"/></svg>
                     Windows 版下载
                 </a>
-                <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.3/YiziMarkdown_0.4.3_universal.dmg" target="_blank" class="btn-secondary">
+                <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.4/YiziMarkdown_0.4.4_universal.dmg" target="_blank" class="btn-secondary">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 12.54c-.03-3.04 2.48-4.5 2.6-4.57-1.42-2.07-3.62-2.36-4.4-2.39-1.88-.19-3.66 1.1-4.62 1.1-.95 0-2.43-1.08-4-1.05-2.05.03-3.95 1.2-5 3.04-2.14 3.7-.55 9.17 1.53 12.18 1.02 1.46 2.23 3.1 3.83 3.04 1.53-.06 2.11-.99 3.96-.99 1.85 0 2.37.99 4 .96 1.65-.03 2.7-1.49 3.71-2.95 1.17-1.71 1.65-3.37 1.68-3.45-.04-.02-3.22-1.24-3.29-4.92zM14.4 4.2c.85-1.03 1.42-2.46 1.26-3.89-1.22.05-2.7.81-3.58 1.84-.79.91-1.47 2.36-1.29 3.76 1.36.1 2.76-.69 3.61-1.71z"/></svg>
                     macOS 版下载
                 </a>
-                <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.3/YiziMarkdown_0.4.3_x64-portable.zip" target="_blank" class="btn-secondary">
+                <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.4/YiziMarkdown_0.4.4_x64-portable.zip" target="_blank" class="btn-secondary">
                     <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 7l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                     Windows 便携版
                 </a>
             </div>
             <div class="hero-actions-row">
-                <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.3/YiziMarkdown_0.4.3_amd64.deb" target="_blank" class="btn-secondary">
+                <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.4/YiziMarkdown_0.4.4_amd64.deb" target="_blank" class="btn-secondary">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
                     Linux 版下载（deb）
                 </a>
-                <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.3/YiziMarkdown_0.4.3_amd64.AppImage" target="_blank" class="btn-secondary">
+                <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.4/YiziMarkdown_0.4.4_amd64.AppImage" target="_blank" class="btn-secondary">
                     <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 7l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                     Linux 免安装（AppImage）
                 </a>
@@ -147,7 +147,7 @@
         <div class="feature-card">
             <div class="feature-icon blue"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg></div>
             <h3>演示导出 PPTX</h3>
-            <p>演示模式一键导出<strong>原生可编辑</strong>的 PowerPoint：主题、明暗、版式与分栏一并继承，文字、表格、图片、形状与公式都是独立对象，可带演讲者备注与页脚。</p>
+            <p>演示模式一键导出<strong>原生可编辑</strong>的 PowerPoint：统一 1280×720 逻辑画布，主题、明暗、版式与分栏一并继承，文字、表格、图片、形状与公式都是独立对象。导出弹窗可调整字号、先「检测版式」再写文件，长代码自动折行，可带演讲者备注与页脚。</p>
         </div>
         <div class="feature-card">
             <div class="feature-icon orange"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
@@ -162,7 +162,12 @@
         <div class="feature-card">
             <div class="feature-icon blue"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
             <h3>Skill 技能系统</h3>
-            <p>一键调用技能（演示稿提炼、文档摘要、润色改写、全文翻译、Markdown 格式化），提示词自动注入；自定义技能放进 skills 目录即可扩展。</p>
+            <p>一键调用演示稿提炼、文档摘要、润色改写、全文翻译、Markdown 格式化等技能；设置内可新增 / 编辑 / 删除技能，修改名称、ID、图标与提示词，保存后 AI 面板即时刷新。</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon orange"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3l7 18 2.5-7.5L21 11 4 3z"/></svg></div>
+            <h3>可配置划词助手</h3>
+            <p>选中文本即可弹出工具栏；设置里可增删、排序功能并修改显示名称，支持预设 / 自建技能与复制、粘贴、添加到对话。顶部实时预览，短名称也能自行调整。</p>
         </div>
         <div class="feature-card">
             <div class="feature-icon orange"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
@@ -182,7 +187,7 @@
         <div class="feature-card">
             <div class="feature-icon blue"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg></div>
             <h3>WebDAV 云端存储</h3>
-            <p>直连坚果云、Nextcloud、群晖等 WebDAV 服务器，浏览、打开、保存云端文档；相对路径的图片一并同步，凭据存入系统凭据库。</p>
+            <p>直连坚果云、Nextcloud、群晖等 WebDAV 服务器，浏览、打开、保存云端文档；云端图片统一存放于根目录 <code>assets/</code>，打开已缓存文档会核对云端版本，缓存同步可选离线镜像，凭据存入系统凭据库。</p>
         </div>
         <div class="feature-card">
             <div class="feature-icon orange"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg></div>
@@ -300,7 +305,7 @@
             <ul class="spotlight-list">
                 <li><strong>18 家供应商 + 自定义服务</strong>：OpenAI、Anthropic、Gemini、DeepSeek、通义千问、智谱 GLM、Kimi、豆包、Ollama 本地、小米 MiMo、美团 LongCat 等</li>
                 <li><strong>自定义服务</strong>：OpenAI / Anthropic 兼容协议，自填 Base URL、模型 ID 与密钥，可接任意第三方大模型，本地端点密钥可留空</li>
-                <li><strong>Skill 技能</strong>：一键「演示稿提炼」「文档摘要」「润色改写」「全文翻译」「Markdown 格式化」，技能标签插入输入框，用户可自定义扩展</li>
+                <li><strong>Skill 技能</strong>：内置演示稿提炼、文档摘要、润色改写、全文翻译、Markdown 格式化；设置内「Skill 管理」可增删改，支持语义图标与自定义提示词，改动在应用升级后保留</li>
                 <li><strong>思考过程 + 引用文档</strong>：推理模型的 reasoning 可折叠查看，可把当前文档作为上下文提问</li>
             </ul>
         </div>
@@ -374,7 +379,8 @@
     </div>
     <div class="changelog-container">
         <div class="changelog-tabs" id="changelogTabs">
-            <button class="changelog-tab active" data-version="0.4.3">v0.4.3</button>
+            <button class="changelog-tab active" data-version="0.4.4">v0.4.4</button>
+            <button class="changelog-tab" data-version="0.4.3">v0.4.3</button>
             <button class="changelog-tab" data-version="0.4.2">v0.4.2</button>
             <button class="changelog-tab" data-version="0.4.1">v0.4.1</button>
             <button class="changelog-tab" data-version="0.4.0">v0.4.0</button>
@@ -398,12 +404,38 @@
             <button class="changelog-tab" data-version="0.1.3">v0.1.3</button>
         </div>
         <div class="changelog-content" id="changelogContent">
-            <div class="changelog-panel active" data-version="0.4.3">
+            <div class="changelog-panel active" data-version="0.4.4">
+                <div class="changelog-card">
+                    <div class="changelog-card-head">
+                        <div class="changelog-head-left">
+                            <span class="changelog-version">v0.4.4</span>
+                            <span class="changelog-badge">最新</span>
+                        </div>
+                        <span class="changelog-date">2026.11.15</span>
+                    </div>
+                    <div class="changelog-divider"></div>
+                    <ul class="changelog-list">
+                        <li><span class="changelog-tag new">新增</span><strong>云端文档图片统一存放</strong>：云端文档图片自动迁移到 WebDAV 根目录下的 <code>assets/</code>，正文改写为相对引用；Ctrl+S、自动保存与「保存到云端」行为一致，不再在文档旁生成 <code>images/</code> 子目录</li>
+                        <li><span class="changelog-tag new">新增</span><strong>云端缓存同步</strong>：启动后后台同步，设置页可手动触发；远端删除 / 移动的文件会清理本地缓存，可选「离线镜像」下载根目录下全部 Markdown 与引用图片</li>
+                        <li><span class="changelog-tag new">新增</span><strong>打开云端文档时提示版本更新</strong>：轻量校验云端 ETag / 大小，有更新时展示本地与云端的字节数、行数、摘要和首个差异行；可选用云端覆盖、保留本地、另存云端副本或取消</li>
+                        <li><span class="changelog-tag new">新增</span><strong>Skill 管理</strong>：设置里可新增、编辑、删除 AI 技能，修改名称、ID、图标、简介、说明与提示词正文；保存后 AI 面板立即刷新。改过 / 删除的内置技能在升级时保留</li>
+                        <li><span class="changelog-tag new">新增</span><strong>划词助手可配置</strong>：工具栏功能可增删、排序与改名，来源支持预设 / 自建技能和复制、粘贴、添加到对话；设置页顶部实时预览，显示名可改成「对话」这类短名称</li>
+                        <li><span class="changelog-tag new">新增</span><strong>模板 / Skill Markdown 预览</strong>：编辑时支持「编辑 / 预览」切换，列表页查看时直接渲染 Markdown；代码块与表格自动换行，不再出现横向滚动条</li>
+                        <li><span class="changelog-tag new">新增</span><strong>左侧边栏可调整宽度</strong>：文件 / 大纲 / 云端侧栏右边缘新增拖拽手柄，宽度自动记住；默认 260px，最宽取 600px 与窗口 40% 的较小值</li>
+                        <li><span class="changelog-tag new">新增</span><strong>PPTX 导出字号与版式检测</strong>：可单独调整本次导出字号（70%–160%）；「检测版式」只测量不写文件，先看舒适 / 可压缩 / 超出兼容上限页码再导出</li>
+                        <li><span class="changelog-tag improve">优化</span><strong>演示模式统一 1280×720 逻辑画布</strong>：不同分辨率与窗口比例下版式保持一致，非 16:9 窗口只留同色边；标题装饰线跟随左 / 中 / 右对齐</li>
+                        <li><span class="changelog-tag improve">优化</span><strong>PPTX 兼容性</strong>：页底预留余量并自动压缩到最低 14pt；放不下的页明确列入「超出兼容上限」；长代码行按栏宽自动折行</li>
+                        <li><span class="changelog-tag fix">修复</span><strong>云端标签悬浮提示</strong>：改为显示 <code>☁️/yizimarkdown/...</code> 云端路径，不再显示本地缓存绝对路径；AI 助手技能下拉也不再贴屏幕右缘</li>
+                        <li><span class="changelog-tag fix">修复</span><strong>跨平台与界面细节</strong>：Windows 程序路径前缀、Linux 安装版名称 / 文件关联、AI 面板拖动滚动条错位、阅读提示块样式、任务列表回车、公式源码、幻灯片间距等</li>
+                        <li><span class="changelog-tag platform">其他</span><strong>升级说明</strong>：划词助手配置自动补齐，内置技能改动随升级保留；WebDAV 仍使用 TLS + 系统凭据库，暂未提供端到端加密</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="changelog-panel" data-version="0.4.3">
                 <div class="changelog-card">
                     <div class="changelog-card-head">
                         <div class="changelog-head-left">
                             <span class="changelog-version">v0.4.3</span>
-                            <span class="changelog-badge">最新</span>
                         </div>
                         <span class="changelog-date">2026.11.09</span>
                     </div>
@@ -923,7 +955,7 @@
         </div>
         <div class="faq-item">
             <h3 class="faq-q">如何自定义 AI 技能（Skill）？</h3>
-            <p class="faq-a">打开 <code>~/Documents/yizimarkdown/skills/</code> 目录，参考 <code>skill-guide.md</code> 定制指南编写新的技能 JSON 文件。每个技能包含名称、摘要、提示词模板等字段，保存后重启软件即可在 AI 聊天面板的技能菜单中看到新技能。内置技能也会同步到此目录，你可以基于内置技能修改提示词来创建自己的版本。</p>
+            <p class="faq-a">在「设置 → Skill 管理」里可以直接新增、编辑、删除技能：名称、ID、图标、简介、说明、是否需要当前文档和 Markdown 提示词都能改，保存后 AI 面板立即刷新。内置技能也可以改；改过或删除的内置技能会在应用升级时保留你的版本，不再被覆盖。需要手写提示词时，可参考 <a href="skill-spec.html">技能规范</a> 或继续编辑 <code>~/Documents/yizimarkdown/skills/</code> 下的文件。</p>
         </div>
     </div>
 </section>
@@ -935,7 +967,7 @@
         <p>免费、开源、便携。下载解压，即刻开始你的 Markdown 写作之旅。</p>
         <a href="https://github.com/laoduu/YiziMarkdown/releases" target="_blank" class="btn-cta">
             <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 7l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            立即下载 v0.4.3
+            立即下载 v0.4.4
         </a>
     </div>
 </section>

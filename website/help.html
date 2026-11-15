@@ -169,7 +169,7 @@
                     <li><strong>Word 文档（DOCX）</strong>：Word 原生语义（标题 / 列表 / 表格 / 代码块 / 引用 / 任务列表），表格与表头样式对齐预览；图片支持本地路径、网络图片与 HTML <code>&lt;img&gt;</code> 标签，可用 <code>width</code> 属性控制宽度；<code>[toc]</code> 导出为可更新的 Word 原生目录域</li>
                     <li><strong>PDF</strong>：与预览还原度一致，长文档自动分页（Windows）</li>
                     <li><strong>HTML</strong>（<kbd>Ctrl</kbd>+<kbd>H</kbd>）：保留主题样式，可直接分享或发布；导出的 HTML 自带<strong>左侧悬浮大纲卡片</strong>，点击条目直达对应章节（PDF 不含侧栏）</li>
-                    <li><strong>PPTX</strong>：把演示模式导出为<strong>原生可编辑</strong>的 PowerPoint（文字 / 表格 / 图片 / 形状 / 原生公式），继承主题、明暗与版式；基准固定 16:9，可含演讲者备注与页脚；超页时可警告并列出页码，或自动压缩字号</li>
+                    <li><strong>PPTX</strong>：把演示模式导出为<strong>原生可编辑</strong>的 PowerPoint（文字 / 表格 / 图片 / 形状 / 原生公式），继承主题、明暗与版式；基准固定为 16:9 / 1280×720 逻辑画布，可含演讲者备注与页脚。导出弹窗可单独调整本次导出字号（70%–160%）；「检测版式」只测量不写文件，先看舒适 / 可压缩 / 超出兼容上限页码再导出；超页时可警告并列出页码，或自动压缩字号</li>
                     <li><strong>EPUB</strong>：启用「设置 → 插件 → EPUB 导出」后出现，导出 EPUB 3 电子书；控制面板可选章节拆分、封面、可见目录、阅读主题与文档信息</li>
                     <li><strong>Markdown</strong>（<kbd>Ctrl</kbd>+<kbd>M</kbd>）：纯 Markdown 文本副本</li>
                     <li><strong>纯文本</strong>：去除所有标记符号</li>
@@ -311,22 +311,28 @@
             </div>
 
             <div class="help-sub" id="edit-selection">
-                <h3>划词助手（v0.2.3 新增）</h3>
+                <h3>划词助手（v0.4.4 可配置）</h3>
                 <div class="callout callout-new">
                     <span class="callout-icon">新</span>
-                    <p>选中一段文字，浮动操作栏立刻出现，可直接交给 AI 处理。</p>
+                    <p>选中一段文字，浮动操作栏立刻出现，可直接交给 AI 处理；v0.4.4 起可在「设置 → 划词助手」增删、排序与改名。</p>
                 </div>
                 <figure class="help-figure">
                     <img src="assets/selection-toolbar.webp" width="1496" height="912" alt="划词助手浮动工具栏（选中文本后出现）" loading="lazy">
                 </figure>
-                <p>选中文本后可用的操作：</p>
+                <p>默认提供的操作：</p>
                 <ul>
                     <li><strong>演示稿</strong>：把选中内容提炼为演示文稿结构</li>
                     <li><strong>摘要</strong>：提炼核心要点</li>
                     <li><strong>改写 / 润色</strong>：优化表达，保持原意</li>
                     <li><strong>翻译</strong>：翻译为目标语言</li>
                     <li><strong>复制</strong>：复制到剪贴板</li>
-                    <li><strong>添加到 AI 对话</strong>：作为上下文送进右侧 AI 面板</li>
+                    <li><strong>添加到对话</strong>：作为上下文送进右侧 AI 面板</li>
+                </ul>
+                <p>设置页顶部提供<strong>实时预览</strong>：左侧维护当前功能，右侧从「系统功能 / 技能」中添加；可上移 / 下移、删除，点铅笔图标修改显示名称。例如把「添加到对话」改成「对话」，工具栏会更紧凑。</p>
+                <ul>
+                    <li><strong>技能来源</strong>：预设或自建 Skill，名称默认跟随 Skill；改过名称后使用自定义名称</li>
+                    <li><strong>系统功能</strong>：复制、粘贴（用剪贴板内容替换当前选区）、添加到对话</li>
+                    <li><strong>空配置</strong>：没有可显示功能时，选中文本不会弹出工具栏</li>
                 </ul>
                 <div class="callout callout-tip">
                     <span class="callout-icon">i</span>
@@ -530,7 +536,7 @@
         <!-- ========== 6. 演示模式 ========== -->
         <section class="help-section" id="slideshow" data-kw="演示 幻灯片 PPT 全屏 分页 分栏 分栏区间 栏内对齐 分栏样式 栏 字体 字号 字重 排版 内容填充 填充 宽度 高度 页边距 版式 layout align 备注 提词 演讲者 滚轮 模板 切换动画 过渡 棋盘格子 百变立方 六角蜂巢 爆裂卡片 纵深穿梭 卡片推换 百叶窗格 高斯溶解 片段 逐步 分步">
             <h2><a class="anchor" href="#slideshow">#</a>演示模式（类 PPT）</h2>
-            <p class="help-lead">笔记一键变全屏幻灯片。<strong>不需要任何额外格式</strong>——按平时写 Markdown 的习惯写，版式自动推断，配色继承当前主题。</p>
+            <p class="help-lead">笔记一键变全屏幻灯片。<strong>不需要任何额外格式</strong>——按平时写 Markdown 的习惯写，版式自动推断，配色继承当前主题；画面统一为 1280×720 逻辑画布，非 16:9 窗口只留同色边。</p>
 
             <div class="help-sub" id="slideshow-enter">
                 <h3>进入与退出</h3>
@@ -843,33 +849,36 @@
             </div>
 
             <div class="help-sub" id="skills-custom">
-                <h3>自定义技能</h3>
+                <h3>自定义技能（v0.4.4 设置内管理）</h3>
                 <div class="callout callout-new">
                     <span class="callout-icon">新</span>
-                    <p>v0.2.3 起技能文件迁移到用户目录 <code>~/Documents/yizimarkdown/skills/</code>，方便自定义且<strong>不会被版本更新覆盖</strong>。</p>
+                    <p>v0.4.4 起可直接在「设置 → Skill 管理」新增 / 编辑 / 删除技能，不必手动改 JSON。技能文件仍在用户目录 <code>~/Documents/yizimarkdown/skills/</code>，卸载 / 重装不会丢。</p>
                 </div>
-                <p>AI 面板底部的<strong>「管理技能」</strong>按钮可直接打开技能目录并查看 <code>skill-guide.md</code> 定制指南。新增技能只需两步：</p>
+                <p>管理页支持修改名称、ID、图标、简介、详细说明、是否需要当前文档与 Markdown 提示词正文；保存后 AI 面板立即刷新。改过或删除的内置技能会在应用升级时保留用户版本，不再被新版覆盖。</p>
                 <ol class="steps">
-                    <li>在技能目录放入技能的 Markdown 提示词文件，例如 <code>my-skill.md</code></li>
-                    <li>在 <code>skills.json</code> 清单中登记（见下表字段），保存后重启软件</li>
+                    <li>打开「设置 → Skill 管理」，点「+ 新建」</li>
+                    <li>填写名称与 ID，选择图标，再写简介与提示词正文；内容支持「编辑 / 预览」切换</li>
+                    <li>保存后回到 AI 面板，悬停技能按钮即可看到新技能</li>
                 </ol>
+                <p>需要手写或批量维护时，仍可直接编辑 <code>skills.json</code>；清单字段如下：</p>
                 <div class="help-table-wrap">
                     <table>
                         <thead><tr><th>字段</th><th>说明</th></tr></thead>
                         <tbody>
                             <tr><td><code>id</code></td><td>唯一标识，如 <code>slides-outline</code></td></tr>
-                            <tr><td><code>name</code></td><td>技能名称，显示在菜单中</td></tr>
+                            <tr><td><code>name</code></td><td>技能名称，显示在菜单里</td></tr>
                             <tr><td><code>summary</code></td><td>一句话简介</td></tr>
-                            <tr><td><code>description</code></td><td>详细介绍，鼠标悬停时展开</td></tr>
+                            <tr><td><code>description</code></td><td>详细说明，悬停时展开</td></tr>
                             <tr><td><code>file</code></td><td>提示词文件名</td></tr>
                             <tr><td><code>needsDoc</code></td><td>是否需要引用当前文档（true / false）</td></tr>
+                            <tr><td><code>icon</code></td><td>可选图标名称，如 <code>presentation</code> / <code>file-text</code> / <code>pencil</code> / <code>languages</code></td></tr>
                         </tbody>
                     </table>
                 </div>
-                <p>内置技能也会同步到该目录，可以基于内置技能修改提示词来创建自己的版本。首次启动新版本时自动同步。</p>
+                <p><strong>AI 面板底部「管理技能」按钮</strong>现在直接打开「设置 → Skill 管理」；技能规范文档仍在帮助中心。</p>
                 <div class="callout callout-new">
                     <span class="callout-icon">→</span>
-                    <p>要写自己的技能？<a href="skill-spec.html">技能（Skill）规范</a>完整说明了 <code>skills.json</code> 的字段与逗号规则、提示词编写技巧，以及更新时哪些文件会被覆盖。</p>
+                    <p>要写自己的技能？<a href="skill-spec.html">技能（Skill）规范</a>完整说明 <code>skills.json</code> 的字段与提示词编写技巧。</p>
                 </div>
             </div>
         </section>
@@ -913,8 +922,8 @@
             <div class="help-sub" id="cloud-save">
                 <h3>保存到云端</h3>
                 <ul>
-                    <li><strong>上传本地文档</strong>：点工具栏「保存到云端」，确认云端路径后上传；文档中相对引用的图片会一并上传并保持目录结构</li>
-                    <li><strong>保存云端文档</strong>：直接 <kbd>Ctrl</kbd>+<kbd>S</kbd>，写回它原本的远程位置</li>
+                    <li><strong>上传本地文档</strong>：点工具栏「保存到云端」，确认云端路径后上传；本地文档引用或粘贴的图片会自动转存到 WebDAV 根目录下的 <code>assets/</code>，正文改写为相对引用，不再在文档旁生成子目录</li>
+                    <li><strong>保存云端文档</strong>：直接 <kbd>Ctrl</kbd>+<kbd>S</kbd>，写回它原本的远程位置；自动保存与手动保存都会执行同样的图片迁移</li>
                     <li><strong>另存到其他云端位置</strong>：同样是「保存到云端」，把路径改成新的即可</li>
                 </ul>
                 <p>保存云端文档时是「先写本地缓存、再上传服务器」，<strong>两步都成功才会标记为已保存</strong>；任一步失败都会保持未保存状态并提示。</p>
@@ -933,12 +942,40 @@
                 </div>
             </div>
 
+            <div class="help-sub" id="cloud-open-version">
+                <h3>打开时的版本校验（v0.4.4）</h3>
+                <p>打开已缓存的云端文档时，程序会先向服务器确认版本，而不是直接使用旧缓存：</p>
+                <ul>
+                    <li>先比对 ETag 与文件大小；完全一致就不下载正文</li>
+                    <li>有变化时再取云端正文，显示<strong>本地 / 云端的字节数、行数、内容摘要与首个差异行</strong></li>
+                    <li>可选<strong>用云端覆盖本地 / 保留本地 / 另存云端副本 / 取消</strong>；本地未保存的修改不会被静默覆盖</li>
+                    <li>「保留本地」不会清掉旧 ETag，下次保存仍会进入冲突弹窗，由你显式决定</li>
+                    <li>云端文件已被删除或移动时，可一键重新上传到原路径，或另存云端副本</li>
+                </ul>
+                <div class="callout callout-tip">
+                    <span class="callout-icon">i</span>
+                    <p>校验只做轻量请求；离线、401 等失败不会打断阅读，下次激活标签页或下次打开时再试。</p>
+                </div>
+            </div>
+
+            <div class="help-sub" id="cloud-cache">
+                <h3>缓存同步与离线镜像（v0.4.4）</h3>
+                <p>打开「设置 → 云端存储 → 缓存同步」可查看上次同步结果并手动同步。同步范围仅限设置里的 WebDAV 根目录：</p>
+                <ul>
+                    <li><strong>默认模式</strong>：只清理远端已删除 / 移动的本地缓存，不主动下载未打开的文档</li>
+                    <li><strong>离线镜像（默认关闭）</strong>：打开后，同步会下载根目录下所有 Markdown 及其引用图片，离线也能浏览；受单图 8MB 上限约束</li>
+                    <li>应用启动后会在后台同步一次；手动同步不受「只启动一次」限制</li>
+                    <li>缓存根目录下会维护 <code>manifest.json</code>，记录远程路径、ETag、大小、内容哈希与缓存路径</li>
+                </ul>
+            </div>
+
             <div class="help-sub" id="cloud-notes">
                 <h3>注意事项</h3>
                 <ul>
                     <li>需要服务端支持 WebDAV。若提示需要 <strong>Digest 认证</strong>，请改用应用专用密码（本程序只支持 Basic 认证）</li>
-                    <li>只有<strong>相对路径</strong>的图片会随文档同步；绝对路径（<code>D:\pics\a.png</code>、<code>/home/me/a.png</code>）、<code>file://</code>、网络图片与 <code>data:</code> 都不会上传</li>
-                    <li>云端文档在本地保留一份缓存（<code>~/Documents/yizimarkdown/webdav/</code>）用于图片渲染与导出；删除它不影响云端数据，下次打开会自动重新下载</li>
+                    <li>只有<strong>相对路径</strong>的图片会随文档同步；绝对路径（<code>D:\pics\a.png</code>、<code>/home/me/a.png</code>）、<code>file://</code>、网络图片与 <code>data:</code> 都不会上传。保存到云端时本地图片会自动转存到根目录 <code>assets/</code> 并重写为相对引用</li>
+                    <li>云端文档在本地保留一份缓存（<code>~/Documents/yizimarkdown/webdav/</code>）用于图片渲染与导出；删除它不影响云端数据，下次打开或同步时会自动恢复</li>
+                    <li>历史版本遗留在文档旁的云端图片不会自动删除；v0.4.4 起保存的文档会统一迁移到根目录 <code>assets/</code></li>
                     <li>云端图片统一存放在 WebDAV 根目录下的 <code>assets/</code>，目录里会自动写入中英双语 <code>README.md</code>，说明用途与「请勿手动清理」；该目录在文件树中受保护，无法移动、重命名或删除</li>
                 </ul>
             </div>
@@ -1015,7 +1052,7 @@
         <!-- ========== 10. 设置详解 ========== -->
         <section class="help-section" id="settings" data-kw="设置 通用 界面设置 界面字号 界面语言 文件关联 EPUB 默认阅读器 外观 编辑器 AI 助手 云端 快捷键 插件 模板 版本与更新 关于 其他产品 在线更新 自动保存">
             <h2><a class="anchor" href="#settings">#</a>设置详解</h2>
-            <p class="help-lead">设置面板共 12 个分类，覆盖软件全部可配置项。</p>
+            <p class="help-lead">设置面板共 14 个分类，覆盖软件全部可配置项。</p>
 
             <div class="help-sub" id="settings-list">
                 <div class="help-table-wrap">
@@ -1027,10 +1064,12 @@
                             <tr><td>编辑器</td><td>源码 / 预览字体字号行高、拼写检查、鼠标光标样式（原生 / 加粗）</td></tr>
                             <tr><td>实时模式</td><td>标记显现动画（聚焦 / 闪光 / 辉光 / 涟漪）、属性面板相关选项</td></tr>
                             <tr><td>AI 助手</td><td>供应商与模型、API 密钥、上下文轮数、引用上限</td></tr>
-                            <tr><td>云端存储</td><td>WebDAV 服务器地址、凭据（存系统凭据库）、起始目录、测试连接</td></tr>
+                            <tr><td>Skill 管理</td><td>新增 / 编辑 / 删除 AI 技能，修改名称、ID、图标、简介与提示词正文；保存后 AI 面板即时刷新</td></tr>
+                            <tr><td>划词助手</td><td>增删 / 排序工具栏功能，修改显示名称；支持预设 / 自建技能与复制、粘贴、添加到对话，顶部实时预览</td></tr>
+                            <tr><td>云端存储</td><td>WebDAV 服务器地址、凭据（存系统凭据库）、起始目录、测试连接、缓存同步与离线镜像</td></tr>
                             <tr><td>快捷键</td><td>可视化配置、按键录制、冲突检测、恢复默认</td></tr>
                             <tr><td>插件</td><td>EPUB 导出开关；KaTeX 公式与 Mermaid 已内置为核心渲染器，无需在插件页开启</td></tr>
-                            <tr><td>模板</td><td>新建 / 编辑 / 删除文档模板，指定默认模板</td></tr>
+                            <tr><td>模板</td><td>新建 / 编辑 / 删除文档模板，编辑支持 Markdown 预览，指定默认模板</td></tr>
                             <tr><td>文档</td><td>内置帮助、主题规范、技能规范等文档入口</td></tr>
                             <tr><td>关于</td><td>版本号、更新卡片（手动检查 / 查看更新说明 / 跳过此版本 / 启动时自动检查）、开源许可、相关链接</td></tr>
                             <tr><td>其他产品</td><td>作者其他工具与作者主页的入口，附图标与官网地址，点击用系统浏览器打开</td></tr>
@@ -1137,8 +1176,8 @@
             </div>
 
             <div class="help-sub" id="faq-skill-move">
-                <h3>v0.2.3 技能目录迁移后，自定义技能怎么办？</h3>
-                <p>技能文件已迁至 <code>~/Documents/yizimarkdown/skills/</code>。已有的自定义技能只要放在该目录下即可继续使用；内置技能在首次启动新版本时自动同步过去。</p>
+                <h3>技能目录迁移后，自定义技能怎么办？</h3>
+                <p>技能文件位于 <code>~/Documents/yizimarkdown/skills/</code>。已有的自定义技能会继续使用；v0.4.4 起也可以直接在「设置 → Skill 管理」里新增、编辑、删除技能，不必手动改 JSON。改过或删除的内置技能会在升级时保留用户版本。</p>
             </div>
 
             <div class="help-sub" id="faq-template-move">
@@ -1213,7 +1252,7 @@
 
             <div class="help-sub" id="faq-cloud-images">
                 <h3>为什么云端文档里的图片没有一起上传？</h3>
-                <p>只有<strong>相对路径</strong>的图片（如 <code>assets/a.png</code>、<code>../assets/x.png</code>）会随文档同步，并保持目录结构。绝对路径（<code>D:\pics\a.png</code>、<code>/home/me/a.png</code>）、<code>file://</code>、网络图片与 <code>data:</code> 都不会上传——这是为了避免把你本机其他位置的文件传到服务器。本地文档的粘贴图保存在 <code>~/Documents/yizimarkdown/assets/</code>（绝对路径），保存到云端时会自动转存到 WebDAV「根目录」下的 <code>assets/</code> 并重写为相对路径。</p>
+                <p>云端文档的图片统一存放在 WebDAV「根目录」下的 <code>assets/</code>，正文写 <code>assets/</code> 或 <code>../assets/</code> 相对引用。绝对路径（<code>D:\pics\a.png</code>、<code>/home/me/a.png</code>）、<code>file://</code>、网络图片与 <code>data:</code> 都不会上传——这是为了避免把你本机其他位置的文件传到服务器。本地文档的粘贴图保存在 <code>~/Documents/yizimarkdown/assets/</code>（绝对路径），保存到云端时会自动转存到根目录 <code>assets/</code> 并重写为相对路径；历史版本遗留在文档旁的图片不会自动删除。</p>
             </div>
 
             <div class="help-sub" id="faq-cloud-auth">
