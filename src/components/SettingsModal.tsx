@@ -1672,13 +1672,13 @@ function SkillsSettings() {
                   <button
                     key={skill.id}
                     onClick={() => selectSkill(skill)}
-                    className={`w-full px-2.5 py-1.5 text-left hover:bg-[var(--editor-hover)] flex items-center gap-2 ${selectedId === skill.id ? 'bg-[var(--editor-accent)] text-white' : 'text-[var(--editor-text)]'}`}
+                    className={`w-full px-2.5 py-1.5 text-left hover:bg-[var(--editor-hover)] flex flex-col gap-0.5 ${selectedId === skill.id ? 'bg-[var(--editor-accent)] text-white' : 'text-[var(--editor-text)]'}`}
                   >
-                    <SkillIcon skill={skill} size={12} className="shrink-0 opacity-80" />
-                    <span className="min-w-0 flex flex-col gap-0.5">
+                    <span className="flex items-center gap-2 min-w-0">
+                      <SkillIcon skill={skill} size={12} className="shrink-0 opacity-80" />
                       <span className="truncate text-xs">{skill.name}</span>
-                      <span className={`truncate text-[0.625rem] font-mono ${selectedId === skill.id ? 'text-white/75' : 'text-[var(--sidebar-text)]'}`}>{skill.id}</span>
                     </span>
+                    <span className={`truncate pl-5 text-[0.625rem] font-mono ${selectedId === skill.id ? 'text-white/75' : 'text-[var(--sidebar-text)]'}`}>{skill.id}</span>
                   </button>
                 ))}
                 {(!manifest || manifest.skills.length === 0) && (
