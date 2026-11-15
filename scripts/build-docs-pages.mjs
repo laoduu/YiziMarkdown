@@ -217,7 +217,7 @@ function pageTemplate(cfg, body, hash) {
 
     <link rel="icon" type="image/png" href="assets/icon.png">
     <link rel="shortcut icon" href="assets/favicon.ico">
-    <link rel="stylesheet" href="assets/css/style.css?v=4">
+    <link rel="stylesheet" href="assets/css/style.css?v=5">
     <link rel="stylesheet" href="assets/css/help.css?v=7">
 
     <script type="application/ld+json">
