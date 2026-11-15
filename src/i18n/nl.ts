@@ -484,6 +484,7 @@ export const nl = {
     selectionMoveDown: "Omlaag",
     selectionRemove: "Verwijderen",
     selectionDisplayName: "Weergavenaam",
+    selectionEditName: "Weergavenaam bewerken",
     selectionRestoreDefault: "Standaard herstellen",
     selectionAdd: "Toevoegen",
     selectionSystem: "Systeemacties",

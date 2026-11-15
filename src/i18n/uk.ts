@@ -453,6 +453,7 @@ export const uk = {
     selectionMoveDown: "Вниз",
     selectionRemove: "Видалити",
     selectionDisplayName: "Відображуване ім’я",
+    selectionEditName: "Змінити відображуване ім’я",
     selectionRestoreDefault: "Відновити типове",
     selectionAdd: "Додати",
     selectionSystem: "Системні дії",

@@ -399,6 +399,7 @@ export const zhTW = {
     selectionMoveDown: "下移",
     selectionRemove: "刪除",
     selectionDisplayName: "顯示名稱",
+    selectionEditName: "編輯顯示名稱",
     selectionRestoreDefault: "恢復預設",
     selectionAdd: "新增",
     selectionSystem: "系統功能",

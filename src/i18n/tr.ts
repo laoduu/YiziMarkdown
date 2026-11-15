@@ -453,6 +453,7 @@ export const tr = {
     selectionMoveDown: "Aşağı taşı",
     selectionRemove: "Kaldır",
     selectionDisplayName: "Görünen ad",
+    selectionEditName: "Görünen adı düzenle",
     selectionRestoreDefault: "Varsayılana dön",
     selectionAdd: "Ekle",
     selectionSystem: "Sistem işlemleri",

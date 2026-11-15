@@ -453,6 +453,7 @@ export const pt = {
     selectionMoveDown: "Mover para baixo",
     selectionRemove: "Remover",
     selectionDisplayName: "Nome exibido",
+    selectionEditName: "Editar nome exibido",
     selectionRestoreDefault: "Restaurar padrão",
     selectionAdd: "Adicionar",
     selectionSystem: "Ações do sistema",

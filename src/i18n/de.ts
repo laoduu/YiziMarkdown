@@ -484,6 +484,7 @@ export const de = {
     selectionMoveDown: "Nach unten",
     selectionRemove: "Entfernen",
     selectionDisplayName: "Anzeigename",
+    selectionEditName: "Anzeigename bearbeiten",
     selectionRestoreDefault: "Standard wiederherstellen",
     selectionAdd: "Hinzufügen",
     selectionSystem: "Systemaktionen",

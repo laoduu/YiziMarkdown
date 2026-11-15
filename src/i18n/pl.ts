@@ -453,6 +453,7 @@ export const pl = {
     selectionMoveDown: "W dół",
     selectionRemove: "Usuń",
     selectionDisplayName: "Nazwa wyświetlana",
+    selectionEditName: "Edytuj nazwę wyświetlaną",
     selectionRestoreDefault: "Przywróć domyślne",
     selectionAdd: "Dodaj",
     selectionSystem: "Działania systemowe",

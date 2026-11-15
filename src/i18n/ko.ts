@@ -453,6 +453,7 @@ export const ko = {
     selectionMoveDown: "아래로",
     selectionRemove: "삭제",
     selectionDisplayName: "표시 이름",
+    selectionEditName: "표시 이름 편집",
     selectionRestoreDefault: "기본값 복원",
     selectionAdd: "추가",
     selectionSystem: "시스템 기능",

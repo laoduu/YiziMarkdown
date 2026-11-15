@@ -453,6 +453,7 @@ export const ja = {
     selectionMoveDown: "下へ",
     selectionRemove: "削除",
     selectionDisplayName: "表示名",
+    selectionEditName: "表示名を編集",
     selectionRestoreDefault: "既定に戻す",
     selectionAdd: "追加",
     selectionSystem: "システム機能",

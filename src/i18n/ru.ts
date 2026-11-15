@@ -391,6 +391,7 @@ export const ru = {
     selectionMoveDown: "Вниз",
     selectionRemove: "Удалить",
     selectionDisplayName: "Отображаемое имя",
+    selectionEditName: "Изменить отображаемое имя",
     selectionRestoreDefault: "Сбросить по умолчанию",
     selectionAdd: "Добавить",
     selectionSystem: "Системные действия",

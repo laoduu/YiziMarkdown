@@ -399,6 +399,7 @@ export const en = {
     selectionMoveDown: "Move down",
     selectionRemove: "Remove",
     selectionDisplayName: "Display name",
+    selectionEditName: "Edit display name",
     selectionRestoreDefault: "Restore default",
     selectionAdd: "Add",
     selectionSystem: "System actions",

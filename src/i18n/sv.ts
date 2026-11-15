@@ -484,6 +484,7 @@ export const sv = {
     selectionMoveDown: "Flytta ned",
     selectionRemove: "Ta bort",
     selectionDisplayName: "Visningsnamn",
+    selectionEditName: "Redigera visningsnamn",
     selectionRestoreDefault: "Återställ standard",
     selectionAdd: "Lägg till",
     selectionSystem: "Systemåtgärder",
