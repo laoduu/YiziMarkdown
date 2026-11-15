@@ -425,6 +425,7 @@ export const pt = {
     selectSkillToEdit: "Selecione uma skill à esquerda",
     skillName: "Nome da skill",
     skillId: "ID da skill",
+    skillIcon: "Ícone",
     skillIdHint: "Identifica a skill e define o nome do arquivo de prompt. Apenas letras, números, - e _.",
     skillSummary: "Resumo",
     skillDescription: "Descrição",

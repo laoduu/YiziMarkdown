@@ -425,6 +425,7 @@ export const ja = {
     selectSkillToEdit: "左のスキルを選択してください",
     skillName: "スキル名",
     skillId: "スキル ID",
+    skillIcon: "アイコン",
     skillIdHint: "スキルを識別し、プロンプトファイル名を決めます。英数字、-、_ のみ使用できます。",
     skillSummary: "概要",
     skillDescription: "説明",

@@ -34,7 +34,7 @@ test('parseSkillManifest 补默认值并过滤脏条目', () => {
   const parsed = parseSkillManifest(JSON.stringify({
     version: 6,
     skills: [
-      { id: 'a', file: 'a.md' },
+      { id: 'a', file: 'a.md', icon: 'rocket' },
       { id: 1, file: 'bad.md' },
       { name: 'no id', file: 'x.md' },
     ],
@@ -44,6 +44,7 @@ test('parseSkillManifest 补默认值并过滤脏条目', () => {
   assert.equal(parsed.version, 6)
   assert.equal(parsed.skills.length, 1)
   assert.equal(parsed.skills[0].name, 'a', '缺失名称时回落到 id')
+  assert.equal(parsed.skills[0].icon, 'rocket')
   assert.deepEqual(parsed.hiddenIds, ['old'])
   assert.equal(parsed.extra, 'keep-me', '未知字段必须保留')
 })
@@ -82,7 +83,7 @@ test('validateSkillDraft 校验名称、ID 格式与唯一性', () => {
 
 test('planSkillSave 新建技能：派生文件并标记 customized', () => {
   const plan = planSkillSave(manifest(), {
-    id: 'new-skill', name: '新技能', summary: '摘要', description: '说明', needsDoc: true,
+    id: 'new-skill', name: '新技能', summary: '摘要', description: '说明', needsDoc: true, icon: 'rocket',
   }, '# 正文', null)
   assert.equal(plan.file, 'new-skill.md')
   assert.equal(plan.deleteFile, null)
@@ -92,6 +93,7 @@ test('planSkillSave 新建技能：派生文件并标记 customized', () => {
   assert.equal(entry.id, 'new-skill')
   assert.equal(entry.name, '新技能')
   assert.equal(entry.needsDoc, true)
+  assert.equal(entry.icon, 'rocket')
   assert.equal(entry.customized, true)
 })
 

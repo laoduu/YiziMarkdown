@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "skills": [
     {
       "id": "slides-outline",
@@ -7,7 +7,8 @@
       "summary": "把当前文档提炼为简洁的演示模式 Markdown",
       "description": "将当前文档提炼为适合演示模式（幻灯片）的精简 Markdown：用 `---` 分页、`***` 分栏（仅用于并排对照页），每页一个要点，语言简练、句式短小，保留核心结论与数据，去掉冗余叙述。片段逐步显示默认关闭，用户明确要求分段演示时才开启。需要引用当前文档。",
       "file": "slides-outline.md",
-      "needsDoc": true
+      "needsDoc": true,
+      "icon": "presentation"
     },
     {
       "id": "doc-summary",
@@ -15,7 +16,8 @@
       "summary": "快速总结当前文档的核心内容",
       "description": "阅读当前文档，输出结构化摘要：一句话主旨、3~6 个核心要点、关键结论。语言简洁，适合快速了解全文。需要引用当前文档。",
       "file": "doc-summary.md",
-      "needsDoc": true
+      "needsDoc": true,
+      "icon": "file-text"
     },
     {
       "id": "polish-writing",
@@ -23,7 +25,8 @@
       "summary": "润色文字，使其更通顺专业",
       "description": "对用户输入或选中的内容进行润色：修正语法与不通顺之处、优化表达节奏，保持原意与原语言，不随意增删观点。可直接在对话中给出改写后的文本。",
       "file": "polish-writing.md",
-      "needsDoc": false
+      "needsDoc": false,
+      "icon": "pencil"
     },
     {
       "id": "translate-fulltext",
@@ -31,7 +34,8 @@
       "summary": "将内容完整翻译为目标语言",
       "description": "对用户提供的内容进行全文翻译：根据用户指定的或自动判断的目标语言，准确传达原意、语气与情感色彩，保留专有名词、技术术语的规范译法，保持原文风格与 Markdown 排版，代码与命令原样保留，直接输出翻译结果而不附加说明。",
       "file": "translate-fulltext.md",
-      "needsDoc": true
+      "needsDoc": true,
+      "icon": "languages"
     },
     {
       "id": "markdown-format",
@@ -39,7 +43,8 @@
       "summary": "把任意文本规范化为标准 Markdown 文档，不改内容",
       "description": "将任意文本（纯文本、半结构化笔记、已带部分 Markdown 的内容）整理成语法规范的 Markdown 文档：补齐标题层级、段落空行、列表与任务列表、引用、表格、代码围栏等结构标记。只做格式规范化，不增删改任何文字，不提炼、不总结、不润色、不翻译。可直接格式化粘贴的文本，勾选引用当前文档时格式化当前文档。",
       "file": "markdown-format.md",
-      "needsDoc": false
+      "needsDoc": false,
+      "icon": "file-code2"
     }
   ]
 }

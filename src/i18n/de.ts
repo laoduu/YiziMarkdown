@@ -456,6 +456,7 @@ export const de = {
     selectSkillToEdit: "Skill links auswählen",
     skillName: "Skill-Name",
     skillId: "Skill-ID",
+    skillIcon: "Symbol",
     skillIdHint: "Kennzeichnet den Skill und bestimmt den Prompt-Dateinamen. Nur Buchstaben, Ziffern, - und _.",
     skillSummary: "Kurzfassung",
     skillDescription: "Beschreibung",

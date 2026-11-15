@@ -425,6 +425,7 @@ export const tr = {
     selectSkillToEdit: "Soldan bir skill seçin",
     skillName: "Skill adı",
     skillId: "Skill ID",
+    skillIcon: "Simge",
     skillIdHint: "Skill'i tanımlar ve prompt dosya adını belirler. Yalnızca harf, rakam, - ve _ kullanılabilir.",
     skillSummary: "Özet",
     skillDescription: "Açıklama",

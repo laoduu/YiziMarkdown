@@ -425,6 +425,7 @@ export const ko = {
     selectSkillToEdit: "왼쪽에서 스킬을 선택하세요",
     skillName: "스킬 이름",
     skillId: "스킬 ID",
+    skillIcon: "아이콘",
     skillIdHint: "스킬을 식별하고 프롬프트 파일 이름을 정합니다. 영문, 숫자, - 및 _만 사용할 수 있습니다.",
     skillSummary: "한 줄 요약",
     skillDescription: "설명",

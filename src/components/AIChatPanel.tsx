@@ -6,6 +6,7 @@ import { providerById } from '../lib/ai-providers'
 import { invokeTauriOrThrow } from '../lib/tauri'
 import { loadSkills, loadSkillPrompt, type Skill } from '../lib/ai-skills'
 import { SKILLS_CHANGED_EVENT } from '../lib/skillsAdmin'
+import SkillIcon from './SkillIcon'
 import { useI18n } from '../i18n'
 
 interface ChatMessage {
@@ -745,7 +746,7 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
                   className={`group relative w-full text-left px-3 py-1.5 hover:bg-[var(--editor-hover)] border-b border-[var(--editor-border)] last:border-b-0 ${activeSkill?.id === s.id ? 'bg-[var(--editor-accent)]/5' : ''}`}
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <Zap size={12} className="text-[var(--editor-accent)] shrink-0" />
+                    <SkillIcon skill={s} size={12} className="text-[var(--editor-accent)] shrink-0" />
                     <span className="text-[0.8125rem] font-medium text-[var(--sidebar-text)] shrink-0">{s.name}</span>
                     <span className="text-[0.75rem] text-[var(--editor-text)] truncate">{s.summary}</span>
                   </div>

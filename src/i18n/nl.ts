@@ -456,6 +456,7 @@ export const nl = {
     selectSkillToEdit: "Kies links een skill",
     skillName: "Skillnaam",
     skillId: "Skill-ID",
+    skillIcon: "Pictogram",
     skillIdHint: "Identificeert de skill en bepaalt de promptbestandsnaam. Alleen letters, cijfers, - en _.",
     skillSummary: "Samenvatting",
     skillDescription: "Beschrijving",

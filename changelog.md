@@ -10,11 +10,14 @@
 - 设置侧栏在「AI 助手」下面新增「Skill 管理」，像模板管理一样支持新增、编辑、删除技能。
 - 可修改技能名称、ID、简介、详细说明、是否需要当前文档，以及 Markdown 提示词正文。
 - 模板管理与 Skill 管理都需要 Markdown 预览，并共用同一套编辑 / 预览逻辑。
+- Skill 列表中的图标要能表达技能含义（如演示、摘要、改写、翻译），新增技能时可选择图标。
 
 **实现**
 - 新增 `SkillsSettings`：左侧技能列表，右侧查看 / 编辑；保存后写入 `~/Documents/yizimarkdown/skills/skills.json` 与同名 `.md` 提示词文件。
 - 新增后端命令 `write_skills_manifest` / `write_skill_file` / `delete_skill_file`，校验 ID / 文件唯一性与文件名安全，拒绝路径穿越。
 - 新增 `src/lib/skillsManifest.ts` 纯逻辑：解析清单、ID 校验、文件派生、保存 / 删除计划；`src/lib/skillsAdmin.ts` 负责 Tauri 读写。
+- 新增 `src/lib/skillIconNames.ts` 与 `components/SkillIcon.tsx`：技能清单保存 `icon` 字段，管理页提供 32 个语义图标可选；内置技能没有 icon 时按 ID 回退（演示 / 摘要 / 改写 / 翻译 / Markdown 格式化），AI 面板技能列表按技能显示对应图标。
+- 内置 `skills/skills.json` 升到 v7 并补齐内置技能图标；升级同步会把这些图标合并给老用户，用户自定义过的技能仍保留原值。
 - 新增共用组件 `MarkdownEditPreview`：可编辑时「编辑 / 预览」标签；列表页查看态直接显示渲染后的预览，不提供源码 / 预览切换（需要源码时点「编辑」）。模板管理与 Skill 管理复用同一组件。
 - 设置页预览禁止横向滚动：代码块自动换行、表格按容器宽度折行、图片限制为 100% 宽。
 - 技能保存后广播 `skills-changed`：AI 面板立即重新加载清单、清空提示词缓存；被删除的当前技能会自动移除输入区胶囊。
@@ -25,7 +28,7 @@
 - `sync_builtin_skills` 升级时跳过 `hiddenIds`，保留自定义条目的正文与字段；未被改动的内置技能仍按新版覆盖。
 
 **验证**
-- `cargo test` 195 通过 / 6 忽略；`npm test` 545 通过；`npx tsc --noEmit`、`npm run build`、`check-i18n --strict` 通过。
+- `cargo test` 195 通过 / 6 忽略；`npm test` 548 通过；`npx tsc --noEmit`、`npm run build`、`check-i18n --strict` 通过。
 
 ### 云端存储专项：图片路径 / 缓存同步 / 打开时版本校验（2026-11-14）
 

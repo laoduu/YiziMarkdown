@@ -425,6 +425,7 @@ export const fr = {
     selectSkillToEdit: "Sélectionnez un skill à gauche",
     skillName: "Nom du skill",
     skillId: "ID du skill",
+    skillIcon: "Icône",
     skillIdHint: "Identifie le skill et détermine le nom du fichier de prompt. Lettres, chiffres, - et _ uniquement.",
     skillSummary: "Résumé",
     skillDescription: "Description",

@@ -6,6 +6,7 @@
  * - ID / 文件名校验
  * - 新建 / 编辑 / 删除时更新清单（含 hiddenIds / customized 标记）
  */
+import { isSkillIconName, resolveSkillIcon, type SkillIconName } from './skillIconNames.ts'
 
 export interface Skill {
   id: string
@@ -18,6 +19,8 @@ export interface Skill {
   file: string
   /** 是否需要引用当前文档作为上下文 */
   needsDoc?: boolean
+  /** 图标名称，见 `skillIconNames.ts` */
+  icon?: string
   /** 用户通过管理页改过：升级同步时不覆盖 */
   customized?: boolean
 }
@@ -37,6 +40,7 @@ export interface SkillDraft {
   summary: string
   description: string
   needsDoc: boolean
+  icon?: SkillIconName
 }
 
 export type SkillValidationError =
@@ -71,6 +75,7 @@ export function parseSkillManifest(raw: string): SkillManifest {
           description: typeof s.description === 'string' ? s.description : '',
           file: String(s.file),
           needsDoc: s.needsDoc === true,
+          ...(typeof s.icon === 'string' ? { icon: s.icon } : {}),
           ...(s.customized === true ? { customized: true } : {}),
         })) as Skill[]
     : []
@@ -173,6 +178,9 @@ export function planSkillSave(
     description: draft.description.trim(),
     file,
     needsDoc: draft.needsDoc,
+    icon: isSkillIconName(draft.icon)
+      ? draft.icon
+      : resolveSkillIcon(existing ?? { id }),
     customized: true,
   }
 

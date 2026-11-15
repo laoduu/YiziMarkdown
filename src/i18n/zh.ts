@@ -371,6 +371,7 @@ export const zh = {
     selectSkillToEdit: "选择左侧技能查看",
     skillName: "技能名称",
     skillId: "技能 ID",
+    skillIcon: "图标",
     skillIdHint: "用于标识技能并派生提示词文件名，仅支持字母、数字、- 和 _。",
     skillSummary: "一句话简介",
     skillDescription: "详细说明",

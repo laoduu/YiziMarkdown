@@ -456,6 +456,7 @@ export const sv = {
     selectSkillToEdit: "Välj en skill till vänster",
     skillName: "Skillnamn",
     skillId: "Skill-ID",
+    skillIcon: "Ikon",
     skillIdHint: "Identifierar skillen och bestämmer promptfilens namn. Endast bokstäver, siffror, - och _.",
     skillSummary: "Sammanfattning",
     skillDescription: "Beskrivning",

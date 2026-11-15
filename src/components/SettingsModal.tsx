@@ -30,6 +30,8 @@ import { sanitizeUserCss } from '../lib/userCss'
 import { loadThemeCatalog, type ThemeEntry } from '../lib/themeCatalog'
 import { buildThemePreviewCss } from '../lib/themePreview'
 import MarkdownEditPreview from './MarkdownEditPreview'
+import SkillIcon from './SkillIcon'
+import { SKILL_ICON_NAMES, DEFAULT_SKILL_ICON, resolveSkillIcon } from '../lib/skillIconNames'
 import {
   parseSkillManifest,
   validateSkillDraft,
@@ -1426,7 +1428,7 @@ function SkillsSettings() {
   const [editing, setEditing] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft] = useState<SkillDraft>({
-    id: '', name: '', summary: '', description: '', needsDoc: false,
+    id: '', name: '', summary: '', description: '', needsDoc: false, icon: DEFAULT_SKILL_ICON,
   })
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -1474,7 +1476,7 @@ function SkillsSettings() {
     setEditingId(null)
     setSelectedId(null)
     setContent('')
-    setDraft({ id: '', name: '', summary: '', description: '', needsDoc: false })
+    setDraft({ id: '', name: '', summary: '', description: '', needsDoc: false, icon: DEFAULT_SKILL_ICON })
     setError(null)
     setDeleteOpen(false)
   }
@@ -1489,6 +1491,7 @@ function SkillsSettings() {
       summary: selected.summary,
       description: selected.description,
       needsDoc: selected.needsDoc === true,
+      icon: resolveSkillIcon(selected),
     })
     setError(null)
     setDeleteOpen(false)
@@ -1586,6 +1589,30 @@ function SkillsSettings() {
               </div>
               <p className="text-[0.6875rem] text-[var(--sidebar-text)]">{t('settings.skillIdHint')}</p>
               <div>
+                <label className="block text-[0.6875rem] text-[var(--sidebar-text)] mb-1">{t('settings.skillIcon')}</label>
+                <div className="grid grid-cols-8 gap-1">
+                  {SKILL_ICON_NAMES.map((name) => {
+                    const active = (draft.icon ?? DEFAULT_SKILL_ICON) === name
+                    return (
+                      <button
+                        key={name}
+                        type="button"
+                        title={name}
+                        aria-pressed={active}
+                        onClick={() => setDraft({ ...draft, icon: name })}
+                        className={`flex items-center justify-center h-7 rounded border transition-colors ${
+                          active
+                            ? 'border-[var(--editor-accent)] text-[var(--editor-accent)] bg-[var(--editor-accent)]/10'
+                            : 'border-[var(--editor-border)] text-[var(--sidebar-text)] hover:bg-[var(--editor-hover)] hover:text-[var(--editor-text)]'
+                        }`}
+                      >
+                        <SkillIcon name={name} size={14} />
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              <div>
                 <label className="block text-[0.6875rem] text-[var(--sidebar-text)] mb-1">{t('settings.skillSummary')}</label>
                 <input
                   type="text"
@@ -1645,10 +1672,13 @@ function SkillsSettings() {
                   <button
                     key={skill.id}
                     onClick={() => selectSkill(skill)}
-                    className={`w-full px-3 py-1.5 text-left hover:bg-[var(--editor-hover)] flex flex-col gap-0.5 ${selectedId === skill.id ? 'bg-[var(--editor-accent)] text-white' : 'text-[var(--editor-text)]'}`}
+                    className={`w-full px-2.5 py-1.5 text-left hover:bg-[var(--editor-hover)] flex items-center gap-2 ${selectedId === skill.id ? 'bg-[var(--editor-accent)] text-white' : 'text-[var(--editor-text)]'}`}
                   >
-                    <span className="truncate text-xs">{skill.name}</span>
-                    <span className={`truncate text-[0.625rem] font-mono ${selectedId === skill.id ? 'text-white/75' : 'text-[var(--sidebar-text)]'}`}>{skill.id}</span>
+                    <SkillIcon skill={skill} size={12} className="shrink-0 opacity-80" />
+                    <span className="min-w-0 flex flex-col gap-0.5">
+                      <span className="truncate text-xs">{skill.name}</span>
+                      <span className={`truncate text-[0.625rem] font-mono ${selectedId === skill.id ? 'text-white/75' : 'text-[var(--sidebar-text)]'}`}>{skill.id}</span>
+                    </span>
                   </button>
                 ))}
                 {(!manifest || manifest.skills.length === 0) && (
@@ -1668,6 +1698,7 @@ function SkillsSettings() {
                   <>
                     <div className="mb-2">
                       <div className="flex items-center gap-2">
+                        <SkillIcon skill={selected} size={14} className="shrink-0 text-[var(--editor-accent)]" />
                         <span className="text-[0.8125rem] font-medium text-[var(--editor-text)] truncate">{selected.name}</span>
                         <span className="text-[0.625rem] font-mono text-[var(--editor-accent)]">{selected.id}</span>
                         {selected.needsDoc && (

@@ -371,6 +371,7 @@ export const zhTW = {
     selectSkillToEdit: "選擇左側技能查看",
     skillName: "技能名稱",
     skillId: "技能 ID",
+    skillIcon: "圖示",
     skillIdHint: "用於識別技能並產生提示詞檔名，僅支援字母、數字、- 和 _。",
     skillSummary: "一句話簡介",
     skillDescription: "詳細說明",

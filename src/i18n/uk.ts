@@ -425,6 +425,7 @@ export const uk = {
     selectSkillToEdit: "Виберіть навичку ліворуч",
     skillName: "Назва навички",
     skillId: "ID навички",
+    skillIcon: "Іконка",
     skillIdHint: "Ідентифікує навичку та визначає ім’я файлу промпту. Лише літери, цифри, - та _.",
     skillSummary: "Стислий опис",
     skillDescription: "Опис",

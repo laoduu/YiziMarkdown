@@ -363,6 +363,7 @@ export const ru = {
     selectSkillToEdit: "Выберите навык слева",
     skillName: "Название навыка",
     skillId: "ID навыка",
+    skillIcon: "Иконка",
     skillIdHint: "Идентифицирует навык и задаёт имя файла промпта. Только буквы, цифры, - и _.",
     skillSummary: "Краткое описание",
     skillDescription: "Описание",
