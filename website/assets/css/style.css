@@ -345,6 +345,7 @@
             grid-template-columns: 44px 1fr;
             grid-template-areas: "icon title" "desc desc";
             align-items: center;
+            align-content: start;
             column-gap: 14px; row-gap: 6px;
             transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
         }
@@ -407,11 +408,6 @@
             margin-bottom: 4px;
         }
         .mode-head strong { font-size: 15px; color: var(--dark); font-weight: 700; }
-        .mode-key {
-            font-size: 11px; font-weight: 600; color: var(--blue);
-            background: var(--light); border-radius: 5px; padding: 2px 6px;
-            white-space: nowrap;
-        }
         .mode-item p { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--gray); }
 
         /* ===== THEME SHOWCASE — Magazine Stack ===== */
