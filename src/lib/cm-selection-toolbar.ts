@@ -14,6 +14,8 @@ export interface SelectionToolbarInfo {
   x: number
   y: number
   text: string
+  /** 选区来源：源码/实时编辑器，或预览面板 */
+  source: 'editor' | 'preview'
 }
 
 export function selectionToolbarExtension(
@@ -70,11 +72,11 @@ export function selectionToolbarExtension(
               onHide()
               return
             }
-            onShow({ x: coords.left, y: coords.top, text: this.latestText })
+            onShow({ x: coords.left, y: coords.top, text: this.latestText, source: 'editor' })
           })
         } else {
           // 拖拽中：只更新文字内容，不重新定位
-          onShow({ x: -1, y: -1, text: this.latestText })
+          onShow({ x: -1, y: -1, text: this.latestText, source: 'editor' })
         }
       }
 

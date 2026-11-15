@@ -810,7 +810,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   const [slashMenuVisible, setSlashMenuVisible] = useState(false)
   const [slashMenuCoords, setSlashMenuCoords] = useState({ left: 0, bottom: 0 })
   const [slashMenuQuery, setSlashMenuQuery] = useState('')
-  const [selToolbar, setSelToolbar] = useState<SelectionToolbarInfo & { visible: boolean }>({ visible: false, x: 0, y: 0, text: '' })
+  const [selToolbar, setSelToolbar] = useState<SelectionToolbarInfo & { visible: boolean }>({ visible: false, x: 0, y: 0, text: '', source: 'editor' })
   const lineNumbersCompartment = useRef(new Compartment()).current
   const richCompartment = useRef(new Compartment()).current
   const lineWrappingCompartment = useRef(new Compartment()).current
@@ -1908,7 +1908,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       if (pendingRaf) cancelAnimationFrame(pendingRaf)
       pendingRaf = requestAnimationFrame(() => {
         const rect = range.getBoundingClientRect()
-        setSelToolbar({ visible: true, x: rect.left, y: rect.top, text })
+        setSelToolbar({ visible: true, x: rect.left, y: rect.top, text, source: 'preview' })
       })
     }
 
@@ -1918,6 +1918,27 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       if (pendingRaf) cancelAnimationFrame(pendingRaf)
     }
   }, [viewMode])
+
+  /** 划词助手的「粘贴」：用剪贴板内容替换 CodeMirror 当前选区。 */
+  const handleSelectionPaste = useCallback(async () => {
+    try {
+      const clipboard = await navigator.clipboard.readText()
+      const view = viewRef.current
+      if (!view || !clipboard) return
+      const { from, to } = view.state.selection.main
+      if (from === to) return
+      view.dispatch({
+        changes: { from, to, insert: clipboard },
+        selection: { anchor: from + clipboard.length },
+        scrollIntoView: true,
+      })
+      view.focus()
+      setSelToolbar((prev) => ({ ...prev, visible: false }))
+    } catch (e) {
+      console.error('[selection-toolbar] paste failed:', e)
+      onToast?.(translate(getCurrentLang(), 'editor.selectionPasteFailed'))
+    }
+  }, [onToast])
 
   return (
     <div className="editor-container h-full flex flex-col">
@@ -1943,6 +1964,8 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
           x={selToolbar.x}
           y={selToolbar.y}
           text={selToolbar.text}
+          source={selToolbar.source}
+          onPasteSelected={selToolbar.source === 'editor' ? handleSelectionPaste : undefined}
         />
 
         {/* 预览面板：永远挂载 */}

@@ -165,6 +165,7 @@ export const zh = {
   },
   editor: {
     imagePasteFailed: "图片保存失败，未插入",
+    selectionPasteFailed: "无法读取剪贴板，请检查权限后重试。",
     imageTooLarge: "图片超过 {mb} MB，未插入",
     copied: '已复制',
     searchPlaceholder: '搜索...',
@@ -386,6 +387,24 @@ export const zh = {
     skillIdInvalid: "技能 ID 只能包含字母、数字、- 和 _",
     skillIdDuplicate: "该技能 ID 已被占用",
     skillFileCollision: "提示词文件名已被占用",
+    selectionAssistant: "划词助手",
+    selectionPreview: "工具栏预览",
+    selectionPreviewHint: "选中文本后工具栏会这样显示；修改立即生效。",
+    selectionEmpty: "暂无功能，选中文本时工具栏将隐藏。",
+    selectionFunctions: "工具栏功能",
+    selectionSkillSource: "技能",
+    selectionSystemSource: "系统",
+    selectionMissingSkill: "技能不存在",
+    selectionMoveUp: "上移",
+    selectionMoveDown: "下移",
+    selectionRemove: "删除",
+    selectionDisplayName: "显示名称",
+    selectionRestoreDefault: "恢复默认",
+    selectionAdd: "添加",
+    selectionSystem: "系统功能",
+    selectionSkills: "技能",
+    selectionAlreadyAdded: "已添加",
+    selectionNoSkills: "暂无技能",
     // 插件
     pluginMgmt: '插件管理',
     pluginHint: '插件提供可选的渲染或导出能力；未启用的插件不会加载，不占用系统资源。公式与 Mermaid 已内置，无需在此开启。',
@@ -978,5 +997,11 @@ export const zh = {
   },
   docx: {
     tocHint: '右键目录 → 更新域（或按 F9）',
-  }
+  },
+  selection: {
+    copy: "复制",
+    paste: "粘贴",
+    chat: "添加到对话",
+    copied: "已复制",
+  },
 }

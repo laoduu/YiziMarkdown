@@ -1,6 +1,6 @@
 import { invokeTauri, invokeTauriOrThrow } from '../lib/tauri'
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { X, Loader2, ChevronRight, FolderOpen, Palette, FileText, Keyboard, Settings2, Eye, EyeOff, Info, Github, History, BookOpen, ExternalLink, Zap, Globe, Puzzle, Bot, Cloud, Boxes, Download, RefreshCw, Presentation, Layers, Sparkles, Plus, HelpCircle } from 'lucide-react'
+import { X, Loader2, ChevronRight, FolderOpen, Palette, FileText, Keyboard, Settings2, Eye, EyeOff, Info, Github, History, BookOpen, ExternalLink, Zap, Globe, Puzzle, Bot, Cloud, Boxes, Download, RefreshCw, Presentation, Layers, Sparkles, Plus, HelpCircle, TextCursorInput, ArrowUp, ArrowDown, Trash2, Copy, ClipboardPaste, MessageSquarePlus, Check } from 'lucide-react'
 import { useSettingsStore, UI_TEXT_SCALE_DEFAULT, UI_TEXT_SCALE_MIN, UI_TEXT_SCALE_MAX, DEFAULT_BRAND_NAME, BRAND_NAME_MAX } from '../stores/settingsStore'
 import { useUpdateStore } from '../stores/updateStore'
 import type { UpdateBlocker } from '../lib/updateClient'
@@ -31,6 +31,7 @@ import { loadThemeCatalog, type ThemeEntry } from '../lib/themeCatalog'
 import { buildThemePreviewCss } from '../lib/themePreview'
 import MarkdownEditPreview from './MarkdownEditPreview'
 import SkillIcon from './SkillIcon'
+import SelectionToolbarView from './SelectionToolbarView'
 import { SKILL_ICON_NAMES, DEFAULT_SKILL_ICON, resolveSkillIcon } from '../lib/skillIconNames'
 import {
   parseSkillManifest,
@@ -49,7 +50,18 @@ import {
   deleteSkillFile,
   writeSkillManifest,
   notifySkillsChanged,
+  SKILLS_CHANGED_EVENT,
 } from '../lib/skillsAdmin'
+import { loadSkills, type Skill as AiSkill } from '../lib/ai-skills'
+import {
+  DEFAULT_SELECTION_ACTIONS,
+  buildSelectionToolbarItems,
+  createSelectionActionId,
+  hasSelectionAction,
+  moveSelectionAction,
+  type SelectionActionConfig,
+  type SelectionSystemAction,
+} from '../lib/selectionActions'
 
 const fallbackFonts = [
   'Consolas', 'Courier New', 'Lucida Console', 'Monaco', 'Menlo',
@@ -86,7 +98,7 @@ interface SettingsModalProps {
   defaultTab?: CategoryKey
 }
 
-type CategoryKey = 'general' | 'appearance' | 'editor' | 'liveMode' | 'ai' | 'skills' | 'cloud' | 'plugins' | 'shortcuts' | 'templates' | 'docs' | 'about' | 'products'
+type CategoryKey = 'general' | 'appearance' | 'editor' | 'liveMode' | 'ai' | 'skills' | 'selection' | 'cloud' | 'plugins' | 'shortcuts' | 'templates' | 'docs' | 'about' | 'products'
 
 const categories: Array<{ key: CategoryKey; labelKey: string; icon: React.ReactNode }> = [
   { key: 'general', labelKey: 'settings.general', icon: <Settings2 size={16} /> },
@@ -95,6 +107,7 @@ const categories: Array<{ key: CategoryKey; labelKey: string; icon: React.ReactN
   { key: 'liveMode', labelKey: 'settings.liveMode', icon: <Zap size={16} /> },
   { key: 'ai', labelKey: 'settings.ai', icon: <Bot size={16} /> },
   { key: 'skills', labelKey: 'settings.skills', icon: <Sparkles size={16} /> },
+  { key: 'selection', labelKey: 'settings.selectionAssistant', icon: <TextCursorInput size={16} /> },
   { key: 'cloud', labelKey: 'settings.cloud', icon: <Cloud size={16} /> },
   { key: 'plugins', labelKey: 'settings.plugins', icon: <Puzzle size={16} /> },
   { key: 'shortcuts', labelKey: 'settings.shortcuts', icon: <Keyboard size={16} /> },
@@ -1746,6 +1759,249 @@ function SkillsSettings() {
 }
 
 
+// ===================== 划词助手 =====================
+
+const SYSTEM_ACTION_DEFS: Array<{
+  type: SelectionSystemAction
+  icon: typeof Copy
+  labelKey: string
+}> = [
+  { type: 'copy', icon: Copy, labelKey: 'selection.copy' },
+  { type: 'paste', icon: ClipboardPaste, labelKey: 'selection.paste' },
+  { type: 'chat', icon: MessageSquarePlus, labelKey: 'selection.chat' },
+]
+
+function SelectionAssistantSettings() {
+  const { t } = useI18n()
+  const actions = useSettingsStore((s) => s.selectionActions)
+  const setField = useSettingsStore((s) => s.setField)
+  const [skills, setSkills] = useState<AiSkill[]>([])
+
+  useEffect(() => {
+    let alive = true
+    const reload = () => {
+      loadSkills().then((list) => { if (alive) setSkills(list) })
+    }
+    reload()
+    window.addEventListener(SKILLS_CHANGED_EVENT, reload)
+    return () => {
+      alive = false
+      window.removeEventListener(SKILLS_CHANGED_EVENT, reload)
+    }
+  }, [])
+
+  const systemLabels = useMemo<Record<SelectionSystemAction, string>>(() => ({
+    copy: t('selection.copy'),
+    paste: t('selection.paste'),
+    chat: t('selection.chat'),
+  }), [t])
+
+  const items = useMemo(
+    () => buildSelectionToolbarItems(actions, skills, systemLabels),
+    [actions, skills, systemLabels],
+  )
+  const previewItems = items.filter((item) => !item.missingSkill)
+
+  const updateActions = (next: SelectionActionConfig[]) => setField('selectionActions', next)
+
+  const defaultLabel = (action: SelectionActionConfig): string => {
+    if (action.type === 'skill') {
+      return skills.find((s) => s.id === action.skillId)?.name ?? action.skillId ?? ''
+    }
+    return systemLabels[action.type]
+  }
+
+  const addSkill = (skill: AiSkill) => {
+    if (hasSelectionAction(actions, 'skill', skill.id)) return
+    updateActions([
+      ...actions,
+      { id: createSelectionActionId('skill', skill.id), type: 'skill', skillId: skill.id },
+    ])
+  }
+
+  const addSystem = (type: SelectionSystemAction) => {
+    if (hasSelectionAction(actions, type)) return
+    updateActions([...actions, { id: createSelectionActionId(type), type }])
+  }
+
+  const updateLabel = (action: SelectionActionConfig, value: string) => {
+    updateActions(actions.map((a) => {
+      if (a.id !== action.id) return a
+      const label = value.trim()
+      if (!label) {
+        const { label: _drop, ...rest } = a
+        return rest
+      }
+      return { ...a, label: value }
+    }))
+  }
+
+  const removeAction = (id: string) => {
+    updateActions(actions.filter((a) => a.id !== id))
+  }
+
+  const resetDefault = () => {
+    updateActions(DEFAULT_SELECTION_ACTIONS.map((a) => ({ ...a })))
+  }
+
+  return (
+    <div className="settings-content-scroll">
+      <div className="space-y-4">
+        <Section title={t('settings.selectionPreview')}>
+          <div
+            className="rounded-lg border border-[var(--editor-border)] px-3 py-4"
+            style={{ background: 'var(--editor-bg)' }}
+          >
+            {previewItems.length > 0 ? (
+              <div className="flex justify-center overflow-x-auto py-1">
+                <SelectionToolbarView items={previewItems} interactive={false} />
+              </div>
+            ) : (
+              <p className="text-center text-[0.75rem] text-[var(--sidebar-text)]">{t('settings.selectionEmpty')}</p>
+            )}
+            <p className="mt-2 text-center text-[0.6875rem] text-[var(--sidebar-text)]">
+              {t('settings.selectionPreviewHint')}
+            </p>
+          </div>
+        </Section>
+
+        <Section title={t('settings.selectionFunctions')}>
+          <div className="space-y-1.5">
+            {items.length === 0 && (
+              <p className="text-[0.6875rem] text-[var(--sidebar-text)] pb-1">{t('settings.selectionEmpty')}</p>
+            )}
+            {items.map((item, index) => {
+              const action = actions.find((a) => a.id === item.id)!
+              const SystemIcon = item.systemAction
+                ? SYSTEM_ACTION_DEFS.find((d) => d.type === item.systemAction)?.icon
+                : null
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-2 rounded-lg border border-[var(--editor-border)] px-2.5 py-2"
+                  style={{ background: 'var(--editor-surface)' }}
+                >
+                  <span className="shrink-0 text-[var(--editor-accent)]">
+                    {SystemIcon ? <SystemIcon size={14} /> : <SkillIcon name={item.iconName} size={14} />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 min-w-0 mb-1">
+                      <span className="truncate text-[0.75rem] text-[var(--editor-text)]">{item.label}</span>
+                      <span className="shrink-0 rounded px-1 py-0.5 text-[0.625rem] text-[var(--sidebar-text)] bg-[var(--editor-hover)]">
+                        {item.type === 'skill' ? t('settings.selectionSkillSource') : t('settings.selectionSystemSource')}
+                      </span>
+                      {item.missingSkill && (
+                        <span className="shrink-0 text-[0.625rem] text-red-500">{t('settings.selectionMissingSkill')}</span>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      value={action.label ?? ''}
+                      maxLength={24}
+                      onChange={(e) => updateLabel(action, e.target.value)}
+                      className="settings-input text-[0.6875rem]"
+                      placeholder={defaultLabel(action)}
+                      aria-label={t('settings.selectionDisplayName')}
+                    />
+                  </div>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <button
+                      onClick={() => updateActions(moveSelectionAction(actions, item.id, -1))}
+                      disabled={index === 0}
+                      className="p-1 rounded text-[var(--sidebar-text)] hover:bg-[var(--editor-hover)] disabled:opacity-30"
+                      title={t('settings.selectionMoveUp')}
+                      aria-label={t('settings.selectionMoveUp')}
+                    >
+                      <ArrowUp size={12} />
+                    </button>
+                    <button
+                      onClick={() => updateActions(moveSelectionAction(actions, item.id, 1))}
+                      disabled={index === items.length - 1}
+                      className="p-1 rounded text-[var(--sidebar-text)] hover:bg-[var(--editor-hover)] disabled:opacity-30"
+                      title={t('settings.selectionMoveDown')}
+                      aria-label={t('settings.selectionMoveDown')}
+                    >
+                      <ArrowDown size={12} />
+                    </button>
+                    <button
+                      onClick={() => removeAction(item.id)}
+                      className="p-1 rounded text-red-500 hover:bg-[var(--editor-hover)]"
+                      title={t('settings.selectionRemove')}
+                      aria-label={t('settings.selectionRemove')}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <div className="flex justify-end pt-1">
+            <button onClick={resetDefault} className="text-[0.6875rem] text-[var(--editor-accent)] hover:underline">
+              {t('settings.selectionRestoreDefault')}
+            </button>
+          </div>
+        </Section>
+
+        <Section title={t('settings.selectionAdd')}>
+          <div className="space-y-3">
+            <div>
+              <p className="mb-1.5 text-[0.6875rem] font-medium text-[var(--sidebar-text)]">{t('settings.selectionSystem')}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {SYSTEM_ACTION_DEFS.map((def) => {
+                  const added = hasSelectionAction(actions, def.type)
+                  const Icon = def.icon
+                  return (
+                    <button
+                      key={def.type}
+                      onClick={() => addSystem(def.type)}
+                      disabled={added}
+                      className="inline-flex items-center gap-1 rounded-md border border-[var(--editor-border)] px-2 py-1 text-[0.6875rem] text-[var(--editor-text)] hover:bg-[var(--editor-hover)] disabled:opacity-40"
+                    >
+                      <Icon size={12} />
+                      {t(def.labelKey)}
+                      {added && <Check size={11} className="text-emerald-500" />}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-1.5 text-[0.6875rem] font-medium text-[var(--sidebar-text)]">{t('settings.selectionSkills')}</p>
+              <div className="max-h-[240px] overflow-y-auto rounded-lg border border-[var(--editor-border)] bg-[var(--editor-surface)]">
+                {skills.map((skill) => {
+                  const added = hasSelectionAction(actions, 'skill', skill.id)
+                  return (
+                    <div key={skill.id} className="flex items-center gap-2 px-2.5 py-1.5 border-b border-[var(--editor-border)] last:border-b-0">
+                      <SkillIcon skill={skill} size={13} className="shrink-0 text-[var(--editor-accent)]" />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[0.75rem] text-[var(--editor-text)]">{skill.name}</div>
+                        {skill.summary && <div className="truncate text-[0.625rem] text-[var(--sidebar-text)]">{skill.summary}</div>}
+                      </div>
+                      <button
+                        onClick={() => addSkill(skill)}
+                        disabled={added}
+                        className="shrink-0 inline-flex items-center gap-0.5 text-[0.6875rem] text-[var(--editor-accent)] hover:underline disabled:opacity-40 disabled:no-underline"
+                      >
+                        {added ? <Check size={11} /> : <Plus size={11} />}
+                        {added ? t('settings.selectionAlreadyAdded') : t('settings.selectionAdd')}
+                      </button>
+                    </div>
+                  )
+                })}
+                {skills.length === 0 && (
+                  <p className="px-3 py-3 text-center text-[0.6875rem] text-[var(--sidebar-text)]">{t('settings.selectionNoSkills')}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </Section>
+      </div>
+    </div>
+  )
+}
+
 // ===================== 插件设置 =====================
 function PluginsSettings() {
   const { t } = useI18n()
@@ -2889,7 +3145,7 @@ export default function SettingsModal({ isOpen, onClose, defaultTab }: SettingsM
 
   const content: Record<CategoryKey, React.ReactNode> = {
     general: <GeneralSettings />, appearance: <AppearanceSettings />, editor: <EditorSettings />,
-    liveMode: <LiveModeSettings />, ai: <AISettings />, skills: <SkillsSettings />, cloud: <CloudSettings />,
+    liveMode: <LiveModeSettings />, ai: <AISettings />, skills: <SkillsSettings />, selection: <SelectionAssistantSettings />, cloud: <CloudSettings />,
     plugins: <PluginsSettings />,
     shortcuts: <ShortcutsSettings />, templates: <TemplatesSettings />, docs: <DocumentationSettings />,
     about: <AboutSettings />, products: <OtherProductsSettings />,

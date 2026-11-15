@@ -165,6 +165,7 @@ export const en = {
   },
   editor: {
     imagePasteFailed: "Failed to save the pasted image",
+    selectionPasteFailed: "Could not read the clipboard. Check permission and try again.",
     imageTooLarge: "Image is larger than {mb} MB and was not inserted",
     copied: 'Copied',
     searchPlaceholder: 'Search...',
@@ -386,6 +387,24 @@ export const en = {
     skillIdInvalid: "Skill ID can only contain letters, digits, - and _",
     skillIdDuplicate: "This Skill ID is already in use",
     skillFileCollision: "The prompt file name is already in use",
+    selectionAssistant: "Selection Assistant",
+    selectionPreview: "Toolbar preview",
+    selectionPreviewHint: "This is how the toolbar appears after selecting text; changes take effect immediately.",
+    selectionEmpty: "No actions configured. The toolbar stays hidden when text is selected.",
+    selectionFunctions: "Toolbar actions",
+    selectionSkillSource: "Skill",
+    selectionSystemSource: "System",
+    selectionMissingSkill: "Skill missing",
+    selectionMoveUp: "Move up",
+    selectionMoveDown: "Move down",
+    selectionRemove: "Remove",
+    selectionDisplayName: "Display name",
+    selectionRestoreDefault: "Restore default",
+    selectionAdd: "Add",
+    selectionSystem: "System actions",
+    selectionSkills: "Skills",
+    selectionAlreadyAdded: "Added",
+    selectionNoSkills: "No skills available",
     // 插件
     pluginMgmt: 'Plugin Management',
     pluginHint: 'Plugins add optional rendering or export capabilities. Disabled plugins are not loaded. Math and Mermaid are built in and do not need to be enabled here.',
@@ -978,5 +997,11 @@ export const en = {
   },
   docx: {
     tocHint: 'Right-click the table of contents → Update Field (F9)',
-  }
+  },
+  selection: {
+    copy: "Copy",
+    paste: "Paste",
+    chat: "Add to chat",
+    copied: "Copied",
+  },
 }

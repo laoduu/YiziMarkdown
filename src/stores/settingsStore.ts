@@ -12,6 +12,11 @@ import {
   isSlideColAlign, isSlideColStyle, type SlideColAlign, type SlideColStyle,
 } from '../lib/slideColumns.ts'
 import { DEFAULT_READER_ANIM, type ReaderAnim } from '../lib/readerAnimation.ts'
+import {
+  DEFAULT_SELECTION_ACTIONS,
+  normalizeSelectionActions,
+  type SelectionActionConfig,
+} from '../lib/selectionActions.ts'
 
 /** 内容区宽度（正文列 max-width）的取值区间与默认值（px）。
  *  拖拽手柄（components/ContentWidthHandles.tsx）与存档迁移共用同一组边界，避免两处各写一套。 */
@@ -213,6 +218,10 @@ export interface SettingsState {
   /** 按 `${pluginId}:${format}` 记住的偏好项（只存 checkbox / select，见 lib/exportOptions.ts） */
   pluginExportOptions: Record<string, Record<string, unknown>>
 
+  // 划词助手（v0.4.4）
+  /** 划词工具栏的功能顺序与自定义显示名；默认见 lib/selectionActions.ts */
+  selectionActions: SelectionActionConfig[]
+
   // AI 面板运行时状态（不持久化）
   /** AI 面板是否打开 */
   aiPanelOpen: boolean
@@ -340,6 +349,9 @@ export const useSettingsStore = create<SettingsState>()(
       // 插件导出弹窗（v0.4.4）：默认没有任何记住项
       pluginExportOptions: {},
 
+      // 划词助手（v0.4.4）：默认保持旧的 6 个按钮
+      selectionActions: DEFAULT_SELECTION_ACTIONS.map((a) => ({ ...a })),
+
       // AI 面板运行时状态
       aiPanelOpen: false,
       aiPendingAction: null,
@@ -374,7 +386,8 @@ export const useSettingsStore = create<SettingsState>()(
       // v22: 左侧边栏可拖拽调宽 —— 新增 sidebarWidth（默认 260，与改动前一致）
       // v23: 导出弹窗记住勾选 —— 新增 docxThemeColors / docxFollowPreview /
       //      docxFollowPreviewFont / pluginExportOptions（默认空）
-      version: 23,
+      // v24: 划词助手可配置 —— 新增 selectionActions（默认旧版 6 个按钮）
+      version: 24,
       migrate: (persisted: unknown) => {
         // 自动迁移旧字体栈到 MiSans 方案
         const oldFont = "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
@@ -464,6 +477,9 @@ export const useSettingsStore = create<SettingsState>()(
           ) {
             state.pluginExportOptions = {}
           }
+          // v24：划词助手。存量存档没有该字段 ⇒ 默认旧版 6 个按钮；
+          // 已有配置则清掉非法 / 重复项（空的 [] 是用户主动删空，必须保留）。
+          state.selectionActions = normalizeSelectionActions(state.selectionActions)
           // v14：PPTX 导出。存量存档没有这四个键 ⇒ 补默认值。
           // 超页策略只认枚举值（手改 localStorage 写入非法值会让分段按钮全灭）。
           if (typeof state.pptxExportHintSeen !== 'boolean') state.pptxExportHintSeen = false

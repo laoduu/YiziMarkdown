@@ -165,6 +165,7 @@ export const zhTW = {
   },
   editor: {
     imagePasteFailed: "圖片儲存失敗，未插入",
+    selectionPasteFailed: "無法讀取剪貼簿，請檢查權限後重試。",
     imageTooLarge: "圖片超過 {mb} MB，未插入",
     copied: '已複製',
     searchPlaceholder: '搜尋...',
@@ -386,6 +387,24 @@ export const zhTW = {
     skillIdInvalid: "技能 ID 只能包含字母、數字、- 和 _",
     skillIdDuplicate: "此技能 ID 已被使用",
     skillFileCollision: "此提示詞檔名已被使用",
+    selectionAssistant: "選取助手",
+    selectionPreview: "工具列預覽",
+    selectionPreviewHint: "選取文字後工具列會這樣顯示；修改立即生效。",
+    selectionEmpty: "尚未設定功能。選取文字時工具列會隱藏。",
+    selectionFunctions: "工具列功能",
+    selectionSkillSource: "技能",
+    selectionSystemSource: "系統",
+    selectionMissingSkill: "技能不存在",
+    selectionMoveUp: "上移",
+    selectionMoveDown: "下移",
+    selectionRemove: "刪除",
+    selectionDisplayName: "顯示名稱",
+    selectionRestoreDefault: "恢復預設",
+    selectionAdd: "新增",
+    selectionSystem: "系統功能",
+    selectionSkills: "技能",
+    selectionAlreadyAdded: "已新增",
+    selectionNoSkills: "暫無技能",
     // 外掛
     pluginMgmt: '外掛管理',
     pluginHint: '啟用外掛後可增強 Markdown 的渲染能力。未啟用的外掛不會載入，不佔用系統資源。',
@@ -976,5 +995,11 @@ export const zhTW = {
   },
   docx: {
     tocHint: '右鍵目錄 → 更新功能變數（或按 F9）',
-  }
+  },
+  selection: {
+    copy: "複製",
+    paste: "貼上",
+    chat: "加入對話",
+    copied: "已複製",
+  },
 }

@@ -2971,10 +2971,32 @@ a {
   white-space: nowrap;
   user-select: none;
   animation: selection-toolbar-in 0.15s ease-out;
-  height: 28px;
+  height: auto;
+  min-height: 28px;
+  max-width: calc(100vw - 16px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
   box-sizing: border-box;
   font-size: 0.75rem;
   line-height: 1;
+}
+
+/* 设置页预览：同一个组件，去掉 fixed 定位 / 弹出动画 */
+.selection-toolbar-preview {
+  position: static;
+  z-index: auto;
+  width: max-content;
+  max-width: 100%;
+  animation: none;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+.selection-toolbar-preview .selection-toolbar-btn {
+  cursor: default;
+}
+.selection-toolbar-preview .selection-toolbar-btn:hover {
+  background: transparent;
+  color: var(--sel-toolbar-text);
 }
 @keyframes selection-toolbar-in {
   from { opacity: 0; transform: translateY(4px); }
