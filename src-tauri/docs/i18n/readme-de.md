@@ -204,17 +204,19 @@ Rich Text aus Webseiten, Word / DOCX, Google Docs, Notion und ähnlichen Quellen
   - DOCX nutzt native Word-Semantik (Listen, Tabellen, Codeblöcke, Zitate, Aufgabenlisten), die Tabellenformatierung entspricht der Vorschau, Bilder aus lokalen Pfaden, Web-Bilder und HTML-`<img>` werden unterstützt (Breite über `width`)
   - PDF entspricht der Vorschau und wird automatisch umbrochen
   - HTML enthält links eine schwebende Gliederungskarte, Klick auf einen Eintrag springt zum Abschnitt (PDF ohne Seitenleiste)
-  - PPTX übernimmt Theme, Hell/Dunkel und Layouts des Präsentationsmodus und gibt bearbeitbaren Text, Tabellen, Bilder, Formen und native Formeln aus
+  - PPTX übernimmt Theme, Hell/Dunkel und Layouts des Präsentationsmodus und gibt bearbeitbaren Text, Tabellen, Bilder, Formen und native Formeln aus; die Arbeitsfläche ist auf 16:9 / 1280×720 festgelegt, der Exportdialog bietet Schriftgrößenanpassung und eine Layoutprüfung ohne Schreiben; lange Codezeilen brechen an der Spaltenbreite um
   - EPUB stammt aus dem integrierten Plugin; vor dem Export sind Kapitelaufteilung / Cover / sichtbares Inhaltsverzeichnis / Lesetheme / Dokumentinformationen wählbar
 - **`.md`-Zuordnung**: in den Einstellungen mit einem Klick als Standard-Markdown-Editor des Systems festlegen (Windows-Registrierung / macOS LaunchServices)
 
 ### Cloud-Speicher (WebDAV)
 
 - **Dateibrowser**: Der „Cloud“-Tab in der Seitenleiste durchsucht den Verzeichnisbaum des Servers – Dokumente öffnen, Dateien / Ordner anlegen, umbenennen, verschieben, löschen; tiefe Pfade klappen im Breadcrumb zu „…“ mit Dropdown, Ordner werden Schicht für Schicht nachgeladen
-- **In die Cloud speichern**: lokales Dokument mit einem Klick hochladen, relativ referenzierte Bilder werden mit übertragen und die Verzeichnisstruktur bleibt erhalten; bei Cloud-Dokumenten schreibt `Ctrl+S` direkt zurück
+- **In die Cloud speichern**: lokales Dokument mit einem Klick hochladen; lokale Bilder werden automatisch in den Stammordner `assets/` kopiert und als relative Referenzen umgeschrieben; `Ctrl+S` schreibt Cloud-Dokumente direkt zurück
 - **Konfliktschutz**: vor dem Speichern wird der ETag verglichen; wurde die Datei auf einem anderen Gerät geändert, fragt ein Dialog nach „Serverversion überschreiben“ oder „Lokale Änderungen verwerfen und neu laden“ – niemals stilles Überschreiben
 - **Zugangsdaten**: Benutzername und Passwort liegen im System-Credential-Store (Windows-Anmeldeinformationsverwaltung / macOS-Schlüsselbund), nicht in Konfigurationsdateien
 - **Kompatibilität**: Standard-WebDAV-Dienste wie Nutstore, Nextcloud, Synology (ein anwendungsspezifisches Passwort wird empfohlen)
+- **Versionsprüfung beim Öffnen**: zwischengespeicherte Dokumente werden vor dem Öffnen mit der Cloud verglichen; bei Änderungen werden Bytes, Zeilen, Hashes und die erste abweichende Zeile angezeigt – mit Optionen für Cloud-Version übernehmen, lokal behalten, Cloud-Kopie speichern oder abbrechen
+- **Cache-Synchronisierung**: läuft beim Start im Hintergrund und lässt sich in den Einstellungen manuell auslösen; entfernte/gelöschte Dateien werden lokal bereinigt, optional lädt ein Offline-Spiegel alle Markdown-Dateien und referenzierten Bilder unter dem WebDAV-Stamm
 
 ---
 
@@ -232,6 +234,10 @@ Rich Text aus Webseiten, Word / DOCX, Google Docs, Notion und ähnlichen Quellen
 ### KI-Skills
 
 Die ⚡-Schaltfläche im Eingabefeld öffnet das Skill-Menü; der gewählte Skill-Tag wird an der Cursorposition eingefügt und der Prompt automatisch in den Kontext eingebunden. In `skills/` genügen `skills.json` + `.md`-Prompts, um eigene Skills zu definieren. Fünf Skills sind integriert: „Präsentationsfassung verdichten“, „Dokument zusammenfassen“, „Formulierung überarbeiten“, „Volltext übersetzen“, „Markdown formatieren“.
+
+### Skill-Verwaltung und Auswahlassistent
+
+v0.4.4: Unter Einstellungen → Skill-Verwaltung lassen sich Skills anlegen, bearbeiten und löschen – Name, ID, Icon, Kurzfassung und Prompt; das KI-Panel aktualisiert sich sofort, und geänderte oder gelöschte integrierte Skills bleiben bei Upgrades erhalten. Unter Einstellungen → Auswahlassistent lässt sich die Werkzeugleiste konfigurieren: Aktionen aus Skills oder Systemfunktionen (Kopieren, Einfügen, zum Chat hinzufügen) hinzufügen, entfernen und sortieren, umbenennen und live in der Vorschau sehen.
 
 ### Plugins
 
@@ -253,7 +259,7 @@ Die ⚡-Schaltfläche im Eingabefeld öffnet das Skill-Menü; der gewählte Skil
 - Unter Einstellungen → Allgemein → Oberflächensprache mit einem Klick wechseln, sofort wirksam; Oberflächentexte, das Tastenkürzel-Panel und Plugin-Beschreibungen folgen mit
 - **Erster Start passt sich an**: ohne Installationssprache wird die Systemsprache gewählt, außerhalb der Liste fällt es auf English zurück; jeder Spracheintrag trägt zusätzlich die englische Kennung `Language`, damit er auch in einer chinesischen Oberfläche schnell zu finden ist
 - **Oberflächenskalierung**: 80 %–120 % (Standard 100 %), skaliert nur Oberflächentexte und Symbole, Panelgrößen und Dokumentinhalt bleiben unberührt
-- **Einstellungs-Panel**: Allgemein, Aussehen, Editor, Live-Modus, KI-Assistent, Cloud, Plugins, Tastenkürzel, Vorlagen, Dokumente, Info, Produkte, mit sofortiger Vorschau
+- **Einstellungs-Panel**: Allgemein, Aussehen, Editor, Live-Modus, KI-Assistent, Skill-Verwaltung, Auswahlassistent, Cloud, Plugins, Tastenkürzel, Vorlagen, Dokumente, Info, Produkte, mit sofortiger Vorschau
 
 ---
 

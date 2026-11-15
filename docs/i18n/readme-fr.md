@@ -204,17 +204,19 @@ Le texte enrichi copié depuis des pages web, Word / DOCX, Google Docs, Notion o
   - DOCX utilise la sémantique native de Word (listes, tableaux, blocs de code, citations, listes de tâches), aligne le style des tableaux sur l'aperçu et prend en charge les images en chemin local, les images distantes et le HTML `<img>` (`width` permettant de contrôler la largeur)
   - PDF restitue fidèlement l'aperçu et pagine automatiquement
   - HTML inclut une carte de plan flottante à gauche, un clic menant à la section (le PDF n'a pas de panneau latéral)
-  - PPTX hérite du thème, du mode clair/sombre et des mises en page du mode diaporama, et produit du texte, des tableaux, des images, des formes et des équations natives modifiables
+  - PPTX hérite du thème, du mode clair/sombre et des mises en page du mode diaporama, et produit du texte, des tableaux, des images, des formes et des équations natives modifiables ; le canevas est fixé à 16:9 / 1280×720, la boîte d'export permet d'ajuster la taille de police et de vérifier la mise en page sans écrire ; les longues lignes de code sont renvoyées à la largeur de colonne
   - EPUB est fourni par le plugin intégré ; avant l'export, choix du découpage par chapitre / de la couverture / du sommaire visible / du thème de lecture / des informations du document
 - **Association des fichiers `.md`** : définir YiziMarkdown comme éditeur Markdown par défaut du système en un clic dans les réglages (registre Windows / LaunchServices macOS)
 
 ### Stockage cloud (WebDAV)
 
 - **Navigateur de fichiers** : l'onglet « Cloud » de la barre latérale parcourt l'arborescence du serveur — ouvrir des documents, créer fichiers / dossiers, renommer, déplacer, supprimer ; le fil d'Ariane des dossiers profonds se replie en « … » avec un menu déroulant, et les dossiers se chargent par niveaux
-- **Enregistrer dans le cloud** : envoi en un clic d'un document local, images référencées en chemin relatif incluses et arborescence préservée ; `Ctrl+S` réécrit directement un document cloud
+- **Enregistrer dans le cloud** : téléversez un document local en un clic ; les images locales sont automatiquement copiées dans le dossier racine `assets/` et réécrites en références relatives ; `Ctrl+S` réécrit directement les documents cloud
 - **Protection contre les conflits** : l'ETag est comparé avant l'enregistrement ; si un autre appareil a modifié le fichier distant, une boîte propose « écraser la version du serveur » ou « abandonner mes modifications et recharger » — jamais d'écrasement silencieux
 - **Sécurité des identifiants** : le nom d'utilisateur et le mot de passe vont dans le magasin d'identifiants du système (Gestionnaire d'identifiants Windows / Trousseau macOS), jamais dans les fichiers de configuration
 - **Compatibilité** : services WebDAV standard tels que Nutstore, Nextcloud ou Synology (mot de passe applicatif recommandé)
+- **Vérification de version à l'ouverture** : les documents en cache sont comparés au cloud avant ouverture ; en cas de changement, la taille, les lignes, les empreintes et la première ligne différente sont affichées, avec choix d'utiliser le cloud, garder le local, enregistrer une copie cloud ou annuler
+- **Synchronisation du cache** : s'exécute en arrière-plan au démarrage et peut être lancée manuellement dans Réglages ; les fichiers distants supprimés ou déplacés sont nettoyés localement, et un miroir hors ligne optionnel télécharge tous les Markdown et images référencées sous la racine WebDAV
 
 ---
 
@@ -232,6 +234,10 @@ Le texte enrichi copié depuis des pages web, Word / DOCX, Google Docs, Notion o
 ### Compétences IA (Skills)
 
 Le bouton ⚡ de la zone de saisie ouvre le menu des skills ; le tag du skill choisi est inséré au curseur et son prompt est injecté dans le contexte. Placez `skills.json` et des prompts `.md` dans le répertoire `skills/` pour personnaliser. Cinq skills sont intégrés : « Extraction de présentation », « Résumé de document », « Réécriture et polissage », « Traduction intégrale » et « Formatage Markdown ».
+
+### Gestion des Skills et assistant de sélection
+
+v0.4.4 : dans Réglages → Gestion des Skills, créez, modifiez ou supprimez des skills, changez nom, ID, icône, résumé et prompt ; le panneau IA se met à jour immédiatement et les skills intégrés modifiés ou supprimés sont conservés lors des mises à jour. Dans Réglages → Assistant de sélection, configurez la barre : ajouter, retirer et réordonner des actions issues des skills ou du système (copier, coller, ajouter au chat), les renommer et voir l'aperçu en direct.
 
 ### Plugins
 
@@ -253,7 +259,7 @@ Le bouton ⚡ de la zone de saisie ouvre le menu des skills ; le tag du skill ch
 - Changement en un clic dans Réglages → Général → Langue de l'interface, effet immédiat ; les textes de l'interface, le panneau des raccourcis et les descriptions de plugins suivent
 - **Détection au premier lancement** : en l'absence de langue choisie dans le programme d'installation, la langue du système est utilisée, avec repli sur English hors de la liste supportée ; chaque entrée de langue porte aussi le libellé anglais `Language`, pour la retrouver vite même depuis une interface chinoise
 - **Taille de l'interface** : 80 %–120 % (100 % par défaut), mettant uniquement à l'échelle les textes et icônes de l'interface, sans toucher à la taille des panneaux ni au contenu des documents
-- **Panneau de réglages** : Général, Apparence, Éditeur, Mode direct, Assistant IA, Cloud, Plugins, Raccourcis, Modèles, Documentation, À propos, Produits, avec aperçu immédiat des réglages
+- **Panneau de réglages** : Général, Apparence, Éditeur, Mode direct, Assistant IA, Gestion des Skills, Assistant de sélection, Cloud, Plugins, Raccourcis, Modèles, Documentation, À propos, Produits, avec aperçu immédiat des réglages
 
 ---
 

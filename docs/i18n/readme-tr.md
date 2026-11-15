@@ -204,17 +204,19 @@ Web sayfaları, Word / DOCX, Google Docs, Notion gibi kaynaklardan kopyalanan ze
   - DOCX, Word'ün yerel anlamlarını kullanır (listeler, tablolar, kod blokları, alıntılar, görev listeleri); tablo stili önizlemeyle uyumludur; görsellerde yerel yollar, internet görselleri ve HTML `<img>` desteklenir (genişlik `width` ile kontrol edilebilir)
   - PDF, önizlemeyle aynı sadakattedir ve otomatik olarak sayfalanır
   - HTML, solda yüzen bir ana hat kartı içerir; öğeye tıklayınca bölüme gidilir (PDF'te kenar çubuğu yoktur)
-  - PPTX, sunum modunun temasını, açık/koyu modunu ve düzenlerini devralır; düzenlenebilir metin, tablolar, görseller, şekiller ve yerel formüller üretir
+  - PPTX, sunum modunun temasını, açık/koyu modunu ve düzenlerini devralır; düzenlenebilir metin, tablo, görsel, şekil ve yerel denklemler üretir; tuval 16:9 / 1280×720 sabittir, dışa aktarma penceresi yazı boyutu ayarı ve dosya yazmadan düzen denetimi sunar; uzun kod satırları sütun genişliğinde sarılır
   - EPUB yerleşik eklenti tarafından sağlanır; dışa aktarmadan önce bölüm bölme / kapak / görünür içindekiler / okuma teması / belge bilgileri seçilebilir
 - **.md dosya ilişkilendirmesi**: ayarlardan tek tıkla sistem varsayılan Markdown editörü yapılır (Windows kayıt defteri / macOS LaunchServices)
 
 ### Bulut Depolama (WebDAV)
 
 - **Dosya tarayıcısı**: kenar çubuğundaki «Bulut» sekmesi sunucu dizin ağacında gezinir; belge açma, dosya / klasör oluşturma, yeniden adlandırma, taşıma, silme yapılabilir; derin dizinlerde gezinti yolu «…» olarak katlanır ve açılır menüyle atlanabilir, klasörler ihtiyaç duyuldukça katman katman yüklenir
-- **Buluta kaydet**: yerel belgeyi tek tıkla yükleyin; metinde göreli olarak başvurulan görseller de dizin yapısı korunarak yüklenir; bulut belgelerinde `Ctrl+S` doğrudan geri yazar
+- **Buluta kaydet**: yerel belgeyi tek tıkla yükleyin; yerel görseller otomatik olarak kök `assets/` klasörüne kopyalanır ve göreli başvurulara dönüştürülür; `Ctrl+S` bulut belgelerini doğrudan geri yazar
 - **Çakışma koruması**: kaydetmeden önce ETag karşılaştırılır; dosya başka bir cihazda değiştirilmişse «sunucu sürümünün üzerine yaz» veya «yerel değişikliklerimi bırak ve yeniden yükle» seçeneği sunulur; asla sessizce üzerine yazılmaz
 - **Kimlik bilgisi güvenliği**: kullanıcı adı ve parola sistem kimlik bilgisi deposuna kaydedilir (Windows Kimlik Bilgisi Yöneticisi / macOS Anahtarlık), yapılandırma dosyalarına yazılmaz
 - **Uyumluluk**: Nutstore, Nextcloud, Synology gibi standart WebDAV hizmetleri (uygulamaya özel parola kullanılması önerilir)
+- **Açılışta sürüm denetimi**: önbellekteki belgeler açılmadan önce bulutla karşılaştırılır; değişiklik varsa bayt, satır, karma ve ilk farklı satır gösterilir; bulut sürümünü kullan, yereli koru, bulut kopyası kaydet veya iptal seçenekleri sunulur
+- **Önbellek eşitleme**: başlangıçta arka planda çalışır ve Ayarlar'dan elle başlatılabilir; uzaktan silinen/taşınan dosyalar yerelde temizlenir, isteğe bağlı çevrimdışı yansı WebDAV kökü altındaki tüm Markdown ve referans görselleri indirir
 
 ---
 
@@ -232,6 +234,10 @@ Web sayfaları, Word / DOCX, Google Docs, Notion gibi kaynaklardan kopyalanan ze
 ### AI Yetenekleri (Skill)
 
 Giriş kutusundaki ⚡ düğmesi yetenek menüsünü açar; seçilen yetenek etiketi imleç konumuna eklenir ve istem (prompt) otomatik olarak bağlama enjekte edilir. `skills/` dizinine `skills.json` + `.md` istemleri koyarak kendinizinkileri tanımlayabilirsiniz. Yerleşik 5 yetenek: «Sunum taslağı çıkarma», «Belge özeti», «Üslup düzeltme», «Tam metin çevirisi», «Markdown biçimlendirme».
+
+### Skill yönetimi ve seçim asistanı
+
+v0.4.4: Ayarlar → Skill yönetimi altında skill oluşturabilir, düzenleyebilir veya silebilir; ad, ID, simge, özet ve prompt değiştirebilirsiniz; AI paneli anında yenilenir ve değiştirilen/silinen yerleşik skill'ler güncellemelerde korunur. Ayarlar → Seçim asistanı altında araç çubuğunu yapılandırın: skill veya sistem işlemlerini (kopyala, yapıştır, sohbete ekle) ekleyin, kaldırın, sıralayın, adlarını değiştirin ve canlı önizlemeyi görün.
 
 ### Eklentiler
 
@@ -253,7 +259,7 @@ Giriş kutusundaki ⚡ düğmesi yetenek menüsünü açar; seçilen yetenek eti
 - Ayarlar → Genel → Arayüz dili ile tek tıkla geçiş yapılır, anında etkili olur; arayüz metinleri, kısayol paneli ve eklenti açıklamaları dile göre değişir
 - **İlk açılışta otomatik uyarlama**: yükleyici dil seçimi yoksa sistem diline göre seçilir; desteklenen listede yoksa English'e düşer; dil öğelerinde İngilizce `Language` etiketi de bulunur, Çince arayüzde bile hızlıca bulunabilir
 - **Arayüz yazı boyutu**: %80–%120 (varsayılan %100); yalnızca arayüz metinlerini ve simgeleri ölçekler, panel boyutları ve belge içeriği etkilenmez
-- **Ayarlar paneli**: Genel, Görünüm, Editör, Canlı Mod, AI Asistanı, Bulut, Eklentiler, Kısayollar, Şablonlar, Belge, Hakkında, Ürün; ayarlar anında önizlenir
+- **Ayarlar paneli**: Genel, Görünüm, Editör, Canlı Mod, AI Asistanı, Skill yönetimi, Seçim asistanı, Bulut, Eklentiler, Kısayollar, Şablonlar, Belge, Hakkında, Ürün; ayarlar anında önizlenir
 
 ---
 

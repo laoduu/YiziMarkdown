@@ -204,17 +204,19 @@ Formaterad text (rich text) som kopierats från webbsidor, Word / DOCX, Google D
   - DOCX använder Words inbyggda semantik (listor, tabeller, kodblock, citat, att-göra-listor), tabellstilen matchar förhandsvisningen, bilder stöds från lokala sökvägar, nätverk och HTML `<img>` (bredd via `width`)
   - PDF överensstämmer med förhandsvisningen och sidindelas automatiskt
   - HTML innehåller ett flytande översiktskort till vänster; klick på en post går direkt till avsnittet (PDF har inget sidofält)
-  - PPTX ärver presentationslägets tema, ljust/mörkt och layouter och exporterar redigerbar text, tabeller, bilder, former och inbyggda formler
+  - PPTX ärver presentationens tema, ljus/mörkt och layouter och skapar redigerbar text, tabeller, bilder, former och inbyggda ekvationer; ytan är fast 16:9 / 1280×720, exportdialogen kan justera teckenstorlek och kontrollera layouten utan att skriva; långa kodrader radbryts efter kolumnbredden
   - EPUB levereras av det inbyggda pluginet; före export kan du välja avsnittsdelning / omslag / synlig innehållsförteckning / läsningstema / dokumentinformation
 - **`.md`-filassociation**: ange YiziMarkdown som systemets standard Markdown-redigerare med ett klick i inställningarna (Windows-registret / macOS LaunchServices)
 
 ### Molnlagring (WebDAV)
 
 - **Filbläddrare**: fliken ”Moln” i sidofältet bläddrar i serverns katalogträd — öppna dokument, skapa filer / mappar, byta namn, flytta, ta bort; djupa sökvägar (brödsmulor) vecklas till ”…” med en rullgardinsmeny för att hoppa, och mappar laddas lättjefullt nivå för nivå
-- **Spara till molnet**: ett lokalt dokument laddas upp med ett klick, tillsammans med bilder som refereras med relativa sökvägar, och katalogstrukturen bevaras; `Ctrl+S` i ett molndokument skriver direkt tillbaka
+- **Spara till molnet**: ladda upp ett lokalt dokument med ett klick; lokala bilder kopieras automatiskt till rotmappen `assets/` och skrivs om som relativa referenser; `Ctrl+S` skriver molndokument direkt tillbaka
 - **Konfliktskydd**: ETag jämförs före sparning; om filen ändrats av en annan enhet visas ett val att ”överskriv serverns version” eller ”förkasta mina ändringar och ladda om” — aldrig tyst överskrivning
 - **Säkerhet för inloggningsuppgifter**: användarnamn och lösenord lagras i operativsystemets nyckelring (Windows Credential Manager / macOS Keychain), aldrig i konfigurationsfiler
 - **Kompatibilitet**: standardiserade WebDAV-tjänster som Nutstore (Jianguoyun), Nextcloud och Synology (appspecifikt lösenord rekommenderas)
+- **Versionskontroll vid öppning**: cachelagrade dokument jämförs med molnet före öppning; vid ändringar visas byte, rader, hashar och första olika raden, med val att använda molnversionen, behålla lokal, spara en molnkopia eller avbryta
+- **Cache-synkronisering**: körs i bakgrunden vid start och kan startas manuellt i Inställningar; borttagna/flyttade fjärrfiler rensas lokalt, och en valfri offline-spegling laddar ner alla Markdown och refererade bilder under WebDAV-roten
 
 ---
 
@@ -232,6 +234,10 @@ Formaterad text (rich text) som kopierats från webbsidor, Word / DOCX, Google D
 ### AI-färdigheter (Skill)
 
 Knappen ⚡ i inmatningsfältet öppnar färdighetsmenyn; den valda färdighetstaggen infogas vid markören och prompten injiceras automatiskt i kontexten. Lägg `skills.json` + `.md`-promptar i katalogen `skills/` för att definiera egna. Fem färdigheter är inbyggda: ”Presentationsdisposition”, ”Dokumentsammanfattning”, ”Textpolering”, ”Översättning av hela texten”, ”Markdown-formatering”.
+
+### Skill-hantering och urvalsassistent
+
+v0.4.4: under Inställningar → Skill-hantering kan du skapa, redigera eller radera skills och ändra namn, ID, ikon, sammanfattning och prompt; AI-panelen uppdateras direkt och ändrade eller borttagna inbyggda skills bevaras vid uppgraderingar. Under Inställningar → Urvalsassistent kan du konfigurera verktygsfältet: lägga till, ta bort och ordna åtgärder från skills eller systemfunktioner (kopiera, klistra in, lägg till i chatten), byta namn och se liveförhandsvisning.
 
 ### Plugin
 
@@ -253,7 +259,7 @@ Knappen ⚡ i inmatningsfältet öppnar färdighetsmenyn; den valda färdighetst
 - Inställningar → Allmänt → Gränssnittsspråk växlar omedelbart; gränssnittstexter, genvägspanelen och plugin-beskrivningar följer språket
 - **Automatisk anpassning vid första starten**: utan installationsspråk väljs språket efter systemets språk; om det inte finns i listan används English. Språkposterna har en engelsk `Language`-etikett, så de är snabba att hitta även i ett kinesiskt gränssnitt
 - **Gränssnittsstorlek**: 80%–120% (standard 100%), skalar endast gränssnittstext och ikoner; panelstorlekar och dokumentinnehåll påverkas inte
-- **Inställningspanel**: Allmänt, Utseende, Redigerare, Live-läge, AI-assistent, Moln, Plugin, Genvägar, Mallar, Dokumentation, Version och uppdateringar, Fler produkter — med omedelbar förhandsvisning
+- **Inställningspanel**: Allmänt, Utseende, Redigerare, Live-läge, AI-assistent, Skill-hantering, Urvalsassistent, Moln, Plugin, Genvägar, Mallar, Dokumentation, Version och uppdateringar, Fler produkter — med omedelbar förhandsvisning
 
 ---
 

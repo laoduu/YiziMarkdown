@@ -204,17 +204,19 @@ Rich text copied from web pages, Word / DOCX, Google Docs or Notion is converted
   - DOCX uses native Word semantics (lists, tables, code blocks, quotes, task lists), matches the preview's table styling, and supports local-path images, remote images and HTML `<img>` (width via the `width` attribute)
   - PDF matches the preview and paginates automatically
   - HTML includes a floating outline card on the left that jumps to sections (PDF has no sidebar)
-  - PPTX inherits the Presentation theme, light/dark mode and layouts, and emits editable text, tables, images, shapes and native equations
+  - PPTX inherits the Presentation theme, light/dark mode and layouts, and emits editable text, tables, images, shapes and native equations; the canvas is fixed at 16:9 / 1280×720, and the export dialog supports font-size adjustment and a layout check that only measures without writing; long code lines wrap to the column width
   - EPUB comes from the built-in plugin; before export you can choose chapter splitting / cover / visible contents / reading theme / document info
 - **`.md` association**: set YiziMarkdown as the default Markdown editor in settings, then double-clicking `.md` opens it (Windows registry / macOS LaunchServices)
 
 ### Cloud Storage (WebDAV)
 
 - **File browser**: the “Cloud” tab in the sidebar browses the server tree — open documents, create files / folders, rename, move, delete; deep breadcrumbs collapse into “…” with a dropdown, and folders load lazily
-- **Save to cloud**: upload a local document in one click, including images referenced by relative paths, preserving the directory structure; `Ctrl+S` writes cloud documents straight back
+- **Save to cloud**: upload a local document in one click; local images are automatically copied to the root `assets/` folder and rewritten as relative references; `Ctrl+S` writes cloud documents straight back
 - **Conflict protection**: the server ETag is compared before saving; if another device changed the file, a dialog offers “overwrite the server copy” or “discard my changes and reload” — never a silent overwrite
 - **Credential safety**: username and password go into the OS credential store (Windows Credential Manager / macOS Keychain), never into config files
 - **Compatibility**: standard WebDAV services such as Nutstore, Nextcloud and Synology (an app-specific password is recommended)
+- **Version check on open**: cached documents are compared with the cloud before opening; if changed, byte counts, line counts, hashes and the first differing line are shown, with options to use the cloud copy, keep local, save a cloud copy, or cancel
+- **Cache sync**: runs in the background at startup and can be triggered in Settings; deleted/moved remote files are cleaned locally, and an optional offline mirror downloads all Markdown and referenced images under the WebDAV root
 
 ---
 
@@ -232,6 +234,10 @@ Rich text copied from web pages, Word / DOCX, Google Docs or Notion is converted
 ### AI Skills
 
 The ⚡ button in the input box opens the skill menu; the selected skill tag is inserted at the cursor and its prompt is injected into the context. Put `skills.json` plus `.md` prompts in `skills/` to define your own. Five skills ship built in: Presentation Outline, Document Summary, Polish Writing, Full-text Translation and Markdown Formatting.
+
+### Skill Management and Selection Assistant
+
+v0.4.4: manage skills under Settings → Skill Management — create, edit or delete skills, change name, ID, icon, summary and prompt; the AI panel refreshes immediately, and edited or deleted built-in skills are preserved across upgrades. Configure the selection toolbar under Settings → Selection Assistant — add, remove and reorder actions from skills or system actions (copy, paste, add to chat), rename them, and preview changes live.
 
 ### Plugins
 
@@ -253,7 +259,7 @@ The ⚡ button in the input box opens the skill menu; the selected skill tag is 
 - Switch instantly in Settings → General → Interface language; UI text, the shortcut panel and plugin descriptions follow
 - **First-launch detection**: without an installer language, the system language is used, falling back to English when unsupported; each language entry also carries an English `Language` label so it is easy to find from a Chinese UI
 - **Interface scale**: 80%–120% (default 100%), scaling only UI text and icons — panel sizes and document content are untouched
-- **Settings panel**: General, Appearance, Editor, Live Mode, AI, Cloud, Plugins, Shortcuts, Templates, Docs, About, Products, with live preview
+- **Settings panel**: General, Appearance, Editor, Live Mode, AI, Skill Management, Selection Assistant, Cloud, Plugins, Shortcuts, Templates, Docs, About, Products, with live preview
 
 ---
 

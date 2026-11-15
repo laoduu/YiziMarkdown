@@ -204,17 +204,19 @@ Texto rico copiado de páginas da web, Word / DOCX, Google Docs, Notion e afins 
   - DOCX usa a semântica nativa do Word (listas, tabelas, blocos de código, citações, listas de tarefas), alinha o estilo das tabelas com a pré-visualização e aceita imagens de caminhos locais, imagens da web e `<img>` em HTML (a largura é controlada por `width`)
   - PDF mantém a mesma fidelidade da pré-visualização e pagina automaticamente
   - HTML traz um cartão flutuante de estrutura à esquerda, com clique para ir direto à seção (o PDF não tem barra lateral)
-  - PPTX herda o tema, o modo claro/escuro e os layouts do modo Apresentação, e gera texto, tabelas, imagens, formas e fórmulas nativas editáveis
+  - PPTX herda o tema, o modo claro/escuro e os layouts do modo apresentação e gera texto, tabelas, imagens, formas e equações nativas editáveis; a tela é fixa em 16:9 / 1280×720, a janela de exportação permite ajustar o tamanho da fonte e verificar o layout sem gravar; linhas de código longas quebram na largura da coluna
   - EPUB vem do plugin integrado; antes de exportar dá para escolher divisão por capítulos / capa / sumário visível / tema de leitura / informações do documento
 - **Associação de arquivos `.md`**: nos ajustes, defina o YiziMarkdown como editor Markdown padrão do sistema (registro do Windows / LaunchServices do macOS)
 
 ### Armazenamento na nuvem (WebDAV)
 
 - **Navegador de arquivos**: a aba «Nuvem» na barra lateral navega pela árvore do servidor: abrir documentos, criar arquivos / pastas, renomear, mover, excluir; trilhas de navegação profundas se recolhem em «…» com um menu suspenso, e as pastas carregam sob demanda, nível por nível
-- **Salvar na nuvem**: um documento local sobe com um clique, junto com as imagens referenciadas por caminhos relativos, preservando a estrutura de diretórios; em documentos na nuvem, `Ctrl+S` grava direto no servidor
+- **Salvar na nuvem**: envie um documento local com um clique; as imagens locais são copiadas automaticamente para a pasta raiz `assets/` e reescritas como referências relativas; `Ctrl+S` grava diretamente os documentos da nuvem
 - **Proteção contra conflitos**: antes de salvar, o ETag é comparado; se o arquivo remoto foi alterado por outro dispositivo, uma caixa de diálogo oferece «sobrescrever a versão do servidor» ou «descartar minhas alterações e recarregar», nunca uma sobrescrita silenciosa
 - **Segurança das credenciais**: usuário e senha vão para o cofre de credenciais do sistema (Gerenciador de Credenciais do Windows / Keychain do macOS), nunca para arquivos de configuração
 - **Compatibilidade**: serviços WebDAV padrão como Nutstore, Nextcloud e Synology (recomenda-se uma senha específica do aplicativo)
+- **Verificação de versão ao abrir**: os documentos em cache são comparados com a nuvem antes de abrir; se houver alteração, são exibidos bytes, linhas, hashes e a primeira linha diferente, com opções para usar a nuvem, manter o local, salvar uma cópia na nuvem ou cancelar
+- **Sincronização de cache**: roda em segundo plano na inicialização e pode ser acionada manualmente nas Configurações; arquivos remotos excluídos ou movidos são limpos localmente, e um espelho offline opcional baixa todos os Markdown e imagens referenciadas sob a raiz WebDAV
 
 ---
 
@@ -232,6 +234,10 @@ Texto rico copiado de páginas da web, Word / DOCX, Google Docs, Notion e afins 
 ### Skills de IA
 
 O botão ⚡ do campo de entrada abre o menu de skills; a tag da skill escolhida é inserida no cursor e o prompt é injetado no contexto. Para criar as suas, basta colocar `skills.json` e os prompts `.md` no diretório `skills/`. Vêm 5 skills integradas: Roteiro da apresentação, Resumo do documento, Polir a redação, Tradução do texto completo e Formatação de Markdown.
+
+### Gerenciamento de Skills e assistente de seleção
+
+v0.4.4: em Configurações → Gerenciamento de Skills, crie, edite ou exclua skills e altere nome, ID, ícone, resumo e prompt; o painel de IA atualiza imediatamente e skills integrados modificados ou excluídos são preservados nas atualizações. Em Configurações → Assistente de seleção, configure a barra: adicione, remova e reordene ações de skills ou do sistema (copiar, colar, adicionar ao chat), renomeie e veja a prévia ao vivo.
 
 ### Plugins
 
@@ -253,7 +259,7 @@ O botão ⚡ do campo de entrada abre o menu de skills; a tag da skill escolhida
 - Troca imediata em Configurações → Geral → Idioma da interface; os textos da interface, o painel de atalhos e as descrições de plugins acompanham o idioma
 - **Detecção automática na primeira inicialização**: quando não há idioma do instalador, usa-se o idioma do sistema, com retorno ao inglês se não estiver na lista; cada idioma traz também o rótulo `Language` em inglês, para localizar rápido mesmo com a interface em chinês
 - **Tamanho da interface**: 80%–120% (padrão 100%), escalando apenas textos e ícones da interface, sem afetar o tamanho dos painéis nem o conteúdo do documento
-- **Painel de configurações**: Geral, Aparência, Editor, Modo Tempo real, Assistente de IA, Nuvem, Plugins, Atalhos, Modelos, Documentos, Sobre, Produtos, com pré-visualização imediata
+- **Painel de configurações**: Geral, Aparência, Editor, Modo Tempo real, Assistente de IA, Gerenciamento de Skills, Assistente de seleção, Nuvem, Plugins, Atalhos, Modelos, Documentos, Sobre, Produtos, com pré-visualização imediata
 
 ---
 

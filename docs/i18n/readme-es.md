@@ -204,17 +204,19 @@ El texto enriquecido copiado de páginas web, Word / DOCX, Google Docs, Notion y
   - DOCX usa la semántica nativa de Word (listas, tablas, bloques de código, citas, listas de tareas), alinea el estilo de las tablas con la vista previa y admite imágenes de rutas locales, remotas e `<img>` de HTML (el ancho se controla con `width`)
   - PDF mantiene la misma fidelidad que la vista previa y pagina automáticamente
   - HTML incluye una tarjeta flotante de esquema a la izquierda, con un clic para ir a la sección (el PDF no incluye barra lateral)
-  - PPTX hereda el tema, el modo claro/oscuro y los diseños del modo Presentación, y genera texto, tablas, imágenes, formas y fórmulas nativas editables
+  - PPTX hereda el tema, el modo claro/oscuro y los diseños del modo presentación, y genera texto, tablas, imágenes, formas y ecuaciones nativas editables; el lienzo está fijo en 16:9 / 1280×720, el diálogo de exportación permite ajustar el tamaño de fuente y comprobar el diseño sin escribir; las líneas de código largas se ajustan al ancho de columna
   - EPUB lo aporta un plugin integrado; antes de exportar se puede elegir la división por capítulos / portada / índice visible / tema de lectura / información del documento
 - **Asociación de archivos `.md`**: en la configuración se puede establecer YiziMarkdown como editor Markdown predeterminado del sistema (registro de Windows / LaunchServices de macOS)
 
 ### Almacenamiento en la nube (WebDAV)
 
 - **Explorador de archivos**: la pestaña «Nube» de la barra lateral permite navegar el árbol del servidor: abrir documentos, crear archivos / carpetas, renombrar, mover y eliminar; las rutas de navegación profundas se pliegan en «…» con un desplegable, y las carpetas se cargan de forma diferida por niveles
-- **Guardar en la nube**: un documento local se sube con un clic, junto con las imágenes a las que hace referencia con rutas relativas, manteniendo la estructura de directorios; en documentos en la nube, `Ctrl+S` escribe directamente en el servidor
+- **Guardar en la nube**: sube un documento local con un clic; las imágenes locales se copian automáticamente a la carpeta raíz `assets/` y se reescriben como referencias relativas; `Ctrl+S` escribe directamente de vuelta los documentos de la nube
 - **Protección contra conflictos**: antes de guardar se compara el ETag; si el archivo remoto ha sido modificado desde otro dispositivo, un diálogo ofrece «sobrescribir la versión del servidor» o «descartar mis cambios y recargar», sin sobrescritura silenciosa
 - **Seguridad de credenciales**: el nombre de usuario y la contraseña se guardan en el almacén de credenciales del sistema (Administrador de credenciales de Windows / Llavero de macOS), nunca en archivos de configuración
 - **Compatibilidad**: servicios WebDAV estándar como Nutstore, Nextcloud y Synology (se recomienda una contraseña específica para la aplicación)
+- **Comprobación de versión al abrir**: los documentos en caché se comparan con la nube antes de abrir; si cambian, se muestran bytes, líneas, hashes y la primera línea diferente, con opciones para usar la nube, mantener lo local, guardar una copia en la nube o cancelar
+- **Sincronización de caché**: se ejecuta en segundo plano al inicio y puede lanzarse manualmente en Ajustes; los archivos remotos eliminados o movidos se limpian en local, y un mirror offline opcional descarga todos los Markdown e imágenes referenciadas bajo la raíz WebDAV
 
 ---
 
@@ -232,6 +234,10 @@ El texto enriquecido copiado de páginas web, Word / DOCX, Google Docs, Notion y
 ### Skills de IA
 
 El botón ⚡ del campo de entrada abre el menú de skills; la etiqueta de la skill elegida se inserta en el cursor y su prompt se inyecta en el contexto. Para definir las propias, basta poner `skills.json` y los prompts `.md` en el directorio `skills/`. Se incluyen 5 skills: Esquema de presentación, Resumen de documento, Pulir la redacción, Traducción de texto completo y Formateo de Markdown.
+
+### Gestión de Skills y asistente de selección
+
+v0.4.4: en Ajustes → Gestión de Skills puedes crear, editar o eliminar skills, cambiar nombre, ID, icono, resumen y prompt; el panel de IA se actualiza al instante y los skills integrados modificados o eliminados se conservan al actualizar. En Ajustes → Asistente de selección puedes configurar la barra: añadir, quitar y ordenar acciones de skills o del sistema (copiar, pegar, añadir al chat), cambiar sus nombres y ver la vista previa en vivo.
 
 ### Plugins
 
@@ -253,7 +259,7 @@ El botón ⚡ del campo de entrada abre el menú de skills; la etiqueta de la sk
 - Cambio inmediato en Configuración → General → Idioma de la interfaz; los textos de la interfaz, el panel de atajos y las descripciones de plugins siguen el idioma
 - **Detección automática en el primer inicio**: si no hay idioma del instalador, se usa el idioma del sistema y se recurre al inglés si no está en la lista; cada idioma incluye además la etiqueta inglesa `Language` para localizarlo rápido incluso con la interfaz en chino
 - **Tamaño de la interfaz**: 80%–120% (100% por defecto); solo escala los textos e iconos de la interfaz, sin afectar el tamaño de los paneles ni el contenido del documento
-- **Panel de configuración**: General, Apariencia, Editor, Modo En vivo, Asistente de IA, Nube, Plugins, Atajos, Plantillas, Documentos, Acerca de, Productos, con vista previa inmediata
+- **Panel de configuración**: General, Apariencia, Editor, Modo En vivo, Asistente de IA, Gestión de Skills, Asistente de selección, Nube, Plugins, Atajos, Plantillas, Documentos, Acerca de, Productos, con vista previa inmediata
 
 ---
 

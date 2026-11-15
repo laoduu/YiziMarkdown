@@ -204,17 +204,19 @@ Il testo formattato copiato da pagine web, Word / DOCX, Google Docs, Notion e si
   - DOCX usa la semantica nativa di Word (elenchi, tabelle, blocchi di codice, citazioni, elenchi di attività), allinea lo stile delle tabelle all'anteprima e supporta immagini da percorso locale, immagini remote e HTML `<img>` (`width` per controllare la larghezza)
   - PDF mantiene la stessa resa dell'anteprima e impagina automaticamente
   - HTML include una scheda indice flottante a sinistra, con un clic che porta alla sezione (il PDF non ha pannello laterale)
-  - PPTX eredita tema, chiaro/scuro e layout della modalità presentazione e produce testo, tabelle, immagini, forme ed equazioni native modificabili
+  - PPTX eredita tema, chiaro/scuro e layout della modalità presentazione e genera testo, tabelle, immagini, forme ed equazioni native modificabili; la tela è fissa a 16:9 / 1280×720, la finestra di esportazione consente di regolare il corpo del testo e di verificare il layout senza scrivere; le righe di codice lunghe vanno a capo alla larghezza della colonna
   - EPUB è fornito dal plugin integrato; prima dell'esportazione si possono scegliere suddivisione per capitolo / copertina / indice visibile / tema di lettura / informazioni del documento
 - **Associazione dei file `.md`**: impostare YiziMarkdown come editor Markdown predefinito del sistema con un clic nelle impostazioni (registro di Windows / LaunchServices di macOS)
 
 ### Archiviazione cloud (WebDAV)
 
 - **Browser dei file**: la scheda «Cloud» della barra laterale esplora l'albero delle cartelle del server — apre documenti, crea file / cartelle, rinomina, sposta, elimina; i percorsi profondi si comprimono in «…» con un menu a discesa, e le cartelle si caricano livello per livello
-- **Salvataggio nel cloud**: caricamento in un clic di un documento locale, con le immagini referenziate tramite percorsi relativi incluse e la struttura delle cartelle conservata; `Ctrl+S` riscrive direttamente i documenti cloud
+- **Salvataggio nel cloud**: carica un documento locale con un clic; le immagini locali vengono copiate automaticamente nella cartella radice `assets/` e riscritte come riferimenti relativi; `Ctrl+S` riscrive direttamente i documenti cloud
 - **Protezione dai conflitti**: l'ETag viene confrontato prima del salvataggio; se un altro dispositivo ha modificato il file remoto, una finestra propone «sovrascrivi la versione sul server» o «abbandona le modifiche locali e ricarica», mai una sovrascrittura silenziosa
 - **Sicurezza delle credenziali**: nome utente e password vanno nell'archivio credenziali di sistema (Gestione credenziali di Windows / Portachiavi di macOS), mai nei file di configurazione
 - **Compatibilità**: servizi WebDAV standard come Nutstore, Nextcloud, Synology (consigliata una password dedicata all'applicazione)
+- **Controllo versione all'apertura**: i documenti in cache vengono confrontati con il cloud prima dell'apertura; se cambiano, vengono mostrati byte, righe, hash e la prima riga diversa, con opzioni per usare il cloud, mantenere il locale, salvare una copia cloud o annullare
+- **Sincronizzazione cache**: viene eseguita in background all'avvio e può essere avviata manualmente nelle Impostazioni; i file remoti eliminati o spostati vengono puliti localmente, e un mirror offline opzionale scarica tutti i Markdown e le immagini referenziate sotto la radice WebDAV
 
 ---
 
@@ -232,6 +234,10 @@ Il testo formattato copiato da pagine web, Word / DOCX, Google Docs, Notion e si
 ### Skill IA
 
 Il pulsante ⚡ nella casella di input apre il menu degli skill; il tag dello skill scelto viene inserito alla posizione del cursore e il suo prompt viene iniettato nel contesto. Per personalizzare basta mettere `skills.json` e i prompt `.md` nella cartella `skills/`. Cinque skill sono integrati: «Estrazione presentazione», «Riassunto documento», «Riscrittura e rifinitura», «Traduzione integrale» e «Formattazione Markdown».
+
+### Gestione Skill e assistente di selezione
+
+v0.4.4: in Impostazioni → Gestione Skill puoi creare, modificare o eliminare skill, cambiare nome, ID, icona, riepilogo e prompt; il pannello IA si aggiorna subito e gli skill integrati modificati o eliminati vengono conservati agli aggiornamenti. In Impostazioni → Assistente di selezione puoi configurare la barra: aggiungere, rimuovere e ordinare azioni da skill o di sistema (copia, incolla, aggiungi alla chat), rinominarle e vedere l'anteprima dal vivo.
 
 ### Plugin
 
@@ -253,7 +259,7 @@ Il pulsante ⚡ nella casella di input apre il menu degli skill; il tag dello sk
 - Cambio con un clic in Impostazioni → Generali → Lingua dell'interfaccia, con effetto immediato; testi dell'interfaccia, pannello dei tasti di scelta rapida e descrizioni dei plugin seguono la lingua
 - **Rilevamento al primo avvio**: in assenza di una lingua scelta nel programma di installazione si usa la lingua di sistema, con ripiego su English se non è nell'elenco supportato; ogni voce di lingua riporta anche l'etichetta inglese `Language`, per trovarla in fretta anche con interfaccia in cinese
 - **Scala dell'interfaccia**: 80%–120% (100% predefinito), scala solo testi e icone dell'interfaccia, senza toccare le dimensioni dei pannelli né il contenuto dei documenti
-- **Pannello delle impostazioni**: Generali, Aspetto, Editor, Modalità in tempo reale, Assistente IA, Cloud, Plugin, Tasti di scelta rapida, Modelli, Documentazione, Informazioni, Prodotti, con anteprima immediata delle impostazioni
+- **Pannello delle impostazioni**: Generali, Aspetto, Editor, Modalità in tempo reale, Assistente IA, Gestione Skill, Assistente di selezione, Cloud, Plugin, Tasti di scelta rapida, Modelli, Documentazione, Informazioni, Prodotti, con anteprima immediata delle impostazioni
 
 ---
 

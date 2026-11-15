@@ -204,17 +204,19 @@ Rijke tekst die je kopieert uit webpagina's, Word / DOCX, Google Docs, Notion en
   - DOCX gebruikt native Word-semantiek (lijsten, tabellen, codeblokken, citaten, takenlijsten), de tabelopmaak komt overeen met het voorbeeld, afbeeldingen via lokale paden, webafbeeldingen en HTML-`<img>` worden ondersteund (breedte via `width`)
   - PDF komt overeen met het voorbeeld en wordt automatisch gepagineerd
   - HTML heeft links een zwevende outlinekaart, klik op een item springt naar de sectie (PDF zonder zijbalk)
-  - PPTX erft thema, licht/donker en lay-outs van de presentatiemodus en levert bewerkbare tekst, tabellen, afbeeldingen, vormen en native formules
+  - PPTX erft het thema, licht/donker en de layouts van de presentatiemodus en levert bewerkbare tekst, tabellen, afbeeldingen, vormen en native vergelijkingen; het canvas is vast 16:9 / 1280×720, het exportdialoog biedt lettergrootte-aanpassing en een lay-outcontrole zonder te schrijven; lange coderegels wikkelen op kolombreedte
   - EPUB komt uit de ingebouwde plugin; vóór het exporteren kun je hoofdstukdeling / voorblad / zichtbare inhoudsopgave / leesthema / documentinformatie kiezen
 - **`.md`-koppeling**: stel YiziMarkdown in de instellingen met één klik in als standaard Markdown-editor van het systeem (Windows-register / macOS LaunchServices)
 
 ### Cloudopslag (WebDAV)
 
 - **Bestandsbrowser**: het tabblad 'Cloud' in de zijbalk doorzoekt de mappenboom van de server – documenten openen, bestanden / mappen aanmaken, hernoemen, verplaatsen, verwijderen; diepe paden klappen in de breadcrumb samen tot '…' met een dropdown, mappen worden lui per niveau geladen
-- **Naar de cloud opslaan**: een lokaal document met één klik uploaden, relatief gerefereerde afbeeldingen gaan mee en de mappenstructuur blijft intact; bij clouddocumenten schrijft `Ctrl+S` direct terug
+- **Naar de cloud opslaan**: upload een lokaal document met één klik; lokale afbeeldingen worden automatisch naar de hoofdmap `assets/` gekopieerd en herschreven als relatieve verwijzingen; `Ctrl+S` schrijft clouddocumenten direct terug
 - **Conflictbescherming**: vóór het opslaan wordt de ETag vergeleken; is het bestand op een ander apparaat gewijzigd, dan biedt een dialoog 'serverversie overschrijven' of 'lokale wijzigingen verwerpen en opnieuw laden' – nooit stil overschrijven
 - **Veilige inloggegevens**: gebruikersnaam en wachtwoord staan in de systeemreferentieopslag (Windows Credential Manager / macOS-sleutelhanger), niet in configuratiebestanden
 - **Compatibiliteit**: standaard WebDAV-diensten zoals Nutstore, Nextcloud en Synology (een app-specifiek wachtwoord wordt aanbevolen)
+- **Versiecontrole bij openen**: gecachte documenten worden voor het openen met de cloud vergeleken; bij wijzigingen worden bytes, regels, hashes en de eerste afwijkende regel getoond, met opties om de cloudversie te gebruiken, lokaal te houden, een cloudkopie op te slaan of te annuleren
+- **Cache-synchronisatie**: draait bij het starten op de achtergrond en kan handmatig in Instellingen worden gestart; verwijderde/verplaatste externe bestanden worden lokaal opgeruimd, en een optionele offline spiegel downloadt alle Markdown en referentieafbeeldingen onder de WebDAV-root
 
 ---
 
@@ -232,6 +234,10 @@ Rijke tekst die je kopieert uit webpagina's, Word / DOCX, Google Docs, Notion en
 ### AI-skills
 
 De ⚡-knop in het invoerveld opent het skillmenu; de gekozen skill-tag wordt op de cursor ingevoegd en de prompt wordt automatisch in de context geïnjecteerd. Zet `skills.json` + `.md`-prompts in `skills/` om eigen skills te definiëren. Vijf skills zijn ingebouwd: 'Presentatie verdichten', 'Document samenvatten', 'Tekst verfijnen', 'Volledige tekst vertalen', 'Markdown formatteren'.
+
+### Skill-beheer en selectie-assistent
+
+v0.4.4: beheer skills via Instellingen → Skill-beheer: maak, bewerk of verwijder skills en wijzig naam, ID, pictogram, samenvatting en prompt; het AI-paneel vernieuwt direct en bewerkte of verwijderde ingebouwde skills blijven bij upgrades behouden. Configureer de werkbalk via Instellingen → Selectie-assistent: voeg acties uit skills of systeemfuncties (kopiëren, plakken, toevoegen aan chat) toe, verwijder en sorteer ze, wijzig namen en bekijk de live preview.
 
 ### Plugins
 
@@ -253,7 +259,7 @@ De ⚡-knop in het invoerveld opent het skillmenu; de gekozen skill-tag wordt op
 - Onder Instellingen → Algemeen → Interfacetaal met één klik wisselen, direct van kracht; interfaceteksten, het sneltoetsenpaneel en pluginbeschrijvingen volgen mee
 - **Automatisch bij de eerste start**: zonder installatietaalkeuze wordt de systeemtaal gebruikt, buiten de lijst valt het terug op English; elke taaleingang heeft ook het Engelse label `Language`, zodat je hem ook in een Chinese interface snel vindt
 - **Interfaceschaal**: 80%–120% (standaard 100%), schaalt alleen interfaceteksten en pictogrammen, paneelgrootte en documentinhoud blijven onaangetast
-- **Instellingenpaneel**: Algemeen, Uiterlijk, Editor, Livemodus, AI-assistent, Cloud, Plugins, Sneltoetsen, Sjablonen, Documenten, Over, Producten, met directe preview
+- **Instellingenpaneel**: Algemeen, Uiterlijk, Editor, Livemodus, AI-assistent, Skill-beheer, Selectie-assistent, Cloud, Plugins, Sneltoetsen, Sjablonen, Documenten, Over, Producten, met directe preview
 
 ---
 

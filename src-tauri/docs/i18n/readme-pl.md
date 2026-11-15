@@ -204,17 +204,19 @@ Tekst sformatowany skopiowany ze stron internetowych, Word / DOCX, Google Docs, 
   - DOCX używa natywnej semantyki Worda (listy, tabele, bloki kodu, cytaty, listy zadań), styl tabel zgodny z podglądem, obrazy z lokalnych ścieżek, obrazy sieciowe i HTML `<img>` (szerokość przez `width`)
   - PDF jest zgodny z podglądem i automatycznie dzieli się na strony
   - HTML zawiera pływającą kartę konspektu po lewej stronie; kliknięcie pozycji przenosi prosto do rozdziału (PDF nie ma paska bocznego)
-  - PPTX dziedziczy motyw, jasność i układy trybu prezentacji, generuje edytowalny tekst, tabele, obrazy, kształty i natywne wzory
+  - PPTX dziedziczy motyw, tryb jasny/ciemny i układy trybu prezentacji, generując edytowalny tekst, tabele, obrazy, kształty i natywne równania; obszar roboczy jest stały 16:9 / 1280×720, okno eksportu pozwala zmienić rozmiar czcionki i sprawdzić układ bez zapisu; długie linie kodu zawijają się do szerokości kolumny
   - EPUB dostarcza wbudowana wtyczka; przed eksportem można wybrać podział na rozdziały / okładkę / widoczny spis treści / motyw czytania / informacje o dokumencie
 - **Skojarzenie plików `.md`**: jednym kliknięciem w ustawieniach ustaw YiziMarkdown jako systemowy domyślny edytor Markdown (rejestr Windows / macOS LaunchServices)
 
 ### Pamięć w chmurze (WebDAV)
 
 - **Przeglądarka plików**: zakładka „Chmura” w pasku bocznym przegląda drzewo katalogów serwera — można otwierać dokumenty, tworzyć pliki / foldery, zmieniać nazwy, przenosić i usuwać; głębokie ścieżki nawigacyjne zwijają się do „…”, które rozwija menu do skoku, a foldery są ładowane leniwie poziom po poziomie
-- **Zapis do chmury**: lokalny dokument jest przesyłany jednym kliknięciem, wraz z obrazami przywoływanymi w treści przez ścieżki względne, z zachowaniem struktury katalogów; `Ctrl+S` w dokumencie w chmurze zapisuje bezpośrednio na serwer
+- **Zapis do chmury**: prześlij lokalny dokument jednym kliknięciem; lokalne obrazy są automatycznie kopiowane do głównego folderu `assets/` i zapisywane jako odwołania względne; `Ctrl+S` zapisuje dokumenty w chmurze bezpośrednio z powrotem
 - **Ochrona przed konfliktami**: przed zapisem porównywany jest ETag; jeśli plik zmieniło inne urządzenie, pojawia się wybór „nadpisz wersję na serwerze” lub „odrzuć lokalne zmiany i wczytaj ponownie” — nigdy ciche nadpisanie
 - **Bezpieczeństwo danych logowania**: nazwa użytkownika i hasło trafiają do systemowego magazynu poświadczeń (Menedżer poświadczeń Windows / Pęk kluczy macOS), nie do plików konfiguracyjnych
 - **Zgodność**: standardowe usługi WebDAV, takie jak Nutstore (Jianguoyun), Nextcloud czy Synology (zalecane hasło aplikacji)
+- **Sprawdzanie wersji przy otwieraniu**: dokumenty w pamięci podręcznej są porównywane z chmurą przed otwarciem; po zmianie wyświetlane są bajty, wiersze, skróty i pierwszy różniący się wiersz, z opcjami użycia wersji z chmury, zachowania lokalnej, zapisania kopii w chmurze lub anulowania
+- **Synchronizacja pamięci podręcznej**: działa w tle przy starcie i można ją uruchomić ręcznie w Ustawieniach; usunięte/przeniesione pliki zdalne są czyszczone lokalnie, a opcjonalne lustro offline pobiera wszystkie pliki Markdown i obrazy referencyjne pod korzeniem WebDAV
 
 ---
 
@@ -232,6 +234,10 @@ Tekst sformatowany skopiowany ze stron internetowych, Word / DOCX, Google Docs, 
 ### Umiejętności AI (Skill)
 
 Przycisk ⚡ w polu wprowadzania otwiera menu umiejętności; po wybraniu tag umiejętności trafia w miejsce kursora, a prompt jest automatycznie wstrzykiwany do kontekstu. Wystarczy umieścić `skills.json` + prompty `.md` w katalogu `skills/`, aby zdefiniować własne. Wbudowane są 5 umiejętności: „Szkic prezentacji”, „Podsumowanie dokumentu”, „Redakcja i szlifowanie”, „Tłumaczenie całego tekstu”, „Formatowanie Markdown”.
+
+### Zarządzanie Skillami i asystent zaznaczania
+
+v0.4.4: w Ustawieniach → Zarządzanie Skillami twórz, edytuj i usuwaj skille oraz zmieniaj nazwę, ID, ikonę, podsumowanie i prompt; panel AI odświeża się natychmiast, a zmodyfikowane lub usunięte wbudowane skille są zachowywane przy aktualizacjach. W Ustawieniach → Asystent zaznaczania skonfiguruj pasek: dodawaj, usuwaj i porządkuj działania ze skilli lub systemowe (kopiuj, wklej, dodaj do czatu), zmieniaj nazwy i oglądaj podgląd na żywo.
 
 ### Wtyczki
 
@@ -253,7 +259,7 @@ Przycisk ⚡ w polu wprowadzania otwiera menu umiejętności; po wybraniu tag um
 - Ustawienia → Ogólne → Język interfejsu przełącza jednym kliknięciem, działa natychmiast; teksty interfejsu, panel skrótów i opisy wtyczek zmieniają się wraz z językiem
 - **Dopasowanie przy pierwszym uruchomieniu**: gdy instalator nie ma języka, wybór następuje według języka systemu; jeśli go nie ma na liście obsługiwanych, używany jest English. Pozycje językowe mają angielską etykietę `Language`, więc można je szybko znaleźć także w chińskim interfejsie
 - **Rozmiar interfejsu**: 80%–120% (domyślnie 100%), skaluje tylko tekst i ikony interfejsu, rozmiar paneli i treść dokumentu pozostają bez zmian
-- **Panel ustawień**: Ogólne, Wygląd, Edytor, Tryb na żywo, Asystent AI, Chmura, Wtyczki, Skróty, Szablony, Dokumentacja, Wersja i aktualizacje, Inne produkty — ustawienia z natychmiastowym podglądem
+- **Panel ustawień**: Ogólne, Wygląd, Edytor, Tryb na żywo, Asystent AI, Zarządzanie Skillami, Asystent zaznaczania, Chmura, Wtyczki, Skróty, Szablony, Dokumentacja, Wersja i aktualizacje, Inne produkty — ustawienia z natychmiastowym podglądem
 
 ---
 
