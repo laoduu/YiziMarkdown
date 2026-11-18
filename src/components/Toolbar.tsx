@@ -68,6 +68,7 @@ import { CUSTOM_THEME, readUserCss } from '../lib/themeLoader'
 import { loadThemeCatalog } from '../lib/themeCatalog'
 import { COLUMN_REGION_SNIPPET } from '../lib/slides'
 import { buildAlertMarkdown } from '../lib/alertTemplate'
+import { hasActiveTableCell } from '../lib/cm-live-blocks'
 import { useI18n } from '../i18n'
 import LinkModal from './LinkModal'
 import ImageModal from './ImageModal'
@@ -504,12 +505,12 @@ export default function Toolbar({
             key={animSeq}
             className={animSeq > 0 ? 'fmt-strip-inner fmt-cascade' : 'fmt-strip-inner'}
           >
-            <ToolbarButton icon={<Bold size={16} />} tooltip={t('toolbar.bold')} onClick={() => onInsertMarkdown('**', 'wrap')} />
-            <ToolbarButton icon={<Italic size={16} />} tooltip={t('toolbar.italic')} onClick={() => onInsertMarkdown('*', 'wrap')} />
-            <ToolbarButton icon={<Strikethrough size={16} />} tooltip={t('toolbar.strikethrough')} onClick={() => onInsertMarkdown('~~', 'wrap')} />
-            <ToolbarButton icon={<Superscript size={16} />} tooltip={t('toolbar.superscript')} onClick={() => onInsertMarkdown('^', 'wrap')} />
-            <ToolbarButton icon={<Subscript size={16} />} tooltip={t('toolbar.subscript')} onClick={() => onInsertMarkdown('~', 'wrap')} />
-            <ToolbarButton icon={<Highlighter size={16} />} tooltip={t('toolbar.highlight')} onClick={() => onInsertMarkdown('==', 'wrap')} />
+            <ToolbarButton icon={<Bold size={16} />} tooltip={t('toolbar.bold')} onClick={() => onInsertMarkdown('**', 'wrap')} keepTableFocus />
+            <ToolbarButton icon={<Italic size={16} />} tooltip={t('toolbar.italic')} onClick={() => onInsertMarkdown('*', 'wrap')} keepTableFocus />
+            <ToolbarButton icon={<Strikethrough size={16} />} tooltip={t('toolbar.strikethrough')} onClick={() => onInsertMarkdown('~~', 'wrap')} keepTableFocus />
+            <ToolbarButton icon={<Superscript size={16} />} tooltip={t('toolbar.superscript')} onClick={() => onInsertMarkdown('^', 'wrap')} keepTableFocus />
+            <ToolbarButton icon={<Subscript size={16} />} tooltip={t('toolbar.subscript')} onClick={() => onInsertMarkdown('~', 'wrap')} keepTableFocus />
+            <ToolbarButton icon={<Highlighter size={16} />} tooltip={t('toolbar.highlight')} onClick={() => onInsertMarkdown('==', 'wrap')} keepTableFocus />
             <ToolbarButton icon={<TextQuote size={16} />} tooltip={t('toolbar.footnote')} onClick={onInsertFootnote} />
         <div
           className="relative flex min-w-0"
@@ -552,6 +553,10 @@ export default function Toolbar({
             >
               <button
                 className="w-full px-3 py-1.5 text-left text-[0.8125rem] hover:bg-[var(--editor-hover)] flex items-center gap-2"
+                onMouseDown={(e) => {
+                  // 与格式按钮一致：单元格编辑中不要抢焦点，否则行内代码落到表格外
+                  if (hasActiveTableCell()) e.preventDefault()
+                }}
                 onClick={() => { onInsertMarkdown('`', 'wrap'); setShowCodeMenu(false); }}
               >
                 <Code size={14} />
@@ -879,12 +884,17 @@ interface ToolbarButtonProps {
   active?: boolean
   accent?: boolean
   disabled?: boolean
+  /** 格式化按钮专用：单元格正在编辑时保住焦点/选区（否则格式会落到表格外） */
+  keepTableFocus?: boolean
 }
 
-function ToolbarButton({ icon, tooltip, onClick, active, accent, disabled = false }: ToolbarButtonProps) {
+function ToolbarButton({ icon, tooltip, onClick, active, accent, disabled = false, keepTableFocus = false }: ToolbarButtonProps) {
   return (
     <button
-      onMouseDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => {
+        e.stopPropagation()
+        if (keepTableFocus && hasActiveTableCell()) e.preventDefault()
+      }}
       onClick={onClick}
       title={tooltip}
       disabled={disabled}

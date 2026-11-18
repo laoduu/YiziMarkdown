@@ -25,7 +25,9 @@ import {
 } from '../lib/docAssets'
 import { planHorizontalRule } from '../lib/horizontalRule'
 import { liveEditExtension } from '../lib/cm-live-render'
-import { liveThemeChanged } from '../lib/cm-live-blocks'
+import { liveThemeChanged, tryFormatInTable } from '../lib/cm-live-blocks'
+import { inlinePairOf, planInlineToggle } from '../lib/inlineWrap'
+import { blockSpecOf, planBlockToggle } from '../lib/blockFormat'
 import { frontMatterField, frontMatterLines } from '../lib/cm-frontmatter'
 import { headingFoldExtension } from '../lib/cm-heading-fold'
 import { slashMenuExtension, slashMenuState, showSlashMenu, hideSlashMenu, slashMenuAction } from '../lib/cm-slash-menu'
@@ -1112,24 +1114,49 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     insertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'ordered' | 'link' | 'tag' | 'block') => {
       const view = viewRef.current
       if (!view) return
+      // 实时模式表格：单元格内有文本选区 / 选中了整行整列时，
+      // 格式必须落在单元格源码里，而不是 CM 光标处（那会在表格外插入标记）。
+      if (tryFormatInTable(markdown, mode)) return
       const { from, to } = view.state.selection.main
       const selectedText = view.state.sliceDoc(from, to)
+
+      // 行内标记（加粗 / 斜体 / 删除线 / 高亮 / 行内代码 / 上下标）：
+      // 统一走 toggle —— 已包裹就取消，避免连点叠加成 `****`。
+      if (mode === 'wrap' || mode === 'tag') {
+        const pair = inlinePairOf(markdown, mode)
+        if (pair) {
+          const edit = planInlineToggle(view.state.doc.toString(), from, to, pair.open, pair.close)
+          view.dispatch({
+            changes: { from: edit.from, to: edit.to, insert: edit.insert },
+            selection: { anchor: edit.selFrom, head: edit.selTo },
+          })
+          view.focus()
+          return
+        }
+      }
+
+      // 块级格式（标题 / 列表 / 引用）：整行处理，再点一次取消。
+      // 快捷键与工具栏共用；具体规则见 lib/blockFormat.ts。
+      if (mode === 'prefix' || mode === 'ordered') {
+        const spec = blockSpecOf(markdown, mode)
+        if (spec) {
+          const edit = planBlockToggle(view.state.doc.toString(), from, to, spec)
+          if (view.state.sliceDoc(edit.from, edit.to) !== edit.insert) {
+            view.dispatch({
+              changes: { from: edit.from, to: edit.to, insert: edit.insert },
+              selection: { anchor: edit.selFrom, head: edit.selTo },
+            })
+          }
+          view.focus()
+          return
+        }
+      }
 
       let insertText: string
       let newFrom: number
       let newTo: number
 
-      if (mode === 'wrap') {
-        if (selectedText) {
-          insertText = `${markdown}${selectedText}${markdown}`
-          newFrom = from + markdown.length
-          newTo = to + markdown.length
-        } else {
-          insertText = `${markdown}${markdown}`
-          newFrom = from + markdown.length
-          newTo = from + markdown.length
-        }
-      } else if (mode === 'prefix') {
+      if (mode === 'prefix') {
         if (selectedText) {
           const lines = selectedText.split('\n')
           const prefixed = lines.map(l => `${markdown}${l}`).join('\n')
@@ -1153,21 +1180,6 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
           insertText = '1. '
           newFrom = from + insertText.length
           newTo = from + insertText.length
-        }
-      } else if (mode === 'tag') {
-        // HTML 标签对包裹（如 <sup></sup>）：按第一个 >< 边界拆成开/闭标签。
-        // 无选中：插入完整标签对，光标落在标签中间；有选中：包住选中内容并保持选中（与粗体等同款）。
-        const cut = markdown.indexOf('><') + 1
-        const open = cut > 0 ? markdown.slice(0, cut) : markdown
-        const close = cut > 0 ? markdown.slice(cut) : ''
-        if (selectedText) {
-          insertText = `${open}${selectedText}${close}`
-          newFrom = from + open.length
-          newTo = newFrom + selectedText.length
-        } else {
-          insertText = markdown
-          newFrom = from + open.length
-          newTo = newFrom
         }
       } else if (mode === 'link') {
         if (selectedText) {

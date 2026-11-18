@@ -43,6 +43,8 @@ import {
   type TableAlign,
   type TocHeading,
 } from './liveSyntax.ts'
+import { arrowTarget, enterTarget, tabTarget, type CellTarget } from './tableCells.ts'
+import { inlinePairOf, toggleWrap } from './inlineWrap.ts'
 import hljs from 'highlight.js'
 import { StateField, StateEffect } from '@codemirror/state'
 import type { EditorState } from '@codemirror/state'
@@ -652,7 +654,166 @@ const TABLE_MENU_ICONS = {
  * · 列顶 / 行左的六点 handle：点击选中整列 / 整行
  * · 最右列 / 最下行边缘的窄条：点击追加列 / 行
  * · 行 hover 底色、按住拖动跨单元格矩形扩选、Ctrl+C 复制为 TSV
+ *
+ * 【为什么需要 pendingCellState】
+ * 整张表是 `Decoration.replace` 的 widget：任何一次提交都会改变文档 ⇒ 装饰重建 ⇒
+ * 整个 DOM 被销毁。于是「提交旧格 + 聚焦新格」不可能在同一个 DOM 里完成，
+ * 焦点/选区必须记在模块级状态里，由新建出来的 widget 在下一帧恢复。
  */
+
+/** 表格重建后要恢复的光标位置 */
+type PendingCaret = 'start' | 'end' | { ratio: number } | { offset: number }
+
+interface PendingCellState {
+  /** 归属的表格起始位置；表格内部的编辑不会改变它 */
+  tableFrom: number
+  /** 过期时间：目标行可能要多等一次 dispatch（例如先提交再追加行） */
+  expiresAt: number
+  focus?: {
+    r: number
+    c: number
+    caret: PendingCaret
+    /** 恢复后要重新选中的文本范围（单元格内格式化后继续编辑） */
+    selectFrom?: number
+    selectTo?: number
+  }
+  /** 恢复矩形框选（整行/整列格式化后选中态不能丢） */
+  select?: { r1: number; c1: number; r2: number; c2: number }
+}
+
+let pendingCellState: PendingCellState | null = null
+
+/** 当前获得焦点的单元格（工具栏格式化、点击换格都依赖它） */
+interface ActiveCellRef {
+  view: EditorView
+  shadow: ShadowRoot
+  host: HTMLElement
+  td: HTMLElement
+  r: number
+  c: number
+  cell: CellData
+  tableFrom: number
+}
+
+let activeTableCell: ActiveCellRef | null = null
+
+/** 当前表格的「整行/整列框选」格式化入口，由 widget 在产生框选时挂上 */
+let activeTableSelection: { tableFrom: number; apply: (open: string, close: string) => void } | null = null
+
+/** 工具栏按钮在 mousedown 时用它决定是否 preventDefault（保住单元格焦点与选区） */
+export function hasActiveTableCell(): boolean {
+  return !!activeTableCell && activeTableCell.td.isConnected
+}
+
+/** 表格改写前后锁住滚动位置（widget 重建会把焦点甩回顶部） */
+function keepViewportStable(view: EditorView, action: () => void): void {
+  const scroller = view.scrollDOM
+  const top = scroller.scrollTop
+  const winTop = window.scrollY
+  action()
+  const restore = (): void => {
+    if (Math.abs(scroller.scrollTop - top) > 2) scroller.scrollTop = top
+    if (Math.abs(window.scrollY - winTop) > 2) window.scrollTo(window.scrollX, winTop)
+  }
+  requestAnimationFrame(() => {
+    restore()
+    requestAnimationFrame(restore)
+  })
+}
+
+/**
+ * 工具栏格式化入口：表格内选中文本 / 选中整行整列时接管。
+ *
+ * 返回 true 表示已经处理（Editor.insertMarkdown 应立即返回）；
+ * false 表示不在表格场景，交回原有的 CodeMirror 选区逻辑。
+ */
+export function tryFormatInTable(
+  markdown: string,
+  mode?: 'wrap' | 'prefix' | 'ordered' | 'link' | 'tag' | 'block',
+): boolean {
+  const pair = inlinePairOf(markdown, mode)
+  if (!pair) {
+    // 标题 / 列表 / 链接等前缀型格式对单元格没有意义，但也绝不能落到表格外的
+    // CM 光标处（那会在表格外面插入一串语法）。有表格上下文时直接吞掉。
+    const inTable = (!!activeTableCell && activeTableCell.td.isConnected) || !!activeTableSelection
+    return !!mode && inTable
+  }
+
+  // 整行/整列框选优先于「聚焦的单个单元格」：点行/列 handle 时 mousedown 会
+  // preventDefault（焦点仍留在原来的单元格里），若先看单元格，加粗就只会加到那一格。
+  // 登记表只在「真的有框选」时存在（见 setCellSelection / clearCellSelection）。
+  if (activeTableSelection) {
+    activeTableSelection.apply(pair.open, pair.close)
+    return true
+  }
+
+  const act = activeTableCell
+  if (act && act.td.isConnected) {
+    // 空单元格 / 无变化也要吞掉：否则标记会插到 CM 光标处（表格外）
+    formatActiveCell(act, pair.open, pair.close)
+    return true
+  }
+  return false
+}
+
+/** 把焦点单元格里的文本选区变成源码标记（重建后恢复焦点与选区） */
+function formatActiveCell(act: ActiveCellRef, open: string, close: string): boolean {
+  const td = act.td
+  // 聚焦态下 td 显示的就是原始 Markdown，DOM 偏移可以直接映射到 cell.text
+  const text = td.textContent ?? ''
+  const shadowSel = (act.shadow as ShadowRoot & { getSelection?: () => Selection | null }).getSelection?.()
+  const sel = shadowSel ?? window.getSelection()
+  let start = 0
+  let end = 0
+  if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+    const range = sel.getRangeAt(0)
+    if (td.contains(range.startContainer) && td.contains(range.endContainer)) {
+      const a = textOffsetWithin(td, range.startContainer, range.startOffset)
+      const b = textOffsetWithin(td, range.endContainer, range.endOffset)
+      start = Math.min(a, b)
+      end = Math.max(a, b)
+    }
+  }
+
+  const res = toggleWrap(text, start, end, open, close)
+  if (res.text === text) return false
+
+  const raw = act.view.state.doc.sliceString(act.cell.from, act.cell.to)
+  const head = raw.match(/^\s*/)?.[0] ?? ''
+  const tail = raw.match(/\s*$/)?.[0] ?? ''
+
+  pendingCellState = {
+    tableFrom: act.tableFrom,
+    expiresAt: Date.now() + 3000,
+    focus: {
+      r: act.r,
+      c: act.c,
+      caret: { offset: res.selFrom },
+      selectFrom: res.selFrom,
+      selectTo: res.selTo,
+    },
+  }
+
+  keepViewportStable(act.view, () => {
+    act.view.dispatch({
+      changes: { from: act.cell.from, to: act.cell.to, insert: head + res.text + tail },
+    })
+  })
+  return true
+}
+
+/** 某个 Shadow DOM 文本位置在单元格纯文本里的偏移 */
+function textOffsetWithin(root: Node, node: Node, offset: number): number {
+  const range = document.createRange()
+  range.selectNodeContents(root)
+  try {
+    range.setEnd(node, offset)
+  } catch {
+    return 0
+  }
+  return range.toString().length
+}
+
 class EditableTableWidget extends WidgetType {
   private _view: EditorView | null = null
   private _cleanup: Array<() => void> = []
@@ -735,6 +896,13 @@ class EditableTableWidget extends WidgetType {
         background: transparent;
       }
       td.cell-placeholder { cursor: default; }
+      /* Shadow DOM 里的文本选区不继承宿主页面的 ::selection 规则
+         （globals.css 的 *:not(.cm-editor)::selection 穿不过 shadow 边界），
+         不写这一段就会退回浏览器默认高亮色，和主题完全无关。 */
+      ::selection {
+        background-color: var(--editor-selection-bg, rgba(0, 102, 204, 0.35));
+        color: var(--editor-text, inherit);
+      }
       td:focus, th:focus {
         box-shadow: inset 0 0 0 2px var(--editor-accent, #4a9eff);
       }
@@ -874,6 +1042,9 @@ class EditableTableWidget extends WidgetType {
     const rowCount = Math.max(1, Math.ceil(cells.length / Math.max(1, colCount)))
     const rows: HTMLTableRowElement[] = []
     const cellMatrix: Array<Array<{ td: HTMLElement; cell: CellData | null }>> = []
+    /** td → 坐标/数据：焦点切换、脏数据判断、pending 恢复都靠它 */
+    const tds = new WeakMap<HTMLElement, { r: number; c: number; cell: CellData | null }>()
+    const cellEl = (r: number, c: number): HTMLElement | null => cellMatrix[r]?.[c]?.td ?? null
     let idx = 0
 
     const schedule = () => {
@@ -910,12 +1081,14 @@ class EditableTableWidget extends WidgetType {
 
     // 单元格扩选状态（矩形，包含首尾）
     let selection: { r1: number; c1: number; r2: number; c2: number } | null = null
+    let tableSelectionApi: { tableFrom: number; apply: (open: string, close: string) => void } | null = null
     const clearCellSelection = (): void => {
       if (!selection) return
       selection = null
       for (const row of cellMatrix) {
         for (const item of row) item.td.classList.remove('cell-selected')
       }
+      if (activeTableSelection === tableSelectionApi) activeTableSelection = null
     }
     const setCellSelection = (ar: number, ac: number, br: number, bc: number): void => {
       clearCellSelection()
@@ -929,6 +1102,16 @@ class EditableTableWidget extends WidgetType {
         if (!row) continue
         for (let c = c1; c <= c2; c++) row[c]?.td.classList.add('cell-selected')
       }
+      // 只有真的存在框选时才登记：多表格文档里最后挂载的那张不能抢走别人的选区
+      if (tableSelectionApi) activeTableSelection = tableSelectionApi
+    }
+
+    // 整行/整列格式化的实现放在下方（依赖 readCurrentTable / dispatchCellEdits），
+    // 这里先建好登记对象，供 setCellSelection 引用。
+    let applyCellSelectionWrap = (_open: string, _close: string): void => { /* 见下方赋值 */ }
+    tableSelectionApi = {
+      tableFrom: this.data.from,
+      apply: (open: string, close: string) => applyCellSelectionWrap(open, close),
     }
 
     const placeCaret = (td: HTMLElement, x: number, y: number): void => {
@@ -949,7 +1132,8 @@ class EditableTableWidget extends WidgetType {
         const score = dy * 10 + dx
         if (score < bestScore) { bestScore = score; best = i }
       }
-      const sel = window.getSelection()
+      const shadowSel = (shadow as ShadowRoot & { getSelection?: () => Selection | null }).getSelection?.()
+      const sel = shadowSel ?? window.getSelection()
       if (!sel) return
       range.setStart(textNode, best)
       range.setEnd(textNode, best)
@@ -968,6 +1152,7 @@ class EditableTableWidget extends WidgetType {
         const td: HTMLElement = r === 0 ? document.createElement('th') : document.createElement('td')
         td.style.textAlign = aligns[c] || 'left'
         rowItems.push({ td, cell })
+        tds.set(td, { r, c, cell })
 
         if (!cell) {
           td.className = 'cell-placeholder'
@@ -1015,8 +1200,28 @@ class EditableTableWidget extends WidgetType {
             window.removeEventListener('mouseup', onUp)
             wrapper.classList.remove('is-selecting')
             if (!moved && !wasActive) {
-              // 单击 = 进入编辑；手动放置光标，避免伸出表格选中其它行
-              placeCaret(td, ev.clientX, ev.clientY)
+              // 另一格正在编辑且有未提交改动时，「直接聚焦新格」会先触发旧格 blur →
+              // 提交文档 → 整张表重建 → 刚聚焦的 DOM 被销毁，于是第一次点击看起来只是
+              // 让旧格失焦（用户必须点第二次）。这里先记下目标格与点击位置，
+              // 提交后由新 widget 在下一帧恢复焦点。
+              const act = shadow.activeElement as HTMLElement | null
+              const info = act ? tds.get(act) : undefined
+              const dirty = !!act && !!info?.cell && (act.textContent ?? '').trim() !== info.cell.text
+              if (act && act !== td && dirty) {
+                const rect = td.getBoundingClientRect()
+                const ratio = rect.width > 0
+                  ? Math.min(1, Math.max(0, (ev.clientX - rect.left) / rect.width))
+                  : 1
+                pendingCellState = {
+                  tableFrom: this.data.from,
+                  expiresAt: Date.now() + 3000,
+                  focus: { r, c, caret: { ratio } },
+                }
+                act.blur()
+              } else {
+                // 单击 = 进入编辑；手动放置光标，避免伸出表格选中其它行
+                placeCaret(td, ev.clientX, ev.clientY)
+              }
             }
           }
           window.addEventListener('mousemove', onMove)
@@ -1026,9 +1231,11 @@ class EditableTableWidget extends WidgetType {
         // 进入单元格时切成源码文本：否则 contentEditable 编辑的是渲染后的 HTML，
         // 回写时 `**加粗**`、反引号这些标记会被一并丢掉。
         td.addEventListener('focus', () => {
+          activeTableCell = { view, shadow, host, td, r, c, cell, tableFrom: this.data.from }
           if (td.textContent !== cell.text) {
             td.textContent = cell.text
-            const selectionApi = window.getSelection()
+            const shadowSel = (shadow as ShadowRoot & { getSelection?: () => Selection | null }).getSelection?.()
+            const selectionApi = shadowSel ?? window.getSelection()
             const range = document.createRange()
             range.selectNodeContents(td)
             range.collapse(false)
@@ -1047,6 +1254,9 @@ class EditableTableWidget extends WidgetType {
 
         td.addEventListener('keydown', (e: KeyboardEvent) => {
           e.stopPropagation()
+          // 输入法组字期间不拦截：Enter / 方向键属于候选词操作，
+          // 拦下来会直接增行 / 跳格（中文输入时最容易踩到）。
+          if (e.isComposing || e.keyCode === 229) return
           if (e.key === 'Escape') {
             e.preventDefault()
             td.textContent = cell.text
@@ -1055,18 +1265,43 @@ class EditableTableWidget extends WidgetType {
           }
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault()
-            td.blur()
+            const t = resolveEditable({ r, c }, (rr) => enterTarget(rr, c, rowCount), true)
+            if (!t) return
+            if (t.addRow) appendRowAndFocus(t.c)
+            else focusCell(t.r, t.c, 'end')
             return
           }
           if (e.key === 'Tab') {
             e.preventDefault()
-            td.blur()
+            const dir = e.shiftKey ? -1 : 1
+            const t = resolveEditable(
+              { r, c },
+              (rr, cc) => tabTarget(rr, cc, rowCount, colCount, dir),
+              dir > 0,
+            )
+            if (!t) return
+            if (t.addRow) appendRowAndFocus(t.c)
+            else focusCell(t.r, t.c, e.shiftKey ? 'start' : 'end')
             return
+          }
+          if (e.key === 'ArrowUp' || e.key === 'ArrowDown' ||
+              e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+            // 只在文本边界切格：单元格内还需要能正常移动光标
+            if (!caretAtEdge(td, e.key)) return
+            const t = resolveEditable(
+              { r, c },
+              (rr, cc) => arrowTarget(rr, cc, rowCount, colCount, e.key as 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight'),
+              false,
+            )
+            if (!t) return
+            e.preventDefault()
+            focusCell(t.r, t.c, 'end')
           }
         })
 
         // blur 时提交修改
         td.addEventListener('blur', () => {
+          if (activeTableCell?.td === td) activeTableCell = null
           const newText = (td.textContent ?? '').trim()
           if (newText !== cell.text) {
             withStableViewport(() => {
@@ -1229,18 +1464,113 @@ class EditableTableWidget extends WidgetType {
      * CM 的重新测量发生在 rAF 里，所以连续校正两帧。
      */
     const withStableViewport = (action: () => void): void => {
-      const scroller = view.scrollDOM
-      const top = scroller.scrollTop
-      const winTop = window.scrollY
-      action()
-      const restore = (): void => {
-        if (Math.abs(scroller.scrollTop - top) > 2) scroller.scrollTop = top
-        if (Math.abs(window.scrollY - winTop) > 2) window.scrollTo(window.scrollX, winTop)
+      keepViewportStable(view, action)
+    }
+
+    /* ---------------- 键盘 / 点击换格 ---------------- */
+
+    /** 把光标放进指定单元格（caret 可以是文本边界，也可以是近似位置） */
+    const placeCaretAt = (td: HTMLElement, caret: PendingCaret): void => {
+      td.focus()
+      const text = td.textContent ?? ''
+      const shadowSel = (shadow as ShadowRoot & { getSelection?: () => Selection | null }).getSelection?.()
+      const sel = shadowSel ?? window.getSelection()
+      if (!sel) return
+      let offset: number
+      if (typeof caret === 'object' && 'ratio' in caret) offset = Math.round(caret.ratio * text.length)
+      else if (typeof caret === 'object') offset = caret.offset
+      else offset = caret === 'start' ? 0 : text.length
+      offset = Math.max(0, Math.min(offset, text.length))
+      const node = td.firstChild
+      const range = document.createRange()
+      if (node && node.nodeType === Node.TEXT_NODE) {
+        range.setStart(node as Text, offset)
+        range.collapse(true)
+      } else {
+        range.selectNodeContents(td)
+        range.collapse(caret === 'start')
       }
-      requestAnimationFrame(() => {
-        restore()
-        requestAnimationFrame(restore)
-      })
+      sel.removeAllRanges()
+      sel.addRange(range)
+    }
+
+    /** 光标是否位于单元格文本边界（方向键只在此时切格，否则单元格内没法编辑） */
+    const caretAtEdge = (td: HTMLElement, key: string): boolean => {
+      // ⚠️ 必须读 ShadowRoot 的 selection：Chrome 里 window.getSelection()
+      // 对 shadow 内的选区只会返回锚在宿主上的空 Range（startContainer 是宿主 DIV），
+      // 用它算偏移永远是 0，方向键切格会完全失效。
+      const shadowSel = (shadow as ShadowRoot & { getSelection?: () => Selection | null }).getSelection?.()
+      const sel = shadowSel ?? window.getSelection()
+      if (!sel || sel.rangeCount === 0) return false
+      const range = sel.getRangeAt(0)
+      if (!range.collapsed || !td.contains(range.startContainer)) return false
+      // 表格单元格是单行文本（Markdown 单元格里不可能有换行），上下方向键没有
+      // 「行内移动」的语义，直接切格；左右仍要求位于文本首/尾，否则没法移动光标。
+      if (key === 'ArrowUp' || key === 'ArrowDown') return true
+      const offset = textOffsetWithin(td, range.startContainer, range.startOffset)
+      const len = (td.textContent ?? '').length
+      return key === 'ArrowLeft' ? offset === 0 : offset === len
+    }
+
+    /**
+     * 沿某个方向找到「可编辑」的单元格。
+     *
+     * 表格行比表头短时，缺的列是 `cell-placeholder`（无 contentEditable），
+     * 直接聚焦会失败、Tab 就卡住。这里按同一方向继续找（最多绕一圈）。
+     */
+    const resolveEditable = (
+      start: { r: number; c: number },
+      step: (r: number, c: number) => CellTarget | null,
+      allowAddRow: boolean,
+    ): CellTarget | null => {
+      let cur = start
+      for (let guard = 0; guard <= rowCount * colCount; guard++) {
+        const t = step(cur.r, cur.c)
+        if (!t) return null
+        if (t.addRow) return allowAddRow ? t : null
+        if (cellEl(t.r, t.c)?.isContentEditable) return t
+        cur = { r: t.r, c: t.c }
+      }
+      return null
+    }
+
+    /**
+     * 切到目标单元格。
+     *
+     * 若当前格有未提交改动，先记 pending 再 blur：blur 触发的提交会让整表重建，
+     * 目标格只能由新建出来的 DOM 恢复（这也是「点两次才换格」的根因）。
+     */
+    const focusCell = (r: number, c: number, caret: PendingCaret): void => {
+      const target = cellEl(r, c)
+      if (!target || !target.isContentEditable) return
+      const active = shadow.activeElement as HTMLElement | null
+      if (active === target) {
+        placeCaretAt(target, caret)
+        return
+      }
+      const info = active ? tds.get(active) : undefined
+      const dirty = !!active && !!info?.cell && (active.textContent ?? '').trim() !== info.cell.text
+      if (active && dirty) {
+        pendingCellState = {
+          tableFrom: this.data.from,
+          expiresAt: Date.now() + 3000,
+          focus: { r, c, caret },
+        }
+        active.blur()
+        return
+      }
+      if (active) active.blur()
+      placeCaretAt(target, caret)
+    }
+
+    /** Enter / Tab 在末行触发：提交当前格并追加一行，再聚焦新行的目标列 */
+    const appendRowAndFocus = (c: number): void => {
+      pendingCellState = {
+        tableFrom: this.data.from,
+        expiresAt: Date.now() + 3000,
+        focus: { r: rowCount, c, caret: 'start' },
+      }
+      commitAndInsert(addTableRow)
     }
 
     const cellSpanAt = (
@@ -1375,6 +1705,41 @@ class EditableTableWidget extends WidgetType {
       const cols: number[] = []
       for (let c = selection.c1; c <= selection.c2; c++) cols.push(c)
       applyTableSource((source) => cols.reduce((acc, c) => setTableColumnAlign(acc, c, align), source))
+    }
+
+    /**
+     * 对矩形框选内的每个单元格做行内标记 toggle（整行/整列统一加粗等）。
+     * 空单元格跳过：写入 `****` 只会留下无意义标记。
+     */
+    applyCellSelectionWrap = (open: string, close: string): void => {
+      if (!selection) return
+      const sel = { ...selection }
+      withStableViewport(() => {
+        const cur = readCurrentTable()
+        const edits: Array<{ from: number; to: number; insert: string }> = []
+        for (let r = sel.r1; r <= sel.r2; r++) {
+          for (let c = sel.c1; c <= sel.c2; c++) {
+            const span = cellSpanAt(cur, r, c)
+            if (!span) continue
+            const raw = view.state.doc.sliceString(span.from, span.to)
+            const head = raw.match(/^\s*/)?.[0] ?? ''
+            const tail = raw.match(/\s*$/)?.[0] ?? ''
+            const inner = raw.trim()
+            if (!inner) continue
+            const res = toggleWrap(inner, 0, 0, open, close)
+            if (res.text === inner) continue
+            edits.push({ from: span.from, to: span.to, insert: head + res.text + tail })
+          }
+        }
+        if (edits.length === 0) return
+        // 重建后恢复框选：dispatchCellEdits 会清掉当前选中态
+        pendingCellState = {
+          tableFrom: this.data.from,
+          expiresAt: Date.now() + 3000,
+          select: sel,
+        }
+        dispatchCellEdits(edits)
+      })
     }
 
     const deleteSelection = (): void => {
@@ -1623,12 +1988,21 @@ class EditableTableWidget extends WidgetType {
       addRow.style.width = `${tableRect.width}px`
     }
 
-    // 点击表格外部时清掉扩选 / 关闭菜单，避免离开表格后仍留着蓝色单元格
+    // 点击表格外部时清掉扩选 / 关闭菜单，避免离开表格后仍留着蓝色单元格。
+    // 但点工具栏（顶部格式条 / 划词助手）不能清：用户正是在「选好整行整列 → 点加粗」
+    // 这条路径上，清掉选中态就会表现为「设置格式无反应」。
+    const isToolbarChrome = (path: EventTarget[]): boolean =>
+      path.some((node) => {
+        const el = node as Element | null
+        if (!el || !(el as any).classList) return false
+        return el.classList.contains('toolbar') || el.classList.contains('selection-toolbar')
+      })
+
     const onOutsideMouseDown = (e: MouseEvent) => {
       const path = typeof e.composedPath === 'function' ? e.composedPath() : []
       const insideHost = path.includes(host)
       if (!activeMenu || !path.includes(activeMenu)) closeTableMenu()
-      if (!insideHost && selection) clearCellSelection()
+      if (!insideHost && !isToolbarChrome(path) && selection) clearCellSelection()
     }
     window.addEventListener('mousedown', onOutsideMouseDown, true)
     this._cleanup.push(() => window.removeEventListener('mousedown', onOutsideMouseDown, true))
@@ -1663,6 +2037,54 @@ class EditableTableWidget extends WidgetType {
         schedule()
       })
     }
+
+    /* ---------------- 重建后的焦点 / 框选恢复 ---------------- */
+
+    const consumePendingCell = (): void => {
+      const p = pendingCellState
+      if (!p) return
+      if (Date.now() > p.expiresAt) { pendingCellState = null; return }
+      if (p.tableFrom !== this.data.from) return
+      // 目标行可能要在第二次 dispatch 后才存在（例如「先提交再追加一行」），
+      // 此时保留 pending，交给下一个 widget 处理。
+      if (p.focus && !cellEl(p.focus.r, p.focus.c)) return
+      pendingCellState = null
+      if (p.select) setCellSelection(p.select.r1, p.select.c1, p.select.r2, p.select.c2)
+      if (!p.focus) return
+      const td = cellEl(p.focus.r, p.focus.c)
+      if (!td) return
+      placeCaretAt(td, p.focus.caret)
+      if (p.focus.selectFrom == null || p.focus.selectTo == null) return
+      const node = td.firstChild
+      if (!node || node.nodeType !== Node.TEXT_NODE) return
+      const text = node as Text
+      const range = document.createRange()
+      const from = Math.min(p.focus.selectFrom, text.length)
+      const to = Math.min(p.focus.selectTo, text.length)
+      range.setStart(text, from)
+      range.setEnd(text, to)
+      const shadowSel = (shadow as ShadowRoot & { getSelection?: () => Selection | null }).getSelection?.()
+      const sel = shadowSel ?? window.getSelection()
+      sel?.removeAllRanges()
+      sel?.addRange(range)
+    }
+
+    // 两个时机都试：
+    // · queueMicrotask：dispatch 返回后 DOM 已经插入，能立刻恢复焦点（后台标签页里
+    //   rAF 会被节流到 1s，只靠 rAF 会让「点完加粗后单元格要等一下才回来」）
+    // · rAF：兜住 DOM 尚未插入 / 需要等一帧测量的情况
+    const consumeIfConnected = (): void => {
+      if (host.isConnected) consumePendingCell()
+    }
+    queueMicrotask(consumeIfConnected)
+    const pendingRaf = requestAnimationFrame(consumeIfConnected)
+    this._cleanup.push(() => cancelAnimationFrame(pendingRaf))
+
+    this._cleanup.push(() => {
+      // 整表被外部改动销毁时 blur 可能不会触发，这里兜住
+      if (activeTableCell?.host === host) activeTableCell = null
+      if (activeTableSelection === tableSelectionApi) activeTableSelection = null
+    })
 
     this._ro = new ResizeObserver(schedule)
     this._ro.observe(table)
