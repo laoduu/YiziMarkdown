@@ -32,6 +32,7 @@ import { buildThemePreviewCss } from '../lib/themePreview'
 import MarkdownEditPreview from './MarkdownEditPreview'
 import SkillIcon from './SkillIcon'
 import SelectionToolbarView from './SelectionToolbarView'
+import { SELECTION_FORMAT_ICONS } from './SelectionFormatBar'
 import { SKILL_ICON_NAMES, DEFAULT_SKILL_ICON, resolveSkillIcon } from '../lib/skillIconNames'
 import {
   parseSkillManifest,
@@ -62,6 +63,15 @@ import {
   type SelectionActionConfig,
   type SelectionSystemAction,
 } from '../lib/selectionActions'
+import {
+  DEFAULT_SELECTION_FORMATS,
+  SELECTION_FORMAT_DEFS,
+  enabledSelectionFormats,
+  moveSelectionFormat,
+  setSelectionFormatEnabled,
+  type SelectionFormatConfig,
+  type SelectionFormatId,
+} from '../lib/selectionFormats'
 
 const fallbackFonts = [
   'Consolas', 'Courier New', 'Lucida Console', 'Monaco', 'Menlo',
@@ -1778,6 +1788,10 @@ function SelectionAssistantSettings() {
   const [skills, setSkills] = useState<AiSkill[]>([])
   const [editingLabelId, setEditingLabelId] = useState<string | null>(null)
   const [addTab, setAddTab] = useState<'system' | 'skills'>('skills')
+  const [panelTab, setPanelTab] = useState<'actions' | 'formats'>(() =>
+    useSettingsStore.getState().selectionBarMode === 'format' ? 'formats' : 'actions')
+  const selectionBarMode = useSettingsStore((s) => s.selectionBarMode)
+  const selectionFormats = useSettingsStore((s) => s.selectionFormats)
 
   useEffect(() => {
     let alive = true
@@ -1803,8 +1817,17 @@ function SelectionAssistantSettings() {
     [actions, skills, systemLabels],
   )
   const previewItems = items.filter((item) => !item.missingSkill)
+  const formatPreview = useMemo(() => enabledSelectionFormats(selectionFormats), [selectionFormats])
 
   const updateActions = (next: SelectionActionConfig[]) => setField('selectionActions', next)
+  const updateFormats = (next: SelectionFormatConfig[]) => setField('selectionFormats', next)
+
+  const toggleFormat = (id: SelectionFormatId, enabled: boolean) => {
+    updateFormats(setSelectionFormatEnabled(selectionFormats, id, enabled))
+  }
+  const resetFormats = () => {
+    updateFormats(DEFAULT_SELECTION_FORMATS.map((f) => ({ ...f })))
+  }
 
   const defaultLabel = (action: SelectionActionConfig): string => {
     if (action.type === 'skill') {
@@ -1849,24 +1872,74 @@ function SelectionAssistantSettings() {
   return (
     <div className="settings-content-scroll">
       <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-5 pt-4">
+          <div className="flex overflow-hidden rounded-lg border border-[var(--editor-border)]">
+            {(['actions', 'formats'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setPanelTab(tab)}
+                className={`px-3 py-1.5 text-[0.6875rem] transition-colors ${
+                  panelTab === tab
+                    ? 'bg-[var(--editor-accent)] text-[var(--on-accent)]'
+                    : 'text-[var(--sidebar-text)] hover:bg-[var(--editor-hover)]'
+                }`}
+              >
+                {tab === 'actions' ? t('settings.selectionTabActions') : t('settings.selectionTabFormats')}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[0.6875rem] text-[var(--sidebar-text)]">{t('settings.selectionBarMode')}</span>
+            <div className="flex overflow-hidden rounded-lg border border-[var(--editor-border)]">
+              {(['actions', 'format'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => {
+                    setField('selectionBarMode', mode)
+                    // 预览与正在编辑的列表一起切到对应栏，点击后立刻能看到效果
+                    setPanelTab(mode === 'format' ? 'formats' : 'actions')
+                  }}
+                  className={`px-2.5 py-1 text-[0.6875rem] transition-colors ${
+                    selectionBarMode === mode
+                      ? 'bg-[var(--editor-accent)] text-[var(--on-accent)]'
+                      : 'text-[var(--sidebar-text)] hover:bg-[var(--editor-hover)]'
+                  }`}
+                >
+                  {mode === 'actions' ? t('settings.selectionModeActions') : t('settings.selectionModeFormats')}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
         <Section title={t('settings.selectionPreview')}>
           <div
             className="rounded-lg border border-[var(--editor-border)] px-3 py-4"
             style={{ background: 'var(--editor-bg)' }}
           >
-            {previewItems.length > 0 ? (
-              <div className="flex justify-center overflow-x-auto py-1">
-                <SelectionToolbarView items={previewItems} interactive={false} />
-              </div>
+            {panelTab === 'actions' ? (
+              previewItems.length > 0 ? (
+                <div className="flex justify-center overflow-x-auto py-1">
+                  <SelectionToolbarView items={previewItems} interactive={false} />
+                </div>
+              ) : (
+                <p className="text-center text-[0.75rem] text-[var(--sidebar-text)]">{t('settings.selectionEmpty')}</p>
+              )
             ) : (
-              <p className="text-center text-[0.75rem] text-[var(--sidebar-text)]">{t('settings.selectionEmpty')}</p>
+              <div className="flex justify-center overflow-x-auto py-1">
+                <SelectionToolbarView mode="format" items={[]} formats={formatPreview} interactive={false} />
+              </div>
             )}
             <p className="mt-2 text-center text-[0.6875rem] text-[var(--sidebar-text)]">
               {t('settings.selectionPreviewHint')}
             </p>
+            <p className="mt-1 text-center text-[0.6875rem] text-[var(--sidebar-text)]">
+              {t('settings.selectionSwitchHint')}
+            </p>
           </div>
         </Section>
 
+        {panelTab === 'actions' ? (
         <div className="flex items-start gap-4 px-5 pb-4">
           <div className="min-w-0 flex-1">
             <h3 className="settings-section-title">{t('settings.selectionFunctions')}</h3>
@@ -2037,6 +2110,65 @@ function SelectionAssistantSettings() {
             </div>
           </div>
         </div>
+        ) : (
+          <div className="px-5 pb-4">
+            <h3 className="settings-section-title">{t('settings.selectionFormats')}</h3>
+            <p className="pb-2 text-[0.6875rem] text-[var(--sidebar-text)]">{t('settings.selectionFormatsHint')}</p>
+            <div className="space-y-1.5">
+              {selectionFormats.map((fmt, index) => {
+                const def = SELECTION_FORMAT_DEFS[fmt.id]
+                const Icon = SELECTION_FORMAT_ICONS[fmt.id]
+                const enabledCount = selectionFormats.filter((f) => f.enabled).length
+                const lastEnabled = fmt.enabled && enabledCount <= 1
+                return (
+                  <div
+                    key={fmt.id}
+                    className={`flex items-center gap-2 rounded-lg border border-[var(--editor-border)] px-2.5 py-2 ${fmt.enabled ? '' : 'opacity-60'}`}
+                    style={{ background: 'var(--editor-surface)' }}
+                  >
+                    <span className="shrink-0 text-[var(--editor-accent)]"><Icon size={14} /></span>
+                    <span className="min-w-0 flex-1 truncate text-[0.75rem] text-[var(--editor-text)]">{t(def.labelKey)}</span>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <button
+                        onClick={() => toggleFormat(fmt.id, !fmt.enabled)}
+                        disabled={lastEnabled}
+                        className="p-1 rounded text-[var(--sidebar-text)] hover:bg-[var(--editor-hover)] disabled:opacity-30"
+                        title={fmt.enabled ? t('settings.selectionHideFormat') : t('settings.selectionShowFormat')}
+                        aria-label={fmt.enabled ? t('settings.selectionHideFormat') : t('settings.selectionShowFormat')}
+                        aria-pressed={fmt.enabled}
+                      >
+                        {fmt.enabled ? <Eye size={12} /> : <EyeOff size={12} />}
+                      </button>
+                      <button
+                        onClick={() => updateFormats(moveSelectionFormat(selectionFormats, fmt.id, -1))}
+                        disabled={index === 0}
+                        className="p-1 rounded text-[var(--sidebar-text)] hover:bg-[var(--editor-hover)] disabled:opacity-30"
+                        title={t('settings.selectionMoveUp')}
+                        aria-label={t('settings.selectionMoveUp')}
+                      >
+                        <ArrowUp size={12} />
+                      </button>
+                      <button
+                        onClick={() => updateFormats(moveSelectionFormat(selectionFormats, fmt.id, 1))}
+                        disabled={index === selectionFormats.length - 1}
+                        className="p-1 rounded text-[var(--sidebar-text)] hover:bg-[var(--editor-hover)] disabled:opacity-30"
+                        title={t('settings.selectionMoveDown')}
+                        aria-label={t('settings.selectionMoveDown')}
+                      >
+                        <ArrowDown size={12} />
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="flex justify-end pt-1.5">
+              <button onClick={resetFormats} className="text-[0.6875rem] text-[var(--editor-accent)] hover:underline">
+                {t('settings.selectionRestoreFormats')}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

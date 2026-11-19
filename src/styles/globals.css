@@ -2974,9 +2974,7 @@ a {
   height: auto;
   min-height: 28px;
   max-width: calc(100vw - 16px);
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: thin;
+  overflow: hidden;
   box-sizing: border-box;
   font-size: 0.75rem;
   line-height: 1;
@@ -3005,8 +3003,10 @@ a {
 .selection-toolbar-icon {
   width: 16px;
   height: 16px;
+  flex: 0 0 16px;
+  object-fit: contain;
+  display: block;
   border-radius: 3px;
-  flex-shrink: 0;
   margin: 0 4px 0 2px;
 }
 .selection-toolbar-divider {
@@ -3020,7 +3020,8 @@ a {
   display: flex;
   align-items: center;
   gap: 3px;
-  padding: 3px 7px;
+  height: 24px;
+  padding: 0 7px;
   border: none;
   border-radius: 5px;
   background: transparent;
@@ -3037,6 +3038,127 @@ a {
 }
 .selection-toolbar-btn svg {
   flex-shrink: 0;
+}
+
+/* 品牌图标：固定在最左，点击在「工具栏 / 格式条」之间切换。
+   不额外加边框/描边：图标本身就是入口，外框会把 16px 的图压得很拥挤。 */
+.selection-toolbar-brand {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+.selection-toolbar-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+}
+.selection-toolbar-icon-btn:hover {
+  background: var(--sel-toolbar-hover);
+}
+.selection-toolbar-icon-btn:active {
+  background: var(--sel-toolbar-hover);
+}
+
+/* 右侧内容单独滚动：品牌图标与分隔线不随格式条滚动 */
+.selection-toolbar-scroll {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+/* 切换动画期间锁住滚动：宽度收放时不应闪出横向滚动条 */
+.selection-toolbar.is-resizing .selection-toolbar-scroll {
+  overflow: hidden;
+}
+
+.selection-format-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+.selection-format-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--sel-toolbar-text);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.selection-format-btn:hover {
+  background: var(--sel-toolbar-hover);
+  color: var(--sel-toolbar-accent);
+}
+.selection-toolbar-preview .selection-format-btn {
+  cursor: default;
+}
+.selection-toolbar-preview .selection-format-btn:hover {
+  background: transparent;
+  color: var(--sel-toolbar-text);
+}
+
+/* 二级菜单：portal 到 body，浮层本身 overflow 裁不到它 */
+.selection-format-menu {
+  position: fixed;
+  z-index: 2147483647;
+  box-sizing: border-box;
+  padding: 4px;
+  border: 1px solid var(--sel-toolbar-border);
+  border-radius: var(--radius-md);
+  background: var(--sel-toolbar-bg);
+  color: var(--sel-toolbar-text);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+.selection-format-menu-item {
+  display: block;
+  width: 100%;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.75rem;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.selection-format-menu-item:hover {
+  background: var(--sel-toolbar-hover);
+  color: var(--sel-toolbar-accent);
+}
+
+/* 首次划词的一次性提示：指向品牌图标，说明可以切换两栏 */
+.selection-mode-hint {
+  position: fixed;
+  z-index: 2147483647;
+  max-width: 300px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: var(--editor-text, #333);
+  color: var(--editor-bg, #fff);
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  animation: selection-toolbar-in 0.15s ease-out;
 }
 
 /* ===== 元信息块（YAML front matter）=====

@@ -17,6 +17,11 @@ import {
   normalizeSelectionActions,
   type SelectionActionConfig,
 } from '../lib/selectionActions.ts'
+import {
+  DEFAULT_SELECTION_FORMATS,
+  normalizeSelectionFormats,
+  type SelectionFormatConfig,
+} from '../lib/selectionFormats.ts'
 
 /** 内容区宽度（正文列 max-width）的取值区间与默认值（px）。
  *  拖拽手柄（components/ContentWidthHandles.tsx）与存档迁移共用同一组边界，避免两处各写一套。 */
@@ -227,6 +232,12 @@ export interface SettingsState {
   // 划词助手（v0.4.4）
   /** 划词工具栏的功能顺序与自定义显示名；默认见 lib/selectionActions.ts */
   selectionActions: SelectionActionConfig[]
+  /** 划词时显示工具条还是格式条（v0.4.6）；品牌图标点击即切换 */
+  selectionBarMode: 'actions' | 'format'
+  /** 划词格式条的顺序与显示开关；默认见 lib/selectionFormats.ts */
+  selectionFormats: SelectionFormatConfig[]
+  /** 首次划词时提示过「品牌图标可切换工具条 / 格式条」 */
+  selectionModeHintSeen: boolean
 
   // AI 面板运行时状态（不持久化）
   /** AI 面板是否打开 */
@@ -361,6 +372,10 @@ export const useSettingsStore = create<SettingsState>()(
 
       // 划词助手（v0.4.4）：默认保持旧的 6 个按钮
       selectionActions: DEFAULT_SELECTION_ACTIONS.map((a) => ({ ...a })),
+      // 划词助手（v0.4.6）：默认显示工具条；格式条默认 13 项 + 链接隐藏
+      selectionBarMode: 'actions',
+      selectionFormats: DEFAULT_SELECTION_FORMATS.map((f) => ({ ...f })),
+      selectionModeHintSeen: false,
 
       // AI 面板运行时状态
       aiPanelOpen: false,
@@ -398,7 +413,8 @@ export const useSettingsStore = create<SettingsState>()(
       //      docxFollowPreviewFont / pluginExportOptions（默认空）
       // v24: 划词助手可配置 —— 新增 selectionActions（默认旧版 6 个按钮）
       // v25: PPTX 导出范围持久化 —— 新增 pptxRangeMode / pptxRangeStart / pptxRangeEnd
-      version: 25,
+      // v26: 划词格式条 —— 新增 selectionBarMode（工具条/格式条）与 selectionFormats
+      version: 26,
       migrate: (persisted: unknown) => {
         // 自动迁移旧字体栈到 MiSans 方案
         const oldFont = "'DengXian', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
@@ -497,6 +513,12 @@ export const useSettingsStore = create<SettingsState>()(
           }
           state.pptxRangeStart = Math.trunc(clampNumber(state.pptxRangeStart, 1, 9999, 1))
           state.pptxRangeEnd = Math.trunc(clampNumber(state.pptxRangeEnd, 0, 9999, 0))
+          // v26：划词格式条。模式只认枚举值；格式列表去重、补缺项、至少保留一个显示项。
+          if (state.selectionBarMode !== 'actions' && state.selectionBarMode !== 'format') {
+            state.selectionBarMode = 'actions'
+          }
+          state.selectionFormats = normalizeSelectionFormats(state.selectionFormats)
+          if (typeof state.selectionModeHintSeen !== 'boolean') state.selectionModeHintSeen = false
           // v14：PPTX 导出。存量存档没有这四个键 ⇒ 补默认值。
           // 超页策略只认枚举值（手改 localStorage 写入非法值会让分段按钮全灭）。
           if (typeof state.pptxExportHintSeen !== 'boolean') state.pptxExportHintSeen = false

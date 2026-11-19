@@ -29,6 +29,7 @@ import { liveThemeChanged, tryFormatInTable } from '../lib/cm-live-blocks'
 import { inlinePairOf, planInlineToggle } from '../lib/inlineWrap'
 import { blockSpecOf, planBlockToggle } from '../lib/blockFormat'
 import { readClipboardText, writeClipboardText } from '../lib/clipboard'
+import type { SelectionFormatAction } from '../lib/selectionFormats'
 import { frontMatterField, frontMatterLines } from '../lib/cm-frontmatter'
 import { headingFoldExtension } from '../lib/cm-heading-fold'
 import { slashMenuExtension, slashMenuState, showSlashMenu, hideSlashMenu, slashMenuAction } from '../lib/cm-slash-menu'
@@ -1095,6 +1096,163 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     }, 100)
   }, [viewMode, getPreviewLines, findNearestLine])
 
+  /** 把 Markdown 应用到当前选区：主工具栏、快捷键、划词格式条共用同一份实现。 */
+  const applyMarkdown = useCallback((markdown: string, mode?: 'wrap' | 'prefix' | 'ordered' | 'link' | 'tag' | 'block') => {
+    const view = viewRef.current
+    if (!view) return
+    // 实时模式表格：单元格内有文本选区 / 选中了整行整列时，
+    // 格式必须落在单元格源码里，而不是 CM 光标处（那会在表格外插入标记）。
+    if (tryFormatInTable(markdown, mode)) return
+    const { from, to } = view.state.selection.main
+    const selectedText = view.state.sliceDoc(from, to)
+
+    // 行内标记（加粗 / 斜体 / 删除线 / 高亮 / 行内代码 / 上下标）：
+    // 统一走 toggle —— 已包裹就取消，避免连点叠加成 `****`。
+    if (mode === 'wrap' || mode === 'tag') {
+      const pair = inlinePairOf(markdown, mode)
+      if (pair) {
+        const edit = planInlineToggle(view.state.doc.toString(), from, to, pair.open, pair.close)
+        view.dispatch({
+          changes: { from: edit.from, to: edit.to, insert: edit.insert },
+          selection: { anchor: edit.selFrom, head: edit.selTo },
+        })
+        view.focus()
+        return
+      }
+    }
+
+    // 块级格式（标题 / 列表 / 引用）：整行处理，再点一次取消。
+    // 快捷键与工具栏共用；具体规则见 lib/blockFormat.ts。
+    if (mode === 'prefix' || mode === 'ordered') {
+      const spec = blockSpecOf(markdown, mode)
+      if (spec) {
+        const edit = planBlockToggle(view.state.doc.toString(), from, to, spec)
+        if (view.state.sliceDoc(edit.from, edit.to) !== edit.insert) {
+          view.dispatch({
+            changes: { from: edit.from, to: edit.to, insert: edit.insert },
+            selection: { anchor: edit.selFrom, head: edit.selTo },
+          })
+        }
+        view.focus()
+        return
+      }
+    }
+
+    let insertText: string
+    let newFrom: number
+    let newTo: number
+
+    if (mode === 'prefix') {
+      if (selectedText) {
+        const lines = selectedText.split('\n')
+        const prefixed = lines.map(l => `${markdown}${l}`).join('\n')
+        insertText = prefixed
+        newFrom = from + markdown.length
+        newTo = from + prefixed.length
+      } else {
+        insertText = markdown
+        newFrom = from + markdown.length
+        newTo = from + markdown.length
+      }
+    } else if (mode === 'ordered') {
+      // 多行选区按行号递增（1. 2. 3.…），不再每行都写 `1. `。
+      // 空行跳过编号；已有编号会被重新排，避免连点两次叠加。
+      if (selectedText) {
+        const numbered = numberOrderedLines(selectedText)
+        insertText = numbered
+        newFrom = from + (numbered.match(/^\s*\d+[.)]\s+/)?.[0].length ?? 0)
+        newTo = from + numbered.length
+      } else {
+        insertText = '1. '
+        newFrom = from + insertText.length
+        newTo = from + insertText.length
+      }
+    } else if (mode === 'link') {
+      if (selectedText) {
+        insertText = markdown.replace('text', selectedText).replace('alt', selectedText)
+        newFrom = insertText.indexOf('](') + from + 2
+        newTo = newFrom + 3
+      } else {
+        insertText = markdown
+        const bracketPos = markdown.indexOf('](')
+        newFrom = from + (bracketPos >= 0 ? bracketPos + 2 : markdown.length)
+        newTo = newFrom + 3
+      }
+    } else if (mode === 'block') {
+      // 多行块片段：原样插入，光标落在片段里**第一个空行**上 —— 那是"该你填了"的位置。
+      // 例：分栏区间 `\n***\n\n***\n\n***\n` → 光标落在第一个 `***` 之后的空行（左栏）；
+      //     用户填完左栏，下面那个空档自然就是右栏，不必先理解语法。
+      insertText = markdown
+      const blank = /\n\s*\n/.exec(markdown)
+      newFrom = from + (blank ? blank.index + 1 : markdown.length)
+      newTo = newFrom
+    } else {
+      insertText = markdown
+      newFrom = from + markdown.length
+      newTo = from + markdown.length
+    }
+
+    view.dispatch({
+      changes: { from, to, insert: insertText },
+      selection: { anchor: newFrom, head: newTo },
+    })
+    view.focus()
+  }, [])
+
+  /** 代码块：有选区时包住选中内容，无选区时插入模板并把光标放进去 */
+  const applyCodeBlock = useCallback(() => {
+    const view = viewRef.current
+    if (!view) return
+    const { from, to } = view.state.selection.main
+    // 有选中内容：用代码块包裹，而不是替换掉；无选中：插入空代码块。
+    // ⚠️ 包裹时插入串不带首尾换行（会把原文档的换行顶出来 ⇒ 多出空行）。
+    if (to > from) {
+      const txt = view.state.sliceDoc(from, to)
+      const insert = `\`\`\`\n${txt}\n\`\`\``
+      view.dispatch({
+        changes: { from, to, insert },
+        selection: { anchor: from + 4, head: from + 4 + txt.length },
+      })
+    } else {
+      const insertText = '\n```\n\n```\n'
+      // 光标定位到两个 ``` 之间（第 3 个字符位置）
+      const cursorOffset = 4
+      view.dispatch({
+        changes: { from, to, insert: insertText },
+        selection: { anchor: from + cursorOffset, head: from + cursorOffset },
+      })
+    }
+    view.focus()
+  }, [])
+
+  /** 划词格式条的链接：直接把选区包成 [文字](url)，并选中 url（不弹窗） */
+  const applyInlineLink = useCallback(() => {
+    const view = viewRef.current
+    if (!view) return
+    const { from, to } = view.state.selection.main
+    const text = view.state.sliceDoc(from, to)
+    const insert = `[${text}](url)`
+    const urlStart = from + insert.indexOf('](') + 2
+    view.dispatch({
+      changes: { from, to, insert },
+      selection: { anchor: urlStart, head: urlStart + 3 },
+    })
+    view.focus()
+  }, [])
+
+  /** 划词格式条动作 → 编辑器命令（与主格式工具栏共用 applyMarkdown） */
+  const applySelectionFormat = useCallback((action: SelectionFormatAction) => {
+    if (action.kind === 'link') {
+      applyInlineLink()
+      return
+    }
+    if (action.markdown === '\n```\n\n```\n') {
+      applyCodeBlock()
+      return
+    }
+    applyMarkdown(action.markdown, action.mode)
+  }, [applyMarkdown, applyCodeBlock, applyInlineLink])
+
   useImperativeHandle(ref, () => ({
     replaceContent: (markdown: string) => {
       const view = viewRef.current
@@ -1112,107 +1270,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       })
       syncingFromExternalRef.current = false
     },
-    insertMarkdown: (markdown: string, mode?: 'wrap' | 'prefix' | 'ordered' | 'link' | 'tag' | 'block') => {
-      const view = viewRef.current
-      if (!view) return
-      // 实时模式表格：单元格内有文本选区 / 选中了整行整列时，
-      // 格式必须落在单元格源码里，而不是 CM 光标处（那会在表格外插入标记）。
-      if (tryFormatInTable(markdown, mode)) return
-      const { from, to } = view.state.selection.main
-      const selectedText = view.state.sliceDoc(from, to)
-
-      // 行内标记（加粗 / 斜体 / 删除线 / 高亮 / 行内代码 / 上下标）：
-      // 统一走 toggle —— 已包裹就取消，避免连点叠加成 `****`。
-      if (mode === 'wrap' || mode === 'tag') {
-        const pair = inlinePairOf(markdown, mode)
-        if (pair) {
-          const edit = planInlineToggle(view.state.doc.toString(), from, to, pair.open, pair.close)
-          view.dispatch({
-            changes: { from: edit.from, to: edit.to, insert: edit.insert },
-            selection: { anchor: edit.selFrom, head: edit.selTo },
-          })
-          view.focus()
-          return
-        }
-      }
-
-      // 块级格式（标题 / 列表 / 引用）：整行处理，再点一次取消。
-      // 快捷键与工具栏共用；具体规则见 lib/blockFormat.ts。
-      if (mode === 'prefix' || mode === 'ordered') {
-        const spec = blockSpecOf(markdown, mode)
-        if (spec) {
-          const edit = planBlockToggle(view.state.doc.toString(), from, to, spec)
-          if (view.state.sliceDoc(edit.from, edit.to) !== edit.insert) {
-            view.dispatch({
-              changes: { from: edit.from, to: edit.to, insert: edit.insert },
-              selection: { anchor: edit.selFrom, head: edit.selTo },
-            })
-          }
-          view.focus()
-          return
-        }
-      }
-
-      let insertText: string
-      let newFrom: number
-      let newTo: number
-
-      if (mode === 'prefix') {
-        if (selectedText) {
-          const lines = selectedText.split('\n')
-          const prefixed = lines.map(l => `${markdown}${l}`).join('\n')
-          insertText = prefixed
-          newFrom = from + markdown.length
-          newTo = from + prefixed.length
-        } else {
-          insertText = markdown
-          newFrom = from + markdown.length
-          newTo = from + markdown.length
-        }
-      } else if (mode === 'ordered') {
-        // 多行选区按行号递增（1. 2. 3.…），不再每行都写 `1. `。
-        // 空行跳过编号；已有编号会被重新排，避免连点两次叠加。
-        if (selectedText) {
-          const numbered = numberOrderedLines(selectedText)
-          insertText = numbered
-          newFrom = from + (numbered.match(/^\s*\d+[.)]\s+/)?.[0].length ?? 0)
-          newTo = from + numbered.length
-        } else {
-          insertText = '1. '
-          newFrom = from + insertText.length
-          newTo = from + insertText.length
-        }
-      } else if (mode === 'link') {
-        if (selectedText) {
-          insertText = markdown.replace('text', selectedText).replace('alt', selectedText)
-          newFrom = insertText.indexOf('](') + from + 2
-          newTo = newFrom + 3
-        } else {
-          insertText = markdown
-          const bracketPos = markdown.indexOf('](')
-          newFrom = from + (bracketPos >= 0 ? bracketPos + 2 : markdown.length)
-          newTo = newFrom + 3
-        }
-      } else if (mode === 'block') {
-        // 多行块片段：原样插入，光标落在片段里**第一个空行**上 —— 那是"该你填了"的位置。
-        // 例：分栏区间 `\n***\n\n***\n\n***\n` → 光标落在第一个 `***` 之后的空行（左栏）；
-        //     用户填完左栏，下面那个空档自然就是右栏，不必先理解语法。
-        insertText = markdown
-        const blank = /\n\s*\n/.exec(markdown)
-        newFrom = from + (blank ? blank.index + 1 : markdown.length)
-        newTo = newFrom
-      } else {
-        insertText = markdown
-        newFrom = from + markdown.length
-        newTo = from + markdown.length
-      }
-
-      view.dispatch({
-        changes: { from, to, insert: insertText },
-        selection: { anchor: newFrom, head: newTo },
-      })
-      view.focus()
-    },
+    insertMarkdown: applyMarkdown,
     insertHorizontalRule: () => {
       const view = viewRef.current
       if (!view) return
@@ -1225,31 +1283,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       })
       view.focus()
     },
-    insertCodeBlock: () => {
-      const view = viewRef.current
-      if (!view) return
-      const { from, to } = view.state.selection.main
-      // 有选中内容：用代码块包裹（而不是替换掉）。
-      // ⚠️ 插入串首尾各带一个 \n，会把选中文字前后的换行"顶"出来 ⇒ 多出空行。
-      // 所以包裹时用不带首尾换行的 ``` 围栏，前后换行交给原文档里已有的。
-      if (to > from) {
-        const txt = view.state.sliceDoc(from, to)
-        const insert = `\`\`\`\n${txt}\n\`\`\``
-        view.dispatch({
-          changes: { from, to, insert },
-          selection: { anchor: from + 4, head: from + 4 + txt.length },
-        })
-      } else {
-        const insertText = '\n```\n\n```\n'
-        // 光标定位到两个 ``` 之间（第3个字符位置）
-        const cursorOffset = 4
-        view.dispatch({
-          changes: { from, to, insert: insertText },
-          selection: { anchor: from + cursorOffset, head: from + cursorOffset },
-        })
-      }
-      view.focus()
-    },
+    insertCodeBlock: applyCodeBlock,
     insertFootnote: () => {
       const view = viewRef.current
       if (!view) return
@@ -1979,6 +2013,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
           text={selToolbar.text}
           source={selToolbar.source}
           onPasteSelected={selToolbar.source === 'editor' ? handleSelectionPaste : undefined}
+          onFormat={selToolbar.source === 'editor' ? applySelectionFormat : undefined}
         />
 
         {/* 预览面板：永远挂载 */}

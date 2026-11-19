@@ -2,7 +2,7 @@
 
 ## v0.4.6
 
-> **开发中**：实时模式表格交互、行内 / 块级格式 toggle、划词粘贴权限修复、任务列表输入法 NBSP 修复。用户向说明待发布时整理。
+> **开发中**：实时模式表格交互、行内 / 块级格式 toggle、划词粘贴权限修复、划词格式条、任务列表输入法 NBSP 修复。用户向说明待发布时整理。
 
 ### 任务列表输入法 NBSP（2026-11-15）
 
@@ -78,6 +78,26 @@
 **验证**
 - 通过 WebView2 CDP 直接调用插件：读到外部写入的 `PASTE_PROBE_2026`；写入 `WRITE_PROBE_777` 后 `Get-Clipboard` 一致。
 - `npx tsc --noEmit` 通过；`npm test` 611 通过
+
+### 划词格式条（2026-11-19）
+
+**需求**
+- 划词助手增加「格式条」：与主格式工具栏同源的移动格式条，点击最左侧品牌图标在工具条 / 格式条之间切换并持久化。
+- 设置 → 划词助手 拆成「工具栏功能 / 格式栏功能」两个标签；格式支持排序与显示 / 隐藏，预览下方提示可随时切换。
+- 标题只占一个图标，hover 展开 H1–H3；行内代码、公式的二级菜单与主工具栏一致。
+
+**实现**
+- 新增 `lib/selectionFormats.ts`：格式 id、默认顺序、动作参数、规范化 / 排序 / 显示开关；`settingsStore` 升 v26，新增 `selectionBarMode` / `selectionFormats` / `selectionModeHintSeen`。
+- 新增 `SelectionFormatBar`：纯图标渲染；二级菜单 portal 到 body + fixed 定位（浮层 `overflow` 会裁掉内联菜单）；链接默认隐藏，启用后直接插入 `[文字](url)`。
+- `SelectionToolbarView` 增加品牌按钮与两栏切换；`SelectionToolbar` 负责切换时 260ms 宽度收放（与顶部格式栏同缓动）以及一次性切换提示。
+- `Editor` 抽出 `applyMarkdown`，划词格式与主工具栏 / 快捷键共用同一套 toggle、标题换级、表格接管逻辑。
+- 设置页：两个 tab、模式开关（切换时同步预览与 tab）、排序 / 显示 / 恢复默认；预览标题改为「划词栏预览」。
+- 两种模式高度统一（内容 24px / 浮层总高 34px），切换无纵向位移；品牌图标去掉强制外框，固定 16×16 + `object-fit: contain`。
+
+**验证**
+- 新增 `tests/selectionFormats.test.ts`（10 条）
+- `npx tsc --noEmit`、`npm test` 621、`npx vite build`、`check-i18n --strict`、`check-docs` 通过
+- 浏览器实测品牌切换、加粗 toggle、标题 / 代码块二级菜单、刷新后保持、设置排序 / 隐藏 / 恢复默认、首次提示与高度稳定
 
 ## v0.4.5
 
