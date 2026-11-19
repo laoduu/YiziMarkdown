@@ -783,6 +783,7 @@ export const es = {
     versionCloudLabel: "Nube",
     versionBytes: "Tamaño",
     versionLines: "Líneas",
+    versionSavedAt: "Guardado",
     versionHash: "SHA-256 {hash}",
     versionFirstDiff: "Primera diferencia en la línea {line}",
     versionNoLineDiff: "El texto por líneas es idéntico; solo difieren los finales de línea o la codificación",

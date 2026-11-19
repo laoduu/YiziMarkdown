@@ -818,6 +818,7 @@ export const zh = {
     versionCloudLabel: "云端",
     versionBytes: "大小",
     versionLines: "行数",
+    versionSavedAt: "保存时间",
     versionHash: "SHA-256 {hash}",
     versionFirstDiff: "首个差异在第 {line} 行",
     versionNoLineDiff: "逐行文字一致，差异仅在行尾 / 编码细节",

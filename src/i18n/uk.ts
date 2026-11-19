@@ -800,6 +800,7 @@ export const uk = {
     versionCloudLabel: "Хмара",
     versionBytes: "Розмір",
     versionLines: "Рядки",
+    versionSavedAt: "Збережено",
     versionHash: "SHA-256 {hash}",
     versionFirstDiff: "Перша відмінність у рядку {line}",
     versionNoLineDiff: "Текст рядків однаковий; різняться лише закінчення рядків або кодування",

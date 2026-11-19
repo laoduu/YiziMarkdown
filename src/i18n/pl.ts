@@ -800,6 +800,7 @@ export const pl = {
     versionCloudLabel: "Chmura",
     versionBytes: "Rozmiar",
     versionLines: "Wiersze",
+    versionSavedAt: "Zapisano",
     versionHash: "SHA-256 {hash}",
     versionFirstDiff: "Pierwsza różnica w wierszu {line}",
     versionNoLineDiff: "Tekst wierszy jest identyczny; różnią się tylko końce wierszy lub kodowanie",

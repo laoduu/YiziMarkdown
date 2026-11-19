@@ -799,6 +799,7 @@ export const ru = {
     versionCloudLabel: "Облако",
     versionBytes: "Размер",
     versionLines: "Строки",
+    versionSavedAt: "Сохранено",
     versionHash: "SHA-256 {hash}",
     versionFirstDiff: "Первое отличие в строке {line}",
     versionNoLineDiff: "Текст по строкам совпадает; различаются только окончания строк или кодировка",

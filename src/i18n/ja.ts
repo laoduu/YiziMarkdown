@@ -800,6 +800,7 @@ export const ja = {
     versionCloudLabel: "クラウド",
     versionBytes: "サイズ",
     versionLines: "行数",
+    versionSavedAt: "保存日時",
     versionHash: "SHA-256 {hash}",
     versionFirstDiff: "最初の差異は {line} 行目",
     versionNoLineDiff: "行単位のテキストは同一です。改行コードやエンコードの違いのみです",

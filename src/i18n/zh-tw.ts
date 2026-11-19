@@ -816,6 +816,7 @@ export const zhTW = {
     versionCloudLabel: "雲端",
     versionBytes: "大小",
     versionLines: "行數",
+    versionSavedAt: "儲存時間",
     versionHash: "SHA-256 {hash}",
     versionFirstDiff: "首個差異在第 {line} 行",
     versionNoLineDiff: "逐行文字一致，差異僅在行尾或編碼細節",

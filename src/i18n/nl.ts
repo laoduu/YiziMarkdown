@@ -800,6 +800,7 @@ export const nl = {
     versionCloudLabel: "Cloud",
     versionBytes: "Grootte",
     versionLines: "Regels",
+    versionSavedAt: "Opgeslagen",
     versionHash: "SHA-256 {hash}",
     versionFirstDiff: "Eerste verschil op regel {line}",
     versionNoLineDiff: "Tekst per regel is identiek; alleen regeleinden of codering verschillen",

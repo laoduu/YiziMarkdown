@@ -2,7 +2,10 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 
+// 归一化行尾：Windows 上 core.autocrlf 会把 LF 检出成 CRLF，
+// 而下面的断言按源码里的 `\n` 拼接多行选择器，不归一化会在 Windows 上误报。
 const css = fs.readFileSync(new URL('../src/styles/slideshow.css', import.meta.url), 'utf8')
+  .replace(/\r\n?/g, '\n')
 
 function rule(selector: string): string {
   const start = css.indexOf(selector)

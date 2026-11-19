@@ -800,6 +800,7 @@ export const de = {
     versionCloudLabel: "Cloud",
     versionBytes: "Größe",
     versionLines: "Zeilen",
+    versionSavedAt: "Gespeichert",
     versionHash: "SHA-256 {hash}",
     versionFirstDiff: "Erste Abweichung in Zeile {line}",
     versionNoLineDiff: "Zeilentext ist identisch; nur Zeilenenden oder Kodierungsdetails unterscheiden sich",

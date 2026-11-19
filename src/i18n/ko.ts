@@ -800,6 +800,7 @@ export const ko = {
     versionCloudLabel: "클라우드",
     versionBytes: "크기",
     versionLines: "줄 수",
+    versionSavedAt: "저장 시간",
     versionHash: "SHA-256 {hash}",
     versionFirstDiff: "첫 차이는 {line}번째 줄",
     versionNoLineDiff: "줄 단위 텍스트는 동일합니다. 줄바꿈이나 인코딩만 다릅니다",

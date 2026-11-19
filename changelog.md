@@ -2,7 +2,36 @@
 
 ## v0.4.6
 
-> **开发中**：实时模式表格交互、行内 / 块级格式 toggle、划词粘贴权限修复、划词格式条、任务列表输入法 NBSP 修复。用户向说明待发布时整理。
+> **开发中**：实时模式表格交互、行内 / 块级格式 toggle、划词粘贴权限修复、划词格式条、任务列表输入法 NBSP 修复、云端版本对比显示保存时间。用户向说明待发布时整理。
+
+### 云端版本对比增加保存时间（2026-11-19）
+
+**问题**
+- 打开已缓存云端文档时，弹窗只对比大小 / 行数 / SHA-256，看不出两边各自是什么时候保存的，难以判断哪一份更新。
+
+**实现**
+- `ContentComparison` 增加 `localSavedAt` / `remoteSavedAt`；`compareContent` 新增可选的 `SavedAtInput`。保存时间只用于展示，**不参与** `identical` 判定。
+- 云端时间取 PROPFIND 的 `getlastmodified`（`statRemote().modified`）；新增 `parseServerTime`，同时兼容 RFC 1123 与 ISO 8601。
+- 本地时间取缓存镜像的文件修改时间（`get_file_meta`）。「打开云端」的冲突路径在下载覆盖镜像**之前**取值，避免显示成刚下载的时间。
+- 新增 `formatSavedAt`，按本地时区输出 `YYYY-MM-DD HH:mm`；未知时显示 `—`（服务器不给 Last-Modified、缓存被清理等）。
+- 16 种语言补充 `cloud.versionSavedAt`。
+- dev 构建注册 `__yiziCheckRemoteVersion()`：在控制台执行即可绕过 20 秒节流、立即校验当前标签，便于复现弹窗（生产构建会被摇掉）。
+
+**验证**
+- `npx tsc --noEmit` 通过
+- `tests/remoteVersion.test.ts` 11 通过
+- `npm run build` 通过
+
+### 测试：修正 Windows 换行导致的 CSS 断言误报（2026-11-19）
+
+**问题**
+- `tests/verticalRhythm.test.ts` 用 `css.indexOf('.ys-slide {\n  position: absolute;')` 匹配源码，而仓库在 Windows 上按 `core.autocrlf=true` 检出为 CRLF，多行选择器永远匹配不到，2 个用例必失败（与代码无关）。
+
+**实现**
+- 读取 `slideshow.css` 后先 `replace(/\r\n?/g, '\n')` 归一化行尾，断言不再依赖工作区换行符。
+
+**验证**
+- `npm test`：626 通过，0 失败
 
 ### 任务列表输入法 NBSP（2026-11-15）
 

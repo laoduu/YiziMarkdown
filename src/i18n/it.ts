@@ -800,6 +800,7 @@ export const it = {
     versionCloudLabel: "Cloud",
     versionBytes: "Dimensione",
     versionLines: "Righe",
+    versionSavedAt: "Salvato",
     versionHash: "SHA-256 {hash}",
     versionFirstDiff: "Prima differenza alla riga {line}",
     versionNoLineDiff: "Il testo per righe è identico; differiscono solo i fine riga o la codifica",

@@ -800,6 +800,7 @@ export const tr = {
     versionCloudLabel: "Bulut",
     versionBytes: "Boyut",
     versionLines: "Satırlar",
+    versionSavedAt: "Kayıt",
     versionHash: "SHA-256 {hash}",
     versionFirstDiff: "İlk fark {line}. satırda",
     versionNoLineDiff: "Satır metni aynı; yalnızca satır sonları veya kodlama farklı",

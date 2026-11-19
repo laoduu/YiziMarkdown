@@ -800,6 +800,7 @@ export const sv = {
     versionCloudLabel: "Moln",
     versionBytes: "Storlek",
     versionLines: "Rader",
+    versionSavedAt: "Sparad",
     versionHash: "SHA-256 {hash}",
     versionFirstDiff: "Första skillnaden på rad {line}",
     versionNoLineDiff: "Radtexten är identisk; endast radslut eller kodning skiljer sig",

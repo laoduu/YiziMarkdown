@@ -800,6 +800,7 @@ export const pt = {
     versionCloudLabel: "Nuvem",
     versionBytes: "Tamanho",
     versionLines: "Linhas",
+    versionSavedAt: "Salvo",
     versionHash: "SHA-256 {hash}",
     versionFirstDiff: "Primeira diferença na linha {line}",
     versionNoLineDiff: "O texto por linha é idêntico; apenas fins de linha ou codificação diferem",

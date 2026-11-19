@@ -24,7 +24,7 @@ import {
 } from './lib/zenMode'
 import { openRemote, save as saveToCloud, notifyRemoteDirChanged, hasCredentials, statRemote, readConditional, lookupCache } from './lib/webdav'
 import { runCloudCacheSync } from './lib/webdavSync'
-import { compareContent, byteLength, formatByteCount, type RemoteVersionPrompt } from './lib/remoteVersion'
+import { compareContent, byteLength, formatByteCount, parseServerTime, formatSavedAt, type RemoteVersionPrompt } from './lib/remoteVersion'
 import { parentPath, joinPath, baseName, canonicalRemotePath } from './lib/remotePath'
 import { saveActiveTab, markConflictResolved, dirOf } from './lib/saveRouter'
 import { adoptStagedAssets, cleanupPastedAssets, saveFileWithAssets, stagePendingAssets, type StagedAssets } from './lib/docAssets'
@@ -71,6 +71,24 @@ type OpenDialogResult = {
   filePath?: string
   /** 浏览器开发模式无法拿到真实路径，直接把 EPUB 字节带回来 */
   epubBytes?: Uint8Array
+}
+
+/**
+ * 本地副本的最后保存时间（Unix 毫秒）。
+ *
+ * 云端文档的 `filePath` 指向缓存镜像：镜像在「保存到云端 / 下载打开」时写入，
+ * 因此文件修改时间就是这份内容最后一次落到本机的时间。
+ * 读不到（文件被清掉、浏览器环境）时返回 null，界面显示占位符。
+ */
+const readLocalSavedAt = async (filePath: string | null | undefined): Promise<number | null> => {
+  if (!filePath) return null
+  try {
+    const meta = await invokeTauri<{ size: number; modified: number }>('get_file_meta', { path: filePath })
+    const ms = Number(meta?.modified)
+    return Number.isFinite(ms) && ms > 0 ? ms : null
+  } catch {
+    return null
+  }
 }
 
 // 打开文件对话框 - Tauri 环境用 Rust 命令，浏览器降级用 HTML input
@@ -871,7 +889,10 @@ function App() {
       const read = await readConditional(baseUrl, remote.path, remote.etag ?? null)
       if (read.notModified) return
       const remoteContent = read.content ?? ''
-      const cmp = await compareContent(tab.content, remoteContent)
+      const cmp = await compareContent(tab.content, remoteContent, {
+        localSavedAt: await readLocalSavedAt(tab.filePath),
+        remoteSavedAt: parseServerTime(stat.modified),
+      })
 
       // 逐行内容一致（含仅行尾差异）：静默刷新 ETag，避免以后保存误判冲突
       if (cmp.identical) {
@@ -917,6 +938,21 @@ function App() {
     }, 1200)
     return () => clearTimeout(timer)
   }, [activeTabId, checkRemoteVersion])
+
+  // 开发期调试入口：绕过 20 秒节流，立即校验当前标签页的云端版本。
+  // 用法：DevTools 控制台执行 `__yiziCheckRemoteVersion()`（仅 dev 构建注册，生产会被摇掉）。
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    const w = window as unknown as Record<string, unknown>
+    w.__yiziCheckRemoteVersion = () => {
+      const store = useEditorStore.getState()
+      const tab = store.tabs.find(t => t.id === store.activeTabId)
+      if (!tab) return false
+      void checkRemoteVersion(tab, { force: true })
+      return true
+    }
+    return () => { delete w.__yiziCheckRemoteVersion }
+  }, [checkRemoteVersion])
 
   /**
    * 禅模式开关（F9 / 工具栏 / 右键）。
@@ -1506,36 +1542,46 @@ function App() {
     if (!webdavBaseUrl) return
     const name = remotePath.split('/').pop() || remotePath
     showToast(t('cloud.opening', { name }))
+
+    // 已打开且本地有未保存修改：先比较正文。
+    // 不同则交给版本决策弹窗 —— 不静默覆盖编辑，也不静默忽略云端新版本。
+    const store = useEditorStore.getState()
+    const target = canonicalRemotePath(remotePath) ?? remotePath
+    const existing = opts?.reload
+      ? undefined
+      : store.tabs.find(t =>
+          t.remote && (canonicalRemotePath(t.remote.path) ?? t.remote.path) === target
+        )
+    // 打开会重写缓存镜像，本地保存时间必须在下载之前取
+    const localSavedAt = existing && !existing.isSaved
+      ? await readLocalSavedAt(existing.filePath)
+      : null
+
     try {
       const result = await openRemote(webdavBaseUrl, remotePath)
 
-      // 已打开且本地有未保存修改：先比较正文。
-      // 不同则交给版本决策弹窗 —— 不静默覆盖编辑，也不静默忽略云端新版本。
-      if (!opts?.reload) {
-        const store = useEditorStore.getState()
-        const target = canonicalRemotePath(remotePath) ?? remotePath
-        const existing = store.tabs.find(t =>
-          t.remote && (canonicalRemotePath(t.remote.path) ?? t.remote.path) === target
-        )
-        if (existing && !existing.isSaved) {
-          const cmp = await compareContent(existing.content, result.content)
-          if (!cmp.identical) {
-            remoteCheckAtRef.current.set(existing.id, Date.now())
-            remoteVersionOpenRef.current = true
-            setRemoteVersion({
-              tabId: existing.id,
-              remotePath,
-              name: existing.name,
-              localContent: existing.content,
-              remoteContent: result.content,
-              remoteEtag: result.etag,
-              remoteSize: byteLength(result.content),
-              localDirty: true,
-              missing: false,
-              comparison: cmp,
-            })
-            return
-          }
+      if (existing && !existing.isSaved) {
+        const stat = await statRemote(webdavBaseUrl, remotePath).catch(() => null)
+        const cmp = await compareContent(existing.content, result.content, {
+          localSavedAt,
+          remoteSavedAt: parseServerTime(stat?.modified),
+        })
+        if (!cmp.identical) {
+          remoteCheckAtRef.current.set(existing.id, Date.now())
+          remoteVersionOpenRef.current = true
+          setRemoteVersion({
+            tabId: existing.id,
+            remotePath,
+            name: existing.name,
+            localContent: existing.content,
+            remoteContent: result.content,
+            remoteEtag: result.etag,
+            remoteSize: byteLength(result.content),
+            localDirty: true,
+            missing: false,
+            comparison: cmp,
+          })
+          return
         }
       }
 
@@ -2508,12 +2554,14 @@ function App() {
                       bytes: remoteVersion.comparison.localBytes,
                       lines: remoteVersion.comparison.localLines,
                       hash: remoteVersion.comparison.localHash,
+                      savedAt: remoteVersion.comparison.localSavedAt,
                     },
                     {
                       label: t('cloud.versionCloudLabel'),
                       bytes: remoteVersion.comparison.remoteBytes,
                       lines: remoteVersion.comparison.remoteLines,
                       hash: remoteVersion.comparison.remoteHash,
+                      savedAt: remoteVersion.comparison.remoteSavedAt,
                     },
                   ] as const).map((side) => (
                     <div
@@ -2529,6 +2577,10 @@ function App() {
                       <div className="flex justify-between gap-2">
                         <span>{t('cloud.versionLines')}</span>
                         <span className="tabular-nums">{side.lines}</span>
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <span>{t('cloud.versionSavedAt')}</span>
+                        <span className="tabular-nums">{formatSavedAt(side.savedAt) || '—'}</span>
                       </div>
                       <div className="mt-1 break-all">
                         {t('cloud.versionHash', { hash: side.hash.slice(0, 16) })}

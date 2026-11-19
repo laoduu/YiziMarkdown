@@ -16,6 +16,16 @@ export interface ContentComparison {
   remoteHash: string
   /** 1 基行号；逐行比较时没有任何差异则为 null */
   firstDiffLine: number | null
+  /** 本地副本最后保存时间（Unix 毫秒）；读不到文件元信息时为 null */
+  localSavedAt: number | null
+  /** 云端 Last-Modified（Unix 毫秒）；服务器未提供时为 null */
+  remoteSavedAt: number | null
+}
+
+/** 两侧的保存时间（Unix 毫秒）。与正文比较解耦，缺一项只影响展示 */
+export interface SavedAtInput {
+  localSavedAt?: number | null
+  remoteSavedAt?: number | null
 }
 
 /** 远端文件缺失或已有新版本时的待决策状态 */
@@ -80,15 +90,45 @@ export function byteLength(text: string): number {
   return encoder.encode(text).byteLength
 }
 
+/** 合法时间戳（正数且有限）才保留，其余一律视为未知 */
+function normalizeTimestamp(value: number | null | undefined): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return null
+  return Math.round(value)
+}
+
+/**
+ * 解析服务器给的时间字符串。
+ *
+ * WebDAV 的 `getlastmodified` 是 RFC 1123（`Wed, 01 Jan 2025 00:00:00 GMT`），
+ * 也有服务器给 ISO 8601；`Date.parse` 两种都认，认不出就返回 null（展示为未知）。
+ */
+export function parseServerTime(raw: string | null | undefined): number | null {
+  if (!raw) return null
+  const ms = Date.parse(raw.trim())
+  return Number.isFinite(ms) ? normalizeTimestamp(ms) : null
+}
+
+/** 本地时间 `YYYY-MM-DD HH:mm`；时间未知或非法时返回空串（由界面显示占位符） */
+export function formatSavedAt(ms: number | null | undefined): string {
+  const value = normalizeTimestamp(ms)
+  if (value === null) return ''
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 /**
  * 比较本地正文与云端正文。
  *
  * 判据是「规范化行尾后的完整字符串」，比单纯比字节数更可靠：
  * 服务器可能重写换行符，但那不算内容冲突。
+ * 保存时间只用于展示（谁更新），**不参与** identical 判定。
  */
 export async function compareContent(
   local: string,
   remote: string,
+  times?: SavedAtInput,
 ): Promise<ContentComparison> {
   const localLines = splitLines(local)
   const remoteLines = splitLines(remote)
@@ -110,6 +150,8 @@ export async function compareContent(
     localHash,
     remoteHash,
     firstDiffLine,
+    localSavedAt: normalizeTimestamp(times?.localSavedAt),
+    remoteSavedAt: normalizeTimestamp(times?.remoteSavedAt),
   }
 }
 
