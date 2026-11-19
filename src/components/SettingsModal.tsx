@@ -1176,6 +1176,7 @@ function EditorSettings() {
 // ===================== 快捷键设置（可视化面板） =====================
 function ShortcutsSettings() {
   const { t } = useI18n()
+  const inlineAIShortcut = useSettingsStore((s) => s.inlineAIShortcut)
   const [map, setMap] = useState<Record<string, string>>({})
   const [originalMap, setOriginalMap] = useState<Record<string, string>>({})
   const [recordingId, setRecordingId] = useState<string | null>(null)
@@ -1261,6 +1262,21 @@ function ShortcutsSettings() {
                 ))}
               </div>
             )}
+          </Section>
+          <Section title={t('settings.inlineAIShortcut')}>
+            <div className="settings-row">
+              <span className="text-[0.75rem] text-[var(--editor-text)]">{t('settings.inlineAIShortcut')}</span>
+              <select
+                value={inlineAIShortcut}
+                onChange={(e) => useSettingsStore.getState().setField('inlineAIShortcut', e.target.value as 'doubleCtrl' | 'ctrlEnter' | 'off')}
+                className="settings-select"
+              >
+                <option value="doubleCtrl">{t('settings.inlineAIShortcutDoubleCtrl')}</option>
+                <option value="ctrlEnter">{t('settings.inlineAIShortcutCtrlEnter')}</option>
+                <option value="off">{t('settings.inlineAIShortcutOff')}</option>
+              </select>
+            </div>
+            <p className="text-[0.6875rem] text-[var(--sidebar-text)] pt-1">{t('settings.inlineAIShortcutHint')}</p>
           </Section>
           {categories.map(cat => (
             <Section key={cat} title={t(cat)}>
@@ -1451,7 +1467,7 @@ function SkillsSettings() {
   const [editing, setEditing] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft] = useState<SkillDraft>({
-    id: '', name: '', summary: '', description: '', needsDoc: false, icon: DEFAULT_SKILL_ICON,
+    id: '', name: '', summary: '', description: '', needsDoc: false, delivery: 'chat', icon: DEFAULT_SKILL_ICON,
   })
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -1499,7 +1515,7 @@ function SkillsSettings() {
     setEditingId(null)
     setSelectedId(null)
     setContent('')
-    setDraft({ id: '', name: '', summary: '', description: '', needsDoc: false, icon: DEFAULT_SKILL_ICON })
+    setDraft({ id: '', name: '', summary: '', description: '', needsDoc: false, delivery: 'chat', icon: DEFAULT_SKILL_ICON })
     setError(null)
     setDeleteOpen(false)
   }
@@ -1514,6 +1530,7 @@ function SkillsSettings() {
       summary: selected.summary,
       description: selected.description,
       needsDoc: selected.needsDoc === true,
+      delivery: selected.delivery === 'inline' ? 'inline' : 'chat',
       icon: resolveSkillIcon(selected),
     })
     setError(null)
@@ -1662,6 +1679,17 @@ function SkillsSettings() {
                 />
                 {t('settings.skillNeedsDoc')}
               </label>
+              <div>
+                <label className="block text-[0.6875rem] text-[var(--sidebar-text)] mb-1">{t('settings.skillDelivery')}</label>
+                <select
+                  value={draft.delivery ?? 'chat'}
+                  onChange={(e) => setDraft({ ...draft, delivery: e.target.value === 'inline' ? 'inline' : 'chat' })}
+                  className="settings-select"
+                >
+                  <option value="chat">{t('settings.skillDeliveryChat')}</option>
+                  <option value="inline">{t('settings.skillDeliveryInline')}</option>
+                </select>
+              </div>
 
               <div>
                 <label className="block text-[0.6875rem] text-[var(--sidebar-text)] mb-1">{t('settings.skillContent')}</label>

@@ -11,7 +11,7 @@ import { createPortal } from 'react-dom'
 import { useI18n } from '../i18n'
 import { writeClipboardText } from '../lib/clipboard'
 import { useSettingsStore } from '../stores/settingsStore'
-import { loadSkills, type Skill } from '../lib/ai-skills'
+import { loadSkills, loadSkillPrompt, type Skill } from '../lib/ai-skills'
 import { SKILLS_CHANGED_EVENT } from '../lib/skillsAdmin'
 import {
   buildSelectionToolbarItems,
@@ -40,6 +40,8 @@ interface SelectionToolbarProps {
   onFormat?: (action: SelectionFormatAction) => void
   /** 星芒：对选中内容打开文档内 AI */
   onAskAI?: (selection: { text: string; from: number; to: number }) => void
+  /** delivery = inline 的划词技能：直接打开文档内 AI 并执行技能提示词 */
+  onInlineSkill?: (payload: { text: string; from: number; to: number; name: string; prompt: string }) => void
 }
 
 export default function SelectionToolbar({
@@ -53,6 +55,7 @@ export default function SelectionToolbar({
   onPasteSelected,
   onFormat,
   onAskAI,
+  onInlineSkill,
 }: SelectionToolbarProps) {
   const { t } = useI18n()
   const toolbarRef = useRef<HTMLDivElement>(null)
@@ -210,6 +213,23 @@ export default function SelectionToolbar({
   const handleAction = (item: SelectionToolbarItem) => {
     switch (item.type) {
       case 'skill':
+        // delivery = inline：带上技能提示词直接改写文档，不进入右侧对话
+        if (item.skill?.delivery === 'inline' && onInlineSkill && from < to) {
+          const fallbackToChat = () => updateSettings({
+            aiPanelOpen: true,
+            aiPendingAction: {
+              type: 'skill',
+              skillId: item.skillId!,
+              fromSelection: true,
+              selectedText: text,
+            },
+          })
+          void loadSkillPrompt(item.skill.file).then((prompt) => {
+            if (!prompt.trim()) { fallbackToChat(); return }
+            onInlineSkill({ text, from, to, name: item.label, prompt })
+          }).catch(fallbackToChat)
+          break
+        }
         updateSettings({
           aiPanelOpen: true,
           aiPendingAction: {

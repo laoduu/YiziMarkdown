@@ -3567,6 +3567,19 @@ a {
 }
 .inline-ai-close:hover { background: var(--sel-toolbar-hover); opacity: 1; }
 
+/* 技能直通：浮层顶部的小角标 */
+.inline-ai-skill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin: 0 20px 6px 2px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sel-toolbar-accent) 10%, transparent);
+  color: var(--sel-toolbar-accent);
+  font-size: 0.6875rem;
+}
+
 .inline-ai-input {
   display: block;
   width: 100%;

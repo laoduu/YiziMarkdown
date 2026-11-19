@@ -242,6 +242,8 @@ export interface SettingsState {
   // AI 面板运行时状态（不持久化）
   /** AI 面板是否打开 */
   aiPanelOpen: boolean
+  /** 文档内 AI 创作浮层的快捷键：双击 Ctrl / Ctrl+Enter / 关闭 */
+  inlineAIShortcut: 'doubleCtrl' | 'ctrlEnter' | 'off'
   /** 来自划词助手的待执行动作 */
   aiPendingAction: { type: 'skill'; skillId: string; fromSelection?: boolean; selectedText?: string } | { type: 'chat'; text: string } | null
 
@@ -379,6 +381,7 @@ export const useSettingsStore = create<SettingsState>()(
 
       // AI 面板运行时状态
       aiPanelOpen: false,
+  inlineAIShortcut: 'doubleCtrl',
       aiPendingAction: null,
 
       // 方法

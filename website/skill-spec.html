@@ -9,7 +9,7 @@
     <meta name="author" content="YiziPaper">
     <meta name="robots" content="index, follow">
     <meta name="docs-src" content="src-tauri/skill-guide.md">
-    <meta name="docs-hash" content="a195f9aff89bb2037b21c39def4ba12e457bf32a2f91caeb94592406d456e920">
+    <meta name="docs-hash" content="ae80ae8b6449c26d2854e96d776283cc4d1f1aa654b700a13167bc1ea024aa55">
     <link rel="canonical" href="https://md.yizigpt.com/skill-spec.html">
 
     <!-- Open Graph -->
@@ -374,12 +374,20 @@
 <td>是否需要引用当前文档。<code>true</code> = AI 会自动读取当前打开的文档内容</td>
 </tr>
 <tr>
+<td><code>delivery</code></td>
+<td>否</td>
+<td>结果去向。<code>chat</code>（默认）= 送进右侧 AI 助手对话；<code>inline</code> = 在划词浮栏点击后直接在正文里改写，读写都发生在文档内</td>
+</tr>
+<tr>
 <td><code>icon</code></td>
 <td>否</td>
 <td>图标名称，可选。常用值：<code>sparkles</code>、<code>file-text</code>、<code>pencil</code>、<code>presentation</code>、<code>languages</code>、<code>code2</code>、<code>rocket</code>。省略时按内置 ID 回退到语义图标</td>
 </tr>
 </tbody>
 </table></div>
+<blockquote>
+<p><code>delivery: &quot;inline&quot;</code> 的技能只在「划词浮栏」里生效：选中文字后点该技能，会打开文档内 AI 浮层并自动执行技能提示词，结果可用「替换选区 / 插入到下方」直接写回正文，也可以继续提「补充需求」。不选中文字时仍按普通技能送入右侧对话。</p>
+</blockquote>
 <p><strong>第 3 步：重启应用</strong></p>
 <p>保存后重启 YiziMarkdown，新的 Skill 就会出现在列表中。</p>
 </div>

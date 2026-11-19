@@ -19,6 +19,8 @@ export interface Skill {
   file: string
   /** 是否需要引用当前文档作为上下文 */
   needsDoc?: boolean
+  /** 结果去向：chat = 送进右侧 AI 助手（默认）；inline = 直接改写文档 */
+  delivery?: 'chat' | 'inline'
   /** 图标名称，见 `skillIconNames.ts` */
   icon?: string
   /** 用户通过管理页改过：升级同步时不覆盖 */
@@ -40,6 +42,7 @@ export interface SkillDraft {
   summary: string
   description: string
   needsDoc: boolean
+  delivery?: 'chat' | 'inline'
   icon?: SkillIconName
 }
 
@@ -75,6 +78,7 @@ export function parseSkillManifest(raw: string): SkillManifest {
           description: typeof s.description === 'string' ? s.description : '',
           file: String(s.file),
           needsDoc: s.needsDoc === true,
+          delivery: s.delivery === 'inline' ? 'inline' : 'chat',
           ...(typeof s.icon === 'string' ? { icon: s.icon } : {}),
           ...(s.customized === true ? { customized: true } : {}),
         })) as Skill[]
@@ -178,6 +182,7 @@ export function planSkillSave(
     description: draft.description.trim(),
     file,
     needsDoc: draft.needsDoc,
+    delivery: draft.delivery === 'inline' ? 'inline' : 'chat',
     icon: isSkillIconName(draft.icon)
       ? draft.icon
       : resolveSkillIcon(existing ?? { id }),

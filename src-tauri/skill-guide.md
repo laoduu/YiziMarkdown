@@ -203,7 +203,10 @@ YiziMarkdown 更新版本时，会自动处理 Skill 文件：
 | `description` | 否 | 详细说明，hover 时显示 |
 | `file` | 是 | 提示词文件名（需与 `skills/` 目录下的文件名一致） |
 | `needsDoc` | 否 | 是否需要引用当前文档。`true` = AI 会自动读取当前打开的文档内容 |
+| `delivery` | 否 | 结果去向。`chat`（默认）= 送进右侧 AI 助手对话；`inline` = 在划词浮栏点击后直接在正文里改写，读写都发生在文档内 |
 | `icon` | 否 | 图标名称，可选。常用值：`sparkles`、`file-text`、`pencil`、`presentation`、`languages`、`code2`、`rocket`。省略时按内置 ID 回退到语义图标 |
+
+> `delivery: "inline"` 的技能只在「划词浮栏」里生效：选中文字后点该技能，会打开文档内 AI 浮层并自动执行技能提示词，结果可用「替换选区 / 插入到下方」直接写回正文，也可以继续提「补充需求」。不选中文字时仍按普通技能送入右侧对话。
 
 **第 3 步：重启应用**
 

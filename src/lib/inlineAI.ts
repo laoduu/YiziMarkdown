@@ -135,6 +135,7 @@ export function buildInlineMessages(
   instruction: string,
   original: string | null | undefined,
   context?: string | null,
+  extraSystem?: string | null,
 ): ChatPayloadMessage[] {
   const body = (original ?? '').trim()
   const user = body
@@ -143,6 +144,8 @@ export function buildInlineMessages(
   const messages: ChatPayloadMessage[] = [
     { role: 'system', content: body ? INLINE_SYSTEM_PROMPT : CREATE_SYSTEM_PROMPT },
   ]
+  const skill = (extraSystem ?? '').trim()
+  if (skill) messages.push({ role: 'system', content: skill })
   const ctx = (context ?? '').trim()
   if (ctx) {
     messages.push({

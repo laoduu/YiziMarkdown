@@ -51,6 +51,15 @@ test('附加上下文：不传 / 空串时不插入多余消息', () => {
   assert.equal(buildInlineMessages('请润色', '原文', '   ').length, 2)
 })
 
+test('技能提示词：作为额外的 system 插在上下文之前', () => {
+  const messages = buildInlineMessages('请润色', '原文', '文档上下文', '技能提示词')
+  assert.equal(messages.length, 4)
+  assert.equal(messages[0].role, 'system')
+  assert.equal(messages[1].content, '技能提示词')
+  assert.ok(messages[2].content.includes('文档上下文'))
+  assert.equal(messages[3].role, 'user')
+})
+
 test('extractSection：按标题切出光标所在小节', () => {
   const doc = '# 标题\n\n第一节内容\n\n## 第二节\n\n第二节内容\n\n## 第三节\n\n第三节内容'
   const offset = doc.indexOf('第二节内容')

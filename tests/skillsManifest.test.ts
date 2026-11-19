@@ -144,3 +144,27 @@ test('planSkillDelete 共享文件不删除', () => {
   const plan = planSkillDelete(m, 'a')
   assert.equal(plan.deleteFile, null)
 })
+
+test('delivery：解析保留 inline，缺省为 chat', () => {
+  const parsed = parseSkillManifest(JSON.stringify({
+    version: 7,
+    skills: [
+      { id: 'a', file: 'a.md', delivery: 'inline' },
+      { id: 'b', file: 'b.md' },
+      { id: 'c', file: 'c.md', delivery: 'bogus' },
+    ],
+    hiddenIds: [],
+  }))
+  assert.equal(parsed.skills[0].delivery, 'inline')
+  assert.equal(parsed.skills[1].delivery, 'chat')
+  assert.equal(parsed.skills[2].delivery, 'chat')
+})
+
+test('planSkillSave：草稿的 delivery 落到清单里', () => {
+  const draft = {
+    id: 'a', name: 'A', summary: '', description: '', needsDoc: false,
+    delivery: 'inline' as const, icon: 'pencil' as const,
+  }
+  const plan = planSkillSave(manifest([]), draft, 'prompt', null)
+  assert.equal(plan.manifest.skills[0].delivery, 'inline')
+})

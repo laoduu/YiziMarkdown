@@ -40,6 +40,12 @@ interface InlineAIPanelProps {
   documentText?: string
   /** 选区起点在文档中的偏移（用于定位当前小节） */
   selectionOffset?: number
+  /** 来自划词技能：技能名（用于浮层上的角标）与提示词 */
+  skillName?: string
+  skillPrompt?: string
+  /** 技能直通：预置指令并自动执行 */
+  initialInstruction?: string
+  autoRun?: boolean
   /** 成功后由调用方关闭浮层并提示（已写入正文，可 Ctrl+Z 撤销） */
   onApply: (kind: 'replace' | 'insert', text: string) => boolean
   /** 对比原文：把 diff 交给编辑器在正文里就地展示；null = 关闭 */
@@ -87,6 +93,10 @@ export default function InlineAIPanel({
   originalText,
   documentText = '',
   selectionOffset = 0,
+  skillName,
+  skillPrompt,
+  initialInstruction,
+  autoRun = false,
   onApply,
   onDiff,
   onClose,
@@ -97,7 +107,7 @@ export default function InlineAIPanel({
   const provider = providerById(aiProvider)
   const intentLang: 'zh' | 'en' = String(lang).startsWith('zh') ? 'zh' : 'en'
 
-  const [instruction, setInstruction] = useState('')
+  const [instruction, setInstruction] = useState(initialInstruction ?? '')
   const [followUp, setFollowUp] = useState('')
   const [ctx, setCtx] = useState<'none' | 'section' | 'document'>('none')
   const [ctxMenuOpen, setCtxMenuOpen] = useState(false)
@@ -115,6 +125,7 @@ export default function InlineAIPanel({
   const streamRef = useRef<AIStreamHandle | null>(null)
   const resultRef = useRef('')
   const busyRef = useRef(false)
+  const autoRanRef = useRef(false)
   /** 多轮「补充需求」的对话上下文：system + 首轮指令 + 历次指令/结果 */
   const historyRef = useRef<ChatPayloadMessage[]>([])
   /** 关掉浮层时要清掉正文里的 diff 装饰，用 ref 拿最新的回调 */
@@ -277,14 +288,22 @@ export default function InlineAIPanel({
       : ctx === 'section'
         ? extractSection(documentText, selectionOffset).slice(0, MAX_CONTEXT_CHARS)
         : null
-    const messages = buildInlineMessages(text, isCreate ? null : payload.text, contextText)
+    const messages = buildInlineMessages(text, isCreate ? null : payload.text, contextText, skillPrompt)
     historyRef.current = messages
     void startStream(messages)
   }
 
+  // 技能直通：打开浮层即按技能提示词执行一次（ref 防止 StrictMode / 重渲染重复触发）
+  useEffect(() => {
+    if (autoRanRef.current || !autoRun) return
+    autoRanRef.current = true
+    const text = (initialInstruction ?? '').trim()
+    if (text) run(text)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRun, initialInstruction])
+
   /** 补充需求：在已有结果的基础上继续改 */
-  const refine = () => {
-    const text = followUp.trim()
+  const refine = () => {    const text = followUp.trim()
     if (!text || busyRef.current || historyRef.current.length === 0) return
     setFollowUp('')
     const messages = trimHistory([...historyRef.current, { role: 'user', content: text }])
@@ -348,6 +367,10 @@ export default function InlineAIPanel({
         <X size={13} />
       </button>
 
+      {skillName && (
+        <div className="inline-ai-skill">{t('aiInline.skillBadge', { name: skillName })}</div>
+      )}
+
       {phase === 'compose' && (
             <>
               <textarea
@@ -402,7 +425,7 @@ export default function InlineAIPanel({
                   </button>
                 </div>
               </div>
-              {!isCreate && intents.length > 0 && (
+              {!isCreate && !skillPrompt && intents.length > 0 && (
                 <div className="inline-ai-intents">
                   {intents.map((id) => (
                     <button
