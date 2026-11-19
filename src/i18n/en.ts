@@ -1036,6 +1036,7 @@ export const en = {
     copy: 'Copy',
     copied: 'Copied',
     compare: 'Compare',
+    compareOff: 'Hide diff',
     original: 'Original',
     result: 'Result',
     discard: 'Discard',

@@ -1018,6 +1018,7 @@ export const nl = {
     copy: 'Kopiëren',
     copied: 'Gekopieerd',
     compare: 'Vergelijken',
+    compareOff: 'Vergelijking verbergen',
     original: 'Origineel',
     result: 'Resultaat',
     discard: 'Verwerpen',

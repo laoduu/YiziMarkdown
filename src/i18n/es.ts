@@ -1018,6 +1018,7 @@ export const es = {
     copy: 'Copiar',
     copied: 'Copiado',
     compare: 'Comparar',
+    compareOff: 'Ocultar comparación',
     original: 'Original',
     result: 'Resultado',
     discard: 'Descartar',

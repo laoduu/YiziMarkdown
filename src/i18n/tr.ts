@@ -1018,6 +1018,7 @@ export const tr = {
     copy: 'Kopyala',
     copied: 'Kopyalandı',
     compare: 'Karşılaştır',
+    compareOff: 'Karşılaştırmayı gizle',
     original: 'Özgün',
     result: 'Sonuç',
     discard: 'Vazgeç',

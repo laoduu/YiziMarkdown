@@ -1018,6 +1018,7 @@ export const uk = {
     copy: 'Копіювати',
     copied: 'Скопійовано',
     compare: 'Порівняти',
+    compareOff: 'Приховати порівняння',
     original: 'Оригінал',
     result: 'Результат',
     discard: 'Відхилити',

@@ -1017,6 +1017,7 @@ export const ru = {
     copy: 'Копировать',
     copied: 'Скопировано',
     compare: 'Сравнить',
+    compareOff: 'Скрыть сравнение',
     original: 'Оригинал',
     result: 'Результат',
     discard: 'Отклонить',

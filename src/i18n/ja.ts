@@ -1018,6 +1018,7 @@ export const ja = {
     copy: 'コピー',
     copied: 'コピーしました',
     compare: '原文と比較',
+    compareOff: '比較を閉じる',
     original: '原文',
     result: '結果',
     discard: '破棄',

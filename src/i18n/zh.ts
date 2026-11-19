@@ -1036,6 +1036,7 @@ export const zh = {
     copy: '复制',
     copied: '已复制',
     compare: '对比原文',
+    compareOff: '关闭对比',
     original: '原文',
     result: '结果',
     discard: '放弃',

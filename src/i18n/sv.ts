@@ -1018,6 +1018,7 @@ export const sv = {
     copy: 'Kopiera',
     copied: 'Kopierat',
     compare: 'Jämför',
+    compareOff: 'Dölj jämförelse',
     original: 'Original',
     result: 'Resultat',
     discard: 'Släng',

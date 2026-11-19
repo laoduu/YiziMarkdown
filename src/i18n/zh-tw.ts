@@ -1034,6 +1034,7 @@ export const zhTW = {
     copy: '複製',
     copied: '已複製',
     compare: '對比原文',
+    compareOff: '關閉對比',
     original: '原文',
     result: '結果',
     discard: '放棄',

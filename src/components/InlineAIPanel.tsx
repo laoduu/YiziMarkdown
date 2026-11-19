@@ -22,6 +22,7 @@ import {
   pickInlineIntents,
   truncateSelection,
   type ChatPayloadMessage,
+  type DiffLine,
   type InlineIntentId,
 } from '../lib/inlineAI'
 
@@ -35,6 +36,8 @@ interface InlineAIPanelProps {
   originalText: string
   /** 成功后由调用方关闭浮层并提示（已写入正文，可 Ctrl+Z 撤销） */
   onApply: (kind: 'replace' | 'insert', text: string) => boolean
+  /** 对比原文：把 diff 交给编辑器在正文里就地展示；null = 关闭 */
+  onDiff?: (lines: DiffLine[] | null) => void
   onClose: () => void
 }
 
@@ -77,6 +80,7 @@ export default function InlineAIPanel({
   mode = 'rewrite',
   originalText,
   onApply,
+  onDiff,
   onClose,
 }: InlineAIPanelProps) {
   const { t, lang } = useI18n()
@@ -103,6 +107,9 @@ export default function InlineAIPanel({
   const busyRef = useRef(false)
   /** 多轮「补充需求」的对话上下文：system + 首轮指令 + 历次指令/结果 */
   const historyRef = useRef<ChatPayloadMessage[]>([])
+  /** 关掉浮层时要清掉正文里的 diff 装饰，用 ref 拿最新的回调 */
+  const onDiffRef = useRef(onDiff)
+  onDiffRef.current = onDiff
 
   const intents = pickInlineIntents(originalText)
   const streaming = phase === 'streaming'
@@ -157,9 +164,10 @@ export default function InlineAIPanel({
     textareaRef.current?.focus()
   }, [])
 
-  // 卸载时取消请求并释放监听器
+  // 卸载时取消请求并释放监听器；正文里的 diff 也必须一起撤掉
   useEffect(() => {
     return () => {
+      onDiffRef.current?.(null)
       streamRef.current?.cancel()
       streamRef.current?.dispose()
       streamRef.current = null
@@ -193,6 +201,7 @@ export default function InlineAIPanel({
     setError('')
     setCopied(false)
     setCompareOpen(false)
+    onDiffRef.current?.(null)
     resultRef.current = ''
 
     streamRef.current?.dispose()
@@ -282,14 +291,19 @@ export default function InlineAIPanel({
     })
   }
 
+  const toggleCompare = () => {
+    if (isCreate || !result.trim()) return
+    const next = !compareOpen
+    setCompareOpen(next)
+    onDiffRef.current?.(next ? diffLines(originalText, result) : null)
+  }
+
   const apply = (kind: 'replace' | 'insert') => {
     if (!result.trim()) return
     if (!onApply(kind, result)) return
     // 写入成功后立即关闭：浮层正好盖在写回位置上方，留着会挡住用户看结果
     onClose()
   }
-
-  const diff = !isCreate && compareOpen && phase === 'review' ? diffLines(originalText, result) : null
 
   return createPortal(
     <div
@@ -356,32 +370,11 @@ export default function InlineAIPanel({
 
           {(phase === 'streaming' || phase === 'review' || phase === 'error') && (
             <>
-              {compareOpen && diff ? (
-                <div className="inline-ai-compare">
-                  <div>
-                    <div className="inline-ai-compare-title">{t('aiInline.original')}</div>
-                    <pre className="inline-ai-pre">
-                      {diff.map((line, i) => (
-                        <div key={i} className={`inline-ai-diff-${line.type}`}>{line.text || ' '}</div>
-                      ))}
-                    </pre>
-                  </div>
-                  <div>
-                    <div className="inline-ai-compare-title">{t('aiInline.result')}</div>
-                    <pre className="inline-ai-pre">
-                      {diff.filter((line) => line.type !== 'del').map((line, i) => (
-                        <div key={i} className={`inline-ai-diff-${line.type}`}>{line.text || ' '}</div>
-                      ))}
-                    </pre>
-                  </div>
-                </div>
-              ) : (
-                (streaming || result) && (
-                  <pre className="inline-ai-pre inline-ai-result">
-                    {result || t('aiInline.generating')}
-                    {streaming && result && <span className="inline-ai-caret" />}
-                  </pre>
-                )
+              {(streaming || result) && (
+                <pre className="inline-ai-pre inline-ai-result">
+                  {result || t('aiInline.generating')}
+                  {streaming && result && <span className="inline-ai-caret" />}
+                </pre>
               )}
 
               {thinking && !result && (
@@ -434,8 +427,12 @@ export default function InlineAIPanel({
                 ) : (
                   <>
                     {!isCreate && (
-                      <button type="button" className="inline-ai-btn" onClick={() => setCompareOpen((v) => !v)}>
-                        {t('aiInline.compare')}
+                      <button
+                        type="button"
+                        className={`inline-ai-btn ${compareOpen ? 'is-active' : ''}`}
+                        onClick={toggleCompare}
+                      >
+                        {compareOpen ? t('aiInline.compareOff') : t('aiInline.compare')}
                       </button>
                     )}
                     <button type="button" className="inline-ai-btn" onClick={copyResult}>

@@ -3694,23 +3694,31 @@ a {
   white-space: pre-wrap;
 }
 
-.inline-ai-compare {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 8px;
+/* ===== 正文内 diff 预览（块级替换，只读） ===== */
+.cm-inline-diff {
+  margin: 4px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--editor-border);
+  border-radius: 8px;
+  background: var(--editor-surface);
+  font-family: inherit;
+  font-size: 0.9em;
+  line-height: 1.65;
+  max-height: 60vh;
+  overflow: auto;
+  white-space: pre-wrap;
 }
-.inline-ai-compare .inline-ai-pre { margin-top: 4px; max-height: 38vh; }
-.inline-ai-compare-title {
-  font-size: 0.6875rem;
-  color: color-mix(in srgb, var(--sel-toolbar-text) 62%, transparent);
+.cm-inline-diff-line {
+  padding: 1px 6px;
+  border-radius: 3px;
 }
-.inline-ai-diff-del {
-  background: rgba(248, 81, 73, 0.12);
+.cm-inline-diff-del {
+  background: rgba(248, 81, 73, 0.14);
   text-decoration: line-through;
-  opacity: 0.75;
+  opacity: 0.78;
 }
-.inline-ai-diff-add { background: rgba(46, 160, 67, 0.14); }
+.cm-inline-diff-add { background: rgba(46, 160, 67, 0.16); }
+.cm-inline-diff-same { opacity: 0.68; }
 
 .inline-ai-error {
   margin-top: 8px;
@@ -3740,6 +3748,10 @@ a {
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 .inline-ai-btn:hover { background: var(--sel-toolbar-hover); }
+.inline-ai-btn.is-active {
+  border-color: var(--sel-toolbar-accent);
+  color: var(--sel-toolbar-accent);
+}
 .inline-ai-btn-primary {
   border-color: var(--sel-toolbar-accent);
   background: var(--sel-toolbar-accent);

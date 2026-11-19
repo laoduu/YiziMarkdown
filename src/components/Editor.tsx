@@ -30,7 +30,8 @@ import { inlinePairOf, planInlineToggle } from '../lib/inlineWrap'
 import { blockSpecOf, planBlockToggle } from '../lib/blockFormat'
 import { readClipboardText, writeClipboardText } from '../lib/clipboard'
 import type { SelectionFormatAction } from '../lib/selectionFormats'
-import { isRangeStillValid } from '../lib/inlineAI'
+import { isRangeStillValid, type DiffLine } from '../lib/inlineAI'
+import { inlineDiffField, setInlineDiff } from '../lib/cm-inline-diff'
 import { frontMatterField, frontMatterLines } from '../lib/cm-frontmatter'
 import { headingFoldExtension } from '../lib/cm-heading-fold'
 import { slashMenuExtension, slashMenuState, showSlashMenu, hideSlashMenu, slashMenuAction } from '../lib/cm-slash-menu'
@@ -820,7 +821,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   const [slashMenuQuery, setSlashMenuQuery] = useState('')
   const [selToolbar, setSelToolbar] = useState<SelectionToolbarInfo & { visible: boolean }>({ visible: false, x: 0, y: 0, text: '', from: 0, to: 0, source: 'editor' })
   /** 文档内 AI：当前要改写的选区快照（null = 浮层关闭）；create 模式没有选区 */
-  const [inlineAI, setInlineAI] = useState<{ text: string; from: number; to: number; x: number; y: number; boundLeft: number; boundRight: number; mode: 'rewrite' | 'create' } | null>(null)
+  const [inlineAI, setInlineAI] = useState<{ text: string; from: number; to: number; x: number; y: number; baseY: number; boundLeft: number; boundRight: number; mode: 'rewrite' | 'create' } | null>(null)
   const lineNumbersCompartment = useRef(new Compartment()).current
   const richCompartment = useRef(new Compartment()).current
   const lineWrappingCompartment = useRef(new Compartment()).current
@@ -1271,12 +1272,14 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     const start = view.coordsAtPos(selection.from)
     const end = view.coordsAtPos(selection.to)
     const content = view.contentDOM.getBoundingClientRect()
+    const anchorY = end?.bottom ?? start?.bottom ?? content.top + 40
     setInlineAI({
       ...selection,
       mode: 'rewrite',
       x: start?.left ?? content.left + 16,
       // 锚在选区末尾下方，避免默认盖住刚选中的第一行
-      y: end?.bottom ?? start?.bottom ?? content.top + 40,
+      y: anchorY,
+      baseY: anchorY,
       boundLeft: content.left,
       boundRight: content.right,
     })
@@ -1289,6 +1292,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     const head = view.state.selection.main.head
     const coords = view.coordsAtPos(head)
     const content = view.contentDOM.getBoundingClientRect()
+    const anchorY = coords?.bottom ?? content.top + 40
     setSelToolbar((prev) => ({ ...prev, visible: false }))
     setInlineAI({
       mode: 'create',
@@ -1296,7 +1300,8 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       from: head,
       to: head,
       x: coords?.left ?? content.left + 16,
-      y: coords?.bottom ?? content.top + 40,
+      y: anchorY,
+      baseY: anchorY,
       boundLeft: content.left,
       boundRight: content.right,
     })
@@ -1322,11 +1327,34 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     return () => window.removeEventListener('keydown', onKeyDown, true)
   }, [openInlineAICreate])
 
+  const clearInlineDiff = useCallback(() => {
+    const view = viewRef.current
+    if (view) view.dispatch({ effects: setInlineDiff.of(null) })
+  }, [])
+
+  /** 对比原文：把 diff 交给编辑器在正文里就地展示；面板下移到 diff 卡片下方 */
+  const handleInlineDiff = useCallback((lines: DiffLine[] | null) => {
+    const view = viewRef.current
+    if (!view) return
+    if (!lines || !inlineAI) {
+      view.dispatch({ effects: setInlineDiff.of(null) })
+      if (inlineAI) setInlineAI((prev) => (prev ? { ...prev, y: prev.baseY } : prev))
+      return
+    }
+    view.dispatch({ effects: setInlineDiff.of({ from: inlineAI.from, to: inlineAI.to, lines }) })
+    requestAnimationFrame(() => {
+      const rect = view.dom.querySelector('.cm-inline-diff')?.getBoundingClientRect()
+      if (!rect) return
+      setInlineAI((prev) => (prev ? { ...prev, y: rect.bottom + 8 } : prev))
+    })
+  }, [inlineAI])
+
   const closeInlineAI = useCallback(() => {
+    clearInlineDiff()
     setInlineAI(null)
     // 关掉浮层后把焦点还给正文，避免下一次快捷键落在已卸载的输入框上
     viewRef.current?.focus()
-  }, [])
+  }, [clearInlineDiff])
 
   /**
    * 把 AI 结果写回正文。
@@ -1350,6 +1378,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         scrollIntoView: true,
       })
       view.focus()
+      clearInlineDiff()
       setInlineAI(null)
       const lang = getCurrentLang()
       onToast?.(`${translate(lang, 'aiInline.applied')} · ${translate(lang, 'aiInline.undoHint')}`)
@@ -1377,17 +1406,19 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       })
     }
     view.focus()
+    clearInlineDiff()
     // 浮层正好压在写回位置上方，不关掉会挡住结果，也让人误以为撤销无效
     setInlineAI(null)
     const lang = getCurrentLang()
     onToast?.(`${translate(lang, 'aiInline.applied')} · ${translate(lang, 'aiInline.undoHint')}`)
     return true
-  }, [inlineAI, onToast])
+  }, [clearInlineDiff, inlineAI, onToast])
 
   // 切到预览 / 分栏预览时，浮层失去锚点，直接关闭（生成中的请求由浮层卸载时取消）
   useEffect(() => {
+    clearInlineDiff()
     setInlineAI(null)
-  }, [externalViewMode])
+  }, [externalViewMode, clearInlineDiff])
 
 
   useImperativeHandle(ref, () => ({
@@ -1395,6 +1426,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       const view = viewRef.current
       if (!view) return
       // 整篇替换（切标签 / 打开文件）时浮层锚点失效，直接收掉
+      clearInlineDiff()
       setInlineAI(null)
       const current = view.state.doc.toString()
       if (current === markdown) return
@@ -1582,6 +1614,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         // 这里用 StateField 判定区间、并给区间内每行套类；源码与实时模式共用。
         frontMatterField,
         frontMatterLines,
+        inlineDiffField,
         // 任务列表回车续写：必须压过 markdownKeymap 自带的 Enter（只补 `- `）
         Prec.highest(keymap.of([{ key: 'Enter', run: taskListEnter }])),
         keymap.of([
@@ -2166,6 +2199,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
             mode={inlineAI.mode}
             originalText={inlineAI.text}
             onApply={applyInlineAI}
+            onDiff={handleInlineDiff}
             onClose={closeInlineAI}
           />
         )}

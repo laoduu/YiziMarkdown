@@ -1018,6 +1018,7 @@ export const ko = {
     copy: '복사',
     copied: '복사됨',
     compare: '원문 비교',
+    compareOff: '비교 닫기',
     original: '원문',
     result: '결과',
     discard: '버리기',
