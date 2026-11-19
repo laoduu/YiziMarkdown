@@ -2,7 +2,7 @@
 
 ## v0.4.6
 
-> **开发中**：任务列表输入法 NBSP 修复。用户向说明待发布时整理。
+> **开发中**：实时模式表格交互、行内 / 块级格式 toggle、划词粘贴权限修复、任务列表输入法 NBSP 修复。用户向说明待发布时整理。
 
 ### 任务列表输入法 NBSP（2026-11-15）
 
@@ -22,6 +22,62 @@
 - `npx tsc --noEmit` 通过
 - `npm test`：567 通过
 - `npm run build` 通过
+
+### 实时模式表格交互优化（2026-11-19）
+
+**问题**
+- 单元格内划词高亮使用浏览器默认色，与主题无关：Shadow DOM 内的 `::selection` 不继承宿主页面的规则。
+- `Tab` / `Enter` 只退出编辑，不能跳到下一格；方向键完全不能切格。
+- 在 A 格编辑后点击 B 格，第一次点击只让 A 失焦，需要点第二次才能进入 B。
+- 选中整行 / 整列后点工具栏格式无反应；在单元格内选字加粗会把 `**` 插到表格外。
+- 单元格内输入法组字时按 Enter / 方向键会误触发增行、跳格。
+
+**实现**
+- Shadow 样式补 `::selection`，使用 `--editor-selection-bg` / `--editor-text`，深浅主题自动适配。
+- 新增 `lib/tableCells.ts`：Tab / Shift+Tab、Enter、方向键的目标计算；Tab / Enter 在末行自动增行，占位单元格自动跳过。
+- 整表是 `Decoration.replace` widget，提交会重建 DOM：新增模块级 `pendingCellState`，由新 widget 在 `queueMicrotask` + rAF 中恢复焦点、光标与矩形框选（后台窗口 rAF 被节流时也能立刻恢复）。
+- 点击换格改为「记录目标格与点击横向比例 → 提交旧格 → 重建后恢复」；方向键左右仅在文本首 / 尾切格，上下直接切格。
+- 工具栏格式按钮增加 `keepTableFocus`，保住单元格焦点与选区；`insertMarkdown` 先由 `tryFormatInTable` 接管单元格文本与整行 / 整列格式。
+- 点工具栏时不再清除表格框选（`.toolbar` / `.selection-toolbar` 白名单）。
+- 输入法组字期间不拦截 Enter / 方向键。
+
+**验证**
+- 新增 `tests/tableCells.test.ts`（17 条）
+- `npx tsc --noEmit` 通过；`npm test` 584 通过；`npx vite build` 通过
+- 浏览器实测 7 项交互、整行 / 整列格式化、深浅主题选区色
+
+### 行内与块级格式 toggle（2026-11-19）
+
+**问题**
+- 正文选中文字连续点加粗会不断叠加 `**`；斜体、删除线、行内代码、高亮、上下标同样。
+- 标题 / 列表 / 引用连点会叠前缀（如 `# # `）；光标在行中间时前缀插在光标处；缩进行会从 `  - item` 变成 `-   item`。
+
+**实现**
+- 新增 `lib/inlineWrap.ts`：统一的包裹 / 去包裹规则，覆盖「选中标记内部文字」「选区外侧紧贴标记」「粗斜嵌套不误拆」，表格与正文共用同一份实现。
+- `insertMarkdown` 的 `wrap` / `tag` 模式改用 `planInlineToggle`，一次事务完成替换并恢复选区。
+- 新增 `lib/blockFormat.ts`：标题同级取消、换级直接替换；无序 / 有序 / 任务列表与引用支持 toggle；列表类型互转；有序列表自动编号；按整行处理、保留缩进、跳过空行。
+- 表格侧行内格式改为复用同一套规则，行为与正文一致。
+
+**验证**
+- 新增 `tests/inlineWrap.test.ts`（11 条）、`tests/blockFormat.test.ts`（16 条）
+- `npx tsc --noEmit` 通过；`npm test` 611 通过；`npx vite build` 通过
+- 浏览器实测加粗 / 斜体 / 删除线 / 高亮 / 行内代码 / 上下标、H1–H3、无序 / 有序 / 任务列表、引用、缩进与多行混合
+
+### 划词工具条粘贴改用原生剪贴板（2026-11-19）
+
+**问题**
+- Windows 上用 `Ctrl+C` 复制后，点划词工具条的「粘贴」提示无法读取剪贴板。
+- WebView2 不授予 `navigator.clipboard.readText()` 所需的 `clipboard-read` 权限；表格右键菜单此前看起来正常，只是因为有一份进程内副本 `lastTableClipboard` 兜底，并未真正读取系统剪贴板。
+
+**实现**
+- 接入 `tauri-plugin-clipboard-manager`，固定在 `2.3.3`：2.4+ 要求 tauri 2.12，会引入 webview2-com 0.39，与项目固定的 0.38 / windows-core 0.61 冲突（`pdf_export.rs` 编译失败）。
+- capabilities 显式开放 `clipboard-manager:allow-read-text` / `clipboard-manager:allow-write-text`。
+- 新增 `lib/clipboard.ts`：Tauri 环境走原生插件，浏览器开发模式回退 Web API；写入保留 `execCommand` 兜底；读失败返回 `null`（与空剪贴板区分）。
+- 划词粘贴 / 复制、表格右键菜单、代码块复制、AI 回复复制统一走该封装；表格保留 200ms 超时兜底。
+
+**验证**
+- 通过 WebView2 CDP 直接调用插件：读到外部写入的 `PASTE_PROBE_2026`；写入 `WRITE_PROBE_777` 后 `Get-Clipboard` 一致。
+- `npx tsc --noEmit` 通过；`npm test` 611 通过
 
 ## v0.4.5
 
