@@ -17,6 +17,11 @@ tauri = { version = "2", features = ["devtools"] }
 tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
+# 系统剪贴板：WebView2 不授予 navigator.clipboard.readText 的 clipboard-read 权限，
+# 「划词工具条 → 粘贴」以及表格菜单跨程序粘贴必须走原生剪贴板。
+# ⚠️ 固定 2.3.3：2.4+ 依赖 tauri 2.12，会把 tauri 升到 2.12 并引入 webview2-com 0.39，
+# 与本项目固定的 webview2-com 0.38 / windows-core 0.61 冲突（pdf_export 编译失败）。
+tauri-plugin-clipboard-manager = "=2.3.3"
 # 在线更新（v0.3.4）：官方 updater，只服务 Windows NSIS 安装版
 # 只加 updater、不加 process —— Windows 上装完由 NSIS 的 /R 自动重启，前端不需要调 relaunch()
 tauri-plugin-updater = "2"

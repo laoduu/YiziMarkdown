@@ -28,6 +28,7 @@ import { liveEditExtension } from '../lib/cm-live-render'
 import { liveThemeChanged, tryFormatInTable } from '../lib/cm-live-blocks'
 import { inlinePairOf, planInlineToggle } from '../lib/inlineWrap'
 import { blockSpecOf, planBlockToggle } from '../lib/blockFormat'
+import { readClipboardText, writeClipboardText } from '../lib/clipboard'
 import { frontMatterField, frontMatterLines } from '../lib/cm-frontmatter'
 import { headingFoldExtension } from '../lib/cm-heading-fold'
 import { slashMenuExtension, slashMenuState, showSlashMenu, hideSlashMenu, slashMenuAction } from '../lib/cm-slash-menu'
@@ -461,7 +462,7 @@ function PreviewPane({ content, currentTheme, onContentChange, enabledPlugins = 
       const copyBtn = actions.querySelector('.code-block-copy-btn')
       copyBtn?.addEventListener('click', async () => {
         try {
-          await navigator.clipboard.writeText(codeText)
+          await writeClipboardText(codeText)
           onToast?.(t('editor.copied'))
           copyBtn.innerHTML = `
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1933,23 +1934,23 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
 
   /** 划词助手的「粘贴」：用剪贴板内容替换 CodeMirror 当前选区。 */
   const handleSelectionPaste = useCallback(async () => {
-    try {
-      const clipboard = await navigator.clipboard.readText()
-      const view = viewRef.current
-      if (!view || !clipboard) return
-      const { from, to } = view.state.selection.main
-      if (from === to) return
-      view.dispatch({
-        changes: { from, to, insert: clipboard },
-        selection: { anchor: from + clipboard.length },
-        scrollIntoView: true,
-      })
-      view.focus()
-      setSelToolbar((prev) => ({ ...prev, visible: false }))
-    } catch (e) {
-      console.error('[selection-toolbar] paste failed:', e)
+    const clipboard = await readClipboardText()
+    const view = viewRef.current
+    if (!view) return
+    if (clipboard == null) {
       onToast?.(translate(getCurrentLang(), 'editor.selectionPasteFailed'))
+      return
     }
+    if (!clipboard) return
+    const { from, to } = view.state.selection.main
+    if (from === to) return
+    view.dispatch({
+      changes: { from, to, insert: clipboard },
+      selection: { anchor: from + clipboard.length },
+      scrollIntoView: true,
+    })
+    view.focus()
+    setSelToolbar((prev) => ({ ...prev, visible: false }))
   }, [onToast])
 
   return (

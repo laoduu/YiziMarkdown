@@ -2525,6 +2525,8 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        // 系统剪贴板读写：前端 navigator.clipboard.readText 在 WebView2 里没有权限
+        .plugin(tauri_plugin_clipboard_manager::init())
         // 在线更新（v0.3.4）：pubkey / endpoints / installMode 都在 tauri.conf.json 的 plugins.updater
         .plugin(tauri_plugin_updater::Builder::new().build())
         // PDF 导出：隐藏窗口通过 yiziexport 自定义协议加载内联 HTML（WebView2 不支持直接导航 data: URL）

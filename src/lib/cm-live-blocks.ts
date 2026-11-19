@@ -16,6 +16,7 @@ import { resolveLocalImageSrc } from './localImages.ts'
 import { addTocFrameButton } from './tocFrame.ts'
 import { LINE_NUMBERS_ICON, withCodeLineNumbers } from './codeBlockLines.ts'
 import { invokeTauri } from './tauri.ts'
+import { readClipboardText, writeClipboardText } from './clipboard.ts'
 import { getMarkdownIt } from './markdownRenderer.ts'
 import { useSettingsStore } from '../stores/settingsStore.ts'
 import { renderMermaidInto } from '../renderers/mermaid.ts'
@@ -419,7 +420,8 @@ class CodeBlockWidget extends WidgetType {
       e.preventDefault()
       e.stopPropagation()
       try {
-        await navigator.clipboard.writeText(this.code)
+        const ok = await writeClipboardText(this.code)
+        if (!ok) throw new Error('copy failed')
         copyBtn.innerHTML = CHECK_ICON
         setTimeout(() => { copyBtn.innerHTML = COPY_ICON }, 1500)
       } catch {
@@ -1599,32 +1601,18 @@ class EditableTableWidget extends WidgetType {
     }
 
     const writeClipboard = async (text: string): Promise<void> => {
-      // 记一份进程内副本：没有剪贴板权限（Tauri / 未授权）时，「粘贴」仍可用
+      // 进程内副本只作为兜底：正常情况下原生插件会直接写系统剪贴板
       lastTableClipboard = text
-      try {
-        await navigator.clipboard.writeText(text)
-        return
-      } catch { /* 退回到 execCommand */ }
-      try {
-        const ta = document.createElement('textarea')
-        ta.value = text
-        ta.style.position = 'fixed'
-        ta.style.opacity = '0'
-        ta.style.pointerEvents = 'none'
-        wrapper.appendChild(ta)
-        ta.select()
-        document.execCommand('copy')
-        ta.remove()
-      } catch { /* ignore */ }
+      await writeClipboardText(text)
     }
 
     const readClipboard = async (): Promise<string> => {
-      // readText() 在没有权限时会一直挂起（不是 reject），必须加超时，
-      // 否则右键菜单会卡在「等待剪贴板」。超时后退回进程内副本。
+      // 原生路径通常立即返回；浏览器开发模式下 readText() 在无权限时可能一直挂起，
+      // 保留超时避免右键菜单卡在「等待剪贴板」，超时后退回进程内副本。
       try {
         const text = await Promise.race([
-          navigator.clipboard.readText(),
-          new Promise<string>((resolve) => setTimeout(() => resolve(''), 200)),
+          readClipboardText(),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 400)),
         ])
         if (text) return text
       } catch { /* 无权限 / 非安全上下文 */ }

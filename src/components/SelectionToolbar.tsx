@@ -9,6 +9,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useI18n } from '../i18n'
+import { writeClipboardText } from '../lib/clipboard'
 import { useSettingsStore } from '../stores/settingsStore'
 import { loadSkills, type Skill } from '../lib/ai-skills'
 import { SKILLS_CHANGED_EVENT } from '../lib/skillsAdmin'
@@ -102,7 +103,8 @@ export default function SelectionToolbar({ visible, x, y, text, source = 'editor
         })
         break
       case 'copy':
-        navigator.clipboard.writeText(text).then(() => {
+        void writeClipboardText(text).then((ok) => {
+          if (!ok) return
           setCopiedId(item.id)
           if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
           copyTimerRef.current = setTimeout(() => setCopiedId(null), 1500)

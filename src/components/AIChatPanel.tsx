@@ -4,6 +4,7 @@ import { Bot, Send, Square, Trash2, Copy, Check, FileDown, FilePlus2, X, Sparkle
 import { useSettingsStore } from '../stores/settingsStore'
 import { providerById } from '../lib/ai-providers'
 import { invokeTauriOrThrow } from '../lib/tauri'
+import { writeClipboardText } from '../lib/clipboard'
 import { loadSkills, loadSkillPrompt, type Skill } from '../lib/ai-skills'
 import { SKILLS_CHANGED_EVENT } from '../lib/skillsAdmin'
 import SkillIcon from './SkillIcon'
@@ -596,7 +597,8 @@ export default function AIChatPanel({ open, onClose, docContent, docName, onInse
   }
 
   const handleCopy = async (content: string) => {
-    await navigator.clipboard.writeText(content)
+    const ok = await writeClipboardText(content)
+    if (!ok) return
     setCopiedIndex(messages.findIndex((m) => m.role === 'assistant' && m.content === content))
     setTimeout(() => setCopiedIndex(null), 1500)
   }
