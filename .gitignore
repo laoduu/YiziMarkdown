@@ -47,3 +47,6 @@ releases/
 
 # Playwright CLI 测试产物（自动化验证会话）
 .playwright-cli/
+
+# Video production workspace (local-only, never publish)
+video/
