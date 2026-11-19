@@ -30,6 +30,7 @@ import { inlinePairOf, planInlineToggle } from '../lib/inlineWrap'
 import { blockSpecOf, planBlockToggle } from '../lib/blockFormat'
 import { readClipboardText, writeClipboardText } from '../lib/clipboard'
 import type { SelectionFormatAction } from '../lib/selectionFormats'
+import { isRangeStillValid } from '../lib/inlineAI'
 import { frontMatterField, frontMatterLines } from '../lib/cm-frontmatter'
 import { headingFoldExtension } from '../lib/cm-heading-fold'
 import { slashMenuExtension, slashMenuState, showSlashMenu, hideSlashMenu, slashMenuAction } from '../lib/cm-slash-menu'
@@ -39,6 +40,7 @@ import { addTocFrameButton } from '../lib/tocFrame'
 import { LINE_NUMBERS_ICON, withCodeLineNumbers } from '../lib/codeBlockLines'
 import SlashMenu from './SlashMenu'
 import SelectionToolbar from './SelectionToolbar'
+import InlineAIPanel from './InlineAIPanel'
 import ContentWidthHandles from './ContentWidthHandles'
 import { renderMarkdown } from '../lib/markdownRenderer'
 import { extendMarkdownIt, getMarkdownPluginIds, postRender as pluginPostRender } from '../plugins/registry'
@@ -814,7 +816,9 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   const [slashMenuVisible, setSlashMenuVisible] = useState(false)
   const [slashMenuCoords, setSlashMenuCoords] = useState({ left: 0, bottom: 0 })
   const [slashMenuQuery, setSlashMenuQuery] = useState('')
-  const [selToolbar, setSelToolbar] = useState<SelectionToolbarInfo & { visible: boolean }>({ visible: false, x: 0, y: 0, text: '', source: 'editor' })
+  const [selToolbar, setSelToolbar] = useState<SelectionToolbarInfo & { visible: boolean }>({ visible: false, x: 0, y: 0, text: '', from: 0, to: 0, source: 'editor' })
+  /** 文档内 AI：当前要改写的选区快照（null = 浮层关闭） */
+  const [inlineAI, setInlineAI] = useState<{ text: string; from: number; to: number; x: number; y: number; boundLeft: number; boundRight: number } | null>(null)
   const lineNumbersCompartment = useRef(new Compartment()).current
   const richCompartment = useRef(new Compartment()).current
   const lineWrappingCompartment = useRef(new Compartment()).current
@@ -1253,10 +1257,87 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     applyMarkdown(action.markdown, action.mode)
   }, [applyMarkdown, applyCodeBlock, applyInlineLink])
 
+  /* ---------- 文档内 AI（划词改写） ---------- */
+
+  /** 星芒点击：收起划词工具栏，打开改写浮层 */
+  const handleAskAI = useCallback((selection: { text: string; from: number; to: number }) => {
+    const view = viewRef.current
+    if (!view) return
+    setSelToolbar((prev) => ({ ...prev, visible: false }))
+    // 坐标直接从 CodeMirror 取：拖拽刚结束时工具栏的 x/y 可能还是 -1，
+    // 用它会导致浮层被夹到视口最左边（看起来压在左边栏上）。
+    const start = view.coordsAtPos(selection.from)
+    const end = view.coordsAtPos(selection.to)
+    const content = view.contentDOM.getBoundingClientRect()
+    setInlineAI({
+      ...selection,
+      x: start?.left ?? content.left + 16,
+      // 锚在选区末尾下方，避免默认盖住刚选中的第一行
+      y: end?.bottom ?? start?.bottom ?? content.top + 40,
+      boundLeft: content.left,
+      boundRight: content.right,
+    })
+  }, [])
+
+  const closeInlineAI = useCallback(() => {
+    setInlineAI(null)
+    // 关掉浮层后把焦点还给正文，避免下一次快捷键落在已卸载的输入框上
+    viewRef.current?.focus()
+  }, [])
+
+  /**
+   * 把 AI 结果写回正文。
+   * - 替换：先校验选区内容没被改动；改动过则降级为「插入到选区末尾」，避免错位覆盖
+   * - 插入：落到选区末尾，按块级补空行
+   * 返回是否真的写入了文档。
+   */
+  const applyInlineAI = useCallback((kind: 'replace' | 'insert', text: string): boolean => {
+    const view = viewRef.current
+    const sel = inlineAI
+    if (!view || !sel) return false
+    const doc = view.state.doc.toString()
+    const current = doc.slice(sel.from, sel.to)
+
+    if (kind === 'replace' && isRangeStillValid(sel.text, current)) {
+      view.dispatch({
+        changes: { from: sel.from, to: sel.to, insert: text },
+        selection: { anchor: sel.from + text.length },
+        scrollIntoView: true,
+      })
+    } else {
+      // 插入到「选区末尾所在行」的下一段，避免从句子中间把原文劈开
+      const lineEnd = doc.indexOf('\n', sel.to)
+      const pos = lineEnd === -1 ? doc.length : lineEnd
+      const prefix = lineEnd === -1
+        ? (doc.endsWith('\n') ? '\n' : '\n\n')
+        : '\n\n'
+      const insert = `${prefix}${text}`
+      view.dispatch({
+        changes: { from: pos, to: pos, insert },
+        selection: { anchor: pos + insert.length },
+        scrollIntoView: true,
+      })
+    }
+    view.focus()
+    // 浮层正好压在写回位置上方，不关掉会挡住结果，也让人误以为撤销无效
+    setInlineAI(null)
+    const lang = getCurrentLang()
+    onToast?.(`${translate(lang, 'aiInline.applied')} · ${translate(lang, 'aiInline.undoHint')}`)
+    return true
+  }, [inlineAI, onToast])
+
+  // 切到预览 / 分栏预览时，浮层失去锚点，直接关闭（生成中的请求由浮层卸载时取消）
+  useEffect(() => {
+    setInlineAI(null)
+  }, [externalViewMode])
+
+
   useImperativeHandle(ref, () => ({
     replaceContent: (markdown: string) => {
       const view = viewRef.current
       if (!view) return
+      // 整篇替换（切标签 / 打开文件）时浮层锚点失效，直接收掉
+      setInlineAI(null)
       const current = view.state.doc.toString()
       if (current === markdown) return
       const head = Math.min(view.state.selection.main.head, markdown.length)
@@ -1955,7 +2036,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       if (pendingRaf) cancelAnimationFrame(pendingRaf)
       pendingRaf = requestAnimationFrame(() => {
         const rect = range.getBoundingClientRect()
-        setSelToolbar({ visible: true, x: rect.left, y: rect.top, text, source: 'preview' })
+        setSelToolbar({ visible: true, x: rect.left, y: rect.top, text, from: 0, to: 0, source: 'preview' })
       })
     }
 
@@ -2011,10 +2092,23 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
           x={selToolbar.x}
           y={selToolbar.y}
           text={selToolbar.text}
+          from={selToolbar.from}
+          to={selToolbar.to}
           source={selToolbar.source}
           onPasteSelected={selToolbar.source === 'editor' ? handleSelectionPaste : undefined}
           onFormat={selToolbar.source === 'editor' ? applySelectionFormat : undefined}
+          onAskAI={selToolbar.source === 'editor' ? handleAskAI : undefined}
         />
+
+        {/* 文档内 AI：对选中内容改写 / 插入 */}
+        {inlineAI && (
+          <InlineAIPanel
+            anchor={{ x: inlineAI.x, y: inlineAI.y, boundLeft: inlineAI.boundLeft, boundRight: inlineAI.boundRight }}
+            originalText={inlineAI.text}
+            onApply={applyInlineAI}
+            onClose={closeInlineAI}
+          />
+        )}
 
         {/* 预览面板：永远挂载 */}
         <div ref={previewScrollRef} style={{ flex: viewMode === 'split' ? '1 1 0%' : viewMode === 'preview' ? '1 1 100%' : '0 0 0%', minHeight: 0, overflow: 'auto', pointerEvents: (viewMode === 'edit' || viewMode === 'live') ? 'none' : 'auto' }}>

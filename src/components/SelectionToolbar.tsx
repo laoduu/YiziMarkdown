@@ -29,12 +29,17 @@ interface SelectionToolbarProps {
   x: number
   y: number
   text: string
+  /** 选区范围（文档内 AI 写回时用） */
+  from: number
+  to: number
   /** 选区来源：预览面板不能执行「粘贴替换」与格式命令 */
   source?: 'editor' | 'preview'
   /** 粘贴：用剪贴板内容替换当前选区（由 Editor 实现） */
   onPasteSelected?: () => void
   /** 格式：把格式动作交给编辑器执行（与主格式工具栏同一套命令） */
   onFormat?: (action: SelectionFormatAction) => void
+  /** 星芒：对选中内容打开文档内 AI */
+  onAskAI?: (selection: { text: string; from: number; to: number }) => void
 }
 
 export default function SelectionToolbar({
@@ -42,9 +47,12 @@ export default function SelectionToolbar({
   x,
   y,
   text,
+  from,
+  to,
   source = 'editor',
   onPasteSelected,
   onFormat,
+  onAskAI,
 }: SelectionToolbarProps) {
   const { t } = useI18n()
   const toolbarRef = useRef<HTMLDivElement>(null)
@@ -102,7 +110,7 @@ export default function SelectionToolbar({
     }
   }, [mode])
 
-  /* ---------- 首次划词提示（品牌图标可切换两栏） ---------- */
+  /* ---------- 首次划词提示（星芒改写 / 右侧切换两栏） ---------- */
   const [hintPos, setHintPos] = useState<React.CSSProperties | null>(null)
   const hintShownRef = useRef(false)
   const hintSeenAtMountRef = useRef(selectionModeHintSeen)
@@ -187,6 +195,18 @@ export default function SelectionToolbar({
     updateSettings({ selectionBarMode: mode === 'format' ? 'actions' : 'format' })
   }
 
+  /** 星芒：把选区快照交给文档内 AI；没有回调时退回旧的模式切换，避免预览环境失灵 */
+  const handleAskAI = () => {
+    setHintPos(null)
+    if (onAskAI && from < to) {
+      // 不传 x/y：拖拽过程中工具栏的坐标可能是 -1（拖拽中不重定位），
+      // 由 Editor 从 CodeMirror 直接取选区坐标，避免浮层贴到左边栏。
+      onAskAI({ text, from, to })
+      return
+    }
+    toggleMode()
+  }
+
   const handleAction = (item: SelectionToolbarItem) => {
     switch (item.type) {
       case 'skill':
@@ -220,7 +240,7 @@ export default function SelectionToolbar({
     }
   }
 
-  const hidden = !visible || (mode === 'actions' && items.length === 0)
+  const hidden = !visible
   if (hidden) return null
 
   return createPortal(
@@ -231,6 +251,7 @@ export default function SelectionToolbar({
         formats={formats}
         onAction={handleAction}
         onFormat={onFormat ? (action) => { setHintPos(null); onFormat(action) } : undefined}
+        onAskAI={source === 'editor' ? handleAskAI : undefined}
         onToggleMode={source === 'editor' ? toggleMode : undefined}
         copiedId={copiedId}
         containerRef={toolbarRef}

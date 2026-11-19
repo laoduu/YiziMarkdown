@@ -1,10 +1,10 @@
 /**
  * 划词工具栏 / 格式条的纯展示视图。
  *
- * 真实浮动栏与设置页预览共用：左侧品牌图标负责在两栏之间切换，
- * 右侧按 mode 渲染「功能按钮」或「格式图标」。
+ * 真实浮动栏与设置页预览共用：左侧星芒打开文档内 AI，
+ * 右侧按 mode 渲染「功能按钮」或「格式图标」，最右端是两栏切换。
  */
-import { Check, ClipboardPaste, Copy, MessageSquarePlus } from 'lucide-react'
+import { ArrowLeftRight, Check, ClipboardPaste, Copy, MessageSquarePlus } from 'lucide-react'
 import { useI18n } from '../i18n'
 import type { SelectionToolbarItem, SelectionSystemAction } from '../lib/selectionActions'
 import type { SelectionFormatAction, SelectionFormatConfig } from '../lib/selectionFormats'
@@ -29,6 +29,9 @@ interface SelectionToolbarViewProps {
   interactive?: boolean
   onAction?: (item: SelectionToolbarItem) => void
   onFormat?: (action: SelectionFormatAction) => void
+  /** 左侧星芒：对选中内容打开文档内 AI */
+  onAskAI?: () => void
+  /** 右侧切换按钮：工具条 ↔ 格式条 */
   onToggleMode?: () => void
   /** 复制成功后短暂替换图标 / 文案 */
   copiedId?: string | null
@@ -45,6 +48,7 @@ export default function SelectionToolbarView({
   interactive = true,
   onAction,
   onFormat,
+  onAskAI,
   onToggleMode,
   copiedId = null,
   className = '',
@@ -54,6 +58,7 @@ export default function SelectionToolbarView({
 }: SelectionToolbarViewProps) {
   const { t } = useI18n()
   const toggleLabel = mode === 'format' ? t('selection.switchToActions') : t('selection.switchToFormats')
+  const askLabel = t('selection.askAI')
 
   return (
     <div
@@ -65,13 +70,13 @@ export default function SelectionToolbarView({
       aria-label={interactive ? undefined : t('settings.selectionPreview')}
     >
       <div className="selection-toolbar-brand">
-        {interactive && onToggleMode ? (
+        {interactive && onAskAI ? (
           <button
             type="button"
             className="selection-toolbar-icon-btn"
-            onClick={onToggleMode}
-            title={toggleLabel}
-            aria-label={toggleLabel}
+            onClick={onAskAI}
+            title={askLabel}
+            aria-label={askLabel}
           >
             <SelectionAIIcon size={16} className="selection-toolbar-icon" />
           </button>
@@ -116,6 +121,17 @@ export default function SelectionToolbarView({
           })
         )}
       </div>
+      {interactive && onToggleMode && (
+        <button
+          type="button"
+          className="selection-toolbar-mode-btn"
+          onClick={onToggleMode}
+          title={toggleLabel}
+          aria-label={toggleLabel}
+        >
+          <ArrowLeftRight size={12} />
+        </button>
+      )}
     </div>
   )
 }

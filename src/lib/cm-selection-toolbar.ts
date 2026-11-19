@@ -14,6 +14,9 @@ export interface SelectionToolbarInfo {
   x: number
   y: number
   text: string
+  /** 选区在文档中的起止位置（文档内 AI 替换正文时用） */
+  from: number
+  to: number
   /** 选区来源：源码/实时编辑器，或预览面板 */
   source: 'editor' | 'preview'
 }
@@ -72,11 +75,11 @@ export function selectionToolbarExtension(
               onHide()
               return
             }
-            onShow({ x: coords.left, y: coords.top, text: this.latestText, source: 'editor' })
+            onShow({ x: coords.left, y: coords.top, text: this.latestText, from, to, source: 'editor' })
           })
         } else {
           // 拖拽中：只更新文字内容，不重新定位
-          onShow({ x: -1, y: -1, text: this.latestText, source: 'editor' })
+          onShow({ x: -1, y: -1, text: this.latestText, from, to, source: 'editor' })
         }
       }
 
