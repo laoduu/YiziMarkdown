@@ -1028,6 +1028,7 @@ export const pl = {
     compare: 'Porównaj',
     compareOff: 'Ukryj porównanie',
     skillBadge: 'Umiejętność: {name}',
+    drag: 'Przesuń panel',
     original: 'Oryginał',
     result: 'Wynik',
     discard: 'Odrzuć',

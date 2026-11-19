@@ -1027,6 +1027,7 @@ export const ru = {
     compare: 'Сравнить',
     compareOff: 'Скрыть сравнение',
     skillBadge: 'Навык: {name}',
+    drag: 'Переместить панель',
     original: 'Оригинал',
     result: 'Результат',
     discard: 'Отклонить',

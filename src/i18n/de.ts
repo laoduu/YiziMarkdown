@@ -1028,6 +1028,7 @@ export const de = {
     compare: 'Vergleichen',
     compareOff: 'Vergleich ausblenden',
     skillBadge: 'Skill: {name}',
+    drag: 'Panel verschieben',
     original: 'Original',
     result: 'Ergebnis',
     discard: 'Verwerfen',

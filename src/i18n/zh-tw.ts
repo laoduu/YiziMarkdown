@@ -1044,6 +1044,7 @@ export const zhTW = {
     compare: '對比原文',
     compareOff: '關閉對比',
     skillBadge: '技能：{name}',
+    drag: '拖動浮層',
     original: '原文',
     result: '結果',
     discard: '放棄',

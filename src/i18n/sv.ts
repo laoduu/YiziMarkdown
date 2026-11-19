@@ -1028,6 +1028,7 @@ export const sv = {
     compare: 'Jämför',
     compareOff: 'Dölj jämförelse',
     skillBadge: 'Färdighet: {name}',
+    drag: 'Flytta panelen',
     original: 'Original',
     result: 'Resultat',
     discard: 'Släng',

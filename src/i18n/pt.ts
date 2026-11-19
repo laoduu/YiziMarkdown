@@ -1028,6 +1028,7 @@ export const pt = {
     compare: 'Comparar',
     compareOff: 'Ocultar comparação',
     skillBadge: 'Habilidade: {name}',
+    drag: 'Mover painel',
     original: 'Original',
     result: 'Resultado',
     discard: 'Descartar',

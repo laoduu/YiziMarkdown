@@ -1028,6 +1028,7 @@ export const nl = {
     compare: 'Vergelijken',
     compareOff: 'Vergelijking verbergen',
     skillBadge: 'Vaardigheid: {name}',
+    drag: 'Paneel verplaatsen',
     original: 'Origineel',
     result: 'Resultaat',
     discard: 'Verwerpen',

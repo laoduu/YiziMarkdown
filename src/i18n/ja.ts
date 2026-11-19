@@ -1028,6 +1028,7 @@ export const ja = {
     compare: '原文と比較',
     compareOff: '比較を閉じる',
     skillBadge: 'スキル：{name}',
+    drag: 'パネルを移動',
     original: '原文',
     result: '結果',
     discard: '破棄',

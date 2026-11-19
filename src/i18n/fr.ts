@@ -1028,6 +1028,7 @@ export const fr = {
     compare: 'Comparer',
     compareOff: 'Masquer la comparaison',
     skillBadge: 'Compétence : {name}',
+    drag: 'Déplacer le panneau',
     original: 'Original',
     result: 'Résultat',
     discard: 'Abandonner',

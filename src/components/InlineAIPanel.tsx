@@ -9,7 +9,7 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowUp, Check, Copy, Plus, RotateCcw, Square, X } from 'lucide-react'
+import { ArrowUp, Check, Copy, GripHorizontal, Plus, RotateCcw, Square, X } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { useSettingsStore } from '../stores/settingsStore'
 import { providerById } from '../lib/ai-providers'
@@ -119,6 +119,9 @@ export default function InlineAIPanel({
   const [copied, setCopied] = useState(false)
   const [truncated, setTruncated] = useState(false)
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
+  /** 用户拖动后的位置；一旦拖动，就不再跟随选区锚点 */
+  const [manualPos, setManualPos] = useState<{ left: number; top: number } | null>(null)
+  const dragRef = useRef<{ startX: number; startY: number; left: number; top: number } | null>(null)
 
   const panelRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -180,6 +183,61 @@ export default function InlineAIPanel({
     window.addEventListener('resize', place)
     return () => window.removeEventListener('resize', place)
   }, [place])
+
+  /* ---------- 拖动：抓住顶部手柄移动浮层 ---------- */
+  const clampToViewport = (left: number, top: number) => {
+    const el = panelRef.current
+    const w = el?.offsetWidth ?? 0
+    const h = el?.offsetHeight ?? 0
+    const margin = 8
+    return {
+      left: Math.max(margin, Math.min(left, window.innerWidth - w - margin)),
+      top: Math.max(margin, Math.min(top, window.innerHeight - h - margin)),
+    }
+  }
+
+  const onDragStart = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = panelRef.current
+    if (!el) return
+    e.preventDefault()
+    const rect = el.getBoundingClientRect()
+    dragRef.current = { startX: e.clientX, startY: e.clientY, left: rect.left, top: rect.top }
+    setManualPos({ left: rect.left, top: rect.top })
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  const onDragMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current
+    if (!drag) return
+    setManualPos(clampToViewport(
+      drag.left + e.clientX - drag.startX,
+      drag.top + e.clientY - drag.startY,
+    ))
+  }
+
+  const onDragEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+    dragRef.current = null
+    if (e.currentTarget.hasPointerCapture?.(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    }
+  }
+
+  // 拖动过之后，窗口缩放仍要保证浮层在视口内
+  useEffect(() => {
+    if (!manualPos) return
+    const onResize = () => setManualPos((p) => (p ? clampToViewport(p.left, p.top) : p))
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [manualPos])
+
+  // 拖动过之后，结果变长导致浮层变高时也要夹回视口（不能用 manualPos 作依赖，避免循环）
+  useEffect(() => {
+    setManualPos((prev) => {
+      if (!prev) return prev
+      const next = clampToViewport(prev.left, prev.top)
+      return next.left === prev.left && next.top === prev.top ? prev : next
+    })
+  }, [phase, compareOpen, result.length])
 
   useEffect(() => {
     textareaRef.current?.focus()
@@ -358,11 +416,25 @@ export default function InlineAIPanel({
     <div
       ref={panelRef}
       className="inline-ai-panel"
-      style={{ left: pos?.left ?? anchor.x, top: pos?.top ?? anchor.y, visibility: pos ? 'visible' : 'hidden' }}
+      style={{
+        left: (manualPos ?? pos)?.left ?? anchor.x,
+        top: (manualPos ?? pos)?.top ?? anchor.y,
+        visibility: manualPos || pos ? 'visible' : 'hidden',
+      }}
       role="dialog"
       aria-label={t('selection.askAI')}
       onMouseDown={(e) => e.stopPropagation()}
     >
+      <div
+        className="inline-ai-drag"
+        title={t('aiInline.drag')}
+        onPointerDown={onDragStart}
+        onPointerMove={onDragMove}
+        onPointerUp={onDragEnd}
+        onPointerCancel={onDragEnd}
+      >
+        <GripHorizontal size={14} />
+      </div>
       <button type="button" className="inline-ai-close" onClick={onClose} title={t('aiInline.close')} aria-label={t('aiInline.close')}>
         <X size={13} />
       </button>

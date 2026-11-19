@@ -1046,6 +1046,7 @@ export const zh = {
     compare: '对比原文',
     compareOff: '关闭对比',
     skillBadge: '技能：{name}',
+    drag: '拖动浮层',
     original: '原文',
     result: '结果',
     discard: '放弃',

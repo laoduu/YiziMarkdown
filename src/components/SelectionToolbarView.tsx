@@ -122,15 +122,18 @@ export default function SelectionToolbarView({
         )}
       </div>
       {interactive && onToggleMode && (
-        <button
-          type="button"
-          className="selection-toolbar-mode-btn"
-          onClick={onToggleMode}
-          title={toggleLabel}
-          aria-label={toggleLabel}
-        >
-          <ArrowLeftRight size={12} />
-        </button>
+        <>
+          <div className="selection-toolbar-divider" />
+          <button
+            type="button"
+            className="selection-toolbar-mode-btn"
+            onClick={onToggleMode}
+            title={toggleLabel}
+            aria-label={toggleLabel}
+          >
+            <ArrowLeftRight size={16} />
+          </button>
+        </>
       )}
     </div>
   )

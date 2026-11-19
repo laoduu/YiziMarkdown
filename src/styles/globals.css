@@ -3017,19 +3017,19 @@ a {
   margin: 0 4px;
 }
 
-/* 右侧的「工具条 ↔ 格式条」切换：让出左侧星芒作为 AI 入口 */
+/* 右侧的「工具条 ↔ 格式条」切换：与左侧星芒同为强调色，靠分隔线区分入口 */
 .selection-toolbar-mode-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 20px;
+  width: 22px;
   height: 24px;
   padding: 0;
   border: 0;
   border-radius: 5px;
   background: transparent;
-  color: var(--sel-toolbar-text);
+  color: var(--sel-toolbar-accent);
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
 }
@@ -3548,6 +3548,20 @@ a {
   from { opacity: 0; transform: translateY(4px) scale(0.99); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
+/* 顶部拖动柄：只在这里按下才移动浮层，避免和输入 / 选字冲突 */
+.inline-ai-drag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 14px;
+  margin: -6px 0 2px;
+  color: color-mix(in srgb, var(--sel-toolbar-text) 34%, transparent);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.inline-ai-drag:hover { color: color-mix(in srgb, var(--sel-toolbar-text) 62%, transparent); }
+.inline-ai-drag:active { cursor: grabbing; }
 .inline-ai-close {
   position: absolute;
   top: 6px;

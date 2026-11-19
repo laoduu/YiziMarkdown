@@ -1265,16 +1265,20 @@ function ShortcutsSettings() {
           </Section>
           <Section title={t('settings.inlineAIShortcut')}>
             <div className="settings-row">
-              <span className="text-[0.75rem] text-[var(--editor-text)]">{t('settings.inlineAIShortcut')}</span>
-              <select
-                value={inlineAIShortcut}
-                onChange={(e) => useSettingsStore.getState().setField('inlineAIShortcut', e.target.value as 'doubleCtrl' | 'ctrlEnter' | 'off')}
-                className="settings-select"
-              >
-                <option value="doubleCtrl">{t('settings.inlineAIShortcutDoubleCtrl')}</option>
-                <option value="ctrlEnter">{t('settings.inlineAIShortcutCtrlEnter')}</option>
-                <option value="off">{t('settings.inlineAIShortcutOff')}</option>
-              </select>
+              <div className="flex-shrink-0">
+                <span className="text-[0.75rem] text-[var(--editor-text)]">{t('settings.inlineAIShortcut')}</span>
+              </div>
+              <div>
+                <select
+                  value={inlineAIShortcut}
+                  onChange={(e) => useSettingsStore.getState().setField('inlineAIShortcut', e.target.value as 'doubleCtrl' | 'ctrlEnter' | 'off')}
+                  className="settings-select"
+                >
+                  <option value="doubleCtrl">{t('settings.inlineAIShortcutDoubleCtrl')}</option>
+                  <option value="ctrlEnter">{t('settings.inlineAIShortcutCtrlEnter')}</option>
+                  <option value="off">{t('settings.inlineAIShortcutOff')}</option>
+                </select>
+              </div>
             </div>
             <p className="text-[0.6875rem] text-[var(--sidebar-text)] pt-1">{t('settings.inlineAIShortcutHint')}</p>
           </Section>

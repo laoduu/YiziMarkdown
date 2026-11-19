@@ -1028,6 +1028,7 @@ export const tr = {
     compare: 'Karşılaştır',
     compareOff: 'Karşılaştırmayı gizle',
     skillBadge: 'Beceri: {name}',
+    drag: 'Paneli taşı',
     original: 'Özgün',
     result: 'Sonuç',
     discard: 'Vazgeç',

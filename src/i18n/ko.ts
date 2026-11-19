@@ -1028,6 +1028,7 @@ export const ko = {
     compare: '원문 비교',
     compareOff: '비교 닫기',
     skillBadge: '스킬: {name}',
+    drag: '패널 이동',
     original: '원문',
     result: '결과',
     discard: '버리기',

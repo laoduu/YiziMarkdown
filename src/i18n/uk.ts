@@ -1028,6 +1028,7 @@ export const uk = {
     compare: 'Порівняти',
     compareOff: 'Приховати порівняння',
     skillBadge: 'Навичка: {name}',
+    drag: 'Перемістити панель',
     original: 'Оригінал',
     result: 'Результат',
     discard: 'Відхилити',

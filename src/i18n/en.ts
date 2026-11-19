@@ -1046,6 +1046,7 @@ export const en = {
     compare: 'Compare',
     compareOff: 'Hide diff',
     skillBadge: 'Skill: {name}',
+    drag: 'Drag panel',
     original: 'Original',
     result: 'Result',
     discard: 'Discard',

@@ -1028,6 +1028,7 @@ export const es = {
     compare: 'Comparar',
     compareOff: 'Ocultar comparación',
     skillBadge: 'Habilidad: {name}',
+    drag: 'Arrastrar panel',
     original: 'Original',
     result: 'Resultado',
     discard: 'Descartar',
