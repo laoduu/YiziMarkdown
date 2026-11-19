@@ -4,7 +4,7 @@
  * 与右侧 AI 助手是两套东西：这里的产出直接写回正文（替换 / 插入），
  * 不进入聊天记录，也不走 skills。
  *
- * 阶段：compose → streaming → review → applied / error
+ * 阶段：compose → streaming → review → error；review 里可再提「补充需求」继续改同一段。
  * 事件与后端约定见 lib/aiStream.ts；提示词与 diff 见 lib/inlineAI.ts。
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
@@ -21,6 +21,7 @@ import {
   diffLines,
   pickInlineIntents,
   truncateSelection,
+  type ChatPayloadMessage,
   type InlineIntentId,
 } from '../lib/inlineAI'
 
@@ -29,6 +30,8 @@ type Phase = 'compose' | 'streaming' | 'review' | 'error'
 interface InlineAIPanelProps {
   /** 选区末尾的视口坐标；boundLeft/Right 限制在正文列内，避免压到左侧边栏 */
   anchor: { x: number; y: number; boundLeft?: number; boundRight?: number }
+  /** rewrite：改写选中内容；create：在光标处按指令创作 */
+  mode?: 'rewrite' | 'create'
   originalText: string
   /** 成功后由调用方关闭浮层并提示（已写入正文，可 Ctrl+Z 撤销） */
   onApply: (kind: 'replace' | 'insert', text: string) => boolean
@@ -71,16 +74,19 @@ const INTENT_INSTRUCTION: Record<'zh' | 'en', Record<InlineIntentId, string>> = 
 
 export default function InlineAIPanel({
   anchor,
+  mode = 'rewrite',
   originalText,
   onApply,
   onClose,
 }: InlineAIPanelProps) {
   const { t, lang } = useI18n()
+  const isCreate = mode === 'create'
   const { aiProvider, aiModel, aiBaseUrl, aiApiFormat } = useSettingsStore()
   const provider = providerById(aiProvider)
   const intentLang: 'zh' | 'en' = String(lang).startsWith('zh') ? 'zh' : 'en'
 
   const [instruction, setInstruction] = useState('')
+  const [followUp, setFollowUp] = useState('')
   const [phase, setPhase] = useState<Phase>('compose')
   const [result, setResult] = useState('')
   const [thinking, setThinking] = useState('')
@@ -94,8 +100,9 @@ export default function InlineAIPanel({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const streamRef = useRef<AIStreamHandle | null>(null)
   const resultRef = useRef('')
-  const lastInstructionRef = useRef('')
   const busyRef = useRef(false)
+  /** 多轮「补充需求」的对话上下文：system + 首轮指令 + 历次指令/结果 */
+  const historyRef = useRef<ChatPayloadMessage[]>([])
 
   const intents = pickInlineIntents(originalText)
   const streaming = phase === 'streaming'
@@ -171,21 +178,22 @@ export default function InlineAIPanel({
     return () => window.removeEventListener('keydown', onKey, true)
   }, [onClose])
 
-  const run = useCallback(async (rawInstruction?: string) => {
-    const text = (rawInstruction ?? instruction).trim()
-    if (!text || phase === 'streaming' || busyRef.current) return
+  /** 上下文最多保留 9 条：system + 首轮用户消息 + 最近几轮，避免多轮改写后无限增长 */
+  const MAX_HISTORY_MESSAGES = 9
+  const trimHistory = (messages: ChatPayloadMessage[]): ChatPayloadMessage[] =>
+    messages.length <= MAX_HISTORY_MESSAGES
+      ? messages
+      : [messages[0], messages[1], ...messages.slice(-(MAX_HISTORY_MESSAGES - 2))]
+
+  const startStream = async (messages: ChatPayloadMessage[]) => {
     busyRef.current = true
-    lastInstructionRef.current = text
-    setInstruction(text)
     setPhase('streaming')
     setResult('')
     setThinking('')
     setError('')
     setCopied(false)
+    setCompareOpen(false)
     resultRef.current = ''
-
-    const payload = truncateSelection(originalText)
-    setTruncated(payload.truncated)
 
     streamRef.current?.dispose()
     const handle = await startAIStream(
@@ -194,7 +202,7 @@ export default function InlineAIPanel({
         apiFormat: provider?.id === 'custom' ? aiApiFormat : provider?.apiFormat,
         model: aiModel || provider?.defaultModel || '',
         baseUrl: aiBaseUrl || provider?.defaultBaseUrl || null,
-        messages: buildInlineMessages(text, payload.text),
+        messages,
       },
       {
         onChunk: (chunk) => {
@@ -204,6 +212,7 @@ export default function InlineAIPanel({
         onThinking: (chunk) => setThinking((prev) => prev + chunk),
         onDone: (fullText) => {
           resultRef.current = fullText
+          historyRef.current = trimHistory([...historyRef.current, { role: 'assistant', content: fullText }])
           setResult(fullText)
           setPhase('review')
           busyRef.current = false
@@ -213,7 +222,15 @@ export default function InlineAIPanel({
           streamRef.current = null
           busyRef.current = false
           if (message === 'cancelled') {
-            setPhase(resultRef.current.trim() ? 'review' : 'compose')
+            if (resultRef.current.trim()) {
+              // 已生成的半截内容按结果保留，后续「补充需求」仍能在它基础上继续
+              historyRef.current = trimHistory([...historyRef.current, { role: 'assistant', content: resultRef.current }])
+              setPhase('review')
+            } else {
+              // 没有任何产出：丢掉这条未完成的指令，回到输入态
+              historyRef.current = historyRef.current.slice(0, -1)
+              setPhase('compose')
+            }
             return
           }
           setError(message)
@@ -222,7 +239,35 @@ export default function InlineAIPanel({
       },
     )
     streamRef.current = handle
-  }, [aiApiFormat, aiBaseUrl, aiModel, aiProvider, instruction, originalText, phase, provider])
+  }
+
+  /** 首轮：用指令 + 选区原文开一个任务；创作模式没有原文 */
+  const run = (rawInstruction?: string) => {
+    const text = (rawInstruction ?? instruction).trim()
+    if (!text || busyRef.current) return
+    setInstruction(text)
+    const payload = isCreate ? { text: '', truncated: false } : truncateSelection(originalText)
+    setTruncated(payload.truncated)
+    const messages = buildInlineMessages(text, isCreate ? null : payload.text)
+    historyRef.current = messages
+    void startStream(messages)
+  }
+
+  /** 补充需求：在已有结果的基础上继续改 */
+  const refine = () => {
+    const text = followUp.trim()
+    if (!text || busyRef.current || historyRef.current.length === 0) return
+    setFollowUp('')
+    const messages = trimHistory([...historyRef.current, { role: 'user', content: text }])
+    historyRef.current = messages
+    void startStream(messages)
+  }
+
+  /** 失败重试：沿用同一份上下文（末尾就是失败的那条指令） */
+  const retry = () => {
+    if (busyRef.current || historyRef.current.length === 0) return
+    void startStream(historyRef.current)
+  }
 
   const stop = () => {
     streamRef.current?.cancel()
@@ -244,7 +289,7 @@ export default function InlineAIPanel({
     onClose()
   }
 
-  const diff = compareOpen && phase === 'review' ? diffLines(originalText, result) : null
+  const diff = !isCreate && compareOpen && phase === 'review' ? diffLines(originalText, result) : null
 
   return createPortal(
     <div
@@ -266,7 +311,7 @@ export default function InlineAIPanel({
                 className="inline-ai-input"
                 rows={2}
                 value={instruction}
-                placeholder={t('aiInline.placeholder')}
+                placeholder={isCreate ? t('aiInline.createPlaceholder') : t('aiInline.placeholder')}
                 onChange={(e) => setInstruction(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
@@ -278,7 +323,9 @@ export default function InlineAIPanel({
               <div className="inline-ai-meta">
                 {truncated
                   ? <span style={{ color: 'var(--editor-accent)' }}>{t('aiInline.truncated', { count: MAX_SELECTION_CHARS })}</span>
-                  : <span>{t('aiInline.selectedChars', { count: originalText.length })}</span>}
+                  : !isCreate
+                    ? <span>{t('aiInline.selectedChars', { count: originalText.length })}</span>
+                    : <span />}
                 <button
                   type="button"
                   className="inline-ai-send"
@@ -290,7 +337,7 @@ export default function InlineAIPanel({
                   <ArrowUp size={14} />
                 </button>
               </div>
-              {intents.length > 0 && (
+              {!isCreate && intents.length > 0 && (
                 <div className="inline-ai-intents">
                   {intents.map((id) => (
                     <button
@@ -348,29 +395,66 @@ export default function InlineAIPanel({
                 <div className="inline-ai-error">{t('ai.error', { msg: error })}</div>
               )}
 
+              {phase === 'review' && (
+                <div className="inline-ai-followup">
+                  <input
+                    className="inline-ai-followup-input"
+                    value={followUp}
+                    placeholder={t('aiInline.followUpPlaceholder')}
+                    onChange={(e) => setFollowUp(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                        e.preventDefault()
+                        refine()
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="inline-ai-send inline-ai-send-sm"
+                    disabled={!followUp.trim()}
+                    onClick={refine}
+                    title={t('aiInline.send')}
+                    aria-label={t('aiInline.send')}
+                  >
+                    <ArrowUp size={12} />
+                  </button>
+                </div>
+              )}
+
               <div className="inline-ai-actions">
                 {streaming ? (
                   <button type="button" className="inline-ai-btn" onClick={stop}>
                     <Square size={11} /> {t('aiInline.stop')}
                   </button>
                 ) : phase === 'error' ? (
-                  <button type="button" className="inline-ai-btn" onClick={() => void run(lastInstructionRef.current)}>
+                  <button type="button" className="inline-ai-btn" onClick={retry}>
                     <RotateCcw size={11} /> {t('aiInline.retry')}
                   </button>
                 ) : (
                   <>
-                    <button type="button" className="inline-ai-btn" onClick={() => setCompareOpen((v) => !v)}>
-                      {t('aiInline.compare')}
-                    </button>
+                    {!isCreate && (
+                      <button type="button" className="inline-ai-btn" onClick={() => setCompareOpen((v) => !v)}>
+                        {t('aiInline.compare')}
+                      </button>
+                    )}
                     <button type="button" className="inline-ai-btn" onClick={copyResult}>
                       {copied ? <><Check size={11} /> {t('aiInline.copied')}</> : <><Copy size={11} /> {t('aiInline.copy')}</>}
                     </button>
-                    <button type="button" className="inline-ai-btn" onClick={() => apply('insert')}>
-                      {t('aiInline.insertBelow')}
-                    </button>
-                    <button type="button" className="inline-ai-btn inline-ai-btn-primary" onClick={() => apply('replace')}>
-                      {t('aiInline.replace')}
-                    </button>
+                    {isCreate ? (
+                      <button type="button" className="inline-ai-btn inline-ai-btn-primary" onClick={() => apply('insert')}>
+                        {t('aiInline.insertHere')}
+                      </button>
+                    ) : (
+                      <>
+                        <button type="button" className="inline-ai-btn" onClick={() => apply('insert')}>
+                          {t('aiInline.insertBelow')}
+                        </button>
+                        <button type="button" className="inline-ai-btn inline-ai-btn-primary" onClick={() => apply('replace')}>
+                          {t('aiInline.replace')}
+                        </button>
+                      </>
+                    )}
                   </>
                 )}
                 {!streaming && (

@@ -75,18 +75,31 @@ const INLINE_SYSTEM_PROMPT = [
   '5. 用户未指定输出语言时，沿用原文语言。',
 ].join('\n')
 
+const CREATE_SYSTEM_PROMPT = [
+  '你是 YiziMarkdown 的文档内写作助手，只负责按用户要求生成可直接插入文档的 Markdown 正文。',
+  '硬性要求：',
+  '1. 只输出正文，不要任何解释、前言、结语或「以下是…」。',
+  '2. 不要用 ``` 包裹整段结果。',
+  '3. 用户未指定结构时使用自然段落；需要标题 / 列表 / 表格时使用 Markdown。',
+  '4. 用户未指定输出语言时，沿用指令语言。',
+].join('\n')
+
 /**
  * 拼装一次改写请求。
  *
- * 原文用 `"""` 包起来，和指令隔开，避免指令里出现 Markdown 时模型分不清边界。
+ * - 有原文：原文用 `"""` 包起来，和指令隔开，避免指令里出现 Markdown 时模型分不清边界；
+ * - 无原文（光标处创作）：只发指令，系统提示换成写作模式。
  */
 export function buildInlineMessages(
   instruction: string,
-  original: string,
+  original: string | null | undefined,
 ): ChatPayloadMessage[] {
-  const user = `指令：${instruction.trim()}\n\n待处理内容：\n"""\n${original}\n"""`
+  const body = (original ?? '').trim()
+  const user = body
+    ? `指令：${instruction.trim()}\n\n待处理内容：\n"""\n${original}\n"""`
+    : `指令：${instruction.trim()}`
   return [
-    { role: 'system', content: INLINE_SYSTEM_PROMPT },
+    { role: 'system', content: body ? INLINE_SYSTEM_PROMPT : CREATE_SYSTEM_PROMPT },
     { role: 'user', content: user },
   ]
 }

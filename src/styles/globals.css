@@ -3608,6 +3608,29 @@ a {
 }
 .inline-ai-send:disabled { opacity: 0.35; cursor: default; }
 .inline-ai-send:not(:disabled):active { transform: scale(0.94); }
+.inline-ai-send-sm { width: 22px; height: 22px; }
+
+/* 补充需求：结果之上再提一轮要求，Enter 发送 */
+.inline-ai-followup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 3px 4px 3px 10px;
+  border: 1px solid var(--sel-toolbar-border);
+  border-radius: 999px;
+}
+.inline-ai-followup-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--sel-toolbar-text);
+  font: inherit;
+  font-size: 0.75rem;
+}
+.inline-ai-followup-input::placeholder { color: color-mix(in srgb, var(--sel-toolbar-text) 45%, transparent); }
 
 .inline-ai-intents {
   display: flex;

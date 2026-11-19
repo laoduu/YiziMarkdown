@@ -59,6 +59,7 @@ import {
 } from 'lucide-react'
 import WindowControls from './WindowControls'
 import ZenIcon from './ZenIcon'
+import SelectionAIIcon from './SelectionAIIcon'
 import { windowOps } from '../lib/windowOps'
 import { openContextMenu } from './ContextMenu'
 import { useWindowStateStore } from '../stores/windowStateStore'
@@ -96,6 +97,8 @@ interface ToolbarProps {
   /** 禅模式开关（F9）：撤掉全部界面构件，只留正文 */
   onZen: () => void
   onAIChat: () => void
+  /** 在光标处打开文档内 AI 创作浮层 */
+  onAIWrite?: () => void
   isDark: boolean
   onUndo?: () => void
   onRedo?: () => void
@@ -113,6 +116,7 @@ const AUTO_COLLAPSE_THRESHOLD = 1380
 export default function Toolbar({
   onNew, onNewFromTemplate, onOpen, onSave, onSaveAs, onSaveToCloud, onToggleSidebar, onToggleDark, onUndo, onRedo,
   onInsertMarkdown, onInsertFootnote, onExport, pluginExports = [], onSearch, onSettings, onPresent, onRead, onAIChat,
+  onAIWrite,
   onZen,
   isDark, previewMode = false,
 }: ToolbarProps) {
@@ -855,6 +859,7 @@ export default function Toolbar({
         <span id="zen-anchor" style={{ display: 'inline-flex' }}>
           <ToolbarButton icon={<ZenIcon size={20} />} tooltip={t('toolbar.zen')} onClick={onZen} accent />
         </span>
+        <ToolbarButton icon={<SelectionAIIcon size={16} />} tooltip={t('aiInline.openCreate')} onClick={() => onAIWrite?.()} accent />
         <ToolbarButton icon={<Bot size={16} />} tooltip={t('ai.chatTitle')} onClick={onAIChat} accent />
         <ToolbarButton icon={<Settings size={16} />} tooltip={t('toolbar.settings')} onClick={onSettings} accent />
         

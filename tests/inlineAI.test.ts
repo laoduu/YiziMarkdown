@@ -22,6 +22,19 @@ test('提示词：系统约束 + 用户消息，原文与指令都不丢', () =>
   assert.ok(messages[1].content.includes('第一段\n第二段'))
 })
 
+test('创作模式：无原文时只发指令，换成写作提示词', () => {
+  const messages = buildInlineMessages('写一段关于秋天的散文', null)
+  assert.ok(messages[0].content.includes('写作助手'))
+  assert.ok(!messages[1].content.includes('待处理内容'))
+  assert.ok(messages[1].content.includes('写一段关于秋天的散文'))
+})
+
+test('创作模式：空字符串等同于无原文', () => {
+  const messages = buildInlineMessages('列一个提纲', '   ')
+  assert.ok(messages[0].content.includes('写作助手'))
+  assert.ok(!messages[1].content.includes('待处理内容'))
+})
+
 test('超长选区按上限截断', () => {
   const short = truncateSelection('短文本')
   assert.equal(short.truncated, false)

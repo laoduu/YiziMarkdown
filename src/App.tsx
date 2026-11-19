@@ -2397,6 +2397,7 @@ function App() {
         onPresent={startSlideshow}
         onRead={startReader}
         onAIChat={() => updateSettings({ aiPanelOpen: !aiPanelOpen })}
+        onAIWrite={() => editorRef.current?.openAIWrite()}
         isDark={isDark}
         previewMode={viewMode === 'preview'}
         onUndo={() => editorRef.current?.undo()}

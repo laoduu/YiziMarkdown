@@ -176,6 +176,8 @@ export interface EditorRef {
   redo: () => void
   /** 聚焦编辑器（退出禅模式后把焦点还给正文） */
   focus: () => void
+  /** 在光标处打开文档内 AI 创作浮层（工具栏按钮 / 双击 Ctrl） */
+  openAIWrite: () => void
 }
 
 interface EditorProps {
@@ -817,8 +819,8 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   const [slashMenuCoords, setSlashMenuCoords] = useState({ left: 0, bottom: 0 })
   const [slashMenuQuery, setSlashMenuQuery] = useState('')
   const [selToolbar, setSelToolbar] = useState<SelectionToolbarInfo & { visible: boolean }>({ visible: false, x: 0, y: 0, text: '', from: 0, to: 0, source: 'editor' })
-  /** 文档内 AI：当前要改写的选区快照（null = 浮层关闭） */
-  const [inlineAI, setInlineAI] = useState<{ text: string; from: number; to: number; x: number; y: number; boundLeft: number; boundRight: number } | null>(null)
+  /** 文档内 AI：当前要改写的选区快照（null = 浮层关闭）；create 模式没有选区 */
+  const [inlineAI, setInlineAI] = useState<{ text: string; from: number; to: number; x: number; y: number; boundLeft: number; boundRight: number; mode: 'rewrite' | 'create' } | null>(null)
   const lineNumbersCompartment = useRef(new Compartment()).current
   const richCompartment = useRef(new Compartment()).current
   const lineWrappingCompartment = useRef(new Compartment()).current
@@ -1271,6 +1273,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     const content = view.contentDOM.getBoundingClientRect()
     setInlineAI({
       ...selection,
+      mode: 'rewrite',
       x: start?.left ?? content.left + 16,
       // 锚在选区末尾下方，避免默认盖住刚选中的第一行
       y: end?.bottom ?? start?.bottom ?? content.top + 40,
@@ -1278,6 +1281,46 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       boundRight: content.right,
     })
   }, [])
+
+  /** 双击 Ctrl / 工具栏按钮：在光标处按指令创作（无选区模式） */
+  const openInlineAICreate = useCallback(() => {
+    const view = viewRef.current
+    if (!view) return
+    const head = view.state.selection.main.head
+    const coords = view.coordsAtPos(head)
+    const content = view.contentDOM.getBoundingClientRect()
+    setSelToolbar((prev) => ({ ...prev, visible: false }))
+    setInlineAI({
+      mode: 'create',
+      text: '',
+      from: head,
+      to: head,
+      x: coords?.left ?? content.left + 16,
+      y: coords?.bottom ?? content.top + 40,
+      boundLeft: content.left,
+      boundRight: content.right,
+    })
+  }, [])
+
+  // 双击 Ctrl：在光标处打开创作浮层。任何其他按键都会打断连击，避免和 Ctrl+C 等组合冲突。
+  useEffect(() => {
+    let lastCtrl = 0
+    const onKeyDown = (e: KeyboardEvent) => {
+      const view = viewRef.current
+      if (!view) return
+      if (!view.dom.contains(document.activeElement)) { lastCtrl = 0; return }
+      if (e.key !== 'Control' || e.repeat) { lastCtrl = 0; return }
+      const now = Date.now()
+      if (now - lastCtrl <= 420) {
+        lastCtrl = 0
+        openInlineAICreate()
+      } else {
+        lastCtrl = now
+      }
+    }
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => window.removeEventListener('keydown', onKeyDown, true)
+  }, [openInlineAICreate])
 
   const closeInlineAI = useCallback(() => {
     setInlineAI(null)
@@ -1297,6 +1340,21 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     if (!view || !sel) return false
     const doc = view.state.doc.toString()
     const current = doc.slice(sel.from, sel.to)
+
+    if (sel.mode === 'create') {
+      // 光标处创作：直接插到快照里的光标位置
+      const pos = Math.min(sel.to, doc.length)
+      view.dispatch({
+        changes: { from: pos, to: pos, insert: text },
+        selection: { anchor: pos + text.length },
+        scrollIntoView: true,
+      })
+      view.focus()
+      setInlineAI(null)
+      const lang = getCurrentLang()
+      onToast?.(`${translate(lang, 'aiInline.applied')} · ${translate(lang, 'aiInline.undoHint')}`)
+      return true
+    }
 
     if (kind === 'replace' && isRangeStillValid(sel.text, current)) {
       view.dispatch({
@@ -1352,6 +1410,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       syncingFromExternalRef.current = false
     },
     insertMarkdown: applyMarkdown,
+    openAIWrite: openInlineAICreate,
     insertHorizontalRule: () => {
       const view = viewRef.current
       if (!view) return
@@ -2104,6 +2163,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         {inlineAI && (
           <InlineAIPanel
             anchor={{ x: inlineAI.x, y: inlineAI.y, boundLeft: inlineAI.boundLeft, boundRight: inlineAI.boundRight }}
+            mode={inlineAI.mode}
             originalText={inlineAI.text}
             onApply={applyInlineAI}
             onClose={closeInlineAI}
