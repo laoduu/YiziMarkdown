@@ -26,12 +26,53 @@ export interface ChatPayloadMessage {
 /** 单次发送的选区上限：超过只发前缀，避免撑爆上下文窗口 */
 export const MAX_SELECTION_CHARS = 8000
 
+/** 附加文档 / 小节上下文的上限 */
+export const MAX_CONTEXT_CHARS = 12000
+
 export function truncateSelection(
   text: string,
   max: number = MAX_SELECTION_CHARS,
 ): { text: string; truncated: boolean } {
   if (max <= 0 || text.length <= max) return { text, truncated: false }
   return { text: text.slice(0, max), truncated: true }
+}
+
+/**
+ * 取光标所在的小节：上一个标题（含）到下一个标题（不含）之间的内容。
+ * 标题识别会跳过代码围栏内的 `#`，避免把代码注释当标题。
+ */
+export function extractSection(text: string, offset: number): string {
+  const lines = text.split('\n')
+  const safe = Math.min(Math.max(offset, 0), text.length)
+
+  let inFence = false
+  const headings: boolean[] = []
+  for (const line of lines) {
+    if (/^\s{0,3}(```|~~~)/.test(line)) {
+      headings.push(false)
+      inFence = !inFence
+      continue
+    }
+    headings.push(!inFence && /^\s{0,3}#{1,6}\s/.test(line))
+  }
+
+  let pos = 0
+  let current = 0
+  for (let i = 0; i < lines.length; i++) {
+    const next = pos + lines[i].length + 1
+    if (safe < next) { current = i; break }
+    pos = next
+  }
+
+  let start = 0
+  for (let i = current; i >= 0; i--) {
+    if (headings[i]) { start = i; break }
+  }
+  let end = lines.length
+  for (let i = current + 1; i < lines.length; i++) {
+    if (headings[i]) { end = i; break }
+  }
+  return lines.slice(start, end).join('\n').trim()
 }
 
 /**
@@ -93,15 +134,24 @@ const CREATE_SYSTEM_PROMPT = [
 export function buildInlineMessages(
   instruction: string,
   original: string | null | undefined,
+  context?: string | null,
 ): ChatPayloadMessage[] {
   const body = (original ?? '').trim()
   const user = body
     ? `指令：${instruction.trim()}\n\n待处理内容：\n"""\n${original}\n"""`
     : `指令：${instruction.trim()}`
-  return [
+  const messages: ChatPayloadMessage[] = [
     { role: 'system', content: body ? INLINE_SYSTEM_PROMPT : CREATE_SYSTEM_PROMPT },
-    { role: 'user', content: user },
   ]
+  const ctx = (context ?? '').trim()
+  if (ctx) {
+    messages.push({
+      role: 'system',
+      content: `以下是文档上下文，仅用于理解语气与术语，不要改写它：\n"""\n${ctx}\n"""`,
+    })
+  }
+  messages.push({ role: 'user', content: user })
+  return messages
 }
 
 /** 应用前校验：编辑器里这段文字必须仍是当初选中的内容 */

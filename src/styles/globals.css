@@ -3592,6 +3592,68 @@ a {
   font-size: 0.6875rem;
   color: color-mix(in srgb, var(--sel-toolbar-text) 62%, transparent);
 }
+.inline-ai-meta-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 附加上下文：当前小节 / 整篇文档 */
+.inline-ai-ctx { position: relative; }
+.inline-ai-ctx-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px dashed var(--sel-toolbar-border);
+  border-radius: 999px;
+  background: transparent;
+  color: color-mix(in srgb, var(--sel-toolbar-text) 66%, transparent);
+  font-size: 0.6875rem;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.inline-ai-ctx-btn:hover {
+  border-color: var(--sel-toolbar-accent);
+  color: var(--sel-toolbar-accent);
+}
+.inline-ai-ctx-btn.is-active {
+  border-style: solid;
+  border-color: var(--sel-toolbar-accent);
+  color: var(--sel-toolbar-accent);
+  background: color-mix(in srgb, var(--sel-toolbar-accent) 8%, transparent);
+}
+.inline-ai-ctx-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 132px;
+  padding: 4px;
+  border: 1px solid var(--sel-toolbar-border);
+  border-radius: 8px;
+  background: var(--sel-toolbar-bg);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
+}
+.inline-ai-ctx-menu button {
+  height: 26px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sel-toolbar-text);
+  font-size: 0.6875rem;
+  text-align: left;
+  cursor: pointer;
+}
+.inline-ai-ctx-menu button:hover {
+  background: var(--sel-toolbar-hover);
+  color: var(--sel-toolbar-accent);
+}
 .inline-ai-send {
   display: flex;
   align-items: center;

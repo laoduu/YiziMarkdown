@@ -7,6 +7,7 @@ import {
   MAX_SELECTION_CHARS,
   buildInlineMessages,
   diffLines,
+  extractSection,
   isRangeStillValid,
   pickInlineIntents,
   truncateSelection,
@@ -33,6 +34,43 @@ test('创作模式：空字符串等同于无原文', () => {
   const messages = buildInlineMessages('列一个提纲', '   ')
   assert.ok(messages[0].content.includes('写作助手'))
   assert.ok(!messages[1].content.includes('待处理内容'))
+})
+
+test('附加上下文：多一条 system 消息，且排在用户消息之前', () => {
+  const messages = buildInlineMessages('请润色', '原文', '整篇文档的内容')
+  assert.equal(messages.length, 3)
+  assert.equal(messages[0].role, 'system')
+  assert.equal(messages[1].role, 'system')
+  assert.ok(messages[1].content.includes('文档上下文'))
+  assert.ok(messages[1].content.includes('整篇文档的内容'))
+  assert.equal(messages[2].role, 'user')
+})
+
+test('附加上下文：不传 / 空串时不插入多余消息', () => {
+  assert.equal(buildInlineMessages('请润色', '原文').length, 2)
+  assert.equal(buildInlineMessages('请润色', '原文', '   ').length, 2)
+})
+
+test('extractSection：按标题切出光标所在小节', () => {
+  const doc = '# 标题\n\n第一节内容\n\n## 第二节\n\n第二节内容\n\n## 第三节\n\n第三节内容'
+  const offset = doc.indexOf('第二节内容')
+  const section = extractSection(doc, offset)
+  assert.ok(section.startsWith('## 第二节'))
+  assert.ok(section.includes('第二节内容'))
+  assert.ok(!section.includes('第一节内容'))
+  assert.ok(!section.includes('第三节内容'))
+})
+
+test('extractSection：没有标题时返回全文', () => {
+  const doc = '第一段\n\n第二段'
+  assert.equal(extractSection(doc, 5), doc)
+})
+
+test('extractSection：代码围栏里的 # 不算标题', () => {
+  const doc = '# 真标题\n\n```sh\n# 这是注释\n```\n\n正文'
+  const section = extractSection(doc, doc.indexOf('正文'))
+  assert.ok(section.startsWith('# 真标题'))
+  assert.ok(section.includes('```sh'))
 })
 
 test('超长选区按上限截断', () => {

@@ -9,16 +9,18 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowUp, Check, Copy, RotateCcw, Square, X } from 'lucide-react'
+import { ArrowUp, Check, Copy, Plus, RotateCcw, Square, X } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { useSettingsStore } from '../stores/settingsStore'
 import { providerById } from '../lib/ai-providers'
 import { writeClipboardText } from '../lib/clipboard'
 import { startAIStream, type AIStreamHandle } from '../lib/aiStream'
 import {
+  MAX_CONTEXT_CHARS,
   MAX_SELECTION_CHARS,
   buildInlineMessages,
   diffLines,
+  extractSection,
   pickInlineIntents,
   truncateSelection,
   type ChatPayloadMessage,
@@ -34,6 +36,10 @@ interface InlineAIPanelProps {
   /** rewrite：改写选中内容；create：在光标处按指令创作 */
   mode?: 'rewrite' | 'create'
   originalText: string
+  /** 当前文档全文（用于「附加上下文」） */
+  documentText?: string
+  /** 选区起点在文档中的偏移（用于定位当前小节） */
+  selectionOffset?: number
   /** 成功后由调用方关闭浮层并提示（已写入正文，可 Ctrl+Z 撤销） */
   onApply: (kind: 'replace' | 'insert', text: string) => boolean
   /** 对比原文：把 diff 交给编辑器在正文里就地展示；null = 关闭 */
@@ -79,6 +85,8 @@ export default function InlineAIPanel({
   anchor,
   mode = 'rewrite',
   originalText,
+  documentText = '',
+  selectionOffset = 0,
   onApply,
   onDiff,
   onClose,
@@ -91,6 +99,8 @@ export default function InlineAIPanel({
 
   const [instruction, setInstruction] = useState('')
   const [followUp, setFollowUp] = useState('')
+  const [ctx, setCtx] = useState<'none' | 'section' | 'document'>('none')
+  const [ctxMenuOpen, setCtxMenuOpen] = useState(false)
   const [phase, setPhase] = useState<Phase>('compose')
   const [result, setResult] = useState('')
   const [thinking, setThinking] = useState('')
@@ -186,12 +196,16 @@ export default function InlineAIPanel({
     return () => window.removeEventListener('keydown', onKey, true)
   }, [onClose])
 
-  /** 上下文最多保留 9 条：system + 首轮用户消息 + 最近几轮，避免多轮改写后无限增长 */
+  /** 上下文最多保留 9 条：保留 system / 首轮用户消息与最近几轮，避免多轮改写后无限增长 */
   const MAX_HISTORY_MESSAGES = 9
-  const trimHistory = (messages: ChatPayloadMessage[]): ChatPayloadMessage[] =>
-    messages.length <= MAX_HISTORY_MESSAGES
-      ? messages
-      : [messages[0], messages[1], ...messages.slice(-(MAX_HISTORY_MESSAGES - 2))]
+  const trimHistory = (messages: ChatPayloadMessage[]): ChatPayloadMessage[] => {
+    if (messages.length <= MAX_HISTORY_MESSAGES) return messages
+    const firstUser = messages.findIndex((m) => m.role === 'user')
+    const head = firstUser >= 0 ? firstUser + 1 : 1
+    const tail = MAX_HISTORY_MESSAGES - head
+    if (tail <= 0) return messages.slice(0, MAX_HISTORY_MESSAGES)
+    return [...messages.slice(0, head), ...messages.slice(-tail)]
+  }
 
   const startStream = async (messages: ChatPayloadMessage[]) => {
     busyRef.current = true
@@ -255,9 +269,15 @@ export default function InlineAIPanel({
     const text = (rawInstruction ?? instruction).trim()
     if (!text || busyRef.current) return
     setInstruction(text)
+    setCtxMenuOpen(false)
     const payload = isCreate ? { text: '', truncated: false } : truncateSelection(originalText)
     setTruncated(payload.truncated)
-    const messages = buildInlineMessages(text, isCreate ? null : payload.text)
+    const contextText = ctx === 'document'
+      ? documentText.slice(0, MAX_CONTEXT_CHARS)
+      : ctx === 'section'
+        ? extractSection(documentText, selectionOffset).slice(0, MAX_CONTEXT_CHARS)
+        : null
+    const messages = buildInlineMessages(text, isCreate ? null : payload.text, contextText)
     historyRef.current = messages
     void startStream(messages)
   }
@@ -298,6 +318,16 @@ export default function InlineAIPanel({
     onDiffRef.current?.(next ? diffLines(originalText, result) : null)
   }
 
+  const chooseContext = (next: 'none' | 'section' | 'document') => {
+    setCtx(next)
+    setCtxMenuOpen(false)
+  }
+  const ctxLabel = ctx === 'section'
+    ? t('aiInline.ctxSection')
+    : ctx === 'document'
+      ? t('aiInline.ctxDocument')
+      : t('aiInline.ctxAdd')
+
   const apply = (kind: 'replace' | 'insert') => {
     if (!result.trim()) return
     if (!onApply(kind, result)) return
@@ -335,21 +365,42 @@ export default function InlineAIPanel({
                 }}
               />
               <div className="inline-ai-meta">
-                {truncated
-                  ? <span style={{ color: 'var(--editor-accent)' }}>{t('aiInline.truncated', { count: MAX_SELECTION_CHARS })}</span>
-                  : !isCreate
-                    ? <span>{t('aiInline.selectedChars', { count: originalText.length })}</span>
-                    : <span />}
-                <button
-                  type="button"
-                  className="inline-ai-send"
-                  disabled={!instruction.trim()}
-                  onClick={() => void run()}
-                  title={t('aiInline.send')}
-                  aria-label={t('aiInline.send')}
-                >
-                  <ArrowUp size={14} />
-                </button>
+                <div className="inline-ai-ctx">
+                  <button
+                    type="button"
+                    className={`inline-ai-ctx-btn ${ctx !== 'none' ? 'is-active' : ''}`}
+                    onClick={() => setCtxMenuOpen((v) => !v)}
+                    title={t('aiInline.ctxAdd')}
+                  >
+                    <Plus size={11} /> {ctxLabel}
+                  </button>
+                  {ctxMenuOpen && (
+                    <div className="inline-ai-ctx-menu">
+                      <button type="button" onClick={() => chooseContext('section')}>{t('aiInline.ctxSection')}</button>
+                      <button type="button" onClick={() => chooseContext('document')}>{t('aiInline.ctxDocument')}</button>
+                      {ctx !== 'none' && (
+                        <button type="button" onClick={() => chooseContext('none')}>{t('aiInline.ctxNone')}</button>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="inline-ai-meta-right">
+                  {truncated
+                    ? <span style={{ color: 'var(--editor-accent)' }}>{t('aiInline.truncated', { count: MAX_SELECTION_CHARS })}</span>
+                    : !isCreate
+                      ? <span>{t('aiInline.selectedChars', { count: originalText.length })}</span>
+                      : null}
+                  <button
+                    type="button"
+                    className="inline-ai-send"
+                    disabled={!instruction.trim()}
+                    onClick={() => void run()}
+                    title={t('aiInline.send')}
+                    aria-label={t('aiInline.send')}
+                  >
+                    <ArrowUp size={14} />
+                  </button>
+                </div>
               </div>
               {!isCreate && intents.length > 0 && (
                 <div className="inline-ai-intents">
