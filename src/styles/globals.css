@@ -3067,6 +3067,49 @@ a {
   background: var(--sel-toolbar-hover);
 }
 
+/* 品牌图标 = AI 入口（星芒 SVG）：主星 / 小星分别做动效。
+   所有位移都在 16px 图标内部完成，不向外扩散，紧凑浮栏里不会挤到相邻按钮。 */
+.selection-toolbar-icon-btn {
+  color: var(--sel-toolbar-accent);
+}
+.selection-toolbar-icon {
+  color: var(--sel-toolbar-accent);
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* 悬停：整颗星轻微放大并旋转，和子元素的动画互不干扰 */
+.selection-toolbar-icon-btn:hover .selection-toolbar-icon {
+  transform: scale(1.12) rotate(12deg);
+}
+.selection-ai-main,
+.selection-ai-sm {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.selection-ai-sm { opacity: 0.72; }
+/* 出现：主星弹入，小星延迟点亮（一次性） */
+.selection-toolbar-icon-btn .selection-ai-main {
+  animation: selection-ai-in-main 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.selection-toolbar-icon-btn .selection-ai-sm {
+  animation:
+    selection-ai-in-sm 480ms 110ms cubic-bezier(0.22, 1, 0.36, 1) both,
+    selection-ai-twinkle 6s 1.8s ease-in-out infinite;
+}
+@keyframes selection-ai-in-main {
+  0%   { opacity: 0; transform: scale(0.62) rotate(-16deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+@keyframes selection-ai-in-sm {
+  0%   { opacity: 0; transform: scale(0.2); }
+  100% { opacity: 0.72; transform: scale(1); }
+}
+/* 静置：每 6 秒小星眨一下，其余时间完全静止 */
+@keyframes selection-ai-twinkle {
+  0%, 76%, 100% { opacity: 0.72; transform: scale(1); }
+  82%           { opacity: 1;    transform: scale(1.22); }
+  90%           { opacity: 0.8;  transform: scale(0.96); }
+}
+
 /* 右侧内容单独滚动：品牌图标与分隔线不随格式条滚动 */
 .selection-toolbar-scroll {
   display: flex;
@@ -3475,4 +3518,8 @@ a {
   }
   .zen-halo,
   .zen-anchor-ripple { animation: none !important; }
+  /* 品牌星芒：减少动态时只保留静态图标，悬停也不旋转 */
+  .selection-toolbar-icon-btn .selection-ai-main,
+  .selection-toolbar-icon-btn .selection-ai-sm { animation: none !important; }
+  .selection-toolbar-icon-btn:hover .selection-toolbar-icon { transform: none; }
 }

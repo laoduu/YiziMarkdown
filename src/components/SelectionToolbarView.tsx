@@ -9,9 +9,8 @@ import { useI18n } from '../i18n'
 import type { SelectionToolbarItem, SelectionSystemAction } from '../lib/selectionActions'
 import type { SelectionFormatAction, SelectionFormatConfig } from '../lib/selectionFormats'
 import SelectionFormatBar from './SelectionFormatBar'
+import SelectionAIIcon from './SelectionAIIcon'
 import SkillIcon from './SkillIcon'
-
-const APP_ICON_URL = new URL('../assets/app-icon.png', import.meta.url).href
 
 const SYSTEM_ICONS: Record<SelectionSystemAction, typeof Copy> = {
   copy: Copy,
@@ -74,10 +73,10 @@ export default function SelectionToolbarView({
             title={toggleLabel}
             aria-label={toggleLabel}
           >
-            <img src={APP_ICON_URL} alt="" className="selection-toolbar-icon" />
+            <SelectionAIIcon size={16} className="selection-toolbar-icon" />
           </button>
         ) : (
-          <img src={APP_ICON_URL} alt="" className="selection-toolbar-icon" />
+          <SelectionAIIcon size={16} className="selection-toolbar-icon" />
         )}
         <div className="selection-toolbar-divider" />
       </div>
