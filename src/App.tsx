@@ -1108,28 +1108,6 @@ function App() {
     }
   }, [zenMode, zenAwake])
 
-  // Esc 退出禅模式 —— 但让位给输入法组合与任何已打开的浮层（见 shouldExitZenOnEscape）。
-  // capture 阶段只做"判定"，不抢其它组件的 Esc；浮层打开时直接放行。
-  useEffect(() => {
-    if (!zenMode) return
-    const overlayOpen =
-      isSettingsOpen || showShortcutsPanel || isSearchOpen || docxDialogOpen ||
-      pptxDialog !== null || pluginExportDialog !== null || exportResultPath !== null ||
-      isReader || isSlideshow || epubSession !== null
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      if (!shouldExitZenOnEscape({ imeComposing: e.isComposing, overlayOpen })) return
-      e.preventDefault()
-      toggleZenMode(false)
-    }
-    window.addEventListener('keydown', onKey, true)
-    return () => window.removeEventListener('keydown', onKey, true)
-  }, [
-    zenMode, toggleZenMode, isSettingsOpen, showShortcutsPanel, isSearchOpen,
-    docxDialogOpen, pptxDialog, pluginExportDialog, exportResultPath,
-    isReader, isSlideshow, epubSession,
-  ])
-
   // 收折编排：进入禅 = 逐块朝屏幕边收起（面板→工具栏→Tab→状态栏）；
   // 退出禅 = 严格反向；禅中 = 只跟随「边缘唤回」（目标区展开、其余收起）。
   const zenFoldProgressRef = useRef(new Map<HTMLElement, number>())
@@ -1390,6 +1368,28 @@ function App() {
     /** 「清空全部缓存」的二次确认已按下 */
     confirmingAll: boolean
   } | null>(null)
+
+  // 会盖住正文的浮层：禅模式 Esc 需要让位，划词浮栏也要跟着收起。
+  const overlayOpen =
+    isSettingsOpen || showShortcutsPanel || isSearchOpen || docxDialogOpen ||
+    pptxDialog !== null || pluginExportDialog !== null || exportResultPath !== null ||
+    isReader || isSlideshow || epubSession !== null ||
+    conflict !== null || remoteVersion !== null || cloudSave !== null ||
+    storageCleanup !== null
+
+  // Esc 退出禅模式 —— 但让位给输入法组合与任何已打开的浮层（见 shouldExitZenOnEscape）。
+  // capture 阶段只做"判定"，不抢其它组件的 Esc；浮层打开时直接放行。
+  useEffect(() => {
+    if (!zenMode) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (!shouldExitZenOnEscape({ imeComposing: e.isComposing, overlayOpen })) return
+      e.preventDefault()
+      toggleZenMode(false)
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [zenMode, toggleZenMode, overlayOpen])
 
   const openStorageCleanup = useCallback(() => {
     setStorageCleanup({
@@ -2469,6 +2469,7 @@ function App() {
               onCursorChange={(pos) => setCursorPosition({ line: pos.line, column: pos.column })}
               onToast={showToast}
               themeRevision={themeCssRevision}
+              suppressSelectionToolbar={overlayOpen}
             />
           )}
         </div>

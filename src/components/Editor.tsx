@@ -191,6 +191,8 @@ interface EditorProps {
   onToast?: (message: string) => void
   /** App 主题 CSS 异步注入完成的版本号；用于重渲染 Mermaid 等取主题色的内容 */
   themeRevision?: number
+  /** App 级浮层（设置 / 快捷键 / 演示 / 阅读 / 导出等）打开时，收起划词浮栏 */
+  suppressSelectionToolbar?: boolean
 }
 
 interface PreviewPaneProps {
@@ -801,7 +803,7 @@ function taskListEnter(view: EditorView): boolean {
   return true
 }
 
-const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearchToggle, isSearchOpen: externalSearchOpen, viewMode: externalViewMode, onCursorChange, onToast, themeRevision = 0 }, ref) => {
+const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearchToggle, isSearchOpen: externalSearchOpen, viewMode: externalViewMode, onCursorChange, onToast, themeRevision = 0, suppressSelectionToolbar = false }, ref) => {
   const { t } = useI18n()
 
   const editorRef = useRef<HTMLDivElement>(null)
@@ -820,6 +822,49 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   const [slashMenuCoords, setSlashMenuCoords] = useState({ left: 0, bottom: 0 })
   const [slashMenuQuery, setSlashMenuQuery] = useState('')
   const [selToolbar, setSelToolbar] = useState<SelectionToolbarInfo & { visible: boolean }>({ visible: false, x: 0, y: 0, text: '', from: 0, to: 0, source: 'editor' })
+  /** 浮栏最近一次显示的毫秒时间戳：用于忽略松手后紧跟着的收尾滚动 */
+  const lastShowAtRef = useRef(0)
+  /** 滚动 / 尺寸变化 / 点外 / 浮层打开时自动收起划词浮栏 */
+  useEffect(() => {
+    if (!selToolbar.visible) return
+    const hide = () => setSelToolbar((prev) => (prev.visible ? { ...prev, visible: false } : prev))
+
+    // 松手瞬间 CodeMirror 可能还在做收尾滚动，短暂忽略，避免刚出现就被收起
+    const onScroll = () => {
+      if (Date.now() - lastShowAtRef.current < 150) return
+      hide()
+    }
+    const onResize = () => hide()
+    // 浮栏自身的按钮、编辑器正文、预览正文都算「在选区内」
+    const inSelectionSurface = (target: EventTarget | null) =>
+      !!(target as Element | null)?.closest?.(
+        '.cm-editor, .editor-content, .selection-toolbar, .selection-mode-hint',
+      )
+    const onPointerDown = (e: PointerEvent) => {
+      if (!inSelectionSurface(e.target)) hide()
+    }
+    const onFocusIn = (e: FocusEvent) => {
+      if (!inSelectionSurface(e.target)) hide()
+    }
+
+    window.addEventListener('scroll', onScroll, true)
+    window.addEventListener('resize', onResize)
+    document.addEventListener('pointerdown', onPointerDown, true)
+    document.addEventListener('focusin', onFocusIn, true)
+    return () => {
+      window.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('resize', onResize)
+      document.removeEventListener('pointerdown', onPointerDown, true)
+      document.removeEventListener('focusin', onFocusIn, true)
+    }
+  }, [selToolbar.visible])
+
+  // 打开搜索面板 / 斜杠菜单 / App 级弹窗时收起浮栏（快捷键打开的弹窗不产生 pointerdown）
+  useEffect(() => {
+    if (!(suppressSelectionToolbar || isSearchOpen || slashMenuVisible)) return
+    setSelToolbar((prev) => (prev.visible ? { ...prev, visible: false } : prev))
+  }, [suppressSelectionToolbar, isSearchOpen, slashMenuVisible])
+
   /** 文档内 AI：当前要改写的选区快照（null = 浮层关闭）；create 模式没有选区 */
   const [inlineAI, setInlineAI] = useState<{
     text: string
@@ -1282,8 +1327,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     const view = viewRef.current
     if (!view) return
     setSelToolbar((prev) => ({ ...prev, visible: false }))
-    // 坐标直接从 CodeMirror 取：拖拽刚结束时工具栏的 x/y 可能还是 -1，
-    // 用它会导致浮层被夹到视口最左边（看起来压在左边栏上）。
+    // 坐标直接从 CodeMirror 取，保证与当前选区一致（不依赖工具栏上一次的落点）。
     const start = view.coordsAtPos(selection.from)
     const end = view.coordsAtPos(selection.to)
     const content = view.contentDOM.getBoundingClientRect()
@@ -1643,8 +1687,11 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         search(),
         slashMenuExtension(),
         selectionToolbarExtension(
-          (info) => setSelToolbar({ ...info, visible: true }),
-          () => setSelToolbar((prev) => ({ ...prev, visible: false })),
+          (info) => {
+            lastShowAtRef.current = Date.now()
+            setSelToolbar({ ...info, visible: true })
+          },
+          () => setSelToolbar((prev) => (prev.visible ? { ...prev, visible: false } : prev)),
         ),
         EditorView.updateListener.of((update) => {
           if (!update.docChanged && !update.selectionSet && update.transactions.length === 0) return
@@ -2157,16 +2204,30 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   }, [])
 
   // 预览区划词监听：在 preview 或 split 模式下监听 selectionchange
+  // 与源码/实时一致：选区变化时先收起，停手 150ms 后按包围盒中心定位一次
   useEffect(() => {
     if (viewMode !== 'preview' && viewMode !== 'split') return
     const container = previewScrollRef.current
     if (!container) return
 
-    let pendingRaf = 0
+    let settleTimer = 0
+    let latest: { x: number; y: number; text: string } | null = null
+
+    const hide = () => setSelToolbar((prev) => (prev.visible ? { ...prev, visible: false } : prev))
+
+    const commit = () => {
+      settleTimer = 0
+      if (!latest) return
+      lastShowAtRef.current = Date.now()
+      setSelToolbar({ visible: true, x: latest.x, y: latest.y, text: latest.text, from: 0, to: 0, source: 'preview' })
+    }
+
     const onSelectionChange = () => {
       const sel = window.getSelection()
       if (!sel || sel.isCollapsed || !sel.rangeCount) {
-        setSelToolbar((prev) => ({ ...prev, visible: false }))
+        latest = null
+        if (settleTimer) { clearTimeout(settleTimer); settleTimer = 0 }
+        hide()
         return
       }
       const range = sel.getRangeAt(0)
@@ -2174,20 +2235,22 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       if (!container.contains(range.commonAncestorContainer)) return
       const text = sel.toString()
       if (text.trim().length < 2) {
-        setSelToolbar((prev) => ({ ...prev, visible: false }))
+        latest = null
+        if (settleTimer) { clearTimeout(settleTimer); settleTimer = 0 }
+        hide()
         return
       }
-      if (pendingRaf) cancelAnimationFrame(pendingRaf)
-      pendingRaf = requestAnimationFrame(() => {
-        const rect = range.getBoundingClientRect()
-        setSelToolbar({ visible: true, x: rect.left, y: rect.top, text, from: 0, to: 0, source: 'preview' })
-      })
+      const rect = range.getBoundingClientRect()
+      latest = { x: (rect.left + rect.right) / 2, y: rect.top, text }
+      hide()
+      if (settleTimer) clearTimeout(settleTimer)
+      settleTimer = window.setTimeout(commit, 150)
     }
 
     document.addEventListener('selectionchange', onSelectionChange)
     return () => {
       document.removeEventListener('selectionchange', onSelectionChange)
-      if (pendingRaf) cancelAnimationFrame(pendingRaf)
+      if (settleTimer) clearTimeout(settleTimer)
     }
   }, [viewMode])
 

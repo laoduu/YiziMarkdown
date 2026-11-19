@@ -26,7 +26,9 @@ import SelectionToolbarView, { type SelectionBarMode } from './SelectionToolbarV
 
 interface SelectionToolbarProps {
   visible: boolean
+  /** 选区包围盒的水平中心（视口坐标） */
   x: number
+  /** 选区包围盒的顶边（视口坐标） */
   y: number
   text: string
   /** 选区范围（文档内 AI 写回时用） */
@@ -171,7 +173,8 @@ export default function SelectionToolbar({
 
   const computePosition = useCallback(() => {
     if (!visible || !toolbarRef.current) return
-    if (x < 0 || y < 0) return
+    // 坐标只会是真实视口坐标；非有限值（尚未测量出来）时保持原位，等下一次上报
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return
     const toolbar = toolbarRef.current
     // 切换动画期间 style.width 是目标宽度；offsetWidth 还停在起始值，clamp 必须用目标值
     const styledWidth = Number.parseFloat(toolbar.style.width)
@@ -179,19 +182,28 @@ export default function SelectionToolbar({
     const toolbarHeight = toolbar.offsetHeight
     const viewportWidth = window.innerWidth
 
-    // 左对齐：x 已是选区左边缘坐标
-    let left = x
+    // x 是选区包围盒中心：浮栏水平居中
+    let left = x - toolbarWidth / 2
     left = Math.max(8, Math.min(left, viewportWidth - toolbarWidth - 8))
 
     let top = y - toolbarHeight - 8
     if (top < 4) top = y + 8
 
-    setPosStyle({ left, top })
+    // 值没变就别产生新对象（否则每次渲染都会再触发一轮）
+    setPosStyle((prev) => (prev.left === left && prev.top === top ? prev : { left, top }))
   }, [visible, x, y])
 
-  useEffect(() => {
+  // 用 layout effect：在浏览器绘制前就把位置算好，避免先闪一帧旧位置。
+  // 尺寸变化（工具条/格式条切换、按钮增删）由 ResizeObserver 兜住，
+  // 不把 items/mode/formats 放进依赖里 —— 它们的身份并不稳定（t 每次渲染都是新函数）。
+  useLayoutEffect(() => {
     computePosition()
-  }, [computePosition, items, mode, formats])
+    const el = toolbarRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => computePosition())
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [computePosition])
 
   const toggleMode = () => {
     setHintPos(null)
@@ -202,8 +214,7 @@ export default function SelectionToolbar({
   const handleAskAI = () => {
     setHintPos(null)
     if (onAskAI && from < to) {
-      // 不传 x/y：拖拽过程中工具栏的坐标可能是 -1（拖拽中不重定位），
-      // 由 Editor 从 CodeMirror 直接取选区坐标，避免浮层贴到左边栏。
+      // 不传 x/y：由 Editor 从 CodeMirror 直接取选区坐标，避免用上一帧的位置
       onAskAI({ text, from, to })
       return
     }
