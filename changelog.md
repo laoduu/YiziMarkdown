@@ -4,6 +4,44 @@
 
 > **开发中**：实时模式表格交互、行内 / 块级格式 toggle、划词粘贴权限修复、划词格式条、任务列表输入法 NBSP 修复、云端版本对比显示保存时间、划词入口改为星芒图标、划词浮栏落定后居中与自动收起、格式条按选区显示已应用状态、文档内 AI（改写 / 补充需求 / 创作入口与可配置快捷键 / 正文内 diff / 附加上下文 / 技能直通 / 会话历史）。用户向说明待发布时整理。
 
+### 行号样式与当前行高亮（2026-11-20）
+
+**问题（用户实测反馈）**
+- 行号字号过大（20px，随编辑器正文字号），与侧栏大纲（`text-sm`）不协调，且是等宽字体；
+- 当前行看不出任何提示，行号列尤其无感。
+
+**根因**
+- 行号继承编辑器根字号 20px + CodeMirror 默认 `monospace`；
+- 正文行高亮其实一直开着（`highlightActiveLine` + `--code-active-line`），但浅色只有 3% 黑 / 暗色 5% 白，肉眼几乎不可见；
+- **行号列高亮的扩展从未启用**：只挂了 `highlightActiveLine()`，没有 `highlightActiveLineGutter()` —— `.cm-activeLineGutter` 规则永远命中不到；
+- 去掉自家背景后 CodeMirror **baseTheme 的默认背景**（light `#e2f2ff` / dark `#222227`）又会露出来，必须显式覆盖。
+
+**实现**
+- 行号 `font-size: 0.875rem`（与大纲同为 `text-sm`，界面缩放两者始终同步，实测同为 15.4px）；`font-family: var(--font-ui)`（system-ui 系非衬线，与大纲 / 界面同栈）；
+- **行高对齐保护**：gutter 行高改为按正文字号算 `calc(var(--font-size-base) * var(--line-height))` —— 行高若跟着行号字号缩小，每行差几像素会随滚动累积错位；实测逐行 drift 恒定 2px（字形度量差）不累积；
+- 当前行：启用 `highlightActiveLineGutter()`；`.cm-activeLineGutter` **只用主题色**（`var(--editor-accent)`，不加粗、背景显式 `transparent`）——按用户最终确认的形态；
+- 正文当前行底衬 `--code-active-line` 加深到 6% 黑 / 8% 白（16 个主题均未覆盖该变量，改基线即全局生效）。
+
+**验证**
+- 浏览器实测：行号 15.4px + system-ui；当前行行号 `rgb(0,102,204)` / 400 / 透明底，非当前行淡灰；gutter 宽度稳定不抖。
+- `npx tsc --noEmit`、`check-themes`、`npm test` 673 全过。
+
+### F1 快捷键速查：补文档内 AI 快捷键并修过滤（2026-11-20）
+
+**问题**
+- 「文档内 AI 创作」的快捷键（双击 Ctrl / Ctrl+Enter，设置里可换）走的是 `inlineAIShortcut` 特殊手势，不在 `keybindings` 体系内，F1 速查面板一直没有它；
+- 顺带审计发现过滤缺陷：无默认键但用户在设置里绑过的条目（导出 TXT、图片）即使绑了也永远不显示。
+
+**实现**
+- 确认默认值本就是 `doubleCtrl`（`settingsStore.ts`），无需改；已改过设置的用户保留其选择；
+- `ShortcutsPanel`（App.tsx）在「视图」分类动态加一行：显示当前设置值（`双击 Ctrl` / `Ctrl + Enter`），设为「关闭」时不显示；复用现有 `settings.inlineAIShortcut*` 键，**零新增翻译**；
+- 过滤条件 `a.defaultKey` → `map[a.id] || a.defaultKey`：用户绑过就显示；
+- 审计结论：全局快捷键都从 `SHORTCUT_ACTIONS` 自动生成（35 条全在）；唯一游离的全局键就是文档内 AI；演示 / 阅读 / 斜杠菜单 `/` / Esc 等场景键与原生键**有意不收**（收进速查反而误导）。
+
+**验证**
+- 浏览器三态实测：默认 `双击 Ctrl — 文档内 AI 快捷键`；改 `Ctrl + Enter` 同步变化；关闭后该行消失。
+- i18n 本轮同步检查：`check-i18n --strict` 全过（16 语言 1005 键一致、占位符一致、用到的键全定义、无硬编码中文）。
+
 ### 文档内 AI：会话历史（2026-11-20）
 
 **问题**
