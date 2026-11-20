@@ -153,7 +153,7 @@ export function moveSelectionFormat(
   return next
 }
 
-/** 显示 / 隐藏一项；不允许把最后一项隐藏掉（否则格式条只剩品牌图标） */
+/** 显示 / 隐藏一项；不允许把最后一项隐藏掉（否则格式条只剩星芒入口） */
 export function setSelectionFormatEnabled(
   formats: SelectionFormatConfig[],
   id: SelectionFormatId,

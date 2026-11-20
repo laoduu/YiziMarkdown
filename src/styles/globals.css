@@ -3081,7 +3081,7 @@ a {
   flex-shrink: 0;
 }
 
-/* 品牌图标：固定在最左，点击在「工具栏 / 格式条」之间切换。
+/* 星芒入口：固定在最左，点击进入文档内 AI（工具条 / 格式条的切换按钮在浮栏最右端）。
    不额外加边框/描边：图标本身就是入口，外框会把 16px 的图压得很拥挤。 */
 .selection-toolbar-brand {
   display: flex;
@@ -3108,7 +3108,7 @@ a {
   background: var(--sel-toolbar-hover);
 }
 
-/* 品牌图标 = AI 入口（星芒 SVG）：主星 / 小星分别做动效。
+/* 星芒入口 = 文档内 AI（SVG）：主星 / 小星分别做动效。
    所有位移都在 16px 图标内部完成，不向外扩散，紧凑浮栏里不会挤到相邻按钮。 */
 .selection-toolbar-icon-btn {
   color: var(--sel-toolbar-accent);
@@ -3151,7 +3151,7 @@ a {
   90%           { opacity: 0.8;  transform: scale(0.96); }
 }
 
-/* 右侧内容单独滚动：品牌图标与分隔线不随格式条滚动 */
+/* 右侧内容单独滚动：星芒入口与分隔线不随格式条滚动 */
 .selection-toolbar-scroll {
   display: flex;
   align-items: center;
@@ -3238,7 +3238,7 @@ a {
   color: var(--sel-toolbar-accent);
 }
 
-/* 首次划词的一次性提示：指向品牌图标，说明可以切换两栏 */
+/* 首次划词的一次性提示：说明「点 ✦ 让 AI 改写选区 · 点 ⇄ 切换格式条」 */
 .selection-mode-hint {
   position: fixed;
   z-index: 2147483647;

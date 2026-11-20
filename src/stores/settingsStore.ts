@@ -232,11 +232,11 @@ export interface SettingsState {
   // 划词助手（v0.4.4）
   /** 划词工具栏的功能顺序与自定义显示名；默认见 lib/selectionActions.ts */
   selectionActions: SelectionActionConfig[]
-  /** 划词时显示工具条还是格式条（v0.4.5）；品牌图标点击即切换 */
+  /** 划词时显示工具条还是格式条（v0.4.5）；星芒进文档内 AI，右侧按钮切换两栏 */
   selectionBarMode: 'actions' | 'format'
   /** 划词格式条的顺序与显示开关；默认见 lib/selectionFormats.ts */
   selectionFormats: SelectionFormatConfig[]
-  /** 首次划词时提示过「品牌图标可切换工具条 / 格式条」 */
+  /** 首次划词时提示过「点 ✦ 让 AI 改写选区 · 点 ⇄ 切换格式条」 */
   selectionModeHintSeen: boolean
 
   // AI 面板运行时状态（不持久化）
