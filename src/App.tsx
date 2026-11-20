@@ -2710,9 +2710,9 @@ function App() {
       {/* 快捷键大全面板 */}
       {showShortcutsPanel && (
         <>
-          <div className="fixed inset-0 z-[9000]" onClick={() => setShowShortcutsPanel(false)} />
+          <div className="fixed inset-0 z-[2147483647]" onClick={() => setShowShortcutsPanel(false)} />
           <div 
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9001]
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[2147483647]
               w-[720px] max-h-[80vh] overflow-y-auto rounded-2xl shadow-2xl border border-[var(--editor-border)]
               bg-[var(--editor-bg)] text-[var(--editor-text)] px-8 py-6"
             onClick={(e) => e.stopPropagation()}

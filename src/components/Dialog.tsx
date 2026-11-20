@@ -22,7 +22,8 @@ export default function Dialog({ open, onClose, title, children, width = 400 }: 
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    // z 压过文档内 AI 浮层（2147483600）：对话框打开时必须在最前
+    <div className="fixed inset-0 z-[2147483647] flex items-center justify-center">
       <div className="absolute inset-0 backdrop-blur-sm" style={{ background: 'var(--overlay-bg)' }} onClick={onClose} />
       <div
         ref={dialogRef}

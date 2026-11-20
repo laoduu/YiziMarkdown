@@ -18,7 +18,7 @@ export default function ExportResultDialog({ path, onClose }: Props) {
 
   const overlay = (
     <div
-      className="fixed inset-0 z-[10040] flex items-center justify-center"
+      className="fixed inset-0 z-[2147483647] flex items-center justify-center"
       style={{ background: 'rgba(0,0,0,0.32)' }}
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
