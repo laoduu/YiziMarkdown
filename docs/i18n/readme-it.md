@@ -3,7 +3,7 @@
 
 ![image](https://github.com/laoduu/YiziMarkdown/raw/main/assets/readme/index.png)
 
-[简体中文](../../readme.md) | [繁體中文](./readme-zh-TW.md) | [English](./readme-en.md) | [日本語](./readme-ja.md) | [한국어](./readme-ko.md) | [Deutsch](./readme-de.md) | [Français](./readme-fr.md) | [Español](./readme-es.md) | [Português](./readme-pt.md) | [Italiano](./readme-it.md) | [Polski](./readme-pl.md) | [Nederlands](./readme-nl.md) | [Türkçe](./readme-tr.md) | [Svenska](./readme-sv.md) | [Українська](./readme-uk.md) | [Русский](./readme-ru.md)
+[简体中文](../../README.md) | [繁體中文](./readme-zh-TW.md) | [English](./readme-en.md) | [日本語](./readme-ja.md) | [한국어](./readme-ko.md) | [Deutsch](./readme-de.md) | [Français](./readme-fr.md) | [Español](./readme-es.md) | [Português](./readme-pt.md) | [Italiano](./readme-it.md) | [Polski](./readme-pl.md) | [Nederlands](./readme-nl.md) | [Türkçe](./readme-tr.md) | [Svenska](./readme-sv.md) | [Українська](./readme-uk.md) | [Русский](./readme-ru.md)
 
 **Sito ufficiale:** https://md.yizigpt.com
 
@@ -15,7 +15,7 @@ YiziMarkdown è un editor Markdown multipiattaforma incentrato sulla scrittura. 
 
 Perché sviluppare un altro editor Markdown? Le alternative in circolazione sono o poco gradevoli alla vista o sovraccariche di funzioni, ed è difficile trovarne una che unisca semplicità, bellezza e facilità d'uso. Così è nato YiziMarkdown, con tre convinzioni: **un'interfaccia curata**, **funzioni potenti**, **scenari d'uso molteplici**.
 
-Ecco quindi il `YiziMarkdown` di oggi: `3 sistemi coperti`, `7 modalità d'uso`, `16 lingue dell'interfaccia`, `15 temi chiaro/scuro`, `5 AI Skill`, `7 formati di esportazione`, e in più funzioni originali come l'assistente IA integrato e l'archiviazione cloud, oltre a documentazione aperta su temi, skill e presentazioni, con cui potete costruire esperienze d'uso davvero fuori dal comune.
+Ecco quindi il `YiziMarkdown` di oggi: `3 sistemi coperti`, `7 modalità d'uso`, `16 lingue dell'interfaccia`, `15 temi chiaro/scuro`, `5 AI Skill`, `7 formati di esportazione`, e in più funzioni originali come l'assistente IA integrato, la riscrittura IA direttamente nel documento e l'archiviazione cloud, oltre a documentazione aperta su temi, skill e presentazioni, con cui potete costruire esperienze d'uso davvero fuori dal comune.
 
 Non è più un semplice editor Markdown, ma un'applicazione polivalente che copre davvero i vostri scenari documentali: creazione, lavoro e vita quotidiana.
 
@@ -23,13 +23,15 @@ Non è più un semplice editor Markdown, ma un'applicazione polivalente che copr
 
 ## Sette modalità: un documento, sette presentazioni
 
+![Le sette modalità in sintesi](https://github.com/laoduu/YiziMarkdown/raw/main/assets/readme/modes.svg)
+
 Il valore di Markdown non sta solo nella scrittura, ma anche in chi lo legge e in come lo si mostra. YiziMarkdown offre sette presentazioni dello stesso documento: le prime quattro sono viste di modifica, che alternano sorgente e risultato; le ultime tre sono scenari autonomi, che trasformano il documento in diapositive, in pagine di libro o lo riducono al solo testo.
 
 | Modalità | In una frase | Accesso | Ideale per |
 |------|-----------|------|---------|
 | Sorgente | Modificare direttamente il Markdown originale | `F3` / pulsanti vista | Rifinire la struttura, sostituzioni in blocco, modificare il frontmatter |
 | Affiancato | Scrivi a sinistra, confronti subito a destra | `F3` / pulsanti vista | Correggere l'impaginazione, scrivere seguendo un modello |
-| In tempo reale | WYSIWYG, i marcatori si nascondono da soli | `F3` / pulsanti vista | Scrittura di testi lunghi, scrittura concentrata |
+| In tempo reale | WYSIWYG, i marcatori si nascondono da soli | `F3` / pulsanti vista | Scrittura strutturata immediata |
 | Anteprima | Mostra solo l'impaginazione finale | `F3` / pulsanti vista | Controllare il risultato, rileggere tutto |
 | Presentazione | Il documento proiettato così com'è in diapositive | `Ctrl+Alt+P` / barra strumenti | Condividere, relazionare, insegnare |
 | Lettura | Il documento composto come un libro sfogliabile | `Ctrl+Alt+R` / barra strumenti | Letture lunghe, EPUB, lettura immersiva |
@@ -204,7 +206,7 @@ Il testo formattato copiato da pagine web, Word / DOCX, Google Docs, Notion e si
   - DOCX usa la semantica nativa di Word (elenchi, tabelle, blocchi di codice, citazioni, elenchi di attività), allinea lo stile delle tabelle all'anteprima e supporta immagini da percorso locale, immagini remote e HTML `<img>` (`width` per controllare la larghezza)
   - PDF mantiene la stessa resa dell'anteprima e impagina automaticamente
   - HTML include una scheda indice flottante a sinistra, con un clic che porta alla sezione (il PDF non ha pannello laterale)
-  - PPTX eredita tema, chiaro/scuro e layout della modalità presentazione e genera testo, tabelle, immagini, forme ed equazioni native modificabili; la tela è fissa a 16:9 / 1280×720, la finestra di esportazione consente di regolare il corpo del testo e di verificare il layout senza scrivere; le righe di codice lunghe vanno a capo alla larghezza della colonna
+  - PPTX eredita tema, chiaro/scuro e layout della modalità presentazione e genera testo, tabelle, immagini, forme ed equazioni native modificabili; la tela è fissa a 16:9 / 1280×720, la finestra di esportazione consente di regolare il corpo del testo e di verificare il layout senza scrivere; le righe di codice lunghe vanno a capo alla larghezza della colonna, e l’altezza extra del ritorno a capo spinge giù le schede della stessa riga e il contenuto successivo
   - EPUB è fornito dal plugin integrato; prima dell'esportazione si possono scegliere suddivisione per capitolo / copertina / indice visibile / tema di lettura / informazioni del documento
 - **Associazione dei file `.md`**: impostare YiziMarkdown come editor Markdown predefinito del sistema con un clic nelle impostazioni (registro di Windows / LaunchServices di macOS)
 
@@ -213,31 +215,50 @@ Il testo formattato copiato da pagine web, Word / DOCX, Google Docs, Notion e si
 - **Browser dei file**: la scheda «Cloud» della barra laterale esplora l'albero delle cartelle del server — apre documenti, crea file / cartelle, rinomina, sposta, elimina; i percorsi profondi si comprimono in «…» con un menu a discesa, e le cartelle si caricano livello per livello
 - **Salvataggio nel cloud**: carica un documento locale con un clic; le immagini locali vengono copiate automaticamente nella cartella radice `assets/` e riscritte come riferimenti relativi; `Ctrl+S` riscrive direttamente i documenti cloud
 - **Protezione dai conflitti**: l'ETag viene confrontato prima del salvataggio; se un altro dispositivo ha modificato il file remoto, una finestra propone «sovrascrivi la versione sul server» o «abbandona le modifiche locali e ricarica», mai una sovrascrittura silenziosa
+- **Verifica della versione all'apertura**: i documenti in cache vengono confrontati con il cloud prima dell'apertura; se cambiati, mostrano byte, righe, riepilogo, prima riga diversa e entrambi gli orari di salvataggio (quello cloud da `Last-Modified`), con le opzioni usa la copia cloud, mantieni locale, salva una copia cloud o annulla
 - **Sicurezza delle credenziali**: nome utente e password vanno nell'archivio credenziali di sistema (Gestione credenziali di Windows / Portachiavi di macOS), mai nei file di configurazione
 - **Compatibilità**: servizi WebDAV standard come Nutstore, Nextcloud, Synology (consigliata una password dedicata all'applicazione)
-- **Controllo versione all'apertura**: i documenti in cache vengono confrontati con il cloud prima dell'apertura; se cambiano, vengono mostrati byte, righe, hash e la prima riga diversa, con opzioni per usare il cloud, mantenere il locale, salvare una copia cloud o annullare
 - **Sincronizzazione cache**: viene eseguita in background all'avvio e può essere avviata manualmente nelle Impostazioni; i file remoti eliminati o spostati vengono puliti localmente, e un mirror offline opzionale scarica tutti i Markdown e le immagini referenziate sotto la radice WebDAV
 
 ---
 
 ## Estensioni e personalizzazione
 
+### IA nel documento (riscrittura diretta)
+
+Niente più copia-incolla dal pannello laterale: seleziona il testo e clicca la stella all'estrema sinistra della barra flottante — oppure premi due volte `Ctrl` (modificabile in `Ctrl+Enter` o disattivabile in Impostazioni → Scorciatoie) — e l'IA riscrive o continua direttamente nel documento, con il risultato scritto sul posto.
+
+- **Riscrittura della selezione**: digita un'istruzione accanto alla selezione; sostituisci, inserisci sotto, copia o scarta; «Confronta con l'originale» mostra il diff (rosso/eliminato, verde/aggiunto) nel testo
+- **Contesto aggiuntivo**: allega «sezione corrente / intero documento / nessuno» così l'IA conosce abbreviazioni, termini e tono
+- **Richieste successive**: continua a rifinire nello stesso pannello; dopo la scrittura si chiude e `Ctrl+Z` annulla
+- **Crea al cursore**: chiedi all'IA un paragrafo nella posizione del cursore e inseriscilo o copialo, nello stesso pannello
+- **Intenti rapidi**: rifinisci, amplia, accorcia, traduci, correggi, converti in elenco in base alla selezione
+- **Cronologia sessioni**: ogni generazione è archiviata per documento; espandi elenco e dettaglio dal piè del pannello per rivedere, reinserire, copiare o eliminare. 50 voci per documento, 90 giorni; modifiche altrove non la cancellano
+- **Dettagli del pannello**: trascinabile, input estendibile fino a 480 px, focus all'apertura, ragionamento espanso per impostazione predefinita, piè su una riga
+
 ### Assistente IA (pannello di chat laterale)
 
 - **18 fornitori di LLM + servizio personalizzato**: OpenAI, Anthropic, Gemini, xAI, Mistral, Groq, DeepSeek, Qwen (Tongyi), Zhipu GLM, Moonshot Kimi, Volcano Ark, SiliconFlow, MiniMax, Xiaomi MiMo, Meituan LongCat, OpenRouter, OpenCode Go, Ollama (locale); il «servizio personalizzato» accetta i protocolli compatibili con OpenAI o Anthropic, con Base URL, ID del modello e chiave inseriti a mano
 - **Conversazione in streaming**: il pulsante robot della barra strumenti apre il pannello di destra, le risposte arrivano in streaming e si possono fermare in qualsiasi momento
-- **Processo di ragionamento**: reasoning / thinking dei modelli di ragionamento mostrati in un blocco comprimibile, chiuso per impostazione predefinita
+- **Processo di ragionamento**: reasoning / thinking dei modelli di ragionamento in un blocco comprimibile: aperto durante la generazione, chiuso appena inizia la risposta e riapribile in seguito
 - **Sicurezza delle chiavi**: le chiavi API risiedono nel portachiavi di sistema, con salvataggio, cancellazione e verifica in un clic; gli endpoint locali (llama.cpp / LM Studio / vLLM e simili) possono restare vuoti
 - **Riferimento al documento corrente**: se selezionato, il documento diventa contesto, con limite configurabile (64K–512K / illimitato) e numero di turni di contesto (0–20, 3 predefiniti)
 - **Uso del risultato**: copia, inserimento alla posizione del cursore o creazione di un nuovo documento in un clic
 
 ### Skill IA
 
-Il pulsante ⚡ nella casella di input apre il menu degli skill; il tag dello skill scelto viene inserito alla posizione del cursore e il suo prompt viene iniettato nel contesto. Per personalizzare basta mettere `skills.json` e i prompt `.md` nella cartella `skills/`. Cinque skill sono integrati: «Estrazione presentazione», «Riassunto documento», «Riscrittura e rifinitura», «Traduzione integrale» e «Formattazione Markdown».
+Il pulsante ⚡ nella casella di input apre il menu degli skill; il tag dello skill scelto viene inserito alla posizione del cursore e il suo prompt viene iniettato nel contesto. Per personalizzare basta mettere `skills.json` e i prompt `.md` nella cartella `skills/`. Cinque skill sono integrati: «Estrazione presentazione», «Riassunto documento», «Riscrittura e rifinitura», «Traduzione integrale» e «Formattazione Markdown». Gli skill scelgono anche la destinazione del risultato: «invia alla chat IA» o «modifica direttamente il documento». «Riscrittura e rifinitura» e «Formattazione Markdown» scrivono per impostazione predefinita nel documento, mentre «Estrazione presentazione», «Riassunto documento» e «Traduzione integrale» restano nella chat laterale.
 
-### Gestione Skill e assistente di selezione
+In Impostazioni → Gestione Skill puoi creare, modificare o eliminare skill, cambiare nome, ID, icona, riepilogo e prompt; il pannello IA si aggiorna subito e gli skill integrati modificati o eliminati vengono conservati agli aggiornamenti.
 
-v0.4.4: in Impostazioni → Gestione Skill puoi creare, modificare o eliminare skill, cambiare nome, ID, icona, riepilogo e prompt; il pannello IA si aggiorna subito e gli skill integrati modificati o eliminati vengono conservati agli aggiornamenti. In Impostazioni → Assistente di selezione puoi configurare la barra: aggiungere, rimuovere e ordinare azioni da skill o di sistema (copia, incolla, aggiungi alla chat), rinominarle e vedere l'anteprima dal vivo.
+### Assistente di selezione
+
+In Impostazioni → Assistente di selezione puoi configurare la barra: aggiungere, rimuovere e ordinare azioni da skill o di sistema (copia, incolla, aggiungi alla chat), rinominarle e vedere l'anteprima dal vivo. Per impostazione predefinita offre Estrazione presentazione, Riassunto, Riscrittura, Traduzione, Copia e Aggiungi alla chat; se non c'è alcuna azione disponibile, la barra resta nascosta.
+
+- **Ingresso a stella**: la stella all'estrema sinistra della barra flottante è l'ingresso unico all'IA nel documento; il passaggio barra azioni / barra formati si sposta all'estrema destra (⇄)
+- **Barra formati**: ⇄ alterna tra barra azioni e barra formati — grassetto, corsivo, barrato, evidenziazione, codice in linea (e blocco), apice/pedice, titoli, elenchi, elenchi attività, citazione e formule; le icone con opzioni secondarie si aprono al passaggio del mouse; ordine e visibilità nelle Impostazioni
+- **Stato applicato**: la barra formati segnala i formati già attivi nella selezione; un clic applica, un altro rimuove
+- **Skill nel documento**: gli skill con destinazione «modifica direttamente il documento» vengono eseguiti nel documento e possono sostituire la selezione
 
 ### Plugin
 
@@ -286,6 +307,8 @@ v0.4.4: in Impostazioni → Gestione Skill puoi creare, modificare o eliminare s
 | Ins | Menu slash | F12 | Strumenti per sviluppatori |
 
 I tasti si personalizzano in Impostazioni → Tasti di scelta rapida: assegnazione visiva di 36 action, registrazione dei tasti, rilevamento dei conflitti e ripristino dei valori predefiniti.
+
+L'IA nel documento ha un gesto dedicato: premi due volte `Ctrl` (modificabile in `Ctrl+Enter` o disattivabile); non occupa alcun tasto della tabella sopra.
 
 ---
 

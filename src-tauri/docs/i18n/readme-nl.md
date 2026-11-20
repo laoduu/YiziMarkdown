@@ -3,7 +3,7 @@
 
 ![image](https://github.com/laoduu/YiziMarkdown/raw/main/assets/readme/index.png)
 
-[简体中文](../../readme.md) | [繁體中文](./readme-zh-TW.md) | [English](./readme-en.md) | [日本語](./readme-ja.md) | [한국어](./readme-ko.md) | [Deutsch](./readme-de.md) | [Français](./readme-fr.md) | [Español](./readme-es.md) | [Português](./readme-pt.md) | [Italiano](./readme-it.md) | [Polski](./readme-pl.md) | [Nederlands](./readme-nl.md) | [Türkçe](./readme-tr.md) | [Svenska](./readme-sv.md) | [Українська](./readme-uk.md) | [Русский](./readme-ru.md)
+[简体中文](../../README.md) | [繁體中文](./readme-zh-TW.md) | [English](./readme-en.md) | [日本語](./readme-ja.md) | [한국어](./readme-ko.md) | [Deutsch](./readme-de.md) | [Français](./readme-fr.md) | [Español](./readme-es.md) | [Português](./readme-pt.md) | [Italiano](./readme-it.md) | [Polski](./readme-pl.md) | [Nederlands](./readme-nl.md) | [Türkçe](./readme-tr.md) | [Svenska](./readme-sv.md) | [Українська](./readme-uk.md) | [Русский](./readme-ru.md)
 
 **Officiële website:** https://md.yizigpt.com
 
@@ -15,7 +15,7 @@ YiziMarkdown is een platformonafhankelijke Markdown-editor met schrijven als mid
 
 Waarom nog een Markdown-editor? Wat de markt biedt, is vaak niet mooi om naar te kijken of juist overladen met functies; een tool die tegelijk eenvoudig, mooi en prettig in gebruik is, is moeilijk te vinden. Zo is YiziMarkdown ontstaan, met drie vaste principes: **mooie interface**, **krachtige functies**, **veelzijdige scenario's**.
 
-Zo is het huidige `YiziMarkdown` geworden: `3 besturingssystemen`, `7 gebruiksmodi`, `16 interfacetalen`, `15 lichte en donkere thema's`, `5 AI-skills`, `7 exportformaten`, plus innovatieve functies als de ingebouwde AI-assistent en cloudopslag, en open documentatie over thema's, skills en presentaties waarmee je heel eigen werkwijzen kunt opbouwen.
+Zo is het huidige `YiziMarkdown` geworden: `3 besturingssystemen`, `7 gebruiksmodi`, `16 interfacetalen`, `15 lichte en donkere thema's`, `5 AI-skills`, `7 exportformaten`, plus innovatieve functies als de ingebouwde AI-assistent, AI-herschrijven direct in het document en cloudopslag, en open documentatie over thema's, skills en presentaties waarmee je heel eigen werkwijzen kunt opbouwen.
 
 Dit is allang geen eenvoudige Markdown-editor meer, maar een veelzijdige applicatie die alle documentsituaties bij het schrijven, op het werk en in het dagelijks leven echt dekt.
 
@@ -23,13 +23,15 @@ Dit is allang geen eenvoudige Markdown-editor meer, maar een veelzijdige applica
 
 ## Zeven modi: één document, zeven manieren om het te tonen
 
+![De zeven modi in één oogopslag](https://github.com/laoduu/YiziMarkdown/raw/main/assets/readme/modes.svg)
+
 De waarde van Markdown zit niet alleen in het schrijven, maar ook in aan wie en hoe je het resultaat laat zien. YiziMarkdown biedt voor hetzelfde document zeven manieren van weergeven: de eerste vier zijn bewerkingsweergaven die schakelen tussen broncode en eindresultaat; de laatste drie zijn zelfstandige scenario's die het document omzetten in dia's, boekpagina's of gewoon alleen de tekst.
 
 | Modus | Kort gezegd | Toegang | Geschikt voor |
 |------|-----------|------|------|
 | Broncode | Ruwe Markdown direct bewerken | `F3` / weergaveknoppen | Structuur verfijnen, bulkvervanging, frontmatter aanpassen |
 | Naast elkaar | Links schrijven, rechts direct vergelijken | `F3` / weergaveknoppen | Lay-out nalezen, schrijven volgens een sjabloon |
-| Live | WYSIWYG, markeringen worden automatisch verborgen | `F3` / weergaveknoppen | Lange teksten schrijven, geconcentreerd werken |
+| Live | WYSIWYG, markeringen worden automatisch verborgen | `F3` / weergaveknoppen | Direct gestructureerd schrijven |
 | Voorbeeld | Alleen de definitieve lay-out | `F3` / weergaveknoppen | Resultaat controleren, hele tekst doornemen |
 | Presentatie | Het document direct als dia's tonen | `Ctrl+Alt+P` / werkbalk | Delen, presenteren, lesgeven |
 | Lezen | Het document als een omslaanbaar boek | `Ctrl+Alt+R` / werkbalk | Lange teksten, EPUB, meeslepend lezen |
@@ -204,7 +206,7 @@ Rijke tekst die je kopieert uit webpagina's, Word / DOCX, Google Docs, Notion en
   - DOCX gebruikt native Word-semantiek (lijsten, tabellen, codeblokken, citaten, takenlijsten), de tabelopmaak komt overeen met het voorbeeld, afbeeldingen via lokale paden, webafbeeldingen en HTML-`<img>` worden ondersteund (breedte via `width`)
   - PDF komt overeen met het voorbeeld en wordt automatisch gepagineerd
   - HTML heeft links een zwevende outlinekaart, klik op een item springt naar de sectie (PDF zonder zijbalk)
-  - PPTX erft het thema, licht/donker en de layouts van de presentatiemodus en levert bewerkbare tekst, tabellen, afbeeldingen, vormen en native vergelijkingen; het canvas is vast 16:9 / 1280×720, het exportdialoog biedt lettergrootte-aanpassing en een lay-outcontrole zonder te schrijven; lange coderegels wikkelen op kolombreedte
+  - PPTX erft het thema, licht/donker en de layouts van de presentatiemodus en levert bewerkbare tekst, tabellen, afbeeldingen, vormen en native vergelijkingen; het canvas is vast 16:9 / 1280×720, het exportdialoog biedt lettergrootte-aanpassing en een lay-outcontrole zonder te schrijven; lange coderegels wikkelen op kolombreedte, en de extra hoogte door het afbreken schuift kaarten in dezelfde rij en volgende inhoud mee naar beneden
   - EPUB komt uit de ingebouwde plugin; vóór het exporteren kun je hoofdstukdeling / voorblad / zichtbare inhoudsopgave / leesthema / documentinformatie kiezen
 - **`.md`-koppeling**: stel YiziMarkdown in de instellingen met één klik in als standaard Markdown-editor van het systeem (Windows-register / macOS LaunchServices)
 
@@ -213,31 +215,50 @@ Rijke tekst die je kopieert uit webpagina's, Word / DOCX, Google Docs, Notion en
 - **Bestandsbrowser**: het tabblad 'Cloud' in de zijbalk doorzoekt de mappenboom van de server – documenten openen, bestanden / mappen aanmaken, hernoemen, verplaatsen, verwijderen; diepe paden klappen in de breadcrumb samen tot '…' met een dropdown, mappen worden lui per niveau geladen
 - **Naar de cloud opslaan**: upload een lokaal document met één klik; lokale afbeeldingen worden automatisch naar de hoofdmap `assets/` gekopieerd en herschreven als relatieve verwijzingen; `Ctrl+S` schrijft clouddocumenten direct terug
 - **Conflictbescherming**: vóór het opslaan wordt de ETag vergeleken; is het bestand op een ander apparaat gewijzigd, dan biedt een dialoog 'serverversie overschrijven' of 'lokale wijzigingen verwerpen en opnieuw laden' – nooit stil overschrijven
+- **Versiecontrole bij openen**: documenten in de cache worden vóór het openen met de cloud vergeleken; bij wijzigingen verschijnen bytes, regels, een samenvatting, de eerste afwijkende regel en beide opslagtijden (cloud uit `Last-Modified`), met de opties cloudversie gebruiken, lokaal houden, cloudkopie opslaan of annuleren
 - **Veilige inloggegevens**: gebruikersnaam en wachtwoord staan in de systeemreferentieopslag (Windows Credential Manager / macOS-sleutelhanger), niet in configuratiebestanden
 - **Compatibiliteit**: standaard WebDAV-diensten zoals Nutstore, Nextcloud en Synology (een app-specifiek wachtwoord wordt aanbevolen)
-- **Versiecontrole bij openen**: gecachte documenten worden voor het openen met de cloud vergeleken; bij wijzigingen worden bytes, regels, hashes en de eerste afwijkende regel getoond, met opties om de cloudversie te gebruiken, lokaal te houden, een cloudkopie op te slaan of te annuleren
 - **Cache-synchronisatie**: draait bij het starten op de achtergrond en kan handmatig in Instellingen worden gestart; verwijderde/verplaatste externe bestanden worden lokaal opgeruimd, en een optionele offline spiegel downloadt alle Markdown en referentieafbeeldingen onder de WebDAV-root
 
 ---
 
 ## Uitbreidingen en personalisatie
 
+### AI in het document (direct herschrijven)
+
+Geen omweg meer via de chat rechts met kopiëren en plakken: selecteer tekst en klik op de ster helemaal links in de zwevende balk — of druk twee keer op `Ctrl` (aan te passen naar `Ctrl+Enter` of uit te zetten via Instellingen → Sneltoetsen) — en de AI herschrijft of schrijft verder direct in het document; het resultaat komt op zijn plaats terecht.
+
+- **Selectie herschrijven**: typ een opdracht naast de selectie; vervangen, eronder invoegen, kopiëren of verwerpen; 'Vergelijk met origineel' toont de diff (rood/verwijderd, groen/nieuw) in de tekst
+- **Extra context**: voeg 'huidige sectie / hele document / geen' toe zodat de AI afkortingen, termen en toon kent
+- **Vervolgvragen**: verfijn in hetzelfde paneel; na het schrijven sluit het en `Ctrl+Z` draait het terug
+- **Schrijven bij de cursor**: laat de AI een alinea schrijven op de cursorpositie en voeg die in of kopieer hem, in hetzelfde paneel
+- **Snelle intenties**: verfijnen, uitbreiden, inkorten, vertalen, corrigeren, omzetten naar lijst op basis van de selectie
+- **Sessiegeschiedenis**: elke generatie wordt per document bewaard; klap lijst en details open in de voet van het paneel om te bekijken, opnieuw in te voegen, te kopiëren of te verwijderen. 50 items per document, 90 dagen; wijzigingen elders wissen het niet
+- **Paneeldetails**: versleepbaar, invoer tot 480px hoger te maken, direct focus bij openen, denkproces standaard uitgeklapt, voet op één regel
+
 ### AI-assistent (chatpaneel in de zijbalk)
 
 - **18 modelproviders + eigen dienst**: OpenAI, Anthropic, Gemini, xAI, Mistral, Groq, DeepSeek, Qwen, Zhipu GLM, Moonshot Kimi, Volcano Engine, SiliconFlow, MiniMax, Xiaomi MiMo, Meituan LongCat, OpenRouter, OpenCode Go, Ollama (lokaal); 'Eigen dienst' ondersteunt OpenAI-compatibele en Anthropic-compatibele protocollen met eigen Base URL, model-ID en sleutel
 - **Streaming-gesprek**: de robotknop in de werkbalk opent het paneel rechts, antwoorden streamen live en zijn altijd te stoppen
-- **Denkproces**: reasoning / thinking van reasoning-modellen verschijnt in een inklapbaar blok, standaard ingeklapt
+- **Denkproces**: reasoning / thinking van reasoning-modellen verschijnt in een inklapbaar blok: uitgeklapt tijdens het streamen, ingeklapt zodra het antwoord begint en daarna weer uitklapbaar
 - **Sleutelveiligheid**: API-sleutels staan in de systeemsleutelhanger, met één klik opslaan, wissen en verifiëren; lokale endpoints (llama.cpp / LM Studio / vLLM enz.) mogen leeg blijven
 - **Het huidige document als referentie**: na aanvinken dient het huidige document als context, met instelbare limiet (64K–512K / onbeperkt) en contextrondes (0–20, standaard 3)
 - **Resultaat bruikbaar maken**: kopiëren, op de cursorpositie invoegen of met één klik als nieuw document aanmaken
 
 ### AI-skills
 
-De ⚡-knop in het invoerveld opent het skillmenu; de gekozen skill-tag wordt op de cursor ingevoegd en de prompt wordt automatisch in de context geïnjecteerd. Zet `skills.json` + `.md`-prompts in `skills/` om eigen skills te definiëren. Vijf skills zijn ingebouwd: 'Presentatie verdichten', 'Document samenvatten', 'Tekst verfijnen', 'Volledige tekst vertalen', 'Markdown formatteren'.
+De ⚡-knop in het invoerveld opent het skillmenu; de gekozen skill-tag wordt op de cursor ingevoegd en de prompt wordt automatisch in de context geïnjecteerd. Zet `skills.json` + `.md`-prompts in `skills/` om eigen skills te definiëren. Vijf skills zijn ingebouwd: 'Presentatie verdichten', 'Document samenvatten', 'Tekst verfijnen', 'Volledige tekst vertalen', 'Markdown formatteren'. Skills hebben ook een 'resultaatbestemming': naar de AI-chat sturen of het document direct herschrijven. De ingebouwde 'Tekst verfijnen' en 'Markdown formatteren' schrijven standaard in het document; 'Presentatie verdichten', 'Document samenvatten' en 'Volledige tekst vertalen' gaan nog naar de chat rechts.
 
-### Skill-beheer en selectie-assistent
+Beheer skills via Instellingen → Skill-beheer: maak, bewerk of verwijder skills en wijzig naam, ID, pictogram, samenvatting en prompt; het AI-paneel vernieuwt direct en bewerkte of verwijderde ingebouwde skills blijven bij upgrades behouden.
 
-v0.4.4: beheer skills via Instellingen → Skill-beheer: maak, bewerk of verwijder skills en wijzig naam, ID, pictogram, samenvatting en prompt; het AI-paneel vernieuwt direct en bewerkte of verwijderde ingebouwde skills blijven bij upgrades behouden. Configureer de werkbalk via Instellingen → Selectie-assistent: voeg acties uit skills of systeemfuncties (kopiëren, plakken, toevoegen aan chat) toe, verwijder en sorteer ze, wijzig namen en bekijk de live preview.
+### Selectie-assistent
+
+Configureer de werkbalk via Instellingen → Selectie-assistent: voeg acties uit skills of systeemfuncties (kopiëren, plakken, toevoegen aan chat) toe, verwijder en sorteer ze, wijzig namen en bekijk de live preview. Standaard biedt hij Presentatie verdichten, Samenvatting, Herschrijven, Vertalen, Kopiëren en Toevoegen aan chat; zijn er geen acties beschikbaar, dan blijft de balk verborgen.
+
+- **Ster-ingang**: de ster helemaal links in de zwevende balk is de uniforme ingang naar AI in het document; de wissel werkbalk / formatbalk zit nu helemaal rechts (⇄)
+- **Formatbalk**: ⇄ wisselt tussen actiebalk en formatbalk — vet, cursief, doorhalen, markeren, inline code (en codeblok), superscript/subscript, koppen, lijsten, takenlijsten, citaat en formules; pictogrammen met subopties openen bij hover; volgorde en zichtbaarheid in Instellingen
+- **Toegepaste status**: de formatbalk markeert formaten die al actief zijn in de selectie; één klik past toe, nog een klik haalt weg
+- **Skills direct in het document**: skills met bestemming 'document direct herschrijven' draaien in het document en kunnen de selectie vervangen
 
 ### Plugins
 
@@ -286,6 +307,8 @@ v0.4.4: beheer skills via Instellingen → Skill-beheer: maak, bewerk of verwijd
 | Ins | Slash-menu | F12 | Ontwikkelaarshulpmiddelen |
 
 Sneltoetsen zijn aan te passen onder Instellingen → Sneltoetsen: visuele binding voor 36 actions, toetsen opnemen, conflictdetectie en terugzetten naar de standaard.
+
+AI in het document heeft een eigen gebaar: druk twee keer op `Ctrl` (aan te passen naar `Ctrl+Enter` of uit te zetten); het gebruikt geen toets uit de tabel hierboven.
 
 ---
 

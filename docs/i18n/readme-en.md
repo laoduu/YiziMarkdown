@@ -3,7 +3,7 @@
 
 ![image](https://github.com/laoduu/YiziMarkdown/raw/main/assets/readme/index.png)
 
-[简体中文](../../readme.md) | [繁體中文](./readme-zh-TW.md) | [English](./readme-en.md) | [日本語](./readme-ja.md) | [한국어](./readme-ko.md) | [Deutsch](./readme-de.md) | [Français](./readme-fr.md) | [Español](./readme-es.md) | [Português](./readme-pt.md) | [Italiano](./readme-it.md) | [Polski](./readme-pl.md) | [Nederlands](./readme-nl.md) | [Türkçe](./readme-tr.md) | [Svenska](./readme-sv.md) | [Українська](./readme-uk.md) | [Русский](./readme-ru.md)
+[简体中文](../../README.md) | [繁體中文](./readme-zh-TW.md) | [English](./readme-en.md) | [日本語](./readme-ja.md) | [한국어](./readme-ko.md) | [Deutsch](./readme-de.md) | [Français](./readme-fr.md) | [Español](./readme-es.md) | [Português](./readme-pt.md) | [Italiano](./readme-it.md) | [Polski](./readme-pl.md) | [Nederlands](./readme-nl.md) | [Türkçe](./readme-tr.md) | [Svenska](./readme-sv.md) | [Українська](./readme-uk.md) | [Русский](./readme-ru.md)
 
 **Official website:** https://md.yizigpt.com
 
@@ -15,7 +15,7 @@ YiziMarkdown is a cross-platform Markdown editor built around writing. One `.md`
 
 Why build another Markdown editor? The options out there are either unpleasant to look at or bloated with features, and it is hard to find one that is both clean and comfortable to use. So YiziMarkdown was born, holding to three things: **a beautiful interface**, **formidable features**, **diverse scenarios**.
 
-That is how today's `YiziMarkdown` came to be: `3 operating systems`, `7 usage modes`, `16 interface languages`, `15 light/dark themes`, `5 AI skills`, `7 export formats` — plus built-in innovations such as the AI assistant and cloud storage, and open documentation for themes, skills and presentations, so you can assemble a workflow that is uniquely yours.
+That is how today's `YiziMarkdown` came to be: `3 operating systems`, `7 usage modes`, `16 interface languages`, `15 light/dark themes`, `5 AI skills`, `7 export formats` — plus built-in innovations such as the AI assistant, in-document AI rewriting and cloud storage, and open documentation for themes, skills and presentations, so you can assemble a workflow that is uniquely yours.
 
 This is no longer a simple Markdown editor, but a versatile application that truly covers your document scenarios in creation, work and daily life.
 
@@ -23,13 +23,15 @@ This is no longer a simple Markdown editor, but a versatile application that tru
 
 ## Seven Modes: One Document, Seven Ways to Present It
 
+![Seven modes at a glance](https://github.com/laoduu/YiziMarkdown/raw/main/assets/readme/modes.svg)
+
 Markdown matters not only while writing but also in how the result is shown. YiziMarkdown gives one document seven presentations: the first four are editing views that move between raw source and finished output; the last three are separate scenarios that turn the document into slides, pages, or just the text itself.
 
 | Mode | What it is | Entry | Best for |
 |------|------------|-------|----------|
 | Source | Edit raw Markdown directly | `F3` / view buttons | Precise structure work, bulk replace, front matter |
 | Side-by-side | Write on the left, compare on the right | `F3` / view buttons | Proofing layout, writing against a template |
-| Live | WYSIWYG with markers hidden | `F3` / view buttons | Long-form writing, focused drafting |
+| Live | WYSIWYG with markers hidden | `F3` / view buttons | Instant structured writing |
 | Preview | Finished layout only | `F3` / view buttons | Checking the result, reading through |
 | Presentation | The document as a slide deck | `Ctrl+Alt+P` / toolbar | Sharing, reporting, teaching |
 | Reading | The document as a page-turnable book | `Ctrl+Alt+R` / toolbar | Long reads, EPUB, immersive reading |
@@ -204,7 +206,7 @@ Rich text copied from web pages, Word / DOCX, Google Docs or Notion is converted
   - DOCX uses native Word semantics (lists, tables, code blocks, quotes, task lists), matches the preview's table styling, and supports local-path images, remote images and HTML `<img>` (width via the `width` attribute)
   - PDF matches the preview and paginates automatically
   - HTML includes a floating outline card on the left that jumps to sections (PDF has no sidebar)
-  - PPTX inherits the Presentation theme, light/dark mode and layouts, and emits editable text, tables, images, shapes and native equations; the canvas is fixed at 16:9 / 1280×720, and the export dialog supports font-size adjustment and a layout check that only measures without writing; long code lines wrap to the column width
+  - PPTX inherits the Presentation theme, light/dark mode and layouts, and emits editable text, tables, images, shapes and native equations; the canvas is fixed at 16:9 / 1280×720, and the export dialog supports font-size adjustment and a layout check that only measures without writing; long code lines wrap to the column width, and the extra height from wrapping pushes sibling cards and following content down together
   - EPUB comes from the built-in plugin; before export you can choose chapter splitting / cover / visible contents / reading theme / document info
 - **`.md` association**: set YiziMarkdown as the default Markdown editor in settings, then double-clicking `.md` opens it (Windows registry / macOS LaunchServices)
 
@@ -213,31 +215,50 @@ Rich text copied from web pages, Word / DOCX, Google Docs or Notion is converted
 - **File browser**: the “Cloud” tab in the sidebar browses the server tree — open documents, create files / folders, rename, move, delete; deep breadcrumbs collapse into “…” with a dropdown, and folders load lazily
 - **Save to cloud**: upload a local document in one click; local images are automatically copied to the root `assets/` folder and rewritten as relative references; `Ctrl+S` writes cloud documents straight back
 - **Conflict protection**: the server ETag is compared before saving; if another device changed the file, a dialog offers “overwrite the server copy” or “discard my changes and reload” — never a silent overwrite
+- **Version check on open**: cached documents are compared with the cloud before opening; when changed, byte counts, line counts, a summary, the first differing line and both save times are shown (cloud time from `Last-Modified`), with options to use the cloud copy, keep local, save a cloud copy or cancel
 - **Credential safety**: username and password go into the OS credential store (Windows Credential Manager / macOS Keychain), never into config files
 - **Compatibility**: standard WebDAV services such as Nutstore, Nextcloud and Synology (an app-specific password is recommended)
-- **Version check on open**: cached documents are compared with the cloud before opening; if changed, byte counts, line counts, hashes and the first differing line are shown, with options to use the cloud copy, keep local, save a cloud copy, or cancel
 - **Cache sync**: runs in the background at startup and can be triggered in Settings; deleted/moved remote files are cleaned locally, and an optional offline mirror downloads all Markdown and referenced images under the WebDAV root
 
 ---
 
 ## Extras and Customization
 
+### In-Document AI (Direct Editing)
+
+No more "chat on the side, then copy and paste": select text and click the star at the far left of the floating bar — or double-press `Ctrl` (configurable to `Ctrl+Enter`, or off, in Settings → Shortcuts) — and let AI rewrite or continue right in the document, with the result written back in place.
+
+- **Selection rewrite**: type an instruction next to the selection; replace the selection, insert below, copy or discard; "Compare with original" shows a red/green diff in place
+- **Extra context**: attach "current section / whole document / none" so the AI knows your abbreviations, terms and tone
+- **Follow-ups**: keep refining in the same panel; the panel closes after writing, and `Ctrl+Z` undoes it
+- **Create at cursor**: let AI write a paragraph at the cursor and insert or copy it, sharing the same panel
+- **Quick intents**: polish, expand, shorten, translate, fix, turn into a list — based on the selection
+- **Session history**: every generation is archived per document; expand the list and details from the panel footer to review, re-insert, copy or delete. 50 entries per document, 90 days, and edits elsewhere never lose it
+- **Panel details**: draggable, resizable input (up to 480px), focused on open, thinking expanded by default, single-row footer
+
 ### AI Assistant (Side Chat Panel)
 
 - **18 model providers + custom service**: OpenAI, Anthropic, Gemini, xAI, Mistral, Groq, DeepSeek, Qwen, Zhipu GLM, Moonshot Kimi, Volcano Engine, SiliconFlow, MiniMax, Xiaomi MiMo, Meituan LongCat, OpenRouter, OpenCode Go, Ollama (local); “Custom service” accepts OpenAI-compatible or Anthropic-compatible protocols with your own Base URL, model ID and key
 - **Streaming chat**: the robot button on the toolbar opens the right-hand panel; replies stream in and can be stopped at any time
-- **Thinking process**: reasoning / thinking from reasoning models is shown in a collapsible block, collapsed by default
+- **Thinking process**: reasoning / thinking from reasoning models is shown in a collapsible block — expanded while streaming, collapsed once the answer starts, and still collapsible afterwards
 - **Key safety**: API keys live in the OS keychain and can be saved, cleared and verified in one click; local endpoints (llama.cpp / LM Studio / vLLM) can leave the key empty
 - **Reference the current document**: send the document as context with a configurable limit (64K–512K / unlimited) and context rounds (0–20, default 3)
 - **Landing the result**: copy, insert at the cursor, or create a new document in one click
 
 ### AI Skills
 
-The ⚡ button in the input box opens the skill menu; the selected skill tag is inserted at the cursor and its prompt is injected into the context. Put `skills.json` plus `.md` prompts in `skills/` to define your own. Five skills ship built in: Presentation Outline, Document Summary, Polish Writing, Full-text Translation and Markdown Formatting.
+The ⚡ button in the input box opens the skill menu; the selected skill tag is inserted at the cursor and its prompt is injected into the context. Put `skills.json` plus `.md` prompts in `skills/` to define your own. Five skills ship built in: Presentation Outline, Document Summary, Polish Writing, Full-text Translation and Markdown Formatting. Skills also choose where the result goes: "send to AI chat" or "edit the document inline". The built-in Polish Writing and Markdown Formatting default to inline editing (one click in the selection bar), while Presentation Outline, Document Summary and Full-text Translation still go to the side chat.
 
-### Skill Management and Selection Assistant
+Manage skills under Settings → Skill Management — create, edit or delete skills, change name, ID, icon, summary and prompt; the AI panel refreshes immediately, and edited or deleted built-in skills are preserved across upgrades.
 
-v0.4.4: manage skills under Settings → Skill Management — create, edit or delete skills, change name, ID, icon, summary and prompt; the AI panel refreshes immediately, and edited or deleted built-in skills are preserved across upgrades. Configure the selection toolbar under Settings → Selection Assistant — add, remove and reorder actions from skills or system actions (copy, paste, add to chat), rename them, and preview changes live.
+### Selection Assistant
+
+Configure the selection toolbar under Settings → Selection Assistant — add, remove and reorder actions from skills or system actions (copy, paste, add to chat), rename them, and preview changes live. By default it offers Presentation Outline, Summary, Rewrite, Translate, Copy and Add to chat; when no action is available the toolbar stays hidden.
+
+- **Star entry**: the star at the far left of the floating bar is the unified entry to in-document AI; the toolbar / format-bar switch moved to the far right (⇄)
+- **Format bar**: click ⇄ to switch between the action toolbar and a format bar — bold, italic, strike, highlight, inline code (and code block), super/subscript, headings, lists, task lists, quote and formulas; icons with secondary options open on hover; reorder or hide formats in Settings
+- **Applied state**: the format bar marks formats already active in the selection; click once to apply, again to remove
+- **Skills inline**: skills whose delivery is "edit the document inline" run right in the document and can replace the selection
 
 ### Plugins
 
@@ -286,6 +307,8 @@ v0.4.4: manage skills under Settings → Skill Management — create, edit or de
 | Ins | Slash menu | F12 | Developer tools |
 
 Shortcuts can be customized in Settings → Shortcuts: 36 actions, visual binding, key recording, conflict detection and restore-defaults.
+
+Document AI has its own gesture: double-press `Ctrl` (changeable to `Ctrl+Enter` or off) — it does not occupy any key in the table above.
 
 ---
 
@@ -414,7 +437,7 @@ Artifacts (**amd64 / x86_64 only for now**; ARM `arm64` deb and `aarch64` AppIma
 - Debian package: `src-tauri/target/release/bundle/deb/YiziMarkdown_<ver>_amd64.deb` (about 16 MB, installs to `/usr/bin`, registers menu entry, icon and `.md` / `.epub` associations)
 - Portable AppImage: `src-tauri/target/release/bundle/appimage/YiziMarkdown_<ver>_amd64.AppImage` (about 150 MB, bundles GTK / WebKit and the GStreamer media components, double-click to run)
 
-Note: **build on Ubuntu 22.04**. Binaries built on 24.04 require glibc 2.39 and fail to start on Ubuntu 22.04 (2.35) / Debian 12 (2.36); the `deb` dependency on `libwebkit2gtk-4.1-0` sets the same floor. `rpm` is not provided: Fedora / openSUSE use different dependency names and would need separate maintenance.
+Note: **build on Ubuntu 22.04**. Binaries built on 24.04 require glibc 2.39 and fail to start on Ubuntu 22.04 (2.35) / Debian 12 (2.36); the `deb` dependency on `libwebkit2gtk-4.1-0` sets the same floor (Debian 11 ships only webkit 4.0). `rpm` is not provided: Fedora / openSUSE use different dependency names and would need separate maintenance.
 
 ### Project Structure
 

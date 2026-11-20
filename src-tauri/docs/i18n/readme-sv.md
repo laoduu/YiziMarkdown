@@ -3,7 +3,7 @@
 
 ![Bild](https://github.com/laoduu/YiziMarkdown/raw/main/assets/readme/index.png)
 
-[简体中文](../../readme.md) | [繁體中文](./readme-zh-TW.md) | [English](./readme-en.md) | [日本語](./readme-ja.md) | [한국어](./readme-ko.md) | [Deutsch](./readme-de.md) | [Français](./readme-fr.md) | [Español](./readme-es.md) | [Português](./readme-pt.md) | [Italiano](./readme-it.md) | [Polski](./readme-pl.md) | [Nederlands](./readme-nl.md) | [Türkçe](./readme-tr.md) | [Svenska](./readme-sv.md) | [Українська](./readme-uk.md) | [Русский](./readme-ru.md)
+[简体中文](../../README.md) | [繁體中文](./readme-zh-TW.md) | [English](./readme-en.md) | [日本語](./readme-ja.md) | [한국어](./readme-ko.md) | [Deutsch](./readme-de.md) | [Français](./readme-fr.md) | [Español](./readme-es.md) | [Português](./readme-pt.md) | [Italiano](./readme-it.md) | [Polski](./readme-pl.md) | [Nederlands](./readme-nl.md) | [Türkçe](./readme-tr.md) | [Svenska](./readme-sv.md) | [Українська](./readme-uk.md) | [Русский](./readme-ru.md)
 
 **Officiell webbplats:** https://md.yizigpt.com
 
@@ -15,7 +15,7 @@ YiziMarkdown är en plattformsoberoende Markdown-redigerare med skrivandet i cen
 
 Varför utveckla ännu en Markdown-redigerare? Alternativen på marknaden är antingen mindre vackra eller överfyllda med funktioner, och det är svårt att hitta ett verktyg som förenar enkel, vacker design med behaglig användning. Därför skapades YiziMarkdown, med tre löften: **snyggt gränssnitt**, **kraftfulla funktioner**, **många användningsområden**.
 
-Så uppstod dagens `YiziMarkdown`: `3 system`, `7 arbetslägen`, `16 gränssnittsspråk`, `15 ljusa och mörka teman`, `5 AI-färdigheter (Skill)`, `7 exportformat` – plus innovativa funktioner som AI-assistenten och molnlagringen, och öppen dokumentation för teman, färdigheter och presentationer, så att du kan bygga ännu mer unika upplevelser.
+Så uppstod dagens `YiziMarkdown`: `3 system`, `7 arbetslägen`, `16 gränssnittsspråk`, `15 ljusa och mörka teman`, `5 AI-färdigheter (Skill)`, `7 exportformat` – plus innovativa funktioner som AI-assistenten, AI-omskrivning direkt i dokumentet och molnlagringen, och öppen dokumentation för teman, färdigheter och presentationer, så att du kan bygga ännu mer unika upplevelser.
 
 Det här är inte längre en enkel Markdown-redigerare, utan en verkligt mångsidig app som täcker många dokumentsituationer i ditt skapande, arbete och vardagsliv.
 
@@ -23,13 +23,15 @@ Det här är inte längre en enkel Markdown-redigerare, utan en verkligt mångsi
 
 ## Sju lägen: ett dokument, sju sätt att presenteras
 
+![De sju lägena i korthet](https://github.com/laoduu/YiziMarkdown/raw/main/assets/readme/modes.svg)
+
 Markdowns värde ligger inte bara i skrivandet, utan också i vem som ska se resultatet och hur. YiziMarkdown ger samma dokument sju presentationssätt: de fyra första är redigeringsvyer som växlar mellan rå källkod och färdigt resultat; de tre sista är separata scenarier som förvandlar dokumentet till slajder, boksidor eller bara texten.
 
 | Läge | Kort beskrivning | Ingång | Bäst för |
 |------|-----------|------|------|
 | Källa | Redigera rå Markdown direkt | `F3` / vyknappar | Finjustera struktur, massersättning, redigera front matter |
 | Sida vid sida | Skriv till vänster, jämför direkt till höger | `F3` / vyknappar | Korrekturläsa layout, skriva mot en mall |
-| Live | WYSIWYG, markeringar döljs automatiskt | `F3` / vyknappar | Långa texter, fokuserat skrivande |
+| Live | WYSIWYG, markeringar döljs automatiskt | `F3` / vyknappar | Omedelbart strukturerat skrivande |
 | Förhandsvisning | Visar endast den färdiga layouten | `F3` / vyknappar | Kontrollera resultatet, läsa igenom hela texten |
 | Presentation | Dokumentet som ett bildspel | `Ctrl+Alt+P` / verktygsfältet | Dela, rapportera, undervisa |
 | Läsning | Dokumentet som en bok att bläddra i | `Ctrl+Alt+R` / verktygsfältet | Långa texter, EPUB, fördjupad läsning |
@@ -204,7 +206,7 @@ Formaterad text (rich text) som kopierats från webbsidor, Word / DOCX, Google D
   - DOCX använder Words inbyggda semantik (listor, tabeller, kodblock, citat, att-göra-listor), tabellstilen matchar förhandsvisningen, bilder stöds från lokala sökvägar, nätverk och HTML `<img>` (bredd via `width`)
   - PDF överensstämmer med förhandsvisningen och sidindelas automatiskt
   - HTML innehåller ett flytande översiktskort till vänster; klick på en post går direkt till avsnittet (PDF har inget sidofält)
-  - PPTX ärver presentationens tema, ljus/mörkt och layouter och skapar redigerbar text, tabeller, bilder, former och inbyggda ekvationer; ytan är fast 16:9 / 1280×720, exportdialogen kan justera teckenstorlek och kontrollera layouten utan att skriva; långa kodrader radbryts efter kolumnbredden
+  - PPTX ärver presentationens tema, ljus/mörkt och layouter och skapar redigerbar text, tabeller, bilder, former och inbyggda ekvationer; ytan är fast 16:9 / 1280×720, exportdialogen kan justera teckenstorlek och kontrollera layouten utan att skriva; långa kodrader radbryts efter kolumnbredden, och den extra höjden från radbrytningen skjuter ned korten i samma rad och efterföljande innehåll
   - EPUB levereras av det inbyggda pluginet; före export kan du välja avsnittsdelning / omslag / synlig innehållsförteckning / läsningstema / dokumentinformation
 - **`.md`-filassociation**: ange YiziMarkdown som systemets standard Markdown-redigerare med ett klick i inställningarna (Windows-registret / macOS LaunchServices)
 
@@ -213,31 +215,50 @@ Formaterad text (rich text) som kopierats från webbsidor, Word / DOCX, Google D
 - **Filbläddrare**: fliken ”Moln” i sidofältet bläddrar i serverns katalogträd — öppna dokument, skapa filer / mappar, byta namn, flytta, ta bort; djupa sökvägar (brödsmulor) vecklas till ”…” med en rullgardinsmeny för att hoppa, och mappar laddas lättjefullt nivå för nivå
 - **Spara till molnet**: ladda upp ett lokalt dokument med ett klick; lokala bilder kopieras automatiskt till rotmappen `assets/` och skrivs om som relativa referenser; `Ctrl+S` skriver molndokument direkt tillbaka
 - **Konfliktskydd**: ETag jämförs före sparning; om filen ändrats av en annan enhet visas ett val att ”överskriv serverns version” eller ”förkasta mina ändringar och ladda om” — aldrig tyst överskrivning
+- **Versionskontroll vid öppning**: cachelagrade dokument jämförs med molnet före öppning; vid ändringar visas byte, rader, en sammanfattning, första olika raden och båda spartiderna (molnet från `Last-Modified`), med val att använda molnversionen, behålla lokal, spara en molnkopia eller avbryta
 - **Säkerhet för inloggningsuppgifter**: användarnamn och lösenord lagras i operativsystemets nyckelring (Windows Credential Manager / macOS Keychain), aldrig i konfigurationsfiler
 - **Kompatibilitet**: standardiserade WebDAV-tjänster som Nutstore (Jianguoyun), Nextcloud och Synology (appspecifikt lösenord rekommenderas)
-- **Versionskontroll vid öppning**: cachelagrade dokument jämförs med molnet före öppning; vid ändringar visas byte, rader, hashar och första olika raden, med val att använda molnversionen, behålla lokal, spara en molnkopia eller avbryta
 - **Cache-synkronisering**: körs i bakgrunden vid start och kan startas manuellt i Inställningar; borttagna/flyttade fjärrfiler rensas lokalt, och en valfri offline-spegling laddar ner alla Markdown och refererade bilder under WebDAV-roten
 
 ---
 
 ## Tillägg och anpassning
 
+### AI i dokumentet (direkt redigering)
+
+Slipp kopiera och klistra in från sidopanelen: markera text och klicka på stjärnan längst till vänster i den flytande listen — eller tryck `Ctrl` två gånger (kan ändras till `Ctrl+Enter` eller stängas av i Inställningar → Genvägar) — så skriver AI om eller vidare direkt i dokumentet, och resultatet hamnar på plats.
+
+- **Skriv om markeringen**: skriv en instruktion bredvid markeringen; ersätt, infoga nedan, kopiera eller förkasta; ”Jämför med originalet” visar diffen (rött/borttaget, grönt/nytt) i texten
+- **Extra kontext**: bifoga ”aktuellt avsnitt / hela dokumentet / ingen” så att AI:n känner till förkortningar, termer och ton
+- **Följdfrågor**: finputsa i samma panel; den stängs efter skrivning och `Ctrl+Z` ångrar
+- **Skriv vid markören**: låt AI:n skriva ett stycke vid markören och infoga eller kopiera det, i samma panel
+- **Snabbavsikter**: putsa, utöka, korta, översätt, rätta, gör om till lista utifrån markeringen
+- **Sessionshistorik**: varje generering sparas per dokument; fäll ut lista och detaljer i panelens fot för att granska, infoga igen, kopiera eller ta bort. 50 poster per dokument, 90 dagar; ändringar någon annanstans raderar den inte
+- **Paneldetaljer**: flyttbar, inmatningen kan höjas till 480px, fokus vid öppning, resonemanget utfällt som standard, foten på en rad
+
 ### AI-assistent (sidopanel för chatt)
 
 - **18 modellleverantörer + anpassad tjänst**: OpenAI, Anthropic, Gemini, xAI, Mistral, Groq, DeepSeek, Tongyi Qianwen (Qwen), Zhipu GLM, Moonshot Kimi, Volcano Engine (Doubao), SiliconFlow, MiniMax, Xiaomi MiMo, Meituan LongCat, OpenRouter, OpenCode Go, Ollama (lokal); ”Anpassad tjänst” stöder OpenAI-kompatibla / Anthropic-kompatibla protokoll med egen Base URL, modell-ID och nyckel
 - **Strömmande chatt**: robotknappen i verktygsfältet öppnar panelen till höger, svaren strömmar in i realtid och kan stoppas när som helst
-- **Tankeprocess**: reasoning / thinking från resonerande modeller visas i ett hopfallbart block, hopfallet som standard
+- **Resonemang**: reasoning / thinking från resonerande modeller visas i ett ihopfällbart block: utfällt medan det streamar, ihopfällt när svaret börjar och fortfarande uppfällbart
 - **Nyckelsäkerhet**: API-nycklar lagras i systemets nyckelring och kan sparas, rensas och verifieras med ett klick; lokala slutpunkter (llama.cpp / LM Studio / vLLM m.fl.) kan lämnas tomma
 - **Referera aktuellt dokument**: när rutan är ikryssad används dokumentet som kontext, med konfigurerbar gräns (64K–512K / obegränsat) och antal kontextomgångar (0–20, standard 3)
 - **Spara resultatet**: kopiera, infoga vid markören eller skapa ett nytt dokument med ett klick
 
 ### AI-färdigheter (Skill)
 
-Knappen ⚡ i inmatningsfältet öppnar färdighetsmenyn; den valda färdighetstaggen infogas vid markören och prompten injiceras automatiskt i kontexten. Lägg `skills.json` + `.md`-promptar i katalogen `skills/` för att definiera egna. Fem färdigheter är inbyggda: ”Presentationsdisposition”, ”Dokumentsammanfattning”, ”Textpolering”, ”Översättning av hela texten”, ”Markdown-formatering”.
+Knappen ⚡ i inmatningsfältet öppnar färdighetsmenyn; den valda färdighetstaggen infogas vid markören och prompten injiceras automatiskt i kontexten. Lägg `skills.json` + `.md`-promptar i katalogen `skills/` för att definiera egna. Fem färdigheter är inbyggda: ”Presentationsdisposition”, ”Dokumentsammanfattning”, ”Textpolering”, ”Översättning av hela texten”, ”Markdown-formatering”. Skills har också en ”resultatdestination”: skicka till AI-chatten eller redigera dokumentet direkt. De inbyggda ”Textpolering” och ”Markdown-formatering” skriver som standard i dokumentet, medan ”Presentationsdisposition”, ”Dokumentsammanfattning” och ”Översättning av hela texten” fortfarande går till chatten till höger.
 
-### Skill-hantering och urvalsassistent
+Under Inställningar → Skill-hantering kan du skapa, redigera eller radera skills och ändra namn, ID, ikon, sammanfattning och prompt; AI-panelen uppdateras direkt och ändrade eller borttagna inbyggda skills bevaras vid uppgraderingar.
 
-v0.4.4: under Inställningar → Skill-hantering kan du skapa, redigera eller radera skills och ändra namn, ID, ikon, sammanfattning och prompt; AI-panelen uppdateras direkt och ändrade eller borttagna inbyggda skills bevaras vid uppgraderingar. Under Inställningar → Urvalsassistent kan du konfigurera verktygsfältet: lägga till, ta bort och ordna åtgärder från skills eller systemfunktioner (kopiera, klistra in, lägg till i chatten), byta namn och se liveförhandsvisning.
+### Urvalsassistent
+
+Under Inställningar → Urvalsassistent kan du konfigurera verktygsfältet: lägga till, ta bort och ordna åtgärder från skills eller systemfunktioner (kopiera, klistra in, lägg till i chatten), byta namn och se liveförhandsvisning. Som standard erbjuder den Presentationsdisposition, Sammanfattning, Skriv om, Översätt, Kopiera och Lägg till i chatten; finns inga åtgärder visas inte listen.
+
+- **Stjärningång**: stjärnan längst till vänster i den flytande listen är den samlade ingången till AI i dokumentet; växlingen verktygslist / formatlist ligger nu längst till höger (⇄)
+- **Formatlist**: ⇄ växlar mellan åtgärdslist och formatlist — fet, kursiv, genomstruken, markering, inline-kod (och kodblock), upphöjd/nedsänkt, rubriker, listor, uppgiftslistor, citat och formler; ikoner med underalternativ öppnas vid hover; ordning och synlighet i Inställningar
+- **Tillämpat läge**: formatlisten markerar format som redan är aktiva i markeringen; ett klick tillämpar, ett till tar bort
+- **Skills i dokumentet**: skills med destinationen ”redigera dokumentet direkt” körs i dokumentet och kan ersätta markeringen
 
 ### Plugin
 
@@ -286,6 +307,8 @@ v0.4.4: under Inställningar → Skill-hantering kan du skapa, redigera eller ra
 | Ins | Snedstrecksmeny | F12 | Utvecklarverktyg |
 
 Genvägar kan anpassas i Inställningar → Genvägar: visuell bindning av 36 åtgärder, inspelning av tangenter, konfliktkontroll och återställning till standard.
+
+AI i dokumentet har en egen gest: tryck `Ctrl` två gånger (kan ändras till `Ctrl+Enter` eller stängas av) — den tar ingen tangent i tabellen ovan.
 
 ---
 

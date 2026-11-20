@@ -1,9 +1,9 @@
 # YiziMarkdown
 
 
-![imagem](https://github.com/laoduu/YiziMarkdown/raw/main/assets/readme/index.png)
+![image](https://github.com/laoduu/YiziMarkdown/raw/main/assets/readme/index.png)
 
-[简体中文](../../readme.md) | [繁體中文](./readme-zh-TW.md) | [English](./readme-en.md) | [日本語](./readme-ja.md) | [한국어](./readme-ko.md) | [Deutsch](./readme-de.md) | [Français](./readme-fr.md) | [Español](./readme-es.md) | [Português](./readme-pt.md) | [Italiano](./readme-it.md) | [Polski](./readme-pl.md) | [Nederlands](./readme-nl.md) | [Türkçe](./readme-tr.md) | [Svenska](./readme-sv.md) | [Українська](./readme-uk.md) | [Русский](./readme-ru.md)
+[简体中文](../../README.md) | [繁體中文](./readme-zh-TW.md) | [English](./readme-en.md) | [日本語](./readme-ja.md) | [한국어](./readme-ko.md) | [Deutsch](./readme-de.md) | [Français](./readme-fr.md) | [Español](./readme-es.md) | [Português](./readme-pt.md) | [Italiano](./readme-it.md) | [Polski](./readme-pl.md) | [Nederlands](./readme-nl.md) | [Türkçe](./readme-tr.md) | [Svenska](./readme-sv.md) | [Українська](./readme-uk.md) | [Русский](./readme-ru.md)
 
 **Site oficial:** https://md.yizigpt.com
 
@@ -15,7 +15,7 @@ O YiziMarkdown é um editor Markdown multiplataforma centrado na escrita. Um mes
 
 Por que criar outro editor Markdown? As opções do mercado ou não são agradáveis aos olhos, ou são carregadas e inchadas de recursos, e é difícil achar uma ferramenta que combine simplicidade, beleza e uma experiência de uso fluida. Foi assim que nasceu o YiziMarkdown, com três compromissos firmes: **interface bonita**, **recursos poderosos** e **muitos cenários de uso**.
 
-Assim chegamos ao `YiziMarkdown` de hoje: `3 sistemas`, `7 modos de uso`, `16 idiomas de interface`, `15 temas claros e escuros`, `5 Skills de IA` e `7 formatos de exportação`. Além disso, traz recursos inovadores como o assistente de IA e o armazenamento na nuvem, junto com documentação aberta sobre temas, skills e apresentações, para você construir experiências de uso ainda mais singulares.
+Assim chegamos ao `YiziMarkdown` de hoje: `3 sistemas`, `7 modos de uso`, `16 idiomas de interface`, `15 temas claros e escuros`, `5 Skills de IA` e `7 formatos de exportação`. Além disso, traz recursos inovadores como o assistente de IA, a reescrita com IA direto no documento e o armazenamento na nuvem, junto com documentação aberta sobre temas, skills e apresentações, para você construir experiências de uso ainda mais singulares.
 
 Isto já não é um editor Markdown simples, mas um aplicativo versátil, capaz de cobrir de verdade os mais diversos cenários de documentos na sua criação, no trabalho e na vida.
 
@@ -23,13 +23,15 @@ Isto já não é um editor Markdown simples, mas um aplicativo versátil, capaz 
 
 ## Sete modos: um documento, sete formas de apresentar
 
+![Os sete modos em resumo](https://github.com/laoduu/YiziMarkdown/raw/main/assets/readme/modes.svg)
+
 O valor do Markdown não está apenas em escrever, mas também em para quem e como ele é mostrado. O YiziMarkdown oferece sete formas de apresentar o mesmo documento: as quatro primeiras são visões de edição, que alternam entre o código-fonte e o resultado final; as três últimas são cenários independentes, que transformam o documento em slides, páginas de livro ou simplesmente deixam só o texto.
 
 | Modo | Em uma frase | Entrada | Ideal para |
 |------|-----------|------|------|
 | Código | Editar o Markdown original diretamente | `F3` / botões de visualização | Refinar a estrutura, substituições em massa, editar o front matter |
 | Lado a lado | Escrever à esquerda, comparar na hora à direita | `F3` / botões de visualização | Revisar a diagramação, escrever com base em um modelo |
-| Tempo real | WYSIWYG, as marcas se ocultam sozinhas | `F3` / botões de visualização | Escrita de textos longos, redação concentrada |
+| Tempo real | WYSIWYG, as marcas se ocultam sozinhas | `F3` / botões de visualização | Escrita estruturada na hora |
 | Pré-visualização | Mostra apenas a diagramação final | `F3` / botões de visualização | Conferir o resultado, ler o texto inteiro |
 | Apresentação | O documento direto como slides | `Ctrl+Alt+P` / barra de ferramentas | Compartilhar, reportar, dar aula |
 | Leitura | O documento diagramado como um livro que se folheia | `Ctrl+Alt+R` / barra de ferramentas | Leituras longas, EPUB, leitura imersiva |
@@ -204,7 +206,7 @@ Texto rico copiado de páginas da web, Word / DOCX, Google Docs, Notion e afins 
   - DOCX usa a semântica nativa do Word (listas, tabelas, blocos de código, citações, listas de tarefas), alinha o estilo das tabelas com a pré-visualização e aceita imagens de caminhos locais, imagens da web e `<img>` em HTML (a largura é controlada por `width`)
   - PDF mantém a mesma fidelidade da pré-visualização e pagina automaticamente
   - HTML traz um cartão flutuante de estrutura à esquerda, com clique para ir direto à seção (o PDF não tem barra lateral)
-  - PPTX herda o tema, o modo claro/escuro e os layouts do modo apresentação e gera texto, tabelas, imagens, formas e equações nativas editáveis; a tela é fixa em 16:9 / 1280×720, a janela de exportação permite ajustar o tamanho da fonte e verificar o layout sem gravar; linhas de código longas quebram na largura da coluna
+  - PPTX herda o tema, o modo claro/escuro e os layouts do modo apresentação e gera texto, tabelas, imagens, formas e equações nativas editáveis; a tela é fixa em 16:9 / 1280×720, a janela de exportação permite ajustar o tamanho da fonte e verificar o layout sem gravar; linhas de código longas quebram na largura da coluna, e a altura extra da quebra empurra os cartões da mesma linha e o conteúdo seguinte para baixo
   - EPUB vem do plugin integrado; antes de exportar dá para escolher divisão por capítulos / capa / sumário visível / tema de leitura / informações do documento
 - **Associação de arquivos `.md`**: nos ajustes, defina o YiziMarkdown como editor Markdown padrão do sistema (registro do Windows / LaunchServices do macOS)
 
@@ -213,31 +215,50 @@ Texto rico copiado de páginas da web, Word / DOCX, Google Docs, Notion e afins 
 - **Navegador de arquivos**: a aba «Nuvem» na barra lateral navega pela árvore do servidor: abrir documentos, criar arquivos / pastas, renomear, mover, excluir; trilhas de navegação profundas se recolhem em «…» com um menu suspenso, e as pastas carregam sob demanda, nível por nível
 - **Salvar na nuvem**: envie um documento local com um clique; as imagens locais são copiadas automaticamente para a pasta raiz `assets/` e reescritas como referências relativas; `Ctrl+S` grava diretamente os documentos da nuvem
 - **Proteção contra conflitos**: antes de salvar, o ETag é comparado; se o arquivo remoto foi alterado por outro dispositivo, uma caixa de diálogo oferece «sobrescrever a versão do servidor» ou «descartar minhas alterações e recarregar», nunca uma sobrescrita silenciosa
+- **Verificação de versão ao abrir**: documentos em cache são comparados com a nuvem antes de abrir; se houver mudança, são exibidos bytes, linhas, resumo, primeira linha diferente e os dois horários de salvamento (o da nuvem via `Last-Modified`), com opções de usar a versão da nuvem, manter a local, salvar uma cópia na nuvem ou cancelar
 - **Segurança das credenciais**: usuário e senha vão para o cofre de credenciais do sistema (Gerenciador de Credenciais do Windows / Keychain do macOS), nunca para arquivos de configuração
 - **Compatibilidade**: serviços WebDAV padrão como Nutstore, Nextcloud e Synology (recomenda-se uma senha específica do aplicativo)
-- **Verificação de versão ao abrir**: os documentos em cache são comparados com a nuvem antes de abrir; se houver alteração, são exibidos bytes, linhas, hashes e a primeira linha diferente, com opções para usar a nuvem, manter o local, salvar uma cópia na nuvem ou cancelar
 - **Sincronização de cache**: roda em segundo plano na inicialização e pode ser acionada manualmente nas Configurações; arquivos remotos excluídos ou movidos são limpos localmente, e um espelho offline opcional baixa todos os Markdown e imagens referenciadas sob a raiz WebDAV
 
 ---
 
 ## Extensões e personalização
 
+### IA dentro do documento (edição direta)
+
+Sem passar pelo chat lateral para copiar e colar: selecione o texto e clique na estrela na extremidade esquerda da barra flutuante — ou pressione `Ctrl` duas vezes (pode virar `Ctrl+Enter` ou ser desativado em Configurações → Atalhos) — e a IA reescreve ou continua direto no documento, com o resultado gravado no local.
+
+- **Reescrita da seleção**: digite uma instrução ao lado da seleção; substituir, inserir abaixo, copiar ou descartar; «Comparar com o original» mostra o diff (vermelho/removido, verde/novo) no texto
+- **Contexto adicional**: anexe «seção atual / documento inteiro / nenhum» para a IA conhecer abreviações, termos e tom
+- **Pedidos complementares**: refine no mesmo painel; ele fecha após gravar e `Ctrl+Z` desfaz
+- **Criar no cursor**: peça um parágrafo na posição do cursor e insira ou copie, no mesmo painel
+- **Intenções rápidas**: polir, expandir, encurtar, traduzir, corrigir, transformar em lista conforme a seleção
+- **Histórico da sessão**: cada geração é arquivada por documento; abra lista e detalhe no rodapé do painel para revisar, reinserir, copiar ou excluir. 50 registros por documento, 90 dias; alterações em outro lugar não o apagam
+- **Detalhes do painel**: arrastável, campo redimensionável até 480px, foco ao abrir, raciocínio expandido por padrão, rodapé em uma linha
+
 ### Assistente de IA (painel de chat lateral)
 
 - **18 provedores de modelos + serviço personalizado**: OpenAI, Anthropic, Gemini, xAI, Mistral, Groq, DeepSeek, Qwen, Zhipu GLM, Moonshot Kimi, Volcano Engine, SiliconFlow, MiniMax, Xiaomi MiMo, Meituan LongCat, OpenRouter, OpenCode Go e Ollama (local); o «serviço personalizado» aceita protocolos compatíveis com OpenAI ou com Anthropic, com Base URL, ID do modelo e chave próprios
 - **Chat em streaming**: o botão de robô na barra de ferramentas abre o painel à direita; as respostas chegam em streaming e podem ser interrompidas a qualquer momento
-- **Processo de raciocínio**: o reasoning / thinking dos modelos de raciocínio aparece em um bloco recolhível, recolhido por padrão
+- **Processo de raciocínio**: o reasoning / thinking dos modelos de raciocínio aparece em um bloco recolhível: expandido durante a geração, recolhido quando a resposta começa e recolhível depois
 - **Segurança das chaves**: as chaves de API ficam no cofre do sistema e podem ser salvas, apagadas e verificadas com um clique; endpoints locais (llama.cpp / LM Studio / vLLM etc.) podem ficar sem chave
 - **Referenciar o documento atual**: ao marcar, o documento atual entra como contexto, com limite configurável (64K–512K / ilimitado) e número de turnos de contexto (0–20, padrão 3)
 - **Resultado pronto para uso**: copiar, inserir no cursor ou criar um documento novo com um clique
 
 ### Skills de IA
 
-O botão ⚡ do campo de entrada abre o menu de skills; a tag da skill escolhida é inserida no cursor e o prompt é injetado no contexto. Para criar as suas, basta colocar `skills.json` e os prompts `.md` no diretório `skills/`. Vêm 5 skills integradas: Roteiro da apresentação, Resumo do documento, Polir a redação, Tradução do texto completo e Formatação de Markdown.
+O botão ⚡ do campo de entrada abre o menu de skills; a tag da skill escolhida é inserida no cursor e o prompt é injetado no contexto. Para criar as suas, basta colocar `skills.json` e os prompts `.md` no diretório `skills/`. Vêm 5 skills integradas: Roteiro da apresentação, Resumo do documento, Polir a redação, Tradução do texto completo e Formatação de Markdown. As skills também escolhem o destino do resultado: «enviar ao chat de IA» ou «editar o documento diretamente». «Polir a redação» e «Formatação de Markdown» vêm configuradas para editar o documento, enquanto «Roteiro da apresentação», «Resumo do documento» e «Tradução do texto completo» continuam indo para o chat lateral.
 
-### Gerenciamento de Skills e assistente de seleção
+Em Configurações → Gerenciamento de Skills, crie, edite ou exclua skills e altere nome, ID, ícone, resumo e prompt; o painel de IA atualiza imediatamente e skills integrados modificados ou excluídos são preservados nas atualizações.
 
-v0.4.4: em Configurações → Gerenciamento de Skills, crie, edite ou exclua skills e altere nome, ID, ícone, resumo e prompt; o painel de IA atualiza imediatamente e skills integrados modificados ou excluídos são preservados nas atualizações. Em Configurações → Assistente de seleção, configure a barra: adicione, remova e reordene ações de skills ou do sistema (copiar, colar, adicionar ao chat), renomeie e veja a prévia ao vivo.
+### Assistente de seleção
+
+Em Configurações → Assistente de seleção, configure a barra: adicione, remova e reordene ações de skills ou do sistema (copiar, colar, adicionar ao chat), renomeie e veja a prévia ao vivo. Por padrão oferece Roteiro da apresentação, Resumo, Reescrita, Tradução, Copiar e Adicionar ao chat; sem nenhuma ação disponível, a barra não aparece.
+
+- **Entrada com estrela**: a estrela na extremidade esquerda da barra flutuante é a entrada única para a IA dentro do documento; a troca barra de ações / barra de formato foi para a extremidade direita (⇄)
+- **Barra de formato**: ⇄ alterna entre a barra de ações e a de formato — negrito, itálico, tachado, realce, código em linha (e bloco), sobrescrito/subscrito, títulos, listas, listas de tarefas, citação e fórmulas; ícones com opções secundárias abrem ao passar o mouse; ordem e visibilidade em Configurações
+- **Estado aplicado**: a barra de formato marca os formatos já ativos na seleção; um clique aplica, outro remove
+- **Skills no documento**: skills com destino «editar o documento diretamente» rodam no documento e podem substituir a seleção
 
 ### Plugins
 
@@ -286,6 +307,8 @@ v0.4.4: em Configurações → Gerenciamento de Skills, crie, edite ou exclua sk
 | Ins | Menu de barra | F12 | Ferramentas de desenvolvedor |
 
 Os atalhos podem ser personalizados em Configurações → Atalhos: 36 ações com vinculação visual, gravação de teclas, detecção de conflitos e restauração dos padrões.
+
+A IA dentro do documento tem um gesto próprio: pressione `Ctrl` duas vezes (pode virar `Ctrl+Enter` ou ser desativado); ele não ocupa nenhuma tecla da tabela acima.
 
 ---
 

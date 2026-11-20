@@ -3,7 +3,7 @@
 
 ![image](https://github.com/laoduu/YiziMarkdown/raw/main/assets/readme/index.png)
 
-[简体中文](../../readme.md) | [繁體中文](./readme-zh-TW.md) | [English](./readme-en.md) | [日本語](./readme-ja.md) | [한국어](./readme-ko.md) | [Deutsch](./readme-de.md) | [Français](./readme-fr.md) | [Español](./readme-es.md) | [Português](./readme-pt.md) | [Italiano](./readme-it.md) | [Polski](./readme-pl.md) | [Nederlands](./readme-nl.md) | [Türkçe](./readme-tr.md) | [Svenska](./readme-sv.md) | [Українська](./readme-uk.md) | [Русский](./readme-ru.md)
+[简体中文](../../README.md) | [繁體中文](./readme-zh-TW.md) | [English](./readme-en.md) | [日本語](./readme-ja.md) | [한국어](./readme-ko.md) | [Deutsch](./readme-de.md) | [Français](./readme-fr.md) | [Español](./readme-es.md) | [Português](./readme-pt.md) | [Italiano](./readme-it.md) | [Polski](./readme-pl.md) | [Nederlands](./readme-nl.md) | [Türkçe](./readme-tr.md) | [Svenska](./readme-sv.md) | [Українська](./readme-uk.md) | [Русский](./readme-ru.md)
 
 **Resmi web sitesi:** https://md.yizigpt.com
 
@@ -15,7 +15,7 @@ YiziMarkdown, yazmayı merkeze alan platformlar arası bir Markdown editörüdü
 
 Neden bir Markdown editörü geliştirelim ki? Piyasadaki seçenekler ya görsel olarak hoş değil ya da gereğinden fazla özellikle şişkin; hem sade ve estetik hem de kullanımı keyifli bir araç bulmak zor. İşte YiziMarkdown böyle doğdu ve üç ilkeye bağlı kaldı: **güzel arayüz**, **güçlü özellikler**, **çok yönlü senaryolar**.
 
-Böylece bugünkü `YiziMarkdown` ortaya çıktı: `3 işletim sistemi desteği`, `7 kullanım modu`, `16 arayüz dili`, `15 açık/koyu çift tonlu tema`, `5 AI Skill`, `7 dışa aktarma biçimi` sunuyor; ayrıca yerleşik AI asistanı, bulut depolama gibi yenilikçi özellikler ve tema, yetenek, sunum gibi açık dokümantasyonla çok daha farklı kullanım deneyimleri oluşturabilirsiniz.
+Böylece bugünkü `YiziMarkdown` ortaya çıktı: `3 işletim sistemi desteği`, `7 kullanım modu`, `16 arayüz dili`, `15 açık/koyu çift tonlu tema`, `5 AI Skill`, `7 dışa aktarma biçimi` sunuyor; ayrıca yerleşik AI asistanı, belge içinde doğrudan AI ile yeniden yazma, bulut depolama gibi yenilikçi özellikler ve tema, yetenek, sunum gibi açık dokümantasyonla çok daha farklı kullanım deneyimleri oluşturabilirsiniz.
 
 Bu artık basit bir Markdown editörü değil; yaratıcılık, iş ve günlük yaşamınızdaki birçok belge senaryosunu gerçekten kapsayan çok işlevli bir uygulama.
 
@@ -23,13 +23,15 @@ Bu artık basit bir Markdown editörü değil; yaratıcılık, iş ve günlük y
 
 ## Yedi Mod: Tek Belge, Yedi Sunum
 
+![Yedi moda genel bakış](https://github.com/laoduu/YiziMarkdown/raw/main/assets/readme/modes.svg)
+
 Markdown'ın değeri yalnızca «yazmak»ta değil, «kime, nasıl gösterileceği»nde de yatar. YiziMarkdown aynı belge için yedi sunum biçimi sunar: ilk dördü, kaynak ile bitmiş çıktı arasında gidip gelen düzenleme görünümleridir; son üçü ise belgeyi slayta, kitap sayfasına ya da yalnızca metne dönüştüren bağımsız senaryolardır.
 
 | Mod | Tek cümlelik tanım | Giriş | En uygun olduğu |
 |------|-----------|------|------|
 | Kaynak | Ham Markdown'ı doğrudan düzenleyin | `F3` / görünüm düğmeleri | Yapıyı ince ayarlama, toplu değiştirme, frontmatter düzenleme |
 | Yan yana | Solda yazın, sağda anında karşılaştırın | `F3` / görünüm düğmeleri | Dizgi düzeltmesi, şablonla karşılaştırmalı yazma |
-| Canlı | Ne görürseniz onu alırsınız, işaretler otomatik gizlenir | `F3` / görünüm düğmeleri | Uzun metin yazımı, odaklanmış yazma |
+| Canlı | Ne görürseniz onu alırsınız, işaretler otomatik gizlenir | `F3` / görünüm düğmeleri | Anında yapılandırılmış yazım |
 | Önizleme | Yalnızca nihai dizgiyi gösterir | `F3` / görünüm düğmeleri | Çıktıyı kontrol etme, metni baştan sona okuma |
 | Sunum | Belgeyi doğrudan slayt olarak oynatır | `Ctrl+Alt+P` / araç çubuğu | Paylaşım, raporlama, ders anlatımı |
 | Okuma | Belgeyi çevrilebilir bir kitap gibi dizer | `Ctrl+Alt+R` / araç çubuğu | Uzun metin okuma, EPUB, sürükleyici okuma |
@@ -204,7 +206,7 @@ Web sayfaları, Word / DOCX, Google Docs, Notion gibi kaynaklardan kopyalanan ze
   - DOCX, Word'ün yerel anlamlarını kullanır (listeler, tablolar, kod blokları, alıntılar, görev listeleri); tablo stili önizlemeyle uyumludur; görsellerde yerel yollar, internet görselleri ve HTML `<img>` desteklenir (genişlik `width` ile kontrol edilebilir)
   - PDF, önizlemeyle aynı sadakattedir ve otomatik olarak sayfalanır
   - HTML, solda yüzen bir ana hat kartı içerir; öğeye tıklayınca bölüme gidilir (PDF'te kenar çubuğu yoktur)
-  - PPTX, sunum modunun temasını, açık/koyu modunu ve düzenlerini devralır; düzenlenebilir metin, tablo, görsel, şekil ve yerel denklemler üretir; tuval 16:9 / 1280×720 sabittir, dışa aktarma penceresi yazı boyutu ayarı ve dosya yazmadan düzen denetimi sunar; uzun kod satırları sütun genişliğinde sarılır
+  - PPTX, sunum modunun temasını, açık/koyu modunu ve düzenlerini devralır; düzenlenebilir metin, tablo, görsel, şekil ve yerel denklemler üretir; tuval 16:9 / 1280×720 sabittir, dışa aktarma penceresi yazı boyutu ayarı ve dosya yazmadan düzen denetimi sunar; uzun kod satırları sütun genişliğinde sarılır, satır kaydırmadan gelen ek yükseklik aynı satırdaki kartları ve sonraki içeriği birlikte aşağı iter
   - EPUB yerleşik eklenti tarafından sağlanır; dışa aktarmadan önce bölüm bölme / kapak / görünür içindekiler / okuma teması / belge bilgileri seçilebilir
 - **.md dosya ilişkilendirmesi**: ayarlardan tek tıkla sistem varsayılan Markdown editörü yapılır (Windows kayıt defteri / macOS LaunchServices)
 
@@ -213,31 +215,50 @@ Web sayfaları, Word / DOCX, Google Docs, Notion gibi kaynaklardan kopyalanan ze
 - **Dosya tarayıcısı**: kenar çubuğundaki «Bulut» sekmesi sunucu dizin ağacında gezinir; belge açma, dosya / klasör oluşturma, yeniden adlandırma, taşıma, silme yapılabilir; derin dizinlerde gezinti yolu «…» olarak katlanır ve açılır menüyle atlanabilir, klasörler ihtiyaç duyuldukça katman katman yüklenir
 - **Buluta kaydet**: yerel belgeyi tek tıkla yükleyin; yerel görseller otomatik olarak kök `assets/` klasörüne kopyalanır ve göreli başvurulara dönüştürülür; `Ctrl+S` bulut belgelerini doğrudan geri yazar
 - **Çakışma koruması**: kaydetmeden önce ETag karşılaştırılır; dosya başka bir cihazda değiştirilmişse «sunucu sürümünün üzerine yaz» veya «yerel değişikliklerimi bırak ve yeniden yükle» seçeneği sunulur; asla sessizce üzerine yazılmaz
+- **Açılışta sürüm denetimi**: önbellekteki belgeler açılmadan önce bulutla karşılaştırılır; değişiklik varsa bayt, satır, özet, ilk farklı satır ve her iki kayıt zamanı (bulut `Last-Modified`'dan) gösterilir; bulut sürümünü kullan, yereli koru, bulut kopyası kaydet veya iptal seçenekleri sunulur
 - **Kimlik bilgisi güvenliği**: kullanıcı adı ve parola sistem kimlik bilgisi deposuna kaydedilir (Windows Kimlik Bilgisi Yöneticisi / macOS Anahtarlık), yapılandırma dosyalarına yazılmaz
 - **Uyumluluk**: Nutstore, Nextcloud, Synology gibi standart WebDAV hizmetleri (uygulamaya özel parola kullanılması önerilir)
-- **Açılışta sürüm denetimi**: önbellekteki belgeler açılmadan önce bulutla karşılaştırılır; değişiklik varsa bayt, satır, karma ve ilk farklı satır gösterilir; bulut sürümünü kullan, yereli koru, bulut kopyası kaydet veya iptal seçenekleri sunulur
 - **Önbellek eşitleme**: başlangıçta arka planda çalışır ve Ayarlar'dan elle başlatılabilir; uzaktan silinen/taşınan dosyalar yerelde temizlenir, isteğe bağlı çevrimdışı yansı WebDAV kökü altındaki tüm Markdown ve referans görselleri indirir
 
 ---
 
 ## Uzantılar ve Kişiselleştirme
 
+### Belge içi AI (doğrudan düzenleme)
+
+Yan sohbetten kopyalayıp yapıştırmaya gerek yok: metni seçin ve yüzen çubuğun en solundaki yıldıza tıklayın — ya da `Ctrl` tuşuna iki kez basın (`Ctrl+Enter` olarak değiştirilebilir veya Ayarlar → Kısayollar'dan kapatılabilir) — AI doğrudan belgenin içinde yeniden yazsın veya devam etsin; sonuç yerinde kalır.
+
+- **Seçimi yeniden yazma**: seçimin yanına bir komut yazın; değiştir, altına ekle, kopyala veya bırak; «Orijinalle karşılaştır» diff'i (kırmızı/silinen, yeşil/eklenen) metnin içinde gösterir
+- **Ek bağlam**: «geçerli bölüm / tüm belge / yok» ekleyin; AI kısaltmaları, terimleri ve tonu bilsin
+- **Ek talepler**: aynı panelde iyileştirin; yazdıktan sonra kapanır ve `Ctrl+Z` geri alır
+- **İmleçte oluşturma**: imleç konumunda bir paragraf yazdırın, ekleyin veya kopyalayın; aynı panel
+- **Hızlı niyetler**: seçime göre düzelt, genişlet, kısalt, çevir, hataları düzelt, listeye çevir
+- **Oturum geçmişi**: her üretim belge bazında arşivlenir; panelin altından listeyi ve ayrıntıyı açıp yeniden ekleyin, kopyalayın veya silin. Belge başına 50 kayıt, 90 gün; başka yerdeki değişiklikler onu silmez
+- **Panel ayrıntıları**: sürüklenebilir, giriş 480px'e kadar büyütülebilir, açılışta odaklanır, düşünme varsayılan olarak açık, alt bilgi tek satır
+
 ### AI Asistanı (Yan Sohbet Paneli)
 
 - **18 büyük model sağlayıcısı + özel hizmet**: OpenAI, Anthropic, Gemini, xAI, Mistral, Groq, DeepSeek, Qwen, Zhipu GLM, Moonshot Kimi, Volcano Engine, SiliconFlow, MiniMax, Xiaomi MiMo, Meituan LongCat, OpenRouter, OpenCode Go, Ollama (yerel); «özel hizmet» OpenAI uyumlu / Anthropic uyumlu iki protokolü destekler, Base URL, model ID ve anahtar kendiniz girilir
 - **Akışlı sohbet**: araç çubuğundaki robot düğmesi sağ paneli açar, yanıtlar gerçek zamanlı akışla çıkar ve istenildiği an durdurulabilir
-- **Düşünme süreci**: akıl yürütme modellerinin reasoning / thinking çıktısı katlanabilir blokta gösterilir, varsayılan olarak kapalıdır
+- **Düşünme süreci**: akıl yürüten modellerin reasoning / thinking içeriği katlanabilir bir blokta gösterilir: akış sırasında açık, yanıt başlayınca katlanır ve sonra yeniden açılabilir
 - **Anahtar güvenliği**: API anahtarları sistem anahtarlığında saklanır, tek tıkla kaydetme, temizleme ve doğrulama desteklenir; yerel uç noktalar (llama.cpp / LM Studio / vLLM vb.) boş bırakılabilir
 - **Mevcut belgeyi referans al**: işaretlendiğinde geçerli belge bağlam olarak gönderilir; başvuru üst sınırı (64K–512K / sınırsız) ve bağlam tur sayısı (0–20, varsayılan 3) yapılandırılabilir
 - **Sonucu belgeye aktarma**: kopyala, imleç konumuna ekle veya tek tıkla yeni belge olarak oluştur
 
 ### AI Yetenekleri (Skill)
 
-Giriş kutusundaki ⚡ düğmesi yetenek menüsünü açar; seçilen yetenek etiketi imleç konumuna eklenir ve istem (prompt) otomatik olarak bağlama enjekte edilir. `skills/` dizinine `skills.json` + `.md` istemleri koyarak kendinizinkileri tanımlayabilirsiniz. Yerleşik 5 yetenek: «Sunum taslağı çıkarma», «Belge özeti», «Üslup düzeltme», «Tam metin çevirisi», «Markdown biçimlendirme».
+Giriş kutusundaki ⚡ düğmesi yetenek menüsünü açar; seçilen yetenek etiketi imleç konumuna eklenir ve istem (prompt) otomatik olarak bağlama enjekte edilir. `skills/` dizinine `skills.json` + `.md` istemleri koyarak kendinizinkileri tanımlayabilirsiniz. Yerleşik 5 yetenek: «Sunum taslağı çıkarma», «Belge özeti», «Üslup düzeltme», «Tam metin çevirisi», «Markdown biçimlendirme». Skill'lerde «sonuç hedefi» de var: AI sohbetine gönder veya belgeyi doğrudan düzenle. Yerleşik «Üslup düzeltme» ve «Markdown biçimlendirme» varsayılan olarak belgede yazar; «Sunum taslağı çıkarma», «Belge özeti» ve «Tam metin çevirisi» sağdaki sohbete gitmeye devam eder.
 
-### Skill yönetimi ve seçim asistanı
+Ayarlar → Skill yönetimi altında skill oluşturabilir, düzenleyebilir veya silebilir; ad, ID, simge, özet ve prompt değiştirebilirsiniz; AI paneli anında yenilenir ve değiştirilen/silinen yerleşik skill'ler güncellemelerde korunur.
 
-v0.4.4: Ayarlar → Skill yönetimi altında skill oluşturabilir, düzenleyebilir veya silebilir; ad, ID, simge, özet ve prompt değiştirebilirsiniz; AI paneli anında yenilenir ve değiştirilen/silinen yerleşik skill'ler güncellemelerde korunur. Ayarlar → Seçim asistanı altında araç çubuğunu yapılandırın: skill veya sistem işlemlerini (kopyala, yapıştır, sohbete ekle) ekleyin, kaldırın, sıralayın, adlarını değiştirin ve canlı önizlemeyi görün.
+### Seçim asistanı
+
+Ayarlar → Seçim asistanı altında araç çubuğunu yapılandırın: skill veya sistem işlemlerini (kopyala, yapıştır, sohbete ekle) ekleyin, kaldırın, sıralayın, adlarını değiştirin ve canlı önizlemeyi görün. Varsayılan olarak Sunum taslağı, Özet, Yeniden yaz, Çevir, Kopyala ve Sohbete ekle sunar; kullanılabilir işlem yoksa çubuk görünmez.
+
+- **Yıldız girişi**: yüzen çubuğun en solundaki yıldız, belge içi AI'nın tek girişi; araç çubuğu / biçim çubuğu geçişi en sağa (⇄) taşındı
+- **Biçim çubuğu**: ⇄ ile eylem çubuğu ile biçim çubuğu arasında geçiş — kalın, italik, üstü çizili, vurgu, satır içi kod (ve kod bloğu), üst/alt simge, başlıklar, listeler, görev listeleri, alıntı ve formüller; alt seçenekli simgeler üzerine gelince açılır; sıra ve görünürlük Ayarlar'da
+- **Uygulanmış durum**: biçim çubuğu seçimde zaten etkin biçimleri işaretler; bir tıklama uygular, bir tıklama kaldırır
+- **Belgede skill'ler**: «belgeyi doğrudan düzenle» hedefli skill'ler belgede çalışır ve seçimi değiştirebilir
 
 ### Eklentiler
 
@@ -286,6 +307,8 @@ v0.4.4: Ayarlar → Skill yönetimi altında skill oluşturabilir, düzenleyebil
 | Ins | Eğik çizgi menüsü | F12 | Geliştirici araçları |
 
 Kısayollar Ayarlar → Kısayollar bölümünde özelleştirilebilir: 36 action için görsel bağlama, tuş kaydı, çakışma algılama ve varsayılana dönme.
+
+Belge içi AI'nın kendi hareketi var: `Ctrl` tuşuna iki kez basın (`Ctrl+Enter` olarak değiştirilebilir veya kapatılabilir); yukarıdaki tablodan hiçbir tuşu kullanmaz.
 
 ---
 

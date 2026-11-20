@@ -3,7 +3,7 @@
 
 ![Obraz](https://github.com/laoduu/YiziMarkdown/raw/main/assets/readme/index.png)
 
-[简体中文](../../readme.md) | [繁體中文](./readme-zh-TW.md) | [English](./readme-en.md) | [日本語](./readme-ja.md) | [한국어](./readme-ko.md) | [Deutsch](./readme-de.md) | [Français](./readme-fr.md) | [Español](./readme-es.md) | [Português](./readme-pt.md) | [Italiano](./readme-it.md) | [Polski](./readme-pl.md) | [Nederlands](./readme-nl.md) | [Türkçe](./readme-tr.md) | [Svenska](./readme-sv.md) | [Українська](./readme-uk.md) | [Русский](./readme-ru.md)
+[简体中文](../../README.md) | [繁體中文](./readme-zh-TW.md) | [English](./readme-en.md) | [日本語](./readme-ja.md) | [한국어](./readme-ko.md) | [Deutsch](./readme-de.md) | [Français](./readme-fr.md) | [Español](./readme-es.md) | [Português](./readme-pt.md) | [Italiano](./readme-it.md) | [Polski](./readme-pl.md) | [Nederlands](./readme-nl.md) | [Türkçe](./readme-tr.md) | [Svenska](./readme-sv.md) | [Українська](./readme-uk.md) | [Русский](./readme-ru.md)
 
 **Oficjalna strona:** https://md.yizigpt.com
 
@@ -15,7 +15,7 @@ YiziMarkdown to wieloplatformowy edytor Markdown skoncentrowany na pisaniu. Ten 
 
 Po co tworzyć kolejny edytor Markdown? Dostępne na rynku rozwiązania albo brzydko wyglądają, albo są przeładowane funkcjami — trudno znaleźć narzędzie, które łączy prostotę i estetykę z komfortem pracy. Tak powstał YiziMarkdown, wierny trzem zasadom: **ładny interfejs**, **mocne możliwości**, **wiele zastosowań**.
 
-Tak narodził się obecny `YiziMarkdown`, obejmujący `3 systemy`, `7 trybów pracy`, `16 języków interfejsu`, `15 jasnych i ciemnych motywów`, `5 umiejętności AI (Skill)`, `7 formatów eksportu`, a do tego nowatorskie funkcje, takie jak asystent AI i pamięć w chmurze, oraz otwartą dokumentację motywów, umiejętności i prezentacji — dzięki niej możesz zbudować jeszcze bardziej wyjątkowe doświadczenia.
+Tak narodził się obecny `YiziMarkdown`, obejmujący `3 systemy`, `7 trybów pracy`, `16 języków interfejsu`, `15 jasnych i ciemnych motywów`, `5 umiejętności AI (Skill)`, `7 formatów eksportu`, a do tego nowatorskie funkcje, takie jak asystent AI, przepisywanie AI bezpośrednio w dokumencie i pamięć w chmurze, oraz otwartą dokumentację motywów, umiejętności i prezentacji — dzięki niej możesz zbudować jeszcze bardziej wyjątkowe doświadczenia.
 
 To już nie jest zwykły edytor Markdown, ale naprawdę wszechstronna aplikacja obejmująca wiele scenariuszy dokumentów — w twórczości, pracy i życiu codziennym.
 
@@ -23,13 +23,15 @@ To już nie jest zwykły edytor Markdown, ale naprawdę wszechstronna aplikacja 
 
 ## Siedem trybów: jeden dokument, siedem odsłon
 
+![Siedem trybów w skrócie](https://github.com/laoduu/YiziMarkdown/raw/main/assets/readme/modes.svg)
+
 Wartość Markdown nie tkwi wyłącznie w „pisaniu”, ale też w tym, „komu i jak pokazać efekt”. YiziMarkdown daje jeden dokument w siedmiu odsłonach: pierwsze cztery to widoki edycji, przełączane między źródłem a gotowym wynikiem; pozostałe trzy to odrębne scenariusze, które zamieniają dokument w slajdy, strony książki albo zostawiają tylko treść.
 
 | Tryb | W jednym zdaniu | Wejście | Zastosowanie |
 |------|-----------|------|------|
 | Źródło | Bezpośrednia edycja surowego Markdown | `F3` / przyciski widoku | Precyzyjna praca nad strukturą, masowe zamiany, edycja frontmatter |
 | Obok siebie | Piszesz po lewej, od razu porównujesz po prawej | `F3` / przyciski widoku | Korekta układu, pisanie według szablonu |
-| Na żywo | WYSIWYG, znaczniki ukrywane automatycznie | `F3` / przyciski widoku | Pisanie długich tekstów, skupiona praca |
+| Na żywo | WYSIWYG, znaczniki ukrywane automatycznie | `F3` / przyciski widoku | Natychmiastowe pisanie ze strukturą |
 | Podgląd | Pokazuje tylko ostateczny układ | `F3` / przyciski widoku | Sprawdzanie gotowego efektu, czytanie całości |
 | Prezentacja | Dokument jako gotowy pokaz slajdów | `Ctrl+Alt+P` / pasek narzędzi | Dzielenie się, prezentacje, wykłady |
 | Czytanie | Dokument złożony jako książka do przewracania | `Ctrl+Alt+R` / pasek narzędzi | Długie teksty, EPUB, immersyjne czytanie |
@@ -204,7 +206,7 @@ Tekst sformatowany skopiowany ze stron internetowych, Word / DOCX, Google Docs, 
   - DOCX używa natywnej semantyki Worda (listy, tabele, bloki kodu, cytaty, listy zadań), styl tabel zgodny z podglądem, obrazy z lokalnych ścieżek, obrazy sieciowe i HTML `<img>` (szerokość przez `width`)
   - PDF jest zgodny z podglądem i automatycznie dzieli się na strony
   - HTML zawiera pływającą kartę konspektu po lewej stronie; kliknięcie pozycji przenosi prosto do rozdziału (PDF nie ma paska bocznego)
-  - PPTX dziedziczy motyw, tryb jasny/ciemny i układy trybu prezentacji, generując edytowalny tekst, tabele, obrazy, kształty i natywne równania; obszar roboczy jest stały 16:9 / 1280×720, okno eksportu pozwala zmienić rozmiar czcionki i sprawdzić układ bez zapisu; długie linie kodu zawijają się do szerokości kolumny
+  - PPTX dziedziczy motyw, tryb jasny/ciemny i układy trybu prezentacji, generując edytowalny tekst, tabele, obrazy, kształty i natywne równania; obszar roboczy jest stały 16:9 / 1280×720, okno eksportu pozwala zmienić rozmiar czcionki i sprawdzić układ bez zapisu; długie linie kodu zawijają się do szerokości kolumny, a dodatkowa wysokość po zawinięciu przesuwa karty w tym samym rzędzie i kolejną treść w dół
   - EPUB dostarcza wbudowana wtyczka; przed eksportem można wybrać podział na rozdziały / okładkę / widoczny spis treści / motyw czytania / informacje o dokumencie
 - **Skojarzenie plików `.md`**: jednym kliknięciem w ustawieniach ustaw YiziMarkdown jako systemowy domyślny edytor Markdown (rejestr Windows / macOS LaunchServices)
 
@@ -213,31 +215,50 @@ Tekst sformatowany skopiowany ze stron internetowych, Word / DOCX, Google Docs, 
 - **Przeglądarka plików**: zakładka „Chmura” w pasku bocznym przegląda drzewo katalogów serwera — można otwierać dokumenty, tworzyć pliki / foldery, zmieniać nazwy, przenosić i usuwać; głębokie ścieżki nawigacyjne zwijają się do „…”, które rozwija menu do skoku, a foldery są ładowane leniwie poziom po poziomie
 - **Zapis do chmury**: prześlij lokalny dokument jednym kliknięciem; lokalne obrazy są automatycznie kopiowane do głównego folderu `assets/` i zapisywane jako odwołania względne; `Ctrl+S` zapisuje dokumenty w chmurze bezpośrednio z powrotem
 - **Ochrona przed konfliktami**: przed zapisem porównywany jest ETag; jeśli plik zmieniło inne urządzenie, pojawia się wybór „nadpisz wersję na serwerze” lub „odrzuć lokalne zmiany i wczytaj ponownie” — nigdy ciche nadpisanie
+- **Sprawdzanie wersji przy otwieraniu**: dokumenty w pamięci podręcznej są porównywane z chmurą przed otwarciem; po zmianie wyświetlane są bajty, wiersze, podsumowanie, pierwszy różniący się wiersz oraz oba czasy zapisu (chmura z `Last-Modified`), z opcjami użycia wersji z chmury, zachowania lokalnej, zapisania kopii w chmurze lub anulowania
 - **Bezpieczeństwo danych logowania**: nazwa użytkownika i hasło trafiają do systemowego magazynu poświadczeń (Menedżer poświadczeń Windows / Pęk kluczy macOS), nie do plików konfiguracyjnych
 - **Zgodność**: standardowe usługi WebDAV, takie jak Nutstore (Jianguoyun), Nextcloud czy Synology (zalecane hasło aplikacji)
-- **Sprawdzanie wersji przy otwieraniu**: dokumenty w pamięci podręcznej są porównywane z chmurą przed otwarciem; po zmianie wyświetlane są bajty, wiersze, skróty i pierwszy różniący się wiersz, z opcjami użycia wersji z chmury, zachowania lokalnej, zapisania kopii w chmurze lub anulowania
 - **Synchronizacja pamięci podręcznej**: działa w tle przy starcie i można ją uruchomić ręcznie w Ustawieniach; usunięte/przeniesione pliki zdalne są czyszczone lokalnie, a opcjonalne lustro offline pobiera wszystkie pliki Markdown i obrazy referencyjne pod korzeniem WebDAV
 
 ---
 
 ## Rozszerzenia i personalizacja
 
+### AI w dokumencie (bezpośrednia edycja)
+
+Koniec z kopiowaniem z bocznego czatu: zaznacz tekst i kliknij gwiazdkę na skrajnej lewej stronie paska — albo naciśnij dwukrotnie `Ctrl` (można zmienić na `Ctrl+Enter` lub wyłączyć w Ustawienia → Skróty) — a AI przepisze lub dopisze bezpośrednio w dokumencie, a wynik trafi na miejsce.
+
+- **Przepisywanie zaznaczenia**: wpisz polecenie obok zaznaczenia; zamień, wstaw poniżej, skopiuj lub odrzuć; „Porównaj z oryginałem” pokazuje diff (czerwone/usunięte, zielone/nowe) w tekście
+- **Dodatkowy kontekst**: dołącz „bieżąca sekcja / cały dokument / brak”, aby AI znała skróty, terminy i ton
+- **Doprecyzowania**: dopracowuj w tym samym panelu; po zapisaniu zamyka się, a `Ctrl+Z` cofa
+- **Tworzenie przy kursorze**: poproś AI o akapit w miejscu kursora i wstaw go lub skopiuj, w tym samym panelu
+- **Szybkie intencje**: popraw, rozwiń, skróć, przetłumacz, popraw błędy, zamień w listę — zależnie od zaznaczenia
+- **Historia sesji**: każda generacja jest archiwizowana per dokument; rozwiń listę i szczegóły w stopce panelu, aby przejrzeć, wstawić ponownie, skopiować lub usunąć. 50 wpisów na dokument, 90 dni; zmiany w innym miejscu jej nie usuwają
+- **Szczegóły panelu**: przeciągany, pole wejściowe do 480px, fokus po otwarciu, rozumowanie domyślnie rozwinięte, stopka w jednej linii
+
 ### Asystent AI (boczny panel czatu)
 
 - **18 dostawców modeli AI + usługa własna**: OpenAI, Anthropic, Gemini, xAI, Mistral, Groq, DeepSeek, Tongyi Qianwen (Qwen), Zhipu GLM, Moonshot Kimi, Volcano Engine (Doubao), SiliconFlow, MiniMax, Xiaomi MiMo, Meituan LongCat, OpenRouter, OpenCode Go, Ollama (lokalnie); „Usługa własna” obsługuje protokoły zgodne z OpenAI / Anthropic — własny Base URL, ID modelu i klucz
 - **Czat strumieniowy**: przycisk robota na pasku narzędzi otwiera prawy panel, odpowiedzi płyną na żywo i można je zatrzymać w dowolnym momencie
-- **Proces myślowy**: reasoning / thinking modeli rozumujących jest wyświetlany w zwijanym bloku, domyślnie zwiniętym
+- **Proces myślowy**: reasoning / thinking modeli rozumujących jest wyświetlany w zwijanym bloku: rozwinięty podczas generowania, zwijany, gdy zaczyna się odpowiedź, i nadal można go rozwinąć
 - **Bezpieczeństwo kluczy**: klucze API są przechowywane w systemowym pęku kluczy, z jednym kliknięciem zapisu, czyszczenia i weryfikacji; dla lokalnych punktów końcowych (llama.cpp / LM Studio / vLLM itp.) można zostawić puste
 - **Odwołanie do bieżącego dokumentu**: po zaznaczeniu dokument staje się kontekstem, z konfigurowalnym limitem (64K–512K / bez limitu) i liczbą tur kontekstu (0–20, domyślnie 3)
 - **Zapis wyniku**: kopiowanie, wstawienie w miejscu kursora lub jednym kliknięciem utworzenie nowego dokumentu
 
 ### Umiejętności AI (Skill)
 
-Przycisk ⚡ w polu wprowadzania otwiera menu umiejętności; po wybraniu tag umiejętności trafia w miejsce kursora, a prompt jest automatycznie wstrzykiwany do kontekstu. Wystarczy umieścić `skills.json` + prompty `.md` w katalogu `skills/`, aby zdefiniować własne. Wbudowane są 5 umiejętności: „Szkic prezentacji”, „Podsumowanie dokumentu”, „Redakcja i szlifowanie”, „Tłumaczenie całego tekstu”, „Formatowanie Markdown”.
+Przycisk ⚡ w polu wprowadzania otwiera menu umiejętności; po wybraniu tag umiejętności trafia w miejsce kursora, a prompt jest automatycznie wstrzykiwany do kontekstu. Wystarczy umieścić `skills.json` + prompty `.md` w katalogu `skills/`, aby zdefiniować własne. Wbudowane są 5 umiejętności: „Szkic prezentacji”, „Podsumowanie dokumentu”, „Redakcja i szlifowanie”, „Tłumaczenie całego tekstu”, „Formatowanie Markdown”. Umiejętności mają też „miejsce wyniku”: wysłanie do czatu AI lub bezpośrednie przepisanie dokumentu. Wbudowane „Redakcja i szlifowanie” oraz „Formatowanie Markdown” domyślnie piszą w dokumencie; „Szkic prezentacji”, „Podsumowanie dokumentu” i „Tłumaczenie całego tekstu” nadal trafiają do bocznego czatu.
 
-### Zarządzanie Skillami i asystent zaznaczania
+W Ustawieniach → Zarządzanie Skillami twórz, edytuj i usuwaj skille oraz zmieniaj nazwę, ID, ikonę, podsumowanie i prompt; panel AI odświeża się natychmiast, a zmodyfikowane lub usunięte wbudowane skille są zachowywane przy aktualizacjach.
 
-v0.4.4: w Ustawieniach → Zarządzanie Skillami twórz, edytuj i usuwaj skille oraz zmieniaj nazwę, ID, ikonę, podsumowanie i prompt; panel AI odświeża się natychmiast, a zmodyfikowane lub usunięte wbudowane skille są zachowywane przy aktualizacjach. W Ustawieniach → Asystent zaznaczania skonfiguruj pasek: dodawaj, usuwaj i porządkuj działania ze skilli lub systemowe (kopiuj, wklej, dodaj do czatu), zmieniaj nazwy i oglądaj podgląd na żywo.
+### Asystent zaznaczania
+
+W Ustawieniach → Asystent zaznaczania skonfiguruj pasek: dodawaj, usuwaj i porządkuj działania ze skilli lub systemowe (kopiuj, wklej, dodaj do czatu), zmieniaj nazwy i oglądaj podgląd na żywo. Domyślnie oferuje Szkic prezentacji, Podsumowanie, Przepisanie, Tłumaczenie, Kopiuj i Dodaj do czatu; gdy nie ma żadnej akcji, pasek się nie pojawia.
+
+- **Wejście gwiazdką**: gwiazdka na skrajnej lewej stronie paska to jedno wejście do AI w dokumencie; przełącznik paska akcji / formatowania przeniesiono na skrajną prawą stronę (⇄)
+- **Pasek formatowania**: ⇄ przełącza między paskiem akcji a formatowaniem — pogrubienie, kursywa, przekreślenie, wyróżnienie, kod w linii (i blok), indeks górny/dolny, nagłówki, listy, listy zadań, cytat i formuły; ikony z opcjami otwierają się po najechaniu; kolejność i widoczność w Ustawieniach
+- **Stan zastosowania**: pasek oznacza formaty już aktywne w zaznaczeniu; jedno kliknięcie stosuje, kolejne usuwa
+- **Skille w dokumencie**: skille z ustawieniem „bezpośrednio przepisz dokument” działają w dokumencie i mogą zastąpić zaznaczenie
 
 ### Wtyczki
 
@@ -286,6 +307,8 @@ v0.4.4: w Ustawieniach → Zarządzanie Skillami twórz, edytuj i usuwaj skille 
 | Ins | Menu ukośnika | F12 | Narzędzia deweloperskie |
 
 Skróty można dostosować w Ustawienia → Skróty: wizualne wiązanie 36 akcji, nagrywanie klawiszy, wykrywanie konfliktów i przywracanie domyślnych.
+
+AI w dokumencie ma własny gest: naciśnij dwukrotnie `Ctrl` (można zmienić na `Ctrl+Enter` lub wyłączyć); nie zajmuje żadnego klawisza z powyższej tabeli.
 
 ---
 

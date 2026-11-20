@@ -3,7 +3,7 @@
 
 ![image](https://github.com/laoduu/YiziMarkdown/raw/main/assets/readme/index.png)
 
-[简体中文](../../readme.md) | [繁體中文](./readme-zh-TW.md) | [English](./readme-en.md) | [日本語](./readme-ja.md) | [한국어](./readme-ko.md) | [Deutsch](./readme-de.md) | [Français](./readme-fr.md) | [Español](./readme-es.md) | [Português](./readme-pt.md) | [Italiano](./readme-it.md) | [Polski](./readme-pl.md) | [Nederlands](./readme-nl.md) | [Türkçe](./readme-tr.md) | [Svenska](./readme-sv.md) | [Українська](./readme-uk.md) | [Русский](./readme-ru.md)
+[简体中文](../../README.md) | [繁體中文](./readme-zh-TW.md) | [English](./readme-en.md) | [日本語](./readme-ja.md) | [한국어](./readme-ko.md) | [Deutsch](./readme-de.md) | [Français](./readme-fr.md) | [Español](./readme-es.md) | [Português](./readme-pt.md) | [Italiano](./readme-it.md) | [Polski](./readme-pl.md) | [Nederlands](./readme-nl.md) | [Türkçe](./readme-tr.md) | [Svenska](./readme-sv.md) | [Українська](./readme-uk.md) | [Русский](./readme-ru.md)
 
 **Offizielle Website:** https://md.yizigpt.com
 
@@ -15,7 +15,7 @@ YiziMarkdown ist ein plattformübergreifender Markdown-Editor mit dem Schreiben 
 
 Warum noch ein Markdown-Editor? Was der Markt bietet, sieht entweder wenig ansprechend aus oder ist mit Funktionen überladen; ein Werkzeug, das zugleich schlicht, schön und angenehm zu bedienen ist, ist schwer zu finden. So entstand YiziMarkdown, mit drei festen Grundsätzen: **schöne Oberfläche**, **starke Funktionen**, **vielfältige Szenarien**.
 
-Daraus wurde das heutige `YiziMarkdown`: `3 Betriebssysteme`, `7 Nutzungsmodi`, `16 Oberflächensprachen`, `15 helle und dunkle Themes`, `5 AI-Skills`, `7 Exportformate` – dazu innovative Funktionen wie der integrierte KI-Assistent und Cloud-Speicher sowie offene Dokumentation zu Themes, Skills und Präsentationen, mit der Sie sich ganz eigene Arbeitsweisen zusammenstellen können.
+Daraus wurde das heutige `YiziMarkdown`: `3 Betriebssysteme`, `7 Nutzungsmodi`, `16 Oberflächensprachen`, `15 helle und dunkle Themes`, `5 AI-Skills`, `7 Exportformate` – dazu innovative Funktionen wie der integrierte KI-Assistent, KI-Umschreiben direkt im Dokument und Cloud-Speicher sowie offene Dokumentation zu Themes, Skills und Präsentationen, mit der Sie sich ganz eigene Arbeitsweisen zusammenstellen können.
 
 Das ist längst kein einfacher Markdown-Editor mehr, sondern eine vielseitige Anwendung, die alle Ihre Dokument-Szenarien beim Schreiben, bei der Arbeit und im Alltag wirklich abdeckt.
 
@@ -23,13 +23,15 @@ Das ist längst kein einfacher Markdown-Editor mehr, sondern eine vielseitige An
 
 ## Sieben Modi: ein Dokument, sieben Darstellungen
 
+![Die sieben Modi im Überblick](https://github.com/laoduu/YiziMarkdown/raw/main/assets/readme/modes.svg)
+
 Der Wert von Markdown liegt nicht nur im Schreiben, sondern auch darin, wem man das Ergebnis zeigt und wie. YiziMarkdown bietet für dasselbe Dokument sieben Darstellungen: Die ersten vier sind Bearbeitungsansichten, die zwischen Quelltext und fertigem Ergebnis wechseln; die letzten drei sind eigenständige Szenarien, die das Dokument zu Folien, Buchseiten oder schlicht nur zum Text machen.
 
 | Modus | Kurz gesagt | Zugang | Geeignet für |
 |------|-----------|------|------|
 | Quelltext | Rohes Markdown direkt bearbeiten | `F3` / Ansichts-Schaltflächen | Struktur feilen, Suchen und Ersetzen im großen Stil, Frontmatter ändern |
 | Nebeneinander | Links schreiben, rechts sofort vergleichen | `F3` / Ansichts-Schaltflächen | Layout gegenlesen, nach einer Vorlage schreiben |
-| Live | WYSIWYG, Markierungen verschwinden automatisch | `F3` / Ansichts-Schaltflächen | Lange Texte schreiben, konzentriert arbeiten |
+| Live | WYSIWYG, Markierungen verschwinden automatisch | `F3` / Ansichts-Schaltflächen | Sofort strukturiert schreiben |
 | Vorschau | Nur das endgültige Layout | `F3` / Ansichts-Schaltflächen | Ergebnis prüfen, ganzen Text lesen |
 | Präsentation | Das Dokument direkt als Folien zeigen | `Ctrl+Alt+P` / Symbolleiste | Teilen, Berichten, Unterrichten |
 | Lesen | Das Dokument als durchblätterbares Buch | `Ctrl+Alt+R` / Symbolleiste | Lange Texte, EPUB, immersives Lesen |
@@ -204,7 +206,7 @@ Rich Text aus Webseiten, Word / DOCX, Google Docs, Notion und ähnlichen Quellen
   - DOCX nutzt native Word-Semantik (Listen, Tabellen, Codeblöcke, Zitate, Aufgabenlisten), die Tabellenformatierung entspricht der Vorschau, Bilder aus lokalen Pfaden, Web-Bilder und HTML-`<img>` werden unterstützt (Breite über `width`)
   - PDF entspricht der Vorschau und wird automatisch umbrochen
   - HTML enthält links eine schwebende Gliederungskarte, Klick auf einen Eintrag springt zum Abschnitt (PDF ohne Seitenleiste)
-  - PPTX übernimmt Theme, Hell/Dunkel und Layouts des Präsentationsmodus und gibt bearbeitbaren Text, Tabellen, Bilder, Formen und native Formeln aus; die Arbeitsfläche ist auf 16:9 / 1280×720 festgelegt, der Exportdialog bietet Schriftgrößenanpassung und eine Layoutprüfung ohne Schreiben; lange Codezeilen brechen an der Spaltenbreite um
+  - PPTX übernimmt Theme, Hell/Dunkel und Layouts des Präsentationsmodus und gibt bearbeitbaren Text, Tabellen, Bilder, Formen und native Formeln aus; die Arbeitsfläche ist auf 16:9 / 1280×720 festgelegt, der Exportdialog bietet Schriftgrößenanpassung und eine Layoutprüfung ohne Schreiben; lange Codezeilen brechen an der Spaltenbreite um, und die durch den Umbruch entstehende Höhe schiebt benachbarte Karten und folgende Inhalte mit nach unten
   - EPUB stammt aus dem integrierten Plugin; vor dem Export sind Kapitelaufteilung / Cover / sichtbares Inhaltsverzeichnis / Lesetheme / Dokumentinformationen wählbar
 - **`.md`-Zuordnung**: in den Einstellungen mit einem Klick als Standard-Markdown-Editor des Systems festlegen (Windows-Registrierung / macOS LaunchServices)
 
@@ -213,31 +215,50 @@ Rich Text aus Webseiten, Word / DOCX, Google Docs, Notion und ähnlichen Quellen
 - **Dateibrowser**: Der „Cloud“-Tab in der Seitenleiste durchsucht den Verzeichnisbaum des Servers – Dokumente öffnen, Dateien / Ordner anlegen, umbenennen, verschieben, löschen; tiefe Pfade klappen im Breadcrumb zu „…“ mit Dropdown, Ordner werden Schicht für Schicht nachgeladen
 - **In die Cloud speichern**: lokales Dokument mit einem Klick hochladen; lokale Bilder werden automatisch in den Stammordner `assets/` kopiert und als relative Referenzen umgeschrieben; `Ctrl+S` schreibt Cloud-Dokumente direkt zurück
 - **Konfliktschutz**: vor dem Speichern wird der ETag verglichen; wurde die Datei auf einem anderen Gerät geändert, fragt ein Dialog nach „Serverversion überschreiben“ oder „Lokale Änderungen verwerfen und neu laden“ – niemals stilles Überschreiben
+- **Versionsprüfung beim Öffnen**: zwischengespeicherte Dokumente werden vor dem Öffnen mit der Cloud verglichen; bei Änderungen erscheinen Byte- und Zeilenzahl, Zusammenfassung, erste abweichende Zeile und beide Speicherzeiten (Cloud aus `Last-Modified`) – mit den Optionen Cloud-Version übernehmen, lokal behalten, Cloud-Kopie speichern oder abbrechen
 - **Zugangsdaten**: Benutzername und Passwort liegen im System-Credential-Store (Windows-Anmeldeinformationsverwaltung / macOS-Schlüsselbund), nicht in Konfigurationsdateien
 - **Kompatibilität**: Standard-WebDAV-Dienste wie Nutstore, Nextcloud, Synology (ein anwendungsspezifisches Passwort wird empfohlen)
-- **Versionsprüfung beim Öffnen**: zwischengespeicherte Dokumente werden vor dem Öffnen mit der Cloud verglichen; bei Änderungen werden Bytes, Zeilen, Hashes und die erste abweichende Zeile angezeigt – mit Optionen für Cloud-Version übernehmen, lokal behalten, Cloud-Kopie speichern oder abbrechen
 - **Cache-Synchronisierung**: läuft beim Start im Hintergrund und lässt sich in den Einstellungen manuell auslösen; entfernte/gelöschte Dateien werden lokal bereinigt, optional lädt ein Offline-Spiegel alle Markdown-Dateien und referenzierten Bilder unter dem WebDAV-Stamm
 
 ---
 
 ## Erweiterungen und Personalisierung
 
+### KI direkt im Dokument
+
+Kein Umweg mehr über den Chat rechts mit Kopieren und Einfügen: Text markieren und den Stern ganz links in der Auswahlleiste anklicken – oder `Ctrl` doppelt drücken (unter Einstellungen → Tastenkürzel auf `Ctrl+Enter` änderbar oder abschaltbar) – und die KI schreibt direkt im Dokument um oder weiter; das Ergebnis wird an Ort und Stelle übernommen.
+
+- **Auswahl umschreiben**: Anweisung neben der Auswahl eingeben; Ergebnis ersetzen, darunter einfügen, kopieren oder verwerfen; „Mit Original vergleichen“ zeigt den Diff (rot/gelöscht, grün/neu) direkt im Text
+- **Zusätzlicher Kontext**: „aktueller Abschnitt / ganzes Dokument / keiner“ anhängen, damit die KI Abkürzungen, Fachbegriffe und Tonfall kennt
+- **Nachforderungen**: im selben Panel weiter verfeinern; nach dem Schreiben schließt es sich, `Ctrl+Z` macht es rückgängig
+- **Am Cursor schreiben**: die KI an der Cursorposition einen Absatz schreiben lassen, einfügen oder kopieren – dasselbe Panel
+- **Schnellbefehle**: Überarbeiten, Erweitern, Kürzen, Übersetzen, Korrigieren, in eine Liste umwandeln – passend zur Auswahl
+- **Sitzungsverlauf**: jede Generierung wird pro Dokument archiviert; Liste und Details im Panel-Fuß aufklappen, um Ergebnisse erneut einzufügen, zu kopieren oder zu löschen. 50 Einträge pro Dokument, 90 Tage; Änderungen anderswo löschen nichts
+- **Panel-Details**: verschiebbar, Eingabe bis 480px höhenverstellbar, sofort fokussiert, Denkprozess standardmäßig ausgeklappt, einzeilige Fußleiste
+
 ### KI-Assistent (Chatpanel in der Seitenleiste)
 
 - **18 Modell-Anbieter + eigener Dienst**: OpenAI, Anthropic, Gemini, xAI, Mistral, Groq, DeepSeek, Qwen, Zhipu GLM, Moonshot Kimi, Volcano Engine, SiliconFlow, MiniMax, Xiaomi MiMo, Meituan LongCat, OpenRouter, OpenCode Go, Ollama (lokal); „Eigener Dienst“ unterstützt OpenAI-kompatible und Anthropic-kompatible Protokolle mit eigener Base URL, Modell-ID und Schlüssel
 - **Streaming-Chat**: die Roboterschaltfläche in der Symbolleiste öffnet das Panel rechts, Antworten erscheinen live im Stream und lassen sich jederzeit stoppen
-- **Denkprozess**: reasoning / thinking von Reasoning-Modellen erscheint in einem einklappbaren Block, standardmäßig zugeklappt
+- **Denkprozess**: reasoning / thinking von Reasoning-Modellen erscheint in einem einklappbaren Block – während des Streamings ausgeklappt, ab dem ersten Antworttext zugeklappt und danach weiter aufklappbar
 - **Schlüsselsicherheit**: API-Schlüssel liegen im Systemschlüsselbund, Speichern, Löschen und Prüfen mit einem Klick; lokale Endpunkte (llama.cpp / LM Studio / vLLM usw.) dürfen leer bleiben
 - **Aktuelles Dokument referenzieren**: nach dem Anhaken dient das aktuelle Dokument als Kontext, mit konfigurierbarem Umfang (64K–512K / unbegrenzt) und Kontextrunden (0–20, Standard 3)
 - **Ergebnis übernehmen**: kopieren, an der Cursorposition einfügen oder mit einem Klick als neues Dokument anlegen
 
 ### KI-Skills
 
-Die ⚡-Schaltfläche im Eingabefeld öffnet das Skill-Menü; der gewählte Skill-Tag wird an der Cursorposition eingefügt und der Prompt automatisch in den Kontext eingebunden. In `skills/` genügen `skills.json` + `.md`-Prompts, um eigene Skills zu definieren. Fünf Skills sind integriert: „Präsentationsfassung verdichten“, „Dokument zusammenfassen“, „Formulierung überarbeiten“, „Volltext übersetzen“, „Markdown formatieren“.
+Die ⚡-Schaltfläche im Eingabefeld öffnet das Skill-Menü; der gewählte Skill-Tag wird an der Cursorposition eingefügt und der Prompt automatisch in den Kontext eingebunden. In `skills/` genügen `skills.json` + `.md`-Prompts, um eigene Skills zu definieren. Fünf Skills sind integriert: „Präsentationsfassung verdichten“, „Dokument zusammenfassen“, „Formulierung überarbeiten“, „Volltext übersetzen“, „Markdown formatieren“. Skills legen außerdem fest, wohin das Ergebnis geht: „an den KI-Chat senden“ oder „Dokument direkt umschreiben“. Die integrierten „Formulierung überarbeiten“ und „Markdown formatieren“ schreiben standardmäßig direkt im Dokument, während „Präsentationsfassung verdichten“, „Dokument zusammenfassen“ und „Volltext übersetzen“ weiter in den Chat rechts gehen.
 
-### Skill-Verwaltung und Auswahlassistent
+Unter Einstellungen → Skill-Verwaltung lassen sich Skills anlegen, bearbeiten und löschen – Name, ID, Icon, Kurzfassung und Prompt; das KI-Panel aktualisiert sich sofort, und geänderte oder gelöschte integrierte Skills bleiben bei Upgrades erhalten.
 
-v0.4.4: Unter Einstellungen → Skill-Verwaltung lassen sich Skills anlegen, bearbeiten und löschen – Name, ID, Icon, Kurzfassung und Prompt; das KI-Panel aktualisiert sich sofort, und geänderte oder gelöschte integrierte Skills bleiben bei Upgrades erhalten. Unter Einstellungen → Auswahlassistent lässt sich die Werkzeugleiste konfigurieren: Aktionen aus Skills oder Systemfunktionen (Kopieren, Einfügen, zum Chat hinzufügen) hinzufügen, entfernen und sortieren, umbenennen und live in der Vorschau sehen.
+### Auswahlassistent
+
+Unter Einstellungen → Auswahlassistent lässt sich die Werkzeugleiste konfigurieren: Aktionen aus Skills oder Systemfunktionen (Kopieren, Einfügen, zum Chat hinzufügen) hinzufügen, entfernen und sortieren, umbenennen und live in der Vorschau sehen. Standardmäßig bietet sie Präsentationsfassung, Zusammenfassung, Umschreiben, Übersetzen, Kopieren und Zum Chat hinzufügen; sind keine Aktionen verfügbar, bleibt die Leiste ausgeblendet.
+
+- **Stern-Einstieg**: der Stern ganz links in der Auswahlleiste ist der einheitliche Einstieg in die KI im Dokument; der Wechsel Werkzeugleiste / Formatleiste liegt jetzt ganz rechts (⇄)
+- **Formatleiste**: ⇄ wechselt zwischen Aktionsleiste und Formatleiste – Fett, Kursiv, Durchgestrichen, Hervorhebung, Inline-Code (und Codeblock), Hoch-/Tiefstellung, Überschriften, Listen, Aufgabenlisten, Zitat und Formeln; Symbole mit Unteroptionen öffnen beim Hovern; Reihenfolge und Sichtbarkeit in den Einstellungen
+- **Aktiver Zustand**: die Formatleiste markiert bereits aktive Formate; einmal klicken aktiviert, erneut klicken entfernt
+- **Skills direkt im Dokument**: Skills mit „Dokument direkt umschreiben“ laufen im Dokument und können die Auswahl ersetzen
 
 ### Plugins
 
@@ -286,6 +307,8 @@ v0.4.4: Unter Einstellungen → Skill-Verwaltung lassen sich Skills anlegen, bea
 | Ins | Slash-Menü | F12 | Entwicklerwerkzeuge |
 
 Tastenkürzel lassen sich unter Einstellungen → Tastenkürzel anpassen: visuelle Belegung für 36 Actions, Tastenaufzeichnung, Konflikterkennung und Zurücksetzen auf den Standard.
+
+Die KI im Dokument hat eine eigene Geste: `Ctrl` doppelt drücken (änderbar auf `Ctrl+Enter` oder abschaltbar) – sie belegt keine Taste in der Tabelle oben.
 
 ---
 

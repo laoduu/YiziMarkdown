@@ -3,7 +3,7 @@
 
 ![image](https://github.com/laoduu/YiziMarkdown/raw/main/assets/readme/index.png)
 
-[简体中文](../../readme.md) | [繁體中文](./readme-zh-TW.md) | [English](./readme-en.md) | [日本語](./readme-ja.md) | [한국어](./readme-ko.md) | [Deutsch](./readme-de.md) | [Français](./readme-fr.md) | [Español](./readme-es.md) | [Português](./readme-pt.md) | [Italiano](./readme-it.md) | [Polski](./readme-pl.md) | [Nederlands](./readme-nl.md) | [Türkçe](./readme-tr.md) | [Svenska](./readme-sv.md) | [Українська](./readme-uk.md) | [Русский](./readme-ru.md)
+[简体中文](../../README.md) | [繁體中文](./readme-zh-TW.md) | [English](./readme-en.md) | [日本語](./readme-ja.md) | [한국어](./readme-ko.md) | [Deutsch](./readme-de.md) | [Français](./readme-fr.md) | [Español](./readme-es.md) | [Português](./readme-pt.md) | [Italiano](./readme-it.md) | [Polski](./readme-pl.md) | [Nederlands](./readme-nl.md) | [Türkçe](./readme-tr.md) | [Svenska](./readme-sv.md) | [Українська](./readme-uk.md) | [Русский](./readme-ru.md)
 
 **Site officiel :** https://md.yizigpt.com
 
@@ -15,7 +15,7 @@ YiziMarkdown est un éditeur Markdown multiplateforme centré sur l'écriture. U
 
 Pourquoi développer un éditeur Markdown ? Les solutions du marché sont soit peu agréables à l'œil, soit surchargées de fonctions, et il est difficile de trouver un outil qui réunisse simplicité, élégance et prise en main agréable. C'est ainsi qu'est né YiziMarkdown, avec trois exigences : **une interface soignée**, **des fonctions puissantes**, **des usages variés**.
 
-Voilà donc le `YiziMarkdown` d'aujourd'hui : `3 systèmes couverts`, `7 modes d'utilisation`, `16 langues d'interface`, `15 thèmes clair/sombre`, `5 AI Skills`, `7 formats d'export`, et en plus des fonctions originales comme l'assistant IA intégré et le stockage cloud, ainsi que de la documentation ouverte sur les thèmes, les skills et les présentations, avec lesquelles vous pouvez composer des expériences d'usage vraiment singulières.
+Voilà donc le `YiziMarkdown` d'aujourd'hui : `3 systèmes couverts`, `7 modes d'utilisation`, `16 langues d'interface`, `15 thèmes clair/sombre`, `5 AI Skills`, `7 formats d'export`, et en plus des fonctions originales comme l'assistant IA intégré, la réécriture IA directement dans le document et le stockage cloud, ainsi que de la documentation ouverte sur les thèmes, les skills et les présentations, avec lesquelles vous pouvez composer des expériences d'usage vraiment singulières.
 
 Ce n'est plus un simple éditeur Markdown, mais une application polyvalente qui couvre réellement vos scénarios documentaires : création, travail et vie quotidienne.
 
@@ -23,13 +23,15 @@ Ce n'est plus un simple éditeur Markdown, mais une application polyvalente qui 
 
 ## Sept modes : un seul document, sept présentations
 
+![Les sept modes en un coup d’œil](https://github.com/laoduu/YiziMarkdown/raw/main/assets/readme/modes.svg)
+
 La valeur de Markdown ne tient pas seulement à l'écriture, mais aussi à qui le lit et comment il le voit. YiziMarkdown propose sept présentations d'un même document : les quatre premières sont des vues d'édition, qui alternent entre la source et le résultat ; les trois dernières sont des scènes à part entière, qui transforment le document en diapositives, en pages de livre, ou le réduisent au seul texte.
 
 | Mode | En une phrase | Accès | Idéal pour |
 |------|-----------|------|---------|
 | Source | Éditer directement le Markdown brut | `F3` / boutons de vue | Peaufiner la structure, remplacer en masse, modifier le front matter |
 | Côte à côte | Écrire à gauche, comparer aussitôt à droite | `F3` / boutons de vue | Relire la mise en page, écrire d'après un modèle |
-| Direct | WYSIWYG, les balises se masquent d'elles-mêmes | `F3` / boutons de vue | Écriture de longs textes, rédaction concentrée |
+| Direct | WYSIWYG, les balises se masquent d'elles-mêmes | `F3` / boutons de vue | Écriture structurée instantanée |
 | Aperçu | N'affiche que la mise en page finale | `F3` / boutons de vue | Vérifier le résultat, relire l'intégralité |
 | Diaporama | Le document projeté tel quel en diapositives | `Ctrl+Alt+P` / barre d'outils | Partager, présenter, enseigner |
 | Lecture | Le document composé en livre feuilletable | `Ctrl+Alt+R` / barre d'outils | Lectures longues, EPUB, lecture immersive |
@@ -204,7 +206,7 @@ Le texte enrichi copié depuis des pages web, Word / DOCX, Google Docs, Notion o
   - DOCX utilise la sémantique native de Word (listes, tableaux, blocs de code, citations, listes de tâches), aligne le style des tableaux sur l'aperçu et prend en charge les images en chemin local, les images distantes et le HTML `<img>` (`width` permettant de contrôler la largeur)
   - PDF restitue fidèlement l'aperçu et pagine automatiquement
   - HTML inclut une carte de plan flottante à gauche, un clic menant à la section (le PDF n'a pas de panneau latéral)
-  - PPTX hérite du thème, du mode clair/sombre et des mises en page du mode diaporama, et produit du texte, des tableaux, des images, des formes et des équations natives modifiables ; le canevas est fixé à 16:9 / 1280×720, la boîte d'export permet d'ajuster la taille de police et de vérifier la mise en page sans écrire ; les longues lignes de code sont renvoyées à la largeur de colonne
+  - PPTX hérite du thème, du mode clair/sombre et des mises en page du mode diaporama, et produit du texte, des tableaux, des images, des formes et des équations natives modifiables ; le canevas est fixé à 16:9 / 1280×720, la boîte d'export permet d'ajuster la taille de police et de vérifier la mise en page sans écrire ; les longues lignes de code sont renvoyées à la largeur de colonne, et la hauteur supplémentaire due au retour à la ligne décale les cartes de la même rangée et le contenu suivant
   - EPUB est fourni par le plugin intégré ; avant l'export, choix du découpage par chapitre / de la couverture / du sommaire visible / du thème de lecture / des informations du document
 - **Association des fichiers `.md`** : définir YiziMarkdown comme éditeur Markdown par défaut du système en un clic dans les réglages (registre Windows / LaunchServices macOS)
 
@@ -213,31 +215,50 @@ Le texte enrichi copié depuis des pages web, Word / DOCX, Google Docs, Notion o
 - **Navigateur de fichiers** : l'onglet « Cloud » de la barre latérale parcourt l'arborescence du serveur — ouvrir des documents, créer fichiers / dossiers, renommer, déplacer, supprimer ; le fil d'Ariane des dossiers profonds se replie en « … » avec un menu déroulant, et les dossiers se chargent par niveaux
 - **Enregistrer dans le cloud** : téléversez un document local en un clic ; les images locales sont automatiquement copiées dans le dossier racine `assets/` et réécrites en références relatives ; `Ctrl+S` réécrit directement les documents cloud
 - **Protection contre les conflits** : l'ETag est comparé avant l'enregistrement ; si un autre appareil a modifié le fichier distant, une boîte propose « écraser la version du serveur » ou « abandonner mes modifications et recharger » — jamais d'écrasement silencieux
+- **Vérification de version à l'ouverture** : les documents en cache sont comparés au cloud avant l'ouverture ; en cas de changement, tailles, lignes, résumé, première ligne différente et les deux dates d'enregistrement (celle du cloud via `Last-Modified`) s'affichent, avec les options utiliser la version cloud, garder le local, enregistrer une copie cloud ou annuler
 - **Sécurité des identifiants** : le nom d'utilisateur et le mot de passe vont dans le magasin d'identifiants du système (Gestionnaire d'identifiants Windows / Trousseau macOS), jamais dans les fichiers de configuration
 - **Compatibilité** : services WebDAV standard tels que Nutstore, Nextcloud ou Synology (mot de passe applicatif recommandé)
-- **Vérification de version à l'ouverture** : les documents en cache sont comparés au cloud avant ouverture ; en cas de changement, la taille, les lignes, les empreintes et la première ligne différente sont affichées, avec choix d'utiliser le cloud, garder le local, enregistrer une copie cloud ou annuler
 - **Synchronisation du cache** : s'exécute en arrière-plan au démarrage et peut être lancée manuellement dans Réglages ; les fichiers distants supprimés ou déplacés sont nettoyés localement, et un miroir hors ligne optionnel télécharge tous les Markdown et images référencées sous la racine WebDAV
 
 ---
 
 ## Extensions et personnalisation
 
+### IA dans le document (réécriture directe)
+
+Plus besoin de passer par le chat latéral pour copier-coller : sélectionnez du texte puis cliquez sur l'étoile à l'extrême gauche de la barre flottante — ou appuyez deux fois sur `Ctrl` (modifiable en `Ctrl+Enter` ou désactivable dans Réglages → Raccourcis) — et l'IA réécrit ou prolonge directement dans le document, le résultat est écrit sur place.
+
+- **Réécriture de la sélection** : saisissez une consigne à côté de la sélection ; remplacer, insérer en dessous, copier ou abandonner ; « Comparer à l'original » affiche le diff (rouge/supprimé, vert/ajouté) directement dans le texte
+- **Contexte supplémentaire** : joindre « section courante / document entier / aucun » pour que l'IA connaisse abréviations, termes et ton
+- **Demandes complémentaires** : affinez dans le même panneau ; il se ferme après écriture, `Ctrl+Z` annule
+- **Créer au curseur** : demandez à l'IA un paragraphe à la position du curseur, puis insérez-le ou copiez-le, dans le même panneau
+- **Intentions rapides** : polir, développer, raccourcir, traduire, corriger, convertir en liste selon la sélection
+- **Historique de session** : chaque génération est archivée par document ; dépliez la liste et le détail depuis le pied du panneau pour consulter, réinsérer, copier ou supprimer. 50 entrées par document, 90 jours ; les modifications ailleurs ne le suppriment pas
+- **Détails du panneau** : déplaçable, zone de saisie extensible jusqu'à 480 px, focus à l'ouverture, raisonnement déplié par défaut, pied sur une seule ligne
+
 ### Assistant IA (panneau de chat latéral)
 
 - **18 fournisseurs de LLM + service personnalisé** : OpenAI, Anthropic, Gemini, xAI, Mistral, Groq, DeepSeek, Qwen (Tongyi), Zhipu GLM, Moonshot Kimi, Volcano Ark, SiliconFlow, MiniMax, Xiaomi MiMo, Meituan LongCat, OpenRouter, OpenCode Go, Ollama (local) ; le « service personnalisé » accepte les protocoles compatibles OpenAI et Anthropic, avec Base URL, ID de modèle et clé saisis à la main
 - **Conversation en flux** : le bouton robot de la barre d'outils ouvre le panneau de droite, les réponses s'affichent en flux et peuvent être arrêtées à tout moment
-- **Processus de réflexion** : le reasoning / thinking des modèles de raisonnement s'affiche dans un bloc repliable, replié par défaut
+- **Processus de réflexion** : le reasoning / thinking des modèles de raisonnement s'affiche dans un bloc repliable : déplié pendant la génération, replié dès que la réponse commence, et encore dépliable ensuite
 - **Sécurité des clés** : les clés API résident dans le trousseau du système, avec enregistrement, effacement et vérification en un clic ; les points de terminaison locaux (llama.cpp / LM Studio / vLLM, etc.) peuvent rester vides
 - **Référencer le document courant** : une fois coché, le document sert de contexte, avec limite configurable (64K–512K / illimitée) et nombre de tours de contexte (0–20, 3 par défaut)
 - **Exploiter le résultat** : copier, insérer au curseur, ou créer un nouveau document en un clic
 
 ### Compétences IA (Skills)
 
-Le bouton ⚡ de la zone de saisie ouvre le menu des skills ; le tag du skill choisi est inséré au curseur et son prompt est injecté dans le contexte. Placez `skills.json` et des prompts `.md` dans le répertoire `skills/` pour personnaliser. Cinq skills sont intégrés : « Extraction de présentation », « Résumé de document », « Réécriture et polissage », « Traduction intégrale » et « Formatage Markdown ».
+Le bouton ⚡ de la zone de saisie ouvre le menu des skills ; le tag du skill choisi est inséré au curseur et son prompt est injecté dans le contexte. Placez `skills.json` et des prompts `.md` dans le répertoire `skills/` pour personnaliser. Cinq skills sont intégrés : « Extraction de présentation », « Résumé de document », « Réécriture et polissage », « Traduction intégrale » et « Formatage Markdown ». Les skills choisissent aussi la destination du résultat : « envoyer au chat IA » ou « modifier le document directement ». « Réécriture et polissage » et « Formatage Markdown » écrivent par défaut dans le document, tandis que « Extraction de présentation », « Résumé de document » et « Traduction intégrale » passent toujours par le chat latéral.
 
-### Gestion des Skills et assistant de sélection
+Dans Réglages → Gestion des Skills, créez, modifiez ou supprimez des skills, changez nom, ID, icône, résumé et prompt ; le panneau IA se met à jour immédiatement et les skills intégrés modifiés ou supprimés sont conservés lors des mises à jour.
 
-v0.4.4 : dans Réglages → Gestion des Skills, créez, modifiez ou supprimez des skills, changez nom, ID, icône, résumé et prompt ; le panneau IA se met à jour immédiatement et les skills intégrés modifiés ou supprimés sont conservés lors des mises à jour. Dans Réglages → Assistant de sélection, configurez la barre : ajouter, retirer et réordonner des actions issues des skills ou du système (copier, coller, ajouter au chat), les renommer et voir l'aperçu en direct.
+### Assistant de sélection
+
+Dans Réglages → Assistant de sélection, configurez la barre : ajouter, retirer et réordonner des actions issues des skills ou du système (copier, coller, ajouter au chat), les renommer et voir l'aperçu en direct. Par défaut : Extraction de présentation, Résumé, Réécriture, Traduction, Copier et Ajouter au chat ; si aucune action n'est disponible, la barre reste masquée.
+
+- **Entrée étoile** : l'étoile à l'extrême gauche de la barre flottante est l'entrée unique vers l'IA dans le document ; le basculement barre d'actions / barre de format passe à l'extrême droite (⇄)
+- **Barre de format** : ⇄ alterne entre la barre d'actions et une barre de format — gras, italique, barré, surlignage, code en ligne (et bloc), exposant/indice, titres, listes, listes de tâches, citation et formules ; les icônes à options secondaires s'ouvrent au survol ; ordre et visibilité dans Réglages
+- **État appliqué** : la barre de format signale les formats déjà actifs dans la sélection ; un clic applique, un autre retire
+- **Skills dans le document** : les skills dont la destination est « modifier le document directement » s'exécutent dans le document et peuvent remplacer la sélection
 
 ### Plugins
 
@@ -286,6 +307,8 @@ v0.4.4 : dans Réglages → Gestion des Skills, créez, modifiez ou supprimez de
 | Ins | Menu slash | F12 | Outils de développement |
 
 Les raccourcis se personnalisent dans Réglages → Raccourcis : attribution visuelle des 36 actions, enregistrement des touches, détection des conflits et restauration des valeurs par défaut.
+
+L'IA dans le document a son propre geste : appuyer deux fois sur `Ctrl` (modifiable en `Ctrl+Enter` ou désactivable) — elle n'occupe aucune touche du tableau ci-dessus.
 
 ---
 
