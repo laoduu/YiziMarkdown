@@ -180,7 +180,7 @@
   --code-inline-bg: color-mix(in srgb, var(--editor-text) 10%, var(--editor-surface));
   --code-block-bg: color-mix(in srgb, var(--editor-text) 5%, var(--editor-surface));
   --code-selection-bg: rgba(0, 0, 0, 0.1);
-  --code-active-line: rgba(0, 0, 0, 0.03);
+  --code-active-line: rgba(0, 0, 0, 0.06);
   --code-search-match: rgba(255, 213, 0, 0.3);
   --code-search-match-border: rgba(255, 213, 0, 0.6);
   --code-search-active: rgba(255, 150, 0, 0.4);
@@ -292,7 +292,7 @@
 
   /* 代码区在暗色下需要更亮的选中/活动行底色（原本是组件里按 isDark 分支写死的） */
   --code-selection-bg: rgba(255, 255, 255, 0.15);
-  --code-active-line: rgba(255, 255, 255, 0.05);
+  --code-active-line: rgba(255, 255, 255, 0.08);
 }
 
 /* ===== 基础样式 ===== */

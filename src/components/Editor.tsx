@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react'
-import { EditorView, keymap, lineNumbers, drawSelection, highlightActiveLine } from '@codemirror/view'
+import { EditorView, keymap, lineNumbers, drawSelection, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view'
 import { EditorState, Compartment, Extension, Transaction, Prec } from '@codemirror/state'
 import { markdown, markdownLanguage, insertNewlineContinueMarkup } from '@codemirror/lang-markdown'
 import { defaultHighlightStyle, syntaxHighlighting, indentOnInput, bracketMatching, codeFolding, foldKeymap } from '@codemirror/language'
@@ -689,7 +689,12 @@ function buildEditorTheme(fontFamily: string, fontSize: string, lineHeight: stri
     // `.cm-line` 有 2px 上内边距，行号不补同样的 padding 就会整体高 2px。
     '.cm-lineNumbers .cm-gutterElement': {
       paddingTop: '2px',
-      lineHeight: 'var(--line-height, 1.8)',
+      // 行高必须按正文字号算（而不是行号自己的字号）：两者解析值必须相等，
+      // 否则每行差几像素会随滚动累积错位。
+      lineHeight: 'calc(var(--font-size-base, 20px) * var(--line-height, 1.8))',
+      // 与侧栏大纲同字号（text-sm = 0.875rem，随界面缩放同步）；等宽改 UI 非衬线
+      fontSize: '0.875rem',
+      fontFamily: 'var(--font-ui)',
     },
     '&.cm-focused': {
       outline: 'none',
@@ -713,7 +718,10 @@ function buildEditorTheme(fontFamily: string, fontSize: string, lineHeight: stri
       borderRight: '1px solid var(--editor-border)',
     },
     '.cm-activeLineGutter': {
-      backgroundColor: 'var(--code-active-line)',
+      // 当前行的行号只用主题色强调，不加粗、不加背景。
+      // 背景必须显式置透明：CodeMirror baseTheme 自带 light #e2f2ff / dark #222227。
+      color: 'var(--editor-accent)',
+      backgroundColor: 'transparent',
     },
     '.cm-foldPlaceholder': {
       backgroundColor: 'var(--editor-hover)',
@@ -1755,6 +1763,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         autocompletion(),
         spellCheckCompartment.of(EditorView.contentAttributes.of({ spellcheck: spellCheck ? 'true' : 'false' })),
         highlightActiveLine(),
+      highlightActiveLineGutter(),
         highlightSelectionMatches(),
         codeFolding(),
         keymap.of(foldKeymap),
