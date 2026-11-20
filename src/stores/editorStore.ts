@@ -5,6 +5,7 @@ import {
   createEditorStorage, isRecoverableFromDisk, META_KEY,
   type PendingContentLoad, type PersistedEditorState,
 } from '../lib/editorStorage.ts'
+import { migrateTabHistory, resolveDocKey, withHistory } from '../lib/inlineAIHistory.ts'
 
 export type SaveStatus = 'saved' | 'unsaved' | 'just-saved'
 
@@ -316,16 +317,30 @@ export const useEditorStore = create<EditorState>()(
 
       updateTabFilePath: (tabId, filePath) => {
         const { tabs } = get()
-        set({
-          tabs: tabs.map(t => t.id === tabId ? { ...t, filePath } : t),
-        })
+        const before = tabs.find(t => t.id === tabId)
+        const next = tabs.map(t => t.id === tabId ? { ...t, filePath } : t)
+        set({ tabs: next })
+        // 文档身份变化（未命名保存 / 另存为）：AI 会话历史跟着迁到新键下
+        const tab = next.find(t => t.id === tabId)
+        if (before && tab) {
+          const from = resolveDocKey(before)
+          const to = resolveDocKey(tab)
+          if (to !== from) withHistory(s => migrateTabHistory(s, from, to))
+        }
       },
 
       setTabRemote: (tabId, remote) => {
         const { tabs } = get()
-        set({
-          tabs: tabs.map(t => t.id === tabId ? { ...t, remote } : t),
-        })
+        const before = tabs.find(t => t.id === tabId)
+        const next = tabs.map(t => t.id === tabId ? { ...t, remote } : t)
+        set({ tabs: next })
+        // 身份键变化（绑定 / 解绑云端）时同步迁移 AI 会话历史
+        const tab = next.find(t => t.id === tabId)
+        if (before && tab) {
+          const from = resolveDocKey(before)
+          const to = resolveDocKey(tab)
+          if (to !== from) withHistory(s => migrateTabHistory(s, from, to))
+        }
       },
 
       addRecentFile: (filePath) => {

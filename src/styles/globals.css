@@ -3632,6 +3632,31 @@ a {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
+}
+/* 底部单行的左侧组：上下文按钮 + 快捷意图 chips。
+   注意：这里不能加 overflow —— 那会把 overflow-y 也算成 auto，
+   向上弹出的「附加上下文」菜单会被滚动容器整个裁掉；滚动只给 chips 组。 */
+.inline-ai-meta-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.inline-ai-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.inline-ai-chips::-webkit-scrollbar { display: none; }
+.inline-ai-chars {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 160px;
 }
 
 /* 附加上下文：当前小节 / 整篇文档 */
@@ -3690,6 +3715,164 @@ a {
   background: var(--sel-toolbar-hover);
   color: var(--sel-toolbar-accent);
 }
+
+/* 会话历史：浮层内部向下展开，左列表右详情（关闭即收折，不叠弹窗） */
+.inline-ai-history-panel {
+  margin-top: 8px;
+  border-top: 1px solid var(--sel-toolbar-border);
+  padding-top: 6px;
+  animation: inline-ai-history-in 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes inline-ai-history-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.inline-ai-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 20px;
+  margin-bottom: 4px;
+  font-size: 0.6875rem;
+  color: color-mix(in srgb, var(--sel-toolbar-text) 62%, transparent);
+}
+/* 头部的关闭是行内按钮，不复用面板角落的绝对定位 */
+.inline-ai-history-head .inline-ai-close {
+  position: static;
+  width: 18px;
+  height: 18px;
+  opacity: 0.7;
+}
+.inline-ai-history-body {
+  display: flex;
+  gap: 8px;
+  /* --hist-cap 由 place() 按视口倒推写入：装不下时在本滚动区消化，面板整体不再位移 */
+  max-height: min(360px, 46vh, var(--hist-cap, 9999px));
+}
+.inline-ai-history-list {
+  flex: 0 0 38%;
+  min-width: 150px;
+  max-width: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: 6px;
+  border-right: 1px solid var(--sel-toolbar-border);
+}
+.inline-ai-history-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sel-toolbar-text);
+  font-size: 0.6875rem;
+  text-align: left;
+  cursor: pointer;
+}
+.inline-ai-history-item:hover { background: var(--sel-toolbar-hover); }
+.inline-ai-history-item.is-active {
+  background: color-mix(in srgb, var(--sel-toolbar-accent) 10%, transparent);
+  color: var(--sel-toolbar-accent);
+}
+.inline-ai-history-detail-pane {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.inline-ai-history-empty {
+  padding: 12px 8px;
+  font-size: 0.6875rem;
+  color: color-mix(in srgb, var(--sel-toolbar-text) 55%, transparent);
+  text-align: center;
+}
+.inline-ai-history-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 0.625rem;
+  color: color-mix(in srgb, var(--sel-toolbar-text) 50%, transparent);
+}
+.inline-ai-history-badge {
+  padding: 0 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sel-toolbar-accent) 12%, transparent);
+  color: var(--sel-toolbar-accent);
+}
+.inline-ai-history-instruction {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--sel-toolbar-text);
+}
+/* 指令预览：默认只占几行（超长 skill prompt 不能把结果压出视野），点开看全文 */
+.inline-ai-history-instruction-full {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.6875rem;
+  color: var(--sel-toolbar-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  cursor: pointer;
+}
+.inline-ai-history-instruction-full.is-expanded {
+  display: block;
+  overflow: visible;
+}
+/* 结果不做内部滚动：详情栏是唯一滚动层，避免双滚动条把结果困在夹缝里 */
+.inline-ai-history-result {
+  margin: 0;
+  padding: 6px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--sel-toolbar-text) 8%, transparent);
+  font-size: 0.625rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.inline-ai-history-actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 0;
+  background: var(--sel-toolbar-bg);
+}
+
+/* 底部垂直调高手柄：拖动改变输入区高度（通栏贴到面板边缘） */
+.inline-ai-resize {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 12px;
+  margin: 8px -12px -10px;
+  cursor: ns-resize;
+  touch-action: none;
+  user-select: none;
+}
+.inline-ai-resize::after {
+  content: '';
+  width: 36px;
+  height: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sel-toolbar-text) 22%, transparent);
+  transition: background 0.12s;
+}
+.inline-ai-resize:hover::after {
+  background: color-mix(in srgb, var(--sel-toolbar-accent) 55%, transparent);
+}
+
 .inline-ai-send {
   display: flex;
   align-items: center;
@@ -3730,15 +3913,10 @@ a {
 }
 .inline-ai-followup-input::placeholder { color: color-mix(in srgb, var(--sel-toolbar-text) 45%, transparent); }
 
-.inline-ai-intents {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 10px;
-}
 .inline-ai-chip {
-  height: 26px;
-  padding: 0 10px;
+  flex-shrink: 0;
+  height: 22px;
+  padding: 0 8px;
   border: 1px solid var(--sel-toolbar-border);
   border-radius: 999px;
   background: transparent;

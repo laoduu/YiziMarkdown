@@ -32,6 +32,7 @@ import { readClipboardText, writeClipboardText } from '../lib/clipboard'
 import type { SelectionFormatAction, SelectionFormatId } from '../lib/selectionFormats'
 import { detectSelectionFormats } from '../lib/selectionFormatState'
 import { isRangeStillValid, type DiffLine } from '../lib/inlineAI'
+import { findUniqueRange, pruneHistory, resolveDocKey, withHistory, type InlineAIHistoryRecord } from '../lib/inlineAIHistory'
 import { inlineDiffField, setInlineDiff } from '../lib/cm-inline-diff'
 import { frontMatterField, frontMatterLines } from '../lib/cm-frontmatter'
 import { headingFoldExtension } from '../lib/cm-heading-fold'
@@ -892,6 +893,18 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     initialInstruction?: string
     autoRun?: boolean
   } | null>(null)
+
+  // 文档键：AI 会话历史按它归档（remote > path > tab，与编辑器去重同一套约定）
+  const docKey = useEditorStore((s) => resolveDocKey(s.tabs.find((t) => t.id === s.activeTabId)))
+
+  // 启动后裁剪一次历史（TTL / 单文档与全局上限 / 孤儿 tab 键）
+  const historyPrunedRef = useRef(false)
+  useEffect(() => {
+    if (historyPrunedRef.current) return
+    historyPrunedRef.current = true
+    const ids = new Set(useEditorStore.getState().tabs.map((t) => t.id))
+    withHistory((s) => pruneHistory(s, { activeTabIds: ids }))
+  }, [])
   const lineNumbersCompartment = useRef(new Compartment()).current
   const richCompartment = useRef(new Compartment()).current
   const lineWrappingCompartment = useRef(new Compartment()).current
@@ -1523,6 +1536,54 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     onToast?.(`${translate(lang, 'aiInline.applied')} · ${translate(lang, 'aiInline.undoHint')}`)
     return true
   }, [clearInlineDiff, inlineAI, onToast])
+
+  /**
+   * 把会话历史里的结果写回正文。存储的 from/to 不可信（文档可能已被外部修改），
+   * 一律按「选区原文在全文里唯一命中」判定：
+   * - 唯一命中 → 替换该处（最符合直觉：原文还在，用新结果换掉）；
+   * - 多处 / 未命中 / 创作记录 → 插到光标所在行的下一段，并提示降级。
+   */
+  const applyInlineAIHistory = useCallback((record: InlineAIHistoryRecord): boolean => {
+    const view = viewRef.current
+    if (!view || !record.result) return false
+    const doc = view.state.doc.toString()
+    const lang = getCurrentLang()
+    const range = record.originalSelection ? findUniqueRange(doc, record.originalSelection) : null
+
+    if (range) {
+      view.dispatch({
+        changes: { from: range.from, to: range.to, insert: record.result },
+        selection: { anchor: range.from + record.result.length },
+        scrollIntoView: true,
+      })
+      view.focus()
+      onToast?.(`${translate(lang, 'aiInline.applied')} · ${translate(lang, 'aiInline.undoHint')}`)
+      return true
+    }
+
+    // 降级：插到光标所在行的下一段（与「插入到下方」同一落点约定）
+    const pos = Math.min(view.state.selection.main.head, doc.length)
+    const lineEnd = doc.indexOf('\n', pos)
+    const at = lineEnd === -1 ? doc.length : lineEnd
+    const prefix = pos === 0
+      ? ''
+      : lineEnd === -1
+        ? (doc.endsWith('\n') ? '\n' : '\n\n')
+        : '\n\n'
+    const insert = `${prefix}${record.result}`
+    view.dispatch({
+      changes: { from: at, to: at, insert },
+      selection: { anchor: at + insert.length },
+      scrollIntoView: true,
+    })
+    view.focus()
+    onToast?.(
+      record.originalSelection
+        ? translate(lang, 'aiInline.historyApplyFallback')
+        : `${translate(lang, 'aiInline.applied')} · ${translate(lang, 'aiInline.undoHint')}`,
+    )
+    return true
+  }, [onToast])
 
   // 切到预览 / 分栏预览时，浮层失去锚点，直接关闭（生成中的请求由浮层卸载时取消）
   useEffect(() => {
@@ -2354,6 +2415,8 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
             initialInstruction={inlineAI.initialInstruction}
             autoRun={inlineAI.autoRun}
             onApply={applyInlineAI}
+            docKey={docKey}
+            onApplyHistory={applyInlineAIHistory}
             onDiff={handleInlineDiff}
             onClose={closeInlineAI}
           />
