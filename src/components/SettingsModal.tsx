@@ -31,6 +31,7 @@ import { loadThemeCatalog, type ThemeEntry } from '../lib/themeCatalog'
 import { buildThemePreviewCss } from '../lib/themePreview'
 import MarkdownEditPreview from './MarkdownEditPreview'
 import SkillIcon from './SkillIcon'
+import SettingsSelect from './SettingsSelect'
 import SelectionToolbarView from './SelectionToolbarView'
 import { SELECTION_FORMAT_ICONS } from './SelectionFormatBar'
 import { SKILL_ICON_NAMES, DEFAULT_SKILL_ICON, resolveSkillIcon } from '../lib/skillIconNames'
@@ -245,15 +246,12 @@ function GeneralSettings() {
               label={currentLang === 'en' ? t('settings.language') : `${t('settings.language')} · Language`}
               hint={t('settings.languageHint')}
             >
-              <select
+              <SettingsSelect
                 value={currentLang}
-                onChange={(e) => store.setField('language', e.target.value)}
-                className="settings-select"
-              >
-                {LANGUAGES.map((l) => (
-                  <option key={l.id} value={l.id}>{l.label}</option>
-                ))}
-              </select>
+                onChange={(v) => store.setField('language', v)}
+                ariaLabel={t('settings.language')}
+                options={LANGUAGES.map((l) => ({ value: l.id, label: l.label }))}
+              />
             </Row>
             <Row label={t('settings.interfaceScale')} hint={t('settings.interfaceScaleHint')}>
               <div className="w-full">
@@ -300,10 +298,15 @@ function GeneralSettings() {
           </Section>
           <Section title={t('settings.startup')}>
             <Row label={t('settings.defaultTemplate')}>
-              <select value={store.defaultTemplate} onChange={(e) => store.setField('defaultTemplate', e.target.value)} className="settings-select">
-                <option value="">{t('common.none')}</option>
-                {templates.map((t) => <option key={t} value={t}>{t.replace(/\.\w+$/, '')}</option>)}
-              </select>
+              <SettingsSelect
+                value={store.defaultTemplate}
+                onChange={(v) => store.setField('defaultTemplate', v)}
+                ariaLabel={t('settings.defaultTemplate')}
+                options={[
+                  { value: '', label: t('common.none') },
+                  ...templates.map((f) => ({ value: f, label: f.replace(/\.\w+$/, '') })),
+                ]}
+              />
             </Row>
           </Section>
           <Section title={t('settings.saving')}>
@@ -1008,11 +1011,15 @@ function EditorSettings() {
           </Section>
           <Section title={t('settings.cursor')}>
             <Row label={t('settings.cursorStyle')}>
-              <select className="settings-select" value={store.cursorStyle}
-                onChange={(e) => store.setField('cursorStyle', e.target.value as 'text' | 'bold')}>
-                <option value="text">{t('settings.cursorStyleText')}</option>
-                <option value="bold">{t('settings.cursorStyleBold')}</option>
-              </select>
+              <SettingsSelect
+                value={store.cursorStyle}
+                onChange={(v) => store.setField('cursorStyle', v as 'text' | 'bold')}
+                ariaLabel={t('settings.cursorStyle')}
+                options={[
+                  { value: 'text', label: t('settings.cursorStyleText') },
+                  { value: 'bold', label: t('settings.cursorStyleBold') },
+                ]}
+              />
             </Row>
             <Row label={t('settings.mouseSpotlight')} hint={t('settings.mouseSpotlightHint')}>
               <label className="flex items-center gap-2 cursor-pointer">
@@ -1269,15 +1276,16 @@ function ShortcutsSettings() {
                 <span className="text-[0.75rem] text-[var(--editor-text)]">{t('settings.inlineAIShortcut')}</span>
               </div>
               <div>
-                <select
+                <SettingsSelect
                   value={inlineAIShortcut}
-                  onChange={(e) => useSettingsStore.getState().setField('inlineAIShortcut', e.target.value as 'doubleCtrl' | 'ctrlEnter' | 'off')}
-                  className="settings-select"
-                >
-                  <option value="doubleCtrl">{t('settings.inlineAIShortcutDoubleCtrl')}</option>
-                  <option value="ctrlEnter">{t('settings.inlineAIShortcutCtrlEnter')}</option>
-                  <option value="off">{t('settings.inlineAIShortcutOff')}</option>
-                </select>
+                  onChange={(v) => useSettingsStore.getState().setField('inlineAIShortcut', v as 'doubleCtrl' | 'ctrlEnter' | 'off')}
+                  ariaLabel={t('settings.inlineAIShortcut')}
+                  options={[
+                    { value: 'doubleCtrl', label: t('settings.inlineAIShortcutDoubleCtrl') },
+                    { value: 'ctrlEnter', label: t('settings.inlineAIShortcutCtrlEnter') },
+                    { value: 'off', label: t('settings.inlineAIShortcutOff') },
+                  ]}
+                />
               </div>
             </div>
             <p className="text-[0.6875rem] text-[var(--sidebar-text)] pt-1">{t('settings.inlineAIShortcutHint')}</p>
@@ -2338,15 +2346,15 @@ function PluginsSettings() {
                           </div>
                           <div className="flex-1 flex flex-col items-end gap-1.5">
                             {field.type === 'select' && field.options && (
-                              <select
+                              <SettingsSelect
                                 value={String(configs[field.key] ?? field.defaultValue)}
-                                onChange={(e) => handleConfigChange(plugin.id, field.key, e.target.value)}
-                                className="settings-select"
-                              >
-                                {field.options.map((opt) => (
-                                  <option key={opt.value} value={opt.value}>{opt.labelKey ? t(opt.labelKey) : opt.label}</option>
-                                ))}
-                              </select>
+                                onChange={(v) => handleConfigChange(plugin.id, field.key, v)}
+                                ariaLabel={field.labelKey ? t(field.labelKey) : field.label}
+                                options={field.options.map((opt) => ({
+                                  value: opt.value,
+                                  label: opt.labelKey ? t(opt.labelKey) : opt.label,
+                                }))}
+                              />
                             )}
                             {field.type === 'checkbox' && (
                               <input
@@ -2932,24 +2940,27 @@ function AISettings() {
         <div className="space-y-4">
           <Section title={t('settings.aiSectionGeneral')}>
             <Row label={t('settings.aiProvider')} hint={t('settings.aiProviderHint')}>
-              <select
+              <SettingsSelect
                 value={store.aiProvider}
-                onChange={(e) => handleProviderChange(e.target.value)}
-                className="settings-select"
-              >
-                {PROVIDERS.map((p) => <option key={p.id} value={p.id}>{p.i18nKey ? t(`settings.${p.i18nKey}`) : p.label}</option>)}
-              </select>
+                onChange={handleProviderChange}
+                ariaLabel={t('settings.aiProvider')}
+                options={PROVIDERS.map((p) => ({
+                  value: p.id,
+                  label: p.i18nKey ? t(`settings.${p.i18nKey}`) : p.label,
+                }))}
+              />
             </Row>
             {provider?.id === 'custom' && (
               <Row label={t('settings.aiProtocol')} hint={t('settings.aiProtocolHint')}>
-                <select
+                <SettingsSelect
                   value={store.aiApiFormat}
-                  onChange={(e) => store.setField('aiApiFormat', e.target.value as 'openai' | 'anthropic')}
-                  className="settings-select"
-                >
-                  <option value="openai">{t('settings.aiProtocolOpenAI')}</option>
-                  <option value="anthropic">{t('settings.aiProtocolAnthropic')}</option>
-                </select>
+                  onChange={(v) => store.setField('aiApiFormat', v as 'openai' | 'anthropic')}
+                  ariaLabel={t('settings.aiProtocol')}
+                  options={[
+                    { value: 'openai', label: t('settings.aiProtocolOpenAI') },
+                    { value: 'anthropic', label: t('settings.aiProtocolAnthropic') },
+                  ]}
+                />
               </Row>
             )}
             <Row label={t('settings.aiModel')}>
@@ -2979,16 +2990,13 @@ function AISettings() {
                   </button>
                 </div>
                 {models.length > 0 && (
-                  <select
+                  <SettingsSelect
                     value={models.includes(model) ? model : ''}
-                    onChange={(e) => handleSelectModel(e.target.value)}
-                    className="settings-select"
-                  >
-                    <option value="" disabled>{t('settings.aiSelectModel')}</option>
-                    {models.map((m) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
+                    onChange={handleSelectModel}
+                    ariaLabel={t('settings.aiModel')}
+                    placeholder={t('settings.aiSelectModel')}
+                    options={models.map((m) => ({ value: m, label: m }))}
+                  />
                 )}
                 {modelFetchMsg && (
                   <p className={`text-[0.6875rem] break-all ${modelFetchMsg.ok ? 'text-emerald-500' : 'text-red-500'}`}>
@@ -3020,33 +3028,35 @@ function AISettings() {
               />
             </Row>
             <Row label={t('settings.aiDocLimit')} hint={t('settings.aiDocLimitHint')}>
-              <select
-                value={store.aiDocLimit}
-                onChange={(e) => store.setField('aiDocLimit', Number(e.target.value))}
-                className="settings-select"
-              >
-                <option value={65536}>{t('settings.aiDocLimitK', { n: 64 })}</option>
-                <option value={131072}>{t('settings.aiDocLimitK', { n: 128 })}</option>
-                <option value={200000}>{t('settings.aiDocLimitK', { n: 200 })}</option>
-                <option value={262144}>{t('settings.aiDocLimitK', { n: 256 })}</option>
-                <option value={524288}>{t('settings.aiDocLimitK', { n: 512 })}</option>
-                <option value={0}>{t('settings.aiDocLimitNone')}</option>
-              </select>
+              <SettingsSelect
+                value={String(store.aiDocLimit)}
+                onChange={(v) => store.setField('aiDocLimit', Number(v))}
+                ariaLabel={t('settings.aiDocLimit')}
+                options={[
+                  { value: '65536', label: t('settings.aiDocLimitK', { n: 64 }) },
+                  { value: '131072', label: t('settings.aiDocLimitK', { n: 128 }) },
+                  { value: '200000', label: t('settings.aiDocLimitK', { n: 200 }) },
+                  { value: '262144', label: t('settings.aiDocLimitK', { n: 256 }) },
+                  { value: '524288', label: t('settings.aiDocLimitK', { n: 512 }) },
+                  { value: '0', label: t('settings.aiDocLimitNone') },
+                ]}
+              />
             </Row>
             <Row label={t('settings.aiContextTurns')} hint={t('settings.aiContextTurnsHint')}>
-              <select
-                value={store.aiContextTurns}
-                onChange={(e) => store.setField('aiContextTurns', Number(e.target.value))}
-                className="settings-select"
-              >
-                <option value={0}>{t('settings.aiContextTurnsNone')}</option>
-                <option value={1}>{t('settings.aiContextTurnsN', { n: 1 })}</option>
-                <option value={2}>{t('settings.aiContextTurnsN', { n: 2 })}</option>
-                <option value={3}>{t('settings.aiContextTurnsN', { n: 3 })}</option>
-                <option value={5}>{t('settings.aiContextTurnsN', { n: 5 })}</option>
-                <option value={10}>{t('settings.aiContextTurnsN', { n: 10 })}</option>
-                <option value={20}>{t('settings.aiContextTurnsN', { n: 20 })}</option>
-              </select>
+              <SettingsSelect
+                value={String(store.aiContextTurns)}
+                onChange={(v) => store.setField('aiContextTurns', Number(v))}
+                ariaLabel={t('settings.aiContextTurns')}
+                options={[
+                  { value: '0', label: t('settings.aiContextTurnsNone') },
+                  { value: '1', label: t('settings.aiContextTurnsN', { n: 1 }) },
+                  { value: '2', label: t('settings.aiContextTurnsN', { n: 2 }) },
+                  { value: '3', label: t('settings.aiContextTurnsN', { n: 3 }) },
+                  { value: '5', label: t('settings.aiContextTurnsN', { n: 5 }) },
+                  { value: '10', label: t('settings.aiContextTurnsN', { n: 10 }) },
+                  { value: '20', label: t('settings.aiContextTurnsN', { n: 20 }) },
+                ]}
+              />
             </Row>
           </Section>
 

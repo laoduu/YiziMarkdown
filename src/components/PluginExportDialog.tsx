@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { AlertTriangle, CheckCircle2, FileDown, Loader2, X } from 'lucide-react'
 import ExportResultActions from './ExportResultActions'
+import SettingsSelect from './SettingsSelect'
 import { useI18n } from '../i18n'
 import { getPluginById, exportWithPlugin } from '../plugins/registry'
 import { invokeTauri, invokeTauriOrThrow } from '../lib/tauri'
@@ -236,16 +237,16 @@ export default function PluginExportDialog({ open, pluginId, format, source, def
               </div>
               <div className="flex-1 flex justify-end">
                 {field.type === 'select' && (
-                  <select
-                    className="settings-select"
+                  <SettingsSelect
                     value={String(values[field.key] ?? field.defaultValue)}
-                    onChange={(e) => setValue(field.key, e.target.value)}
+                    onChange={(v) => setValue(field.key, v)}
                     disabled={busy}
-                  >
-                    {field.options?.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.labelKey ? t(opt.labelKey) : opt.label}</option>
-                    ))}
-                  </select>
+                    ariaLabel={fieldLabel(field)}
+                    options={(field.options ?? []).map((opt) => ({
+                      value: opt.value,
+                      label: opt.labelKey ? t(opt.labelKey) : opt.label,
+                    }))}
+                  />
                 )}
                 {field.type === 'checkbox' && (
                   <input

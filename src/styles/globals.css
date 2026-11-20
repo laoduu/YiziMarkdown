@@ -2066,12 +2066,16 @@ a {
   width: 100%;
   padding: 6px 10px;
   font-size: 0.8125rem;
+  /* 原生 select 不继承字体，自绘按钮默认也不继承；统一到界面字体栈 */
+  font-family: var(--font-ui);
+  line-height: 1.45;
   background: var(--editor-surface);
   border: 1px solid var(--editor-border);
   border-radius: var(--radius-sm);
   color: var(--editor-text);
   cursor: pointer;
   transition: border-color 0.15s;
+  appearance: none;
 }
 .settings-select:focus {
   border-color: var(--editor-accent);
@@ -2079,6 +2083,22 @@ a {
 }
 .settings-select:hover {
   border-color: var(--editor-accent);
+}
+.settings-select:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--editor-accent) 40%, transparent);
+  outline-offset: 1px;
+}
+.settings-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* 自绘下拉的触发按钮：左文案 + 右箭头（列表由 SettingsSelect 渲染） */
+.settings-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  text-align: left;
 }
 
 .settings-input {
