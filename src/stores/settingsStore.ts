@@ -232,7 +232,7 @@ export interface SettingsState {
   // 划词助手（v0.4.4）
   /** 划词工具栏的功能顺序与自定义显示名；默认见 lib/selectionActions.ts */
   selectionActions: SelectionActionConfig[]
-  /** 划词时显示工具条还是格式条（v0.4.6）；品牌图标点击即切换 */
+  /** 划词时显示工具条还是格式条（v0.4.5）；品牌图标点击即切换 */
   selectionBarMode: 'actions' | 'format'
   /** 划词格式条的顺序与显示开关；默认见 lib/selectionFormats.ts */
   selectionFormats: SelectionFormatConfig[]
@@ -374,7 +374,7 @@ export const useSettingsStore = create<SettingsState>()(
 
       // 划词助手（v0.4.4）：默认保持旧的 6 个按钮
       selectionActions: DEFAULT_SELECTION_ACTIONS.map((a) => ({ ...a })),
-      // 划词助手（v0.4.6）：默认显示工具条；格式条默认 13 项 + 链接隐藏
+      // 划词助手（v0.4.5）：默认显示工具条；格式条默认 13 项 + 链接隐藏
       selectionBarMode: 'actions',
       selectionFormats: DEFAULT_SELECTION_FORMATS.map((f) => ({ ...f })),
       selectionModeHintSeen: false,
