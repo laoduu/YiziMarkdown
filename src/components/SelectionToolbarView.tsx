@@ -7,7 +7,7 @@
 import { ArrowLeftRight, Check, ClipboardPaste, Copy, MessageSquarePlus } from 'lucide-react'
 import { useI18n } from '../i18n'
 import type { SelectionToolbarItem, SelectionSystemAction } from '../lib/selectionActions'
-import type { SelectionFormatAction, SelectionFormatConfig } from '../lib/selectionFormats'
+import type { SelectionFormatAction, SelectionFormatConfig, SelectionFormatId } from '../lib/selectionFormats'
 import SelectionFormatBar from './SelectionFormatBar'
 import SelectionAIIcon from './SelectionAIIcon'
 import SkillIcon from './SkillIcon'
@@ -25,6 +25,8 @@ interface SelectionToolbarViewProps {
   items: SelectionToolbarItem[]
   /** mode = format 时显示的格式（已按用户顺序与显示开关过滤） */
   formats?: SelectionFormatConfig[]
+  /** 当前选区已应用的格式（格式条高亮） */
+  activeFormats?: SelectionFormatId[]
   /** false = 设置页预览（不响应点击） */
   interactive?: boolean
   onAction?: (item: SelectionToolbarItem) => void
@@ -45,6 +47,7 @@ export default function SelectionToolbarView({
   mode = 'actions',
   items,
   formats = [],
+  activeFormats = [],
   interactive = true,
   onAction,
   onFormat,
@@ -87,7 +90,7 @@ export default function SelectionToolbarView({
       </div>
       <div className="selection-toolbar-scroll">
         {mode === 'format' ? (
-          <SelectionFormatBar formats={formats} interactive={interactive} onAction={onFormat} />
+          <SelectionFormatBar formats={formats} active={activeFormats} interactive={interactive} onAction={onFormat} />
         ) : (
           items.map((item) => {
             const copied = copiedId === item.id

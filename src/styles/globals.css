@@ -3171,6 +3171,16 @@ a {
   background: var(--sel-toolbar-hover);
   color: var(--sel-toolbar-accent);
 }
+/* 已应用：与主格式栏的 active 一致 —— 主题强调色铺底，深色图标 */
+.selection-format-btn.is-active {
+  background: var(--sel-toolbar-accent);
+  color: #fff;
+}
+.selection-format-btn.is-active:hover {
+  background: var(--sel-toolbar-accent);
+  color: #fff;
+  filter: brightness(1.06);
+}
 .selection-toolbar-preview .selection-format-btn {
   cursor: default;
 }

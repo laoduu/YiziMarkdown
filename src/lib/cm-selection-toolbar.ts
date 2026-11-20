@@ -39,6 +39,8 @@ const KEYBOARD_SETTLE_MS = 150
 export function selectionToolbarExtension(
   onShow: (info: SelectionToolbarInfo) => void,
   onHide: () => void,
+  /** 刚点过格式条 ⇒ 这一次选区/文档变化来自浮栏自己，不要收起 */
+  isToolbarAction?: () => boolean,
 ) {
   return ViewPlugin.fromClass(
     class {
@@ -77,6 +79,13 @@ export function selectionToolbarExtension(
           // 拖选进行中：只记录最新选区，等松手再定位
           this.cancelPending()
           this.hide()
+          return
+        }
+
+        // 浮栏自己的动作（点加粗/列表等）：原地刷新，不收起也不等防抖
+        if (isToolbarAction?.()) {
+          this.cancelPending()
+          this.scheduleShow(0)
           return
         }
 

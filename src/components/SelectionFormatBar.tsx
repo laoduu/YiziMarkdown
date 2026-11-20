@@ -54,10 +54,12 @@ interface FormatButtonProps {
   id: SelectionFormatId
   def: SelectionFormatDef
   interactive: boolean
+  /** 当前选区已应用该格式 → 按钮高亮 */
+  active?: boolean
   onAction?: (action: SelectionFormatAction) => void
 }
 
-function FormatButton({ id, def, interactive, onAction }: FormatButtonProps) {
+function FormatButton({ id, def, interactive, active = false, onAction }: FormatButtonProps) {
   const { t } = useI18n()
   const btnRef = useRef<HTMLButtonElement>(null)
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -107,9 +109,10 @@ function FormatButton({ id, def, interactive, onAction }: FormatButtonProps) {
       <button
         ref={btnRef}
         type="button"
-        className="selection-format-btn"
+        className={`selection-format-btn${active ? ' is-active' : ''}`}
         title={label}
         aria-label={label}
+        aria-pressed={active}
         aria-haspopup={def.menu ? 'menu' : undefined}
         onMouseEnter={def.menu ? openMenu : undefined}
         onMouseLeave={def.menu ? scheduleHide : undefined}
@@ -150,11 +153,13 @@ function FormatButton({ id, def, interactive, onAction }: FormatButtonProps) {
 
 interface SelectionFormatBarProps {
   formats: SelectionFormatConfig[]
+  /** 当前选区已应用的格式（见 lib/selectionFormatState.ts） */
+  active?: SelectionFormatId[]
   interactive?: boolean
   onAction?: (action: SelectionFormatAction) => void
 }
 
-export default function SelectionFormatBar({ formats, interactive = true, onAction }: SelectionFormatBarProps) {
+export default function SelectionFormatBar({ formats, active = [], interactive = true, onAction }: SelectionFormatBarProps) {
   return (
     <div className="selection-format-bar">
       {formats.map((f) => (
@@ -163,6 +168,7 @@ export default function SelectionFormatBar({ formats, interactive = true, onActi
           id={f.id}
           def={SELECTION_FORMAT_DEFS[f.id]}
           interactive={interactive}
+          active={active.includes(f.id)}
           onAction={onAction}
         />
       ))}

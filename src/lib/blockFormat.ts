@@ -97,6 +97,18 @@ function listKind(p: ParsedLine): 'task' | 'ul' | 'ol' | null {
   return 'ul'
 }
 
+/** 一行文本的块级格式：标题级别 / 列表类型 / 是否引用（格式条状态用） */
+export interface LineFormatInfo {
+  headingLevel: number
+  list: 'task' | 'ul' | 'ol' | null
+  quote: boolean
+}
+
+export function lineFormatInfo(line: string): LineFormatInfo {
+  const p = parseLine(line)
+  return { headingLevel: headingLevel(p), list: listKind(p), quote: p.quote !== '' }
+}
+
 function hasFormat(p: ParsedLine, spec: BlockFormatSpec): boolean {
   switch (spec.kind) {
     case 'heading': return headingLevel(p) === (spec.level ?? 0)

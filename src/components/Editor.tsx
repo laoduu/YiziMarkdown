@@ -29,7 +29,8 @@ import { liveThemeChanged, tryFormatInTable } from '../lib/cm-live-blocks'
 import { inlinePairOf, planInlineToggle } from '../lib/inlineWrap'
 import { blockSpecOf, planBlockToggle } from '../lib/blockFormat'
 import { readClipboardText, writeClipboardText } from '../lib/clipboard'
-import type { SelectionFormatAction } from '../lib/selectionFormats'
+import type { SelectionFormatAction, SelectionFormatId } from '../lib/selectionFormats'
+import { detectSelectionFormats } from '../lib/selectionFormatState'
 import { isRangeStillValid, type DiffLine } from '../lib/inlineAI'
 import { inlineDiffField, setInlineDiff } from '../lib/cm-inline-diff'
 import { frontMatterField, frontMatterLines } from '../lib/cm-frontmatter'
@@ -821,9 +822,18 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   const [slashMenuVisible, setSlashMenuVisible] = useState(false)
   const [slashMenuCoords, setSlashMenuCoords] = useState({ left: 0, bottom: 0 })
   const [slashMenuQuery, setSlashMenuQuery] = useState('')
-  const [selToolbar, setSelToolbar] = useState<SelectionToolbarInfo & { visible: boolean }>({ visible: false, x: 0, y: 0, text: '', from: 0, to: 0, source: 'editor' })
+  const [selToolbar, setSelToolbar] = useState<SelectionToolbarInfo & { visible: boolean; formats: SelectionFormatId[] }>({
+    visible: false, x: 0, y: 0, text: '', from: 0, to: 0, source: 'editor', formats: [],
+  })
   /** 浮栏最近一次显示的毫秒时间戳：用于忽略松手后紧跟着的收尾滚动 */
   const lastShowAtRef = useRef(0)
+  /** 格式条动作的时间戳：这类选区/文档变化不应该把浮栏收起来 */
+  const formatActionAtRef = useRef(0)
+  /** 供只创建一次的 CM updateListener 读取浮栏可见性 */
+  const selToolbarVisibleRef = useRef(false)
+  useEffect(() => {
+    selToolbarVisibleRef.current = selToolbar.visible
+  }, [selToolbar.visible])
   /** 滚动 / 尺寸变化 / 点外 / 浮层打开时自动收起划词浮栏 */
   useEffect(() => {
     if (!selToolbar.visible) return
@@ -838,7 +848,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
     // 浮栏自身的按钮、编辑器正文、预览正文都算「在选区内」
     const inSelectionSurface = (target: EventTarget | null) =>
       !!(target as Element | null)?.closest?.(
-        '.cm-editor, .editor-content, .selection-toolbar, .selection-mode-hint',
+        '.cm-editor, .editor-content, .selection-toolbar, .selection-mode-hint, .selection-format-menu',
       )
     const onPointerDown = (e: PointerEvent) => {
       if (!inSelectionSurface(e.target)) hide()
@@ -1167,6 +1177,8 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   const applyMarkdown = useCallback((markdown: string, mode?: 'wrap' | 'prefix' | 'ordered' | 'link' | 'tag' | 'block') => {
     const view = viewRef.current
     if (!view) return
+    // 格式命令（浮栏按钮或快捷键）引起的选区/正文变化不应把划词浮栏收起来
+    formatActionAtRef.current = Date.now()
     // 实时模式表格：单元格内有文本选区 / 选中了整行整列时，
     // 格式必须落在单元格源码里，而不是 CM 光标处（那会在表格外插入标记）。
     if (tryFormatInTable(markdown, mode)) return
@@ -1270,6 +1282,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   const applyCodeBlock = useCallback(() => {
     const view = viewRef.current
     if (!view) return
+    formatActionAtRef.current = Date.now()
     const { from, to } = view.state.selection.main
     // 有选中内容：用代码块包裹，而不是替换掉；无选中：插入空代码块。
     // ⚠️ 包裹时插入串不带首尾换行（会把原文档的换行顶出来 ⇒ 多出空行）。
@@ -1296,6 +1309,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
   const applyInlineLink = useCallback(() => {
     const view = viewRef.current
     if (!view) return
+    formatActionAtRef.current = Date.now()
     const { from, to } = view.state.selection.main
     const text = view.state.sliceDoc(from, to)
     const insert = `[${text}](url)`
@@ -1689,12 +1703,30 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
         selectionToolbarExtension(
           (info) => {
             lastShowAtRef.current = Date.now()
-            setSelToolbar({ ...info, visible: true })
+            const v = viewRef.current
+            const formats = v && info.source === 'editor'
+              ? detectSelectionFormats(v.state.doc.toString(), info.from, info.to)
+              : []
+            setSelToolbar({ ...info, visible: true, formats })
           },
           () => setSelToolbar((prev) => (prev.visible ? { ...prev, visible: false } : prev)),
+          // 点格式条会改动正文与选区，但浮栏要留在原地（否则会闪一下再弹回来）
+          () => Date.now() - formatActionAtRef.current < 500,
         ),
         EditorView.updateListener.of((update) => {
           if (!update.docChanged && !update.selectionSet && update.transactions.length === 0) return
+          // 浮栏可见时，正文/选区一变就重新推导「已应用格式」（点格式条、撤销、手改标记都覆盖）
+          if (selToolbarVisibleRef.current) {
+            const { from, to } = update.state.selection.main
+            if (to > from) {
+              const next = detectSelectionFormats(update.state.doc.toString(), from, to)
+              setSelToolbar((prev) =>
+                prev.formats.length === next.length && prev.formats.every((id, i) => id === next[i])
+                  ? prev
+                  : { ...prev, formats: next },
+              )
+            }
+          }
           for (const tr of update.transactions) {
             for (const effect of tr.effects) {
               if (effect.is(showSlashMenu)) {
@@ -2219,7 +2251,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
       settleTimer = 0
       if (!latest) return
       lastShowAtRef.current = Date.now()
-      setSelToolbar({ visible: true, x: latest.x, y: latest.y, text: latest.text, from: 0, to: 0, source: 'preview' })
+      setSelToolbar({ visible: true, x: latest.x, y: latest.y, text: latest.text, from: 0, to: 0, source: 'preview', formats: [] })
     }
 
     const onSelectionChange = () => {
@@ -2302,6 +2334,7 @@ const Editor = forwardRef<EditorRef, EditorProps>(({ content, onChange, onSearch
           from={selToolbar.from}
           to={selToolbar.to}
           source={selToolbar.source}
+          activeFormats={selToolbar.formats}
           onPasteSelected={selToolbar.source === 'editor' ? handleSelectionPaste : undefined}
           onFormat={selToolbar.source === 'editor' ? applySelectionFormat : undefined}
           onAskAI={selToolbar.source === 'editor' ? handleAskAI : undefined}

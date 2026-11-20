@@ -21,6 +21,7 @@ import {
 import {
   enabledSelectionFormats,
   type SelectionFormatAction,
+  type SelectionFormatId,
 } from '../lib/selectionFormats'
 import SelectionToolbarView, { type SelectionBarMode } from './SelectionToolbarView'
 
@@ -40,6 +41,8 @@ interface SelectionToolbarProps {
   onPasteSelected?: () => void
   /** 格式：把格式动作交给编辑器执行（与主格式工具栏同一套命令） */
   onFormat?: (action: SelectionFormatAction) => void
+  /** 当前选区已应用的格式（格式条高亮） */
+  activeFormats?: SelectionFormatId[]
   /** 星芒：对选中内容打开文档内 AI */
   onAskAI?: (selection: { text: string; from: number; to: number }) => void
   /** delivery = inline 的划词技能：直接打开文档内 AI 并执行技能提示词 */
@@ -54,6 +57,7 @@ export default function SelectionToolbar({
   from,
   to,
   source = 'editor',
+  activeFormats = [],
   onPasteSelected,
   onFormat,
   onAskAI,
@@ -280,6 +284,7 @@ export default function SelectionToolbar({
         mode={mode}
         items={items}
         formats={formats}
+        activeFormats={activeFormats}
         onAction={handleAction}
         onFormat={onFormat ? (action) => { setHintPos(null); onFormat(action) } : undefined}
         onAskAI={source === 'editor' ? handleAskAI : undefined}
