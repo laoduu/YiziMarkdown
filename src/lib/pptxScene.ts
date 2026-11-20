@@ -23,6 +23,7 @@ import {
   hasUnderline, isBold, letterSpacingPt, lineHeightPx, num, parseBoxShadow, parseColor, pxToIn,
   pxToPt, rectOf, resolveFontStack, round2, round3, styleOf, textAlignOf, PX_PER_IN,
 } from './pptxTheme.ts'
+import { columnRowGrowth, flowBottom, growFlowNodes, shiftFlowNodes } from './pptxFlow.ts'
 
 export interface SceneOptions {
   /** 1 起的页码 */
@@ -149,6 +150,16 @@ function sameStyle(a: SceneRunStyle, b: SceneRunStyle): boolean {
 }
 
 /**
+ * 代码折行的安全余量。
+ *
+ * 折行宽度用浏览器 canvas 实测；PPTX 里写的是同一族字体，但打开文件的机器未必装了
+ * （Windows 上 JetBrains Mono 通常缺席，PowerPoint 会替换）。实测复现文档里
+ * 34 字符/行只比代码框窄 4%，字体略宽就会横向出血。宁可多折一行——多出来的高度
+ * 已经由垂直回流（pptxFlow）消化。
+ */
+export const CODE_WRAP_SAFETY = 0.96
+
+/**
  * 代码行按可用宽度折行（按字符，不依赖空格）。
  *
  * PowerPoint 没有“元素内部横向滚动条”，长代码行只能折行。这里在场景层
@@ -259,6 +270,10 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
   const slide = frame.slide
   const warnings: PptxWarning[] = []
   const nodes: SceneNode[] = []
+  /** 页/栏/容器流里每个元素被下移的量（px）：回填装饰用 */
+  const hostShift = new Map<Element, number>()
+  /** 装饰节点区间 + 宿主元素：内容回流完成后再按宿主位移回填 */
+  const decorationRanges: Array<{ from: number; to: number; host: Element }> = []
 
   const slideRect = rectOf(slide)
   const slideCS = styleOf(slide, win)
@@ -472,7 +487,8 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
     })
   }
 
-  const emitCard = (el: Element, box?: Box) => {
+  /** 推入卡片节点并返回索引（-1 = 该元素没有可见底色/边框/阴影）。 */
+  const emitCard = (el: Element, box?: Box): number => {
     const cs = styleOf(el, win)
     const bg = parseColor(cs.backgroundColor)
     const borderW = Math.max(
@@ -480,7 +496,7 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
     )
     const shadow = parseBoxShadow(cs)
     const radius = borderRadiusPx(cs)
-    if ((!bg || bg.a <= 0) && borderW <= 0 && !shadow) return
+    if ((!bg || bg.a <= 0) && borderW <= 0 && !shadow) return -1
     const r = box || rectOf(el)
     nodes.push({
       t: 'card',
@@ -491,12 +507,17 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
       radiusPt: radius * 0.75,
       shadow,
     })
+    return nodes.length - 1
   }
 
-  const emitBoxDecoration = (el: Element) => {
+  /**
+   * 推入四条边框节点。返回索引 + 边，供内容回流后延长竖直边 / 下移水平边。
+   */
+  const emitBoxDecoration = (el: Element): Array<{ index: number; side: 'Top' | 'Right' | 'Bottom' | 'Left' }> => {
     const cs = styleOf(el, win)
     const r = rectOf(el)
     const sides: Array<'Top' | 'Right' | 'Bottom' | 'Left'> = ['Top', 'Right', 'Bottom', 'Left']
+    const out: Array<{ index: number; side: 'Top' | 'Right' | 'Bottom' | 'Left' }> = []
     for (const side of sides) {
       const w = num((cs as any)[`border${side}Width`])
       if (w < 0.5) continue
@@ -508,10 +529,13 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
         const y = side === 'Top' ? r.y : r.y + r.h - w
         nodes.push({ t: 'rect', x: pxToIn(r.x), y: pxToIn(y), w: pxToIn(r.w), h: pxToIn(w), fill: color })
       }
+      out.push({ index: nodes.length - 1, side })
     }
+    return out
   }
 
-  const emitCode = (pre: Element) => {
+  /** 发射代码块；返回「预折行造成的额外高度」（px），供上层做垂直回流。 */
+  const emitCode = (pre: Element): number => {
     const cs = styleOf(pre, win)
     const r = rectOf(pre)
     const box = contentBox(pre, win)
@@ -584,7 +608,8 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
 
     // PowerPoint 没有元素内部横向滚动条：长代码行按内容盒宽度折行，
     // 并同步放大代码块高度（后续内容可能因此进入页底预留区 / 红区）。
-    const availPx = Math.max(1, box.w - 8)
+    // 安全余量见 CODE_WRAP_SAFETY：PowerPoint 换字体后略宽也不该横向出血。
+    const availPx = Math.max(1, (box.w - 8) * CODE_WRAP_SAFETY)
     const wrappedLines = lines.flatMap((line) => wrapCodeRuns(line, availPx, measureChar))
     const extraPx = Math.max(0, wrappedLines.length - lines.length) * linePx
     // 不再横向缩小代码：缩到 60% 仍放不下的长行改为折行，避免导出后横向溢出。
@@ -615,6 +640,7 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
       ea: font.ea,
       scale: 1,
     })
+    return extraPx
   }
 
   const cellFill = (cell: Element, row: Element): string | undefined => {
@@ -707,124 +733,172 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
     )
   }
 
+  // ---------- 垂直回流工具（issue #19） ----------
+  //
+  // 代码块的预折行会让它比浏览器里更高；这份「额外高度」必须回流到同一栏的后续节点、
+  // 栏卡片与页面流，否则会压住后面的列表、溢出卡片底部。这里所有 emit* 都返回
+  // 自己造成的增长量（px），由上层按「顺序流」累加并位移后续节点。
+
+  /** 把本次子块新增的节点整体下移（px→inch）。 */
+  const shiftNodes = (from: number, dyPx: number) => {
+    if (dyPx > 0) shiftFlowNodes(nodes, from, pxToIn(dyPx))
+  }
+
+  /** 区间内节点的最大底边（px）；无节点返回 NaN。 */
+  const nodesBottomPx = (from: number) => flowBottom(nodes, from) * PX_PER_IN
+
+  /**
+   * 顺序流：逐个发射子块，把前面的增长量累加到后面子块的 y 上。
+   * 返回容器的总增长（px）。
+   */
+  function emitFlow(children: Element[]): number {
+    let shift = 0
+    for (const child of children) {
+      const start = nodes.length
+      // 记录「这个元素在流里被下移了多少」：装饰（标题下划线 / 金句引号）由独立的
+      // 伪元素测量得到，内容回流后必须跟着走，否则「代码块后面接引用」会让引号错位。
+      hostShift.set(child, (hostShift.get(child) ?? 0) + shift)
+      const growth = emitBlock(child)
+      shiftNodes(start, shift)
+      shift += growth
+    }
+    return shift
+  }
+
   // ---------- 列表 ----------
 
-  const emitList = (list: Element, ordered: boolean, agenda: boolean) => {
-    const lis = Array.from(list.children).filter((c) => c.tagName === 'LI')
-    lis.forEach((li, i) => {
-      if (styleOf(li, win).display === 'none') return
-      const isTask = li.classList.contains('task-list-item')
-      const liCS = styleOf(li, win)
-      const liBox = contentBox(li, win)
+  /** 发射一个列表项；返回该条目内部回流造成的增长（px）。 */
+  const emitListItem = (li: Element, i: number, ordered: boolean, agenda: boolean): number => {
+    const isTask = li.classList.contains('task-list-item')
+    const liCS = styleOf(li, win)
+    const liBox = contentBox(li, win)
 
-      if (!agenda && !isTask) {
-        const pcs = styleOf(li, win, '::before')
-        if (hasVisiblePseudo(pcs) && (pcs.content || '').trim() !== 'none') {
-          if (ordered) {
-            const text = `${i + 1}.`
-            const w = Math.max(num(pcs.minWidth, 0), liBox.x - rectOf(li).x + 1)
-            const h = Math.max(fontSizePx(pcs), lineHeightPx(pcs))
-            const box = pseudoBox(li, pcs, w, h)
-            const font = resolveFontStack(pcs.fontFamily || liCS.fontFamily)
-            const style: SceneRunStyle = {
-              color: pseudoColor(pcs, slideBg),
-              sizePt: pxToPt(fontSizePx(pcs)),
-              bold: isBold(pcs) || undefined,
-              latin: font.latin,
-              ea: font.ea,
-            }
-            // 伪元素的 left/right 决定对齐方向
-            const align = pcs.right !== 'auto' && pcs.left === 'auto' ? 'right' : 'left'
-            pushText(box, [{ runs: [{ text, style }] }], pcs, { align })
-          } else {
-            const size = pseudoSize(pcs)
-            if (size.w > 0.5 && size.h > 0.5) {
-              const box = pseudoBox(li, pcs, size.w, size.h)
-              nodes.push({
-                t: 'ellipse',
-                x: pxToIn(box.x), y: pxToIn(box.y), w: pxToIn(box.w), h: pxToIn(box.h),
-                fill: flattenColor(pcs.backgroundColor, slideBg),
-              })
-            }
+    if (!agenda && !isTask) {
+      const pcs = styleOf(li, win, '::before')
+      if (hasVisiblePseudo(pcs) && (pcs.content || '').trim() !== 'none') {
+        if (ordered) {
+          const text = `${i + 1}.`
+          const w = Math.max(num(pcs.minWidth, 0), liBox.x - rectOf(li).x + 1)
+          const h = Math.max(fontSizePx(pcs), lineHeightPx(pcs))
+          const box = pseudoBox(li, pcs, w, h)
+          const font = resolveFontStack(pcs.fontFamily || liCS.fontFamily)
+          const style: SceneRunStyle = {
+            color: pseudoColor(pcs, slideBg),
+            sizePt: pxToPt(fontSizePx(pcs)),
+            bold: isBold(pcs) || undefined,
+            latin: font.latin,
+            ea: font.ea,
+          }
+          // 伪元素的 left/right 决定对齐方向
+          const align = pcs.right !== 'auto' && pcs.left === 'auto' ? 'right' : 'left'
+          pushText(box, [{ runs: [{ text, style }] }], pcs, { align })
+        } else {
+          const size = pseudoSize(pcs)
+          if (size.w > 0.5 && size.h > 0.5) {
+            const box = pseudoBox(li, pcs, size.w, size.h)
+            nodes.push({
+              t: 'ellipse',
+              x: pxToIn(box.x), y: pxToIn(box.y), w: pxToIn(box.w), h: pxToIn(box.h),
+              fill: flattenColor(pcs.backgroundColor, slideBg),
+            })
           }
         }
       }
+    }
 
-      if (agenda) {
-        const pcs = styleOf(li, win, '::before')
-        const w = Math.max(liBox.x - rectOf(li).x, fontSizePx(pcs) * 1.6)
-        // 盒高必须 >= 实际行高：伪元素是 1.6em 大字号，若行距大于字号，
-        // 只按 font-size 给高度会让大数字在 PPT 里被裁掉半截。
-        const h = Math.max(fontSizePx(pcs), lineHeightPx(pcs), 1)
-        const box = pseudoBox(li, pcs, w * 0.9, h)
-        const font = resolveFontStack(pcs.fontFamily || liCS.fontFamily)
-        const style: SceneRunStyle = {
-          color: pseudoColor(pcs, slideBg),
-          sizePt: pxToPt(fontSizePx(pcs)),
-          bold: isBold(pcs) || undefined,
-          latin: font.latin,
-          ea: font.ea,
-        }
-        pushText(box, [{ runs: [{ text: String(i + 1), style }] }], pcs, { align: textAlignOf(pcs), decorative: true })
+    if (agenda) {
+      const pcs = styleOf(li, win, '::before')
+      const w = Math.max(liBox.x - rectOf(li).x, fontSizePx(pcs) * 1.6)
+      // 盒高必须 >= 实际行高：伪元素是 1.6em 大字号，若行距大于字号，
+      // 只按 font-size 给高度会让大数字在 PPT 里被裁掉半截。
+      const h = Math.max(fontSizePx(pcs), lineHeightPx(pcs), 1)
+      const box = pseudoBox(li, pcs, w * 0.9, h)
+      const font = resolveFontStack(pcs.fontFamily || liCS.fontFamily)
+      const style: SceneRunStyle = {
+        color: pseudoColor(pcs, slideBg),
+        sizePt: pxToPt(fontSizePx(pcs)),
+        bold: isBold(pcs) || undefined,
+        latin: font.latin,
+        ea: font.ea,
       }
+      pushText(box, [{ runs: [{ text: String(i + 1), style }] }], pcs, { align: textAlignOf(pcs), decorative: true })
+    }
 
-      // 列表项自身内容（跳过嵌套列表，它们单独排版）。
-      // 松散列表会生成 `<li><p>…</p></li>`：此时按块渲染，否则 collectInline 会把 p 整块跳过。
-      const ownBlocks = Array.from(li.children).filter((c) =>
-        c.tagName === 'P' || c.tagName === 'PRE' || c.tagName === 'TABLE' || c.tagName === 'BLOCKQUOTE')
-      if (ownBlocks.length) {
-        ownBlocks.forEach((child) => emitBlock(child))
-      } else {
-        const paragraphs = collectInline(li, true)
-        if (paragraphs.length) {
-          pushText(textBoxOf(li, win), paragraphs, liCS, { align: textAlignOf(liCS) })
-        }
+    // 列表项自身内容（跳过嵌套列表，它们单独排版）。
+    // 松散列表会生成 `<li><p>…</p></li>`：此时按块渲染，否则 collectInline 会把 p 整块跳过。
+    const ownBlocks = Array.from(li.children).filter((c) =>
+      c.tagName === 'P' || c.tagName === 'PRE' || c.tagName === 'TABLE' || c.tagName === 'BLOCKQUOTE')
+    let shift = 0
+    if (ownBlocks.length) {
+      shift = emitFlow(ownBlocks)
+    } else {
+      const paragraphs = collectInline(li, true)
+      if (paragraphs.length) {
+        pushText(textBoxOf(li, win), paragraphs, liCS, { align: textAlignOf(liCS) })
       }
+    }
 
-      // 嵌套列表
-      Array.from(li.children).forEach((child) => {
-        if (child.tagName === 'UL') emitList(child, false, false)
-        else if (child.tagName === 'OL') emitList(child, true, false)
-      })
+    // 嵌套列表：排在本项内容之后，所以要承接上面的增长
+    for (const child of Array.from(li.children)) {
+      if (child.tagName !== 'UL' && child.tagName !== 'OL') continue
+      const start = nodes.length
+      const growth = emitList(child, child.tagName === 'OL', false)
+      shiftNodes(start, shift)
+      shift += growth
+    }
+    return shift
+  }
+
+  /** 发射整个列表；返回列表内部回流造成的总增长（px）。 */
+  const emitList = (list: Element, ordered: boolean, agenda: boolean): number => {
+    const lis = Array.from(list.children).filter((c) => c.tagName === 'LI')
+    let shift = 0
+    lis.forEach((li, i) => {
+      if (styleOf(li, win).display === 'none') return
+      const start = nodes.length
+      const growth = emitListItem(li, i, ordered, agenda)
+      shiftNodes(start, shift)
+      shift += growth
     })
+    return shift
   }
 
   // ---------- 走块 ----------
 
-  const emitChildrenAsBlocks = (el: Element) => {
-    Array.from(el.children).forEach((child) => emitBlock(child))
-  }
-
-  const emitBlock = (el: Element) => {
+  /**
+   * 发射一个块；返回它造成的「PPTX 额外高度」（px）。0 = 与浏览器一致。
+   * 目前只有代码预折行会产生增长，但上层回流是通用的：以后表格 / 图片需要重排时，
+   * 让对应的 emit 返回增量即可。
+   */
+  const emitBlock = (el: Element): number => {
     const tag = el.tagName
     const cls = el.classList
     const cs = styleOf(el, win)
-    if (cs.display === 'none' || cs.visibility === 'hidden') return
+    if (cs.display === 'none' || cs.visibility === 'hidden') return 0
 
-    if (tag === 'HR') { emitHr(el); return }
+    if (tag === 'HR') { emitHr(el); return 0 }
 
-    if (tag === 'PRE') { emitCode(el); return }
+    if (tag === 'PRE') { return emitCode(el) }
 
-    if (tag === 'TABLE') { emitTable(el); return }
+    if (tag === 'TABLE') { emitTable(el); return 0 }
 
-    if (tag === 'IMG') { emitImage(el as HTMLImageElement); return }
+    if (tag === 'IMG') { emitImage(el as HTMLImageElement); return 0 }
 
-    if (cls.contains('katex-display')) { emitMathDisplay(el); return }
+    if (cls.contains('katex-display')) { emitMathDisplay(el); return 0 }
 
     if (tag === 'P') {
       const display = el.querySelector('.katex-display')
-      if (display && isOnlyDisplayMath(el, display)) { emitMathDisplay(display); return }
+      if (display && isOnlyDisplayMath(el, display)) { emitMathDisplay(display); return 0 }
       const imgs = Array.from(el.querySelectorAll('img'))
-      if (imgs.length === 1 && isOnlyDisplayMath(el, imgs[0])) { emitImage(imgs[0] as HTMLImageElement); return }
+      if (imgs.length === 1 && isOnlyDisplayMath(el, imgs[0])) { emitImage(imgs[0] as HTMLImageElement); return 0 }
       const onlyImg = el.childNodes.length === 1 && el.firstElementChild?.tagName === 'IMG'
-      if (onlyImg) { emitImage(el.firstElementChild as HTMLImageElement); return }
+      if (onlyImg) { emitImage(el.firstElementChild as HTMLImageElement); return 0 }
       emitTextBlock(el)
-      return
+      return 0
     }
 
     if (tag === 'UL' || tag === 'OL') {
-      emitList(el, tag === 'OL', !!el.closest('.ys-layout-agenda'))
-      return
+      return emitList(el, tag === 'OL', !!el.closest('.ys-layout-agenda'))
     }
 
     if (cls.contains('markdown-toc')) {
@@ -835,15 +909,19 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
         const paragraphs = collectInline(li, true)
         if (paragraphs.length) pushText(textBoxOf(li, win), paragraphs, styleOf(li, win), { align: textAlignOf(styleOf(li, win)) })
       })
-      return
+      return 0
     }
 
     if (cls.contains('ys-cols')) {
       const cols = Array.from(el.children).filter((c) => c.classList.contains('ys-col'))
-      // 卡片：先铺底再放内容
       const style = styleOf(el, win)
+      const cards = style.alignItems === 'stretch'
       const lineMode = !!slide.closest('.yizi-slideshow')?.classList.contains('ys-col-style-line') ||
         !!el.closest('.ys-col-style-line')
+
+      // 卡片 / 分隔线先铺底（内容压在上面），并记住索引以便回流后加长
+      const cardIndexes: number[] = []
+      const lineIndexes: number[] = []
       if (lineMode) {
         cols.forEach((col, idx) => {
           if (idx === 0) return
@@ -856,35 +934,70 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
             x: pxToIn(r.x + left), y: pxToIn(r.y), w: pxToIn(w), h: pxToIn(r.h),
             fill: flattenColor(pcs.backgroundColor || style.borderTopColor, slideBg),
           })
+          lineIndexes[idx] = nodes.length - 1
         })
       }
-      cols.forEach((col) => {
-        emitCard(col)
-        Array.from(col.children).forEach((child) => emitBlock(child))
+      cols.forEach((col, idx) => {
+        cardIndexes[idx] = emitCard(col)
       })
-      return
+
+      // 每栏独立回流；记录增长量与内容底部（用于非卡片模式计算栏区增量）
+      const flows = cols.map((col) => {
+        const start = nodes.length
+        const growth = emitFlow(Array.from(col.children))
+        return {
+          growth,
+          bottomBefore: (rectOf(col).y + rectOf(col).h) * PX_PER_IN,
+          bottomAfter: nodesBottomPx(start),
+        }
+      })
+
+      const rowGrowthPx = columnRowGrowth(flows, cards)
+      flows.forEach((flow, idx) => {
+        // 卡片模式：等高卡片按最大增量一起长高（保住上下留白）；
+        // 其余情况（分隔线 / 无卡片）：每一栏按自己的增量加长。
+        const dy = pxToIn(cards ? rowGrowthPx : flow.growth)
+        if (dy > 0) {
+          if (cardIndexes[idx] >= 0) growFlowNodes(nodes, [cardIndexes[idx]], dy)
+          if (lineIndexes[idx] >= 0) growFlowNodes(nodes, [lineIndexes[idx]], dy)
+        }
+      })
+      return rowGrowthPx
     }
 
     if (tag === 'BLOCKQUOTE') {
-      emitBoxDecoration(el)
+      const decoration = emitBoxDecoration(el)
       const hasBlockChild = Array.from(el.children).some((c) => BLOCK_TAGS.has(c.tagName))
+      let growth = 0
       if (hasBlockChild) {
         // 子块（p / 列表 / 代码…）各自成文本块。容器自身若还有裸文本，
         // 才额外补一个文本块；否则 collectInline 会把子块里的文字再输出一遍。
-        Array.from(el.children).forEach((child) => {
-          if (BLOCK_TAGS.has(child.tagName)) emitBlock(child)
-        })
+        growth = emitFlow(Array.from(el.children).filter((c) => BLOCK_TAGS.has(c.tagName)))
         const own = Array.from(el.childNodes).some((n) => n.nodeType === 3 && (n.nodeValue || '').trim())
         if (own) {
           const paragraphs = collectInline(el, true)
-          if (paragraphs.length) pushText(textBoxOf(el, win), paragraphs, cs, { align: textAlignOf(cs) })
+          if (paragraphs.length) {
+            const start = nodes.length
+            pushText(textBoxOf(el, win), paragraphs, cs, { align: textAlignOf(cs) })
+            shiftNodes(start, growth)
+          }
         }
       } else {
         // 只有行内元素（常见：`> 引用` 单段）⇒ 整块作为一个文本块输出
         const paragraphs = collectInline(el, true)
         if (paragraphs.length) pushText(textBoxOf(el, win), paragraphs, cs, { align: textAlignOf(cs) })
       }
-      return
+      if (growth > 0) {
+        // 左右边框跟着变长；下边框随容器底边下移（引用块常见的是左边框）。
+        // 必须逐条处理：emitBoxDecoration 的顺序是 Top/Right/Bottom/Left，
+        // 用「从 bottom 往后整体位移」会把后面的 left 也一起挪走。
+        const dy = pxToIn(growth)
+        for (const side of decoration) {
+          if (side.side === 'Left' || side.side === 'Right') growFlowNodes(nodes, [side.index], dy)
+          else if (side.side === 'Bottom') shiftFlowNodes(nodes, side.index, dy, side.index + 1)
+        }
+      }
+      return growth
     }
 
     if (tag === 'DIV' || tag === 'SECTION' || tag === 'NAV' || tag === 'ASIDE' || tag === 'FIGURE') {
@@ -892,28 +1005,37 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
       // 它既没有块级子元素也没有文本，`collectInline` 会跳过 IMG，不特判就会整块丢失。
       if (el.childNodes.length === 1 && el.firstElementChild?.tagName === 'IMG') {
         emitImage(el.firstElementChild as HTMLImageElement)
-        return
+        return 0
       }
       // 有可见背景 / 边框的容器先画成卡片（分栏卡片、目录块、脚注块……）
-      emitCard(el)
+      const cardIndex = emitCard(el)
       const hasBlockChild = Array.from(el.children).some((c) => BLOCK_TAGS.has(c.tagName))
+      let growth = 0
       if (hasBlockChild) {
-        emitChildrenAsBlocks(el)
+        // 容器子块保持原有口径：**全部子元素**都走 emitBlock（span 之类的行内元素
+        // 会落到文本块分支）；只按 DOM 顺序串成流，不改变发射集合。
+        growth = emitFlow(Array.from(el.children))
         // 容器自身的纯文本（rare）：只取不在子块里的文本
         const own = Array.from(el.childNodes).some((n) => n.nodeType === 3 && (n.nodeValue || '').trim())
         if (own) {
           const paragraphs = collectInline(el, true)
-          if (paragraphs.length) pushText(textBoxOf(el, win), paragraphs, cs, { align: textAlignOf(cs) })
+          if (paragraphs.length) {
+            const start = nodes.length
+            pushText(textBoxOf(el, win), paragraphs, cs, { align: textAlignOf(cs) })
+            shiftNodes(start, growth)
+          }
         }
       } else {
         const paragraphs = collectInline(el, true)
         if (paragraphs.length) pushText(textBoxOf(el, win), paragraphs, cs, { align: textAlignOf(cs) })
       }
-      return
+      if (growth > 0 && cardIndex >= 0) growFlowNodes(nodes, [cardIndex], pxToIn(growth))
+      return growth
     }
 
     // 标题 / 其它行内块
     emitTextBlock(el)
+    return 0
   }
 
   // ---------- 装饰（先画：文字压在上面） ----------
@@ -963,6 +1085,7 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
       // 封面 / 结尾页的下划线是块级伪元素：margin auto 居中，贴在元素底部
       box = { x: r.x + (r.w - size.w) / 2, y: r.y + r.h - size.h, w: size.w, h: size.h }
     }
+    const from = nodes.length
     nodes.push({
       t: 'rect',
       x: pxToIn(box.x), y: pxToIn(box.y), w: pxToIn(box.w), h: pxToIn(box.h),
@@ -970,6 +1093,7 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
       gradient: fill.gradient ? { color: fill.color } : undefined,
       radiusPt: borderRadiusPx(pcs) * 0.75,
     })
+    decorationRanges.push({ from, to: nodes.length, host: h })
   })
 
   // 3) 金句页对角大引号：逐个子块检查 ::before/::after。
@@ -1005,16 +1129,43 @@ export function buildSlideScene(frame: PptxFrame, opts: SceneOptions): SlideScen
         latin: font.latin,
         ea: font.ea,
       }
+      const from = nodes.length
       pushText(box, [{ runs: [{ text: raw, style }] }], pcs, {
         align: which === '::before' ? 'right' : 'left', decorative: true,
       })
+      decorationRanges.push({ from, to: nodes.length, host })
     })
   })
 
   // ---------- 正文 ----------
 
   // 分栏页：先铺卡片/分隔线（在 .ys-cols 分支里完成）
-  Array.from(slide.children).forEach((child) => emitBlock(child))
+  //
+  // 顺序流：代码预折行导致的增高会把页面后续块（栏外文案、下一块正文）一起下移。
+  // grid 版式（figure 的 45/55 栅格）是**区域定位**，兄弟节点不在同一条流里，
+  // 下移反而会错位 —— 这些页面只做逐块发射，超页仍由包围盒检测兜住。
+  if (slideCS.display === 'grid') {
+    Array.from(slide.children).forEach((child) => { emitBlock(child) })
+  } else {
+    emitFlow(Array.from(slide.children))
+  }
+
+  // 装饰回填：标题下划线 / 金句引号是按伪元素单独测量的，宿主元素在流里被下移后
+  // 它们必须跟着走（节点顺序不变，仍在正文之前，z 序不受影响）。
+  if (decorationRanges.length) {
+    const shiftOf = (el: Element): number => {
+      let dy = 0
+      let cur: Element | null = el
+      while (cur) {
+        dy += hostShift.get(cur) ?? 0
+        cur = cur.parentElement
+      }
+      return dy
+    }
+    for (const range of decorationRanges) {
+      shiftFlowNodes(nodes, range.from, pxToIn(shiftOf(range.host)), range.to)
+    }
+  }
 
   // ---------- 页脚 ----------
 

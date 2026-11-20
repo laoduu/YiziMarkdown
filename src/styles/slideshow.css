@@ -1704,6 +1704,15 @@
    （斜体、引用块、小字……），这里只保证它待在页级流里。
    `.ys-slide > *` 已经给了它 width:100% / max-width:100%，无需重复声明。 */
 
+/* 栏区与**紧随其后**的栏外文案（落款）之间补一个正文块间距。
+   为什么需要单独一条：`.ys-slide p` 刻意只写下边距（见基础排版），而
+   `.ys-has-cols` 又把 flex column 的 gap 归零 —— 于是栏区上方的引言靠自身
+   margin-bottom 拿到了间距，下方落款却直接贴在卡片底边上（issue #19）。
+   只命中「紧跟在 .ys-cols 后面」的那一个，引言不受影响。 */
+.ys-slide.ys-has-cols > .ys-cols + .ys-col-aside {
+  margin-top: var(--ys-gap-md);
+}
+
 /* ===== 分栏对齐（HUD「演示排版 → 分栏 → 栏内对齐」，见 lib/slideColumns.ts）=====
    来源唯一：Slideshow.tsx 已把「HUD 全局默认 + 页级 <!-- align: xxx -->」合成一个值，
    以 .ys-col-align-* 挂在 .ys-slide 上 ⇒ 下面的规则不必再跟 .ys-align-* 争夺优先级。
