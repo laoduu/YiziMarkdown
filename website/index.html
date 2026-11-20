@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YiziMarkdown - 免费开源 Markdown 编辑器（Windows / macOS / Linux） | 七种模式、免安装、多主题</title>
-    <meta name="description" content="YiziMarkdown 是一款免费开源、跨平台的 Markdown 编辑器（Windows 便携 / macOS 原生 / Linux deb 与 AppImage），基于 Tauri + React + CodeMirror 6 构建。内置 AI 大模型助手（18 家供应商 + 自定义接入 + 可管理 Skill 系统 + 可配置划词助手）、WebDAV 云端文档、七种模式（源码 / 并排 / 实时 / 预览 / 演示 / 阅读 / 禅）、类 PPT 演示（纯 Markdown 自动版式）、成书阅读、15 套精美主题、KaTeX 公式、Mermaid 图表、EPUB 导出与阅读。免安装，解压即用。">
-    <meta name="keywords" content="Markdown编辑器,AI写作,AI编辑器,大模型,演示模式,幻灯片,PPT,Skill,技能,划词助手,WebDAV,禅模式,阅读模式,Linux编辑器,deb,AppImage,Windows编辑器,macOS编辑器,跨平台编辑器,便携编辑器,免安装编辑器,Markdown,实时预览,Tauri,开源编辑器,免费编辑器,KaTeX,Mermaid,EPUB,电子书,主题编辑器,品牌自定义,用户主题">
+    <meta name="description" content="YiziMarkdown 是一款免费开源、跨平台的 Markdown 编辑器（Windows 便携 / macOS 原生 / Linux deb 与 AppImage），基于 Tauri + React + CodeMirror 6 构建。内置 AI 大模型助手与正文内 AI 改写（18 家供应商 + 自定义接入 + 可管理 Skill 系统 + 可配置划词助手与格式条）、WebDAV 云端文档、七种模式（源码 / 并排 / 实时 / 预览 / 演示 / 阅读 / 禅）、类 PPT 演示（纯 Markdown 自动版式）、成书阅读、15 套精美主题、KaTeX 公式、Mermaid 图表、EPUB 导出与阅读。免安装，解压即用。">
+    <meta name="keywords" content="Markdown编辑器,AI写作,AI编辑器,大模型,演示模式,幻灯片,PPT,Skill,技能,正文内AI改写,划词格式条,划词助手,WebDAV,禅模式,阅读模式,Linux编辑器,deb,AppImage,Windows编辑器,macOS编辑器,跨平台编辑器,便携编辑器,免安装编辑器,Markdown,实时预览,Tauri,开源编辑器,免费编辑器,KaTeX,Mermaid,EPUB,电子书,主题编辑器,品牌自定义,用户主题">
     <meta name="author" content="YiziPaper">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://md.yizigpt.com/">
@@ -13,7 +13,7 @@
     <!-- Open Graph -->
     <meta property="og:type" content="website">
     <meta property="og:title" content="YiziMarkdown - AI 加持的 Markdown 编辑器（Windows / macOS / Linux）">
-    <meta property="og:description" content="内置 AI 大模型助手、可管理 Skill 系统、可配置划词助手与 WebDAV 云端文档；笔记一键变演示，EPUB 导出/阅读。七种模式覆盖写作、放映、成书阅读与禅模式，15 套主题、便携免安装，开源免费。">
+    <meta property="og:description" content="内置 AI 大模型助手与正文内 AI 改写、可管理 Skill 系统、划词格式条与 WebDAV 云端文档；笔记一键变演示，EPUB 导出/阅读。七种模式覆盖写作、放映、成书阅读与禅模式，15 套主题、便携免安装，开源免费。">
     <meta property="og:url" content="https://md.yizigpt.com/">
     <meta property="og:site_name" content="YiziMarkdown">
     <meta property="og:locale" content="zh_CN">
@@ -22,11 +22,11 @@
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="YiziMarkdown - AI 加持的 Markdown 编辑器（Windows / macOS / Linux）">
-    <meta name="twitter:description" content="内置 AI 大模型助手、可管理 Skill 系统、可配置划词助手与 WebDAV 云端文档；笔记一键变演示，EPUB 导出/阅读。七种模式覆盖写作、放映、成书阅读与禅模式，15 套主题、便携免安装，开源免费。">
+    <meta name="twitter:description" content="内置 AI 大模型助手与正文内 AI 改写、可管理 Skill 系统、划词格式条与 WebDAV 云端文档；笔记一键变演示，EPUB 导出/阅读。七种模式覆盖写作、放映、成书阅读与禅模式，15 套主题、便携免安装，开源免费。">
 
     <link rel="icon" type="image/png" href="assets/icon.png">
     <link rel="shortcut icon" href="assets/favicon.ico">
-    <link rel="stylesheet" href="assets/css/style.css?v=5">
+    <link rel="stylesheet" href="assets/css/style.css?v=6">
 
     <!-- Structured Data -->
     <script type="application/ld+json">
@@ -34,7 +34,7 @@
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
         "name": "YiziMarkdown",
-        "description": "一款免费开源、跨平台的 Markdown 编辑器（Windows 便携 / macOS 原生 / Linux deb 与 AppImage），内置 AI 大模型助手与技能系统、七种模式（源码 / 并排 / 实时 / 预览 / 演示 / 阅读 / 禅）、类 PPT 演示、EPUB 导出与阅读，支持 15 套精美主题与用户主题导入、KaTeX 公式、Mermaid 图表。免安装，解压即用。",
+        "description": "一款免费开源、跨平台的 Markdown 编辑器（Windows 便携 / macOS 原生 / Linux deb 与 AppImage），内置 AI 大模型助手与正文内 AI 改写、技能系统与划词格式条，七种模式（源码 / 并排 / 实时 / 预览 / 演示 / 阅读 / 禅）、类 PPT 演示、EPUB 导出与阅读，支持 15 套精美主题与用户主题导入、KaTeX 公式、Mermaid 图表。免安装，解压即用。",
         "url": "https://md.yizigpt.com/",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Windows, macOS, Linux",
@@ -74,20 +74,20 @@
 <!-- Hero -->
 <section class="hero">
     <div class="hero-content">
-        <div class="hero-badge"><span class="dot"></span> Linux 修复版 V0.4.5 · Windows / macOS 仍为 v0.4.4</div>
+        <div class="hero-badge"><span class="dot"></span> V0.4.5 · 文档内 AI 改写 / 划词格式条 / 表格键盘导航</div>
         <h1>既<span style="color: var(--orange);">好看</span>，又<span class="highlight">彪悍</span></h1>
-        <p class="hero-sub">一款 AI 加持的跨平台 Markdown 编辑器<br>七种模式覆盖写作、放映、成书阅读与禅模式<br>可管理 Skill / 可配置划词助手，WebDAV 云端同步<br>Windows / macOS / Linux 全平台可用</p>
+        <p class="hero-sub">一款 AI 加持的跨平台 Markdown 编辑器<br>七种模式覆盖写作、放映、成书阅读与禅模式<br>AI 直接在正文里改写，可管理 Skill / 可配置划词助手<br>Windows / macOS / Linux 全平台可用</p>
         <div class="hero-actions">
             <div class="hero-actions-row">
-                <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.4/YiziMarkdown_0.4.4_x64-setup.exe" target="_blank" class="btn-primary">
+                <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.5/YiziMarkdown_0.4.5_x64-setup.exe" target="_blank" class="btn-primary">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.55 10.5 4.5v6.8H3V5.55zm0 12.9 7.5-1.05v-6.3H3v7.35zM11.5 4.3 21 3v8.3h-9.5V4.3zm0 15.4 9.5-1.3V12.7h-9.5v7z"/></svg>
                     Windows 版下载
                 </a>
-                <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.4/YiziMarkdown_0.4.4_universal.dmg" target="_blank" class="btn-secondary">
+                <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.5/YiziMarkdown_0.4.5_universal.dmg" target="_blank" class="btn-secondary">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 12.54c-.03-3.04 2.48-4.5 2.6-4.57-1.42-2.07-3.62-2.36-4.4-2.39-1.88-.19-3.66 1.1-4.62 1.1-.95 0-2.43-1.08-4-1.05-2.05.03-3.95 1.2-5 3.04-2.14 3.7-.55 9.17 1.53 12.18 1.02 1.46 2.23 3.1 3.83 3.04 1.53-.06 2.11-.99 3.96-.99 1.85 0 2.37.99 4 .96 1.65-.03 2.7-1.49 3.71-2.95 1.17-1.71 1.65-3.37 1.68-3.45-.04-.02-3.22-1.24-3.29-4.92zM14.4 4.2c.85-1.03 1.42-2.46 1.26-3.89-1.22.05-2.7.81-3.58 1.84-.79.91-1.47 2.36-1.29 3.76 1.36.1 2.76-.69 3.61-1.71z"/></svg>
                     macOS 版下载
                 </a>
-                <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.4/YiziMarkdown_0.4.4_x64-portable.zip" target="_blank" class="btn-secondary">
+                <a href="https://github.com/laoduu/YiziMarkdown/releases/download/v0.4.5/YiziMarkdown_0.4.5_x64-portable.zip" target="_blank" class="btn-secondary">
                     <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 7l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                     Windows 便携版
                 </a>
@@ -156,8 +156,8 @@
         </div>
         <div class="feature-card">
             <div class="feature-icon blue"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M12 8V4M8 4h8"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/><path d="M9 17h6"/></svg></div>
-            <h3>AI 大模型助手</h3>
-            <p>侧边聊天面板接入 18 家大模型，并支持自定义服务；流式回复、思考过程展示，还能引用当前文档对话；模型 ID 可一键拉取供应商模型列表并下拉选择。</p>
+            <h3>文档内 AI 与 AI 助手</h3>
+            <p>两种形态、同一套模型配置：选中文字点星芒，AI 在选区旁直接改写正文，结果可替换选区、看 diff、多轮补充需求；也可以打开右侧面板对话，流式回复、思考过程、引用当前文档都支持。18 家供应商 + 自定义服务。</p>
         </div>
         <div class="feature-card">
             <div class="feature-icon blue"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
@@ -166,8 +166,8 @@
         </div>
         <div class="feature-card">
             <div class="feature-icon orange"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3l7 18 2.5-7.5L21 11 4 3z"/></svg></div>
-            <h3>可配置划词助手</h3>
-            <p>选中文本即可弹出工具栏；设置里可增删、排序功能并修改显示名称，支持预设 / 自建技能与复制、粘贴、添加到对话。顶部实时预览，短名称也能自行调整。</p>
+            <h3>划词助手与格式条</h3>
+            <p>选中文本弹出浮栏：最左星芒进文档内 AI，工具条可增删、排序、改名，点最右的 ⇄ 切到格式条——加粗、列表、标题、公式等格式一键套用，并标出当前已生效的格式。技能可设为「直通正文」，点一下就在文档里执行。</p>
         </div>
         <div class="feature-card">
             <div class="feature-icon orange"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
@@ -202,7 +202,7 @@
         <div class="feature-card">
             <div class="feature-icon blue"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg></div>
             <h3>实时表格编辑</h3>
-            <p>8×8 网格一键插入表格；实时模式可拖选单元格、点行首列首手柄选中整行整列、<code>+</code> 加行加列，右键菜单完成对齐 / 插入 / 移动 / 排序 / 删除，还能与 Excel 互相复制粘贴。</p>
+            <p>8×8 网格一键插入表格；实时模式可拖选单元格、点行首列首手柄选中整行整列、<code>+</code> 加行加列，右键菜单完成对齐 / 插入 / 移动 / 排序 / 删除，还能与 Excel 互相复制粘贴；<code>Tab</code> / <code>Enter</code> / 方向键可在单元格间跳转，行末与末格自动续行。</p>
         </div>
     </div>
 </section>
@@ -269,16 +269,26 @@
 <!-- AI Spotlight -->
 <section class="spotlight ai" id="ai">
     <div class="section-header">
-        <span class="section-label">AI 大模型助手</span>
-        <h2 class="section-title">AI 加持，写作进入快车道</h2>
-        <p class="section-desc">右侧聊天面板内置大模型，侧边对称为写作而生。API 密钥存系统钥匙串，安全不落盘，支持流式输出、随时停止与推理过程折叠查看。</p>
+        <span class="section-label">文档内 AI + 大模型助手</span>
+        <h2 class="section-title">AI 加持，写与改都在原位</h2>
+        <p class="section-desc">两种形态、同一套模型配置：选中文字点星芒，AI 就在选区旁改写，结果直接替换正文；也可以打开右侧面板对话，再把结果插入文档。</p>
         <div class="section-more-group">
-            <a class="section-more" href="help.html#ai">AI 助手配置与技能用法<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+            <a class="section-more" href="help.html#ai">文档内 AI 与助手配置<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
             <a class="section-more" href="skill-spec.html">技能规范<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
         </div>
     </div>
     <div class="spotlight-inner">
-        <div class="spotlight-visual">
+        <div class="spotlight-visual ai-visual">
+            <div class="inline-ai-card">
+                <div class="inline-ai-head"><span class="inline-ai-star">✦</span> 文档内 AI · 直接改正文</div>
+                <p class="inline-ai-inst">让这段更专业，保留原意</p>
+                <p class="inline-ai-out">多端协作时，一致性比功能数量更值得优先保证。</p>
+                <div class="inline-ai-actions">
+                    <span class="inline-ai-btn on">替换选区</span>
+                    <span class="inline-ai-btn">插入到下方</span>
+                    <span class="inline-ai-btn">放弃</span>
+                </div>
+            </div>
             <div class="chat-mock">
                 <div class="chat-head"><span class="chat-dot"></span> AI 助手 · DeepSeek · deepseek-v4</div>
                 <div class="chat-body">
@@ -306,10 +316,12 @@
         </div>
         <div class="spotlight-text">
             <ul class="spotlight-list">
-                <li><strong>18 家供应商 + 自定义服务</strong>：OpenAI、Anthropic、Gemini、DeepSeek、通义千问、智谱 GLM、Kimi、豆包、Ollama 本地、小米 MiMo、美团 LongCat 等</li>
-                <li><strong>自定义服务</strong>：OpenAI / Anthropic 兼容协议，自填 Base URL、模型 ID 与密钥，可接任意第三方大模型，本地端点密钥可留空</li>
-                <li><strong>Skill 技能</strong>：内置演示稿提炼、文档摘要、润色改写、全文翻译、Markdown 格式化；设置内「Skill 管理」可增删改，支持语义图标与自定义提示词，改动在应用升级后保留</li>
-                <li><strong>思考过程 + 引用文档</strong>：推理模型的 reasoning 可折叠查看，可把当前文档作为上下文提问</li>
+                <li><strong>正文内改写</strong>：划词后点星芒，在选区旁输入指令；结果可替换选区、插入到下方或复制，「对比原文」还会在正文里就地显示红删绿增的 diff</li>
+                <li><strong>光标处创作</strong>：双击 <code>Ctrl</code>（可在设置里改为 <code>Ctrl+Enter</code> 或关闭）让 AI 在光标处直接写一段，与划词改写共用同一浮层</li>
+                <li><strong>补充需求与语境</strong>：可附「当前小节 / 整篇文档」让 AI 知道前后文，结果不满意就继续提要求，多轮打磨后一次写入，<code>Ctrl+Z</code> 可撤销</li>
+                <li><strong>会话历史</strong>：每次生成按文档留档，浮层内回看完整结果并重新插入 / 复制 / 删除，单文档保留 50 条、90 天过期</li>
+                <li><strong>18 家供应商 + 自定义服务</strong>：OpenAI、Anthropic、Gemini、DeepSeek、通义千问、智谱 GLM、Kimi、豆包、Ollama 本地等；API 密钥存系统钥匙串</li>
+                <li><strong>Skill 技能 + 直通正文</strong>：内置演示稿提炼、文档摘要、润色改写、全文翻译、Markdown 格式化；「润色改写」「Markdown 格式化」默认直通正文，点一下就在文档内执行</li>
             </ul>
         </div>
     </div>
@@ -366,6 +378,7 @@
         <div class="shortcut-item"><span class="shortcut-key">F11</span><span class="shortcut-desc">切换全屏</span></div>
         <div class="shortcut-item"><span class="shortcut-key">Ctrl + T</span><span class="shortcut-desc">插入表格</span></div>
         <div class="shortcut-item"><span class="shortcut-key">Ctrl + `</span><span class="shortcut-desc">插入代码块</span></div>
+        <div class="shortcut-item"><span class="shortcut-key">双击 Ctrl</span><span class="shortcut-desc">文档内 AI（可在设置中改）</span></div>
         <div class="shortcut-item"><span class="shortcut-key">Ctrl + 1/2/3</span><span class="shortcut-desc">1/2/3级标题</span></div>
         <div class="shortcut-item"><span class="shortcut-key">Ctrl + '</span><span class="shortcut-desc">引用</span></div>
         <div class="shortcut-item"><span class="shortcut-key">Ctrl + .</span><span class="shortcut-desc">无序列表</span></div>
@@ -413,17 +426,26 @@
                     <div class="changelog-card-head">
                         <div class="changelog-head-left">
                             <span class="changelog-version">v0.4.5</span>
-                            <span class="changelog-badge">Linux 修复</span>
+                            <span class="changelog-badge">文档内 AI</span>
                         </div>
-                        <span class="changelog-date">2026.11.15</span>
+                        <span class="changelog-date">2026.11.21</span>
                     </div>
                     <div class="changelog-divider"></div>
                     <ul class="changelog-list">
-                        <li><span class="changelog-tag platform">其他</span><strong>发布范围</strong>：本版本仅发布 Linux 包（deb / AppImage）；Windows / macOS 请继续使用 v0.4.4</li>
-                        <li><span class="changelog-tag fix">修复</span><strong>Linux 双击 / 右键打开 Markdown 只启动应用</strong>：安装包的桌面条目缺少文件参数，文件管理器把路径丢掉了。deb 与 AppImage 的桌面条目现在都会把选中的文件传给应用，双击或「用 YiziMarkdown 打开」直接载入文档</li>
-                        <li><span class="changelog-tag fix">修复</span><strong>特殊路径无法打开</strong>：兼容 <code>file://</code> 地址与百分号编码，中文、空格路径也能正确还原并打开</li>
-                        <li><span class="changelog-tag fix">修复</span><strong>应用已运行时再次双击文档</strong>：复用现有窗口并打开该文件，不再只把窗口切到前台</li>
-                        <li><span class="changelog-tag platform">其他</span><strong>升级提示</strong>：桌面条目属于安装包内容，需要重新安装新版本；若关联仍未刷新，在「设置 → 通用 → 文件关联」关闭再打开一次</li>
+                        <li><span class="changelog-tag new">新增</span><strong>文档内 AI 改写</strong>：划词后点浮栏最左侧星芒，在选区旁输入指令，结果可替换选区 / 插入到下方 / 复制 / 放弃；「对比原文」在正文里就地显示红删绿增的 diff，可附「当前小节 / 整篇文档」作为语境，写入后 <code>Ctrl+Z</code> 可撤销</li>
+                        <li><span class="changelog-tag new">新增</span><strong>光标处 AI 创作</strong>：双击 <code>Ctrl</code>（可改为 <code>Ctrl+Enter</code> 或关闭）或点顶部星芒，让 AI 在光标处直接写一段；与划词改写共用同一浮层</li>
+                        <li><span class="changelog-tag new">新增</span><strong>AI 会话历史</strong>：每次生成按文档留档，浮层底部展开「左列表 + 右详情」，可查看完整结果并重新插入 / 复制 / 删除；单文档保留 50 条、90 天过期</li>
+                        <li><span class="changelog-tag new">新增</span><strong>划词格式条</strong>：点浮栏最右端的 ⇄ 在工具条与格式条间切换；加粗、斜体、删除线、高亮、行内代码、上下标、标题、列表、引用与公式一键套用，带二级选项的图标 hover 展开，选中文字时标出当前已生效的格式</li>
+                        <li><span class="changelog-tag new">新增</span><strong>技能直通正文</strong>：技能可把结果去向设为「直接改写文档」，内置「润色改写」「Markdown 格式化」默认直通，点一下就在文档里执行并可替换选区</li>
+                        <li><span class="changelog-tag new">新增</span><strong>实时模式表格键盘导航</strong>：<code>Tab</code> / <code>Shift+Tab</code> 左右跳格（行末换行、最后一格自动新增一行），<code>Enter</code> 跳同列下一行，方向键在单元格间移动</li>
+                        <li><span class="changelog-tag new">新增</span><strong>格式开关再点取消</strong>：加粗、斜体、删除线、行内代码、高亮、上下标已应用时再点一次即取消，不再叠加 <code>****</code>；标题同级再点取消、换级直接替换，列表与引用也可再次点击取消</li>
+                        <li><span class="changelog-tag improve">优化</span><strong>文档内 AI 浮层</strong>：可拖动、输入区可上下调高（最多 480px）、打开即聚焦、思考过程默认展开、底部工具单行布局，历史在浮层内展开</li>
+                        <li><span class="changelog-tag improve">优化</span><strong>划词浮栏</strong>：改为选区落定后出现并在上方居中，滚动 / 缩放 / 点击外部自动收起；最左入口换成会「眨眼」的星芒，切换按钮与它同款配色，首次划词有一次使用提示</li>
+                        <li><span class="changelog-tag improve">优化</span><strong>设置与细节</strong>：设置里的下拉统一换成主题化自绘列表（深色主题不再弹白框，支持键盘与向上展开）；行号更小巧并标出当前行；F1 速查补上文档内 AI 快捷键；云端版本对比新增本地 / 云端保存时间</li>
+                        <li><span class="changelog-tag fix">修复</span><strong>表格与输入法</strong>：单元格内格式不再写到表格外；中文输入法组字时按 <code>Enter</code> / 方向键不再误触发换行或跳格；任务列表 NBSP 导致预览退化成普通列表的问题已修正</li>
+                        <li><span class="changelog-tag fix">修复</span><strong>划词助手</strong>：浮栏停在旧位置（Linux 高发）已修；Windows 复制后点「粘贴」改为读取系统原生剪贴板</li>
+                        <li><span class="changelog-tag fix">修复</span><strong>PPTX 导出排版</strong>：长代码在 PowerPoint 中折行后的增高会回流——同排卡片等高增高、栏内后续内容同步下移；分栏卡片与下方落款补上正文间距；长代码行另留 4% 安全余量</li>
+                        <li><span class="changelog-tag platform">其他</span><strong>平台</strong>：本版本同时包含首轮 Linux 修复（双击 Markdown 直接载入、兼容 <code>file://</code> 路径、第二个实例复用窗口）；Windows / macOS / Linux 安装包同步更新</li>
                     </ul>
                 </div>
             </div>
@@ -432,7 +454,6 @@
                     <div class="changelog-card-head">
                         <div class="changelog-head-left">
                             <span class="changelog-version">v0.4.4</span>
-                            <span class="changelog-badge">最新</span>
                         </div>
                         <span class="changelog-date">2026.11.15</span>
                     </div>
@@ -964,7 +985,11 @@
         </div>
         <div class="faq-item">
             <h3 class="faq-q">AI 聊天功能需要付费吗？如何接入？</h3>
-            <p class="faq-a">软件本身免费开源。AI 聊天需要你在「设置 → AI」中配置模型服务商的 API 密钥（内置 OpenAI、Anthropic、DeepSeek、通义千问、智谱 GLM、Kimi、小米 MiMo、美团 LongCat 等 18 家，也支持自定义兼容服务），调用费用由对应服务商收取；若使用 Ollama 本地模型则完全免费、无需联网。</p>
+            <p class="faq-a">软件本身免费开源。AI 聊天需要你在「设置 → AI」中配置模型服务商的 API 密钥（内置 OpenAI、Anthropic、DeepSeek、通义千问、智谱 GLM、Kimi、小米 MiMo、美团 LongCat 等 18 家，也支持自定义兼容服务），调用费用由对应服务商收取；若使用 Ollama 本地模型则完全免费、无需联网。侧边对话与「文档内 AI」（划词星芒 / 双击 Ctrl）共用同一套配置。</p>
+        </div>
+        <div class="faq-item">
+            <h3 class="faq-q">「文档内 AI」和右侧的 AI 面板有什么区别？</h3>
+            <p class="faq-a">文档内 AI 直接在正文里改写：选中文字点浮栏最左侧的星芒，输入指令后 AI 就地改写，结果可替换选区、看红删绿增的 diff、多轮补充需求；双击 <code>Ctrl</code> 可在光标处让 AI 直接写一段。右侧面板更适合「先看结果再决定」，两者共用同一套供应商与密钥配置。技能也可以把「结果去向」设为「直接改写文档」，点一下就在正文里执行。</p>
         </div>
         <div class="faq-item">
             <h3 class="faq-q">换电脑或重装系统后，我的文档和 AI 密钥会丢吗？</h3>

@@ -59,7 +59,7 @@ export const DOC_PAGES = [
     description:
       'YiziMarkdown 技能（Skill）规范：skills.json 字段与提示词编写技巧、图标选择、可视化 Skill 管理、自定义技能创建步骤、存储位置与升级保留策略，以及常见问题。',
     keywords: 'YiziMarkdown,Skill,技能,自定义技能,skills.json,提示词,图标,AI助手',
-    meta: ['适用版本 v0.4.4', '设置内可管理'],
+    meta: ['适用版本 v0.4.5', '设置内可管理'],
     searchPlaceholder: '搜索技能配置，例如「needsDoc」',
     icons: ['zap', 'folder-open', 'settings', 'pencil-line', 'code', 'sparkles', 'circle-help']
   }

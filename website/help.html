@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>帮助中心 - YiziMarkdown 使用文档（Markdown 编辑器 / AI 助手 / 演示模式）</title>
-    <meta name="description" content="YiziMarkdown 帮助中心：从下载安装、文档管理、七种模式（源码 / 并排 / 实时 / 预览 / 演示 / 阅读 / 禅）、Markdown 与公式图表写作，到阅读模式与 EPUB、类 PPT 演示、AI 大模型助手、技能系统、主题外观与自定义、快捷键与常见问题，完整使用说明一站查阅。">
-    <meta name="keywords" content="YiziMarkdown,帮助中心,使用教程,Markdown编辑器,七种模式,禅模式,阅读模式,EPUB,演示模式,AI助手,技能Skill,主题,快捷键,常见问题">
+    <meta name="description" content="YiziMarkdown 帮助中心：从下载安装、文档管理、七种模式（源码 / 并排 / 实时 / 预览 / 演示 / 阅读 / 禅）、Markdown 与公式图表写作，到阅读模式与 EPUB、类 PPT 演示、AI 大模型助手与正文内 AI 改写、技能系统、主题外观与自定义、快捷键与常见问题，完整使用说明一站查阅。">
+    <meta name="keywords" content="YiziMarkdown,帮助中心,使用教程,Markdown编辑器,七种模式,禅模式,阅读模式,EPUB,演示模式,AI助手,文档内AI,正文改写,划词格式条,技能Skill,主题,快捷键,常见问题">
     <meta name="author" content="YiziPaper">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://md.yizigpt.com/help.html">
@@ -13,7 +13,7 @@
     <!-- Open Graph -->
     <meta property="og:type" content="article">
     <meta property="og:title" content="YiziMarkdown 帮助中心 - 完整使用文档">
-    <meta property="og:description" content="安装、编辑、演示、AI、主题、快捷键 —— 关于 YiziMarkdown 的一切用法，都在这里。">
+    <meta property="og:description" content="安装、编辑、演示、正文内 AI 改写与右侧 AI 助手、主题、快捷键 —— 关于 YiziMarkdown 的一切用法，都在这里。">
     <meta property="og:url" content="https://md.yizigpt.com/help.html">
     <meta property="og:site_name" content="YiziMarkdown">
     <meta property="og:locale" content="zh_CN">
@@ -169,7 +169,7 @@
                     <li><strong>Word 文档（DOCX）</strong>：Word 原生语义（标题 / 列表 / 表格 / 代码块 / 引用 / 任务列表），表格与表头样式对齐预览；图片支持本地路径、网络图片与 HTML <code>&lt;img&gt;</code> 标签，可用 <code>width</code> 属性控制宽度；<code>[toc]</code> 导出为可更新的 Word 原生目录域</li>
                     <li><strong>PDF</strong>：与预览还原度一致，长文档自动分页（Windows）</li>
                     <li><strong>HTML</strong>（<kbd>Ctrl</kbd>+<kbd>H</kbd>）：保留主题样式，可直接分享或发布；导出的 HTML 自带<strong>左侧悬浮大纲卡片</strong>，点击条目直达对应章节（PDF 不含侧栏）</li>
-                    <li><strong>PPTX</strong>：把演示模式导出为<strong>原生可编辑</strong>的 PowerPoint（文字 / 表格 / 图片 / 形状 / 原生公式），继承主题、明暗与版式；基准固定为 16:9 / 1280×720 逻辑画布，可含演讲者备注与页脚。导出弹窗可单独调整本次导出字号（70%–160%）；「检测版式」只测量不写文件，先看舒适 / 可压缩 / 超出兼容上限页码再导出；超页时可警告并列出页码，或自动压缩字号</li>
+                    <li><strong>PPTX</strong>：把演示模式导出为<strong>原生可编辑</strong>的 PowerPoint（文字 / 表格 / 图片 / 形状 / 原生公式），继承主题、明暗与版式；基准固定为 16:9 / 1280×720 逻辑画布，可含演讲者备注与页脚。导出弹窗可单独调整本次导出字号（70%–160%）；「检测版式」只测量不写文件，先看舒适 / 可压缩 / 超出兼容上限页码再导出；超页时可警告并列出页码，或自动压缩字号；长代码行按栏宽自动折行，折行增高的部分会带动同排卡片与后续内容一起下移，分栏卡片与下方栏外文案之间保留正文间距</li>
                     <li><strong>EPUB</strong>：启用「设置 → 插件 → EPUB 导出」后出现，导出 EPUB 3 电子书；控制面板可选章节拆分、封面、可见目录、阅读主题与文档信息</li>
                     <li><strong>Markdown</strong>（<kbd>Ctrl</kbd>+<kbd>M</kbd>）：纯 Markdown 文本副本</li>
                     <li><strong>纯文本</strong>：去除所有标记符号</li>
@@ -335,6 +335,12 @@
                     <li><strong>系统功能</strong>：复制、粘贴（用剪贴板内容替换当前选区）、添加到对话</li>
                     <li><strong>空配置</strong>：没有可显示功能时，选中文本不会弹出工具栏</li>
                 </ul>
+                <p><strong>星芒与格式条（v0.4.5）</strong>：浮栏最左侧是<strong>星芒</strong> —— 文档内 AI 的统一入口，点它在正文里直接改写；工具条 / 格式条的切换移到最右端的 <strong>⇄</strong> 按钮，选择会记住。</p>
+                <ul>
+                    <li><strong>格式条</strong>：加粗、斜体、删除线、高亮、行内代码（含代码块）、上标 / 下标、标题（H1–H3）、无序 / 有序 / 任务列表、引用与公式（行内 / 块）；带二级选项的图标 hover 展开；设置里可排序与显示 / 隐藏（链接默认隐藏）</li>
+                    <li><strong>已应用状态</strong>：选中文字时格式条标出当前生效的格式，点一次应用、再点一次取消；判定完全读取正文，撤销或手动改标记后同样准确</li>
+                    <li><strong>技能直通</strong>：结果去向设为「直接改写文档」的技能（如「润色改写」「Markdown 格式化」），点击后直接打开文档内 AI 并执行，结果可替换选区</li>
+                </ul>
                 <div class="callout callout-tip">
                     <span class="callout-icon">i</span>
                     <p><strong>与技能联动</strong>：通过划词触发技能时，AI 只处理你选中的文本，输入框里会显示「文本胶囊 + 技能胶囊」，一目了然。</p>
@@ -397,6 +403,10 @@
             <div class="help-sub" id="writing-table">
                 <h3>表格</h3>
                 <p>工具栏表格按钮或 <kbd>Ctrl</kbd>+<kbd>T</kbd> 打开 <strong>8×8 网格</strong>，鼠标移到目标位置点击即插入对应行列数的表格，无需手写分隔线。实时模式下表格渲染为真正的 HTML 表格，可点击单元格直接编辑。</p>
+                <ul>
+                    <li><strong>键盘导航</strong>：<kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd> 左右跳格（行末换行、最后一格自动新增一行），<kbd>Enter</kbd> 跳同列下一行，方向键在单元格间移动</li>
+                    <li><strong>整行 / 整列</strong>：点行首 / 列首手柄选中后统一加粗、斜体等；选中整行或整列格式化后，选中态保留以便连续操作</li>
+                </ul>
             </div>
 
             <div class="help-sub" id="writing-code">
@@ -736,9 +746,30 @@
         </section>
 
         <!-- ========== 6. AI 助手 ========== -->
-        <section class="help-section" id="ai" data-kw="AI 大模型 聊天 面板 API 密钥 keychain 供应商 自定义服务 获取模型 模型列表 流式 思考过程 引用文档 上下文 停止">
-            <h2><a class="anchor" href="#ai">#</a>AI 大模型助手</h2>
-            <p class="help-lead">右侧聊天面板内置大模型。API 密钥存系统钥匙串，安全不落盘。</p>
+        <section class="help-section" id="ai" data-kw="AI 大模型 聊天 面板 API 密钥 keychain 供应商 自定义服务 获取模型 模型列表 流式 思考过程 引用文档 上下文 停止 文档内 AI 正文改写 划词改写 光标处创作 会话历史 星芒 diff 补充需求">
+            <h2><a class="anchor" href="#ai">#</a>AI 助手与文档内 AI</h2>
+            <p class="help-lead">两种形态、同一套模型配置：在正文里直接改写（划词星芒 / 光标处创作），或打开右侧面板对话。API 密钥存系统钥匙串，安全不落盘。</p>
+
+            <div class="help-sub" id="ai-inline">
+                <h3>文档内 AI：直接改正文（v0.4.5 新增）</h3>
+                <div class="callout callout-new">
+                    <span class="callout-icon">新</span>
+                    <p>选中文字点浮栏最左侧的<b>星芒</b>，AI 就在选区旁改写，结果直接替换正文；光标处双击 <kbd>Ctrl</kbd> 也能让 AI 直接写一段 —— 不用再「右侧对话 → 复制 → 粘贴」。</p>
+                </div>
+                <ul>
+                    <li><strong>划词改写</strong>：选区旁输入指令，结果可<strong>替换选区 / 插入到下方 / 复制 / 放弃</strong>；「对比原文」会在正文里就地显示红删绿增的 diff，写入后浮层自动关闭，<kbd>Ctrl</kbd>+<kbd>Z</kbd> 可撤销</li>
+                    <li><strong>附加上下文</strong>：可选「当前小节 / 整篇文档 / 不附加」，让 AI 知道术语与前后语气（上限 12000 字）</li>
+                    <li><strong>补充需求</strong>：结果不满意继续提要求，多轮打磨后一次写入；同一浮层里保留首轮建立的语境</li>
+                    <li><strong>光标处创作</strong>：没有选中文字时，双击 <kbd>Ctrl</kbd> 或点顶部星芒，在光标处让 AI 写一段，结果可插入光标或复制</li>
+                    <li><strong>快捷意图</strong>：润色、扩写、缩写、翻译、纠错、转列表按选区内容自动给出</li>
+                    <li><strong>会话历史</strong>：浮层底部右侧的历史图标展开「左列表 + 右详情」，可查看完整结果并重新插入 / 复制 / 删除；未命名文档按标签页记，保存后跟随文件；单文档保留 50 条、90 天过期</li>
+                    <li><strong>浮层操作</strong>：顶部拖动柄可移动，底缘手柄可加高输入区（最多 480px），打开即聚焦；生成时「思考」内容默认展开</li>
+                </ul>
+                <div class="callout callout-tip">
+                    <span class="callout-icon">i</span>
+                    <p><strong>和右侧面板 / 划词技能的区别</strong>：这里的产出直接写回文档；右侧对话与划词技能用于「先看结果再决定」。技能也可以把结果去向设为<strong>直接改写文档</strong>，点一下就在正文里执行。</p>
+                </div>
+            </div>
 
             <div class="help-sub" id="ai-setup">
                 <h3>配置步骤</h3>
@@ -833,6 +864,7 @@
                         </tbody>
                     </table>
                 </div>
+                <p><strong>结果去向（v0.4.5）</strong>：技能可设为「发送到 AI 助手对话」或「直接改写文档」。后者在划词浮栏点击时直接打开文档内 AI 并执行提示词，结果可替换选区。内置「润色改写」「Markdown 格式化」默认直通正文；「演示稿提炼」「文档摘要」「全文翻译」仍送往右侧对话（产出是原文之外的新内容）。</p>
             </div>
 
             <div class="help-sub" id="skills-use">
@@ -872,6 +904,7 @@
                             <tr><td><code>description</code></td><td>详细说明，悬停时展开</td></tr>
                             <tr><td><code>file</code></td><td>提示词文件名</td></tr>
                             <tr><td><code>needsDoc</code></td><td>是否需要引用当前文档（true / false）</td></tr>
+                            <tr><td><code>delivery</code></td><td>结果去向：<code>chat</code>（默认，送进右侧对话）/ <code>inline</code>（划词浮栏点击后直接在正文里改写）</td></tr>
                             <tr><td><code>icon</code></td><td>可选图标名称，如 <code>presentation</code> / <code>file-text</code> / <code>pencil</code> / <code>languages</code></td></tr>
                         </tbody>
                     </table>
@@ -948,7 +981,7 @@
                 <p>打开已缓存的云端文档时，程序会先向服务器确认版本，而不是直接使用旧缓存：</p>
                 <ul>
                     <li>先比对 ETag 与文件大小；完全一致就不下载正文</li>
-                    <li>有变化时再取云端正文，显示<strong>本地 / 云端的字节数、行数、内容摘要与首个差异行</strong></li>
+                    <li>有变化时再取云端正文，显示<strong>本地 / 云端的字节数、行数、内容摘要与首个差异行</strong>，并列出本地缓存与云端的保存时间（云端取 <code>Last-Modified</code>）</li>
                     <li>可选<strong>用云端覆盖本地 / 保留本地 / 另存云端副本 / 取消</strong>；本地未保存的修改不会被静默覆盖</li>
                     <li>「保留本地」不会清掉旧 ETag，下次保存仍会进入冲突弹窗，由你显式决定</li>
                     <li>云端文件已被删除或移动时，可一键重新上传到原路径，或另存云端副本</li>
@@ -1065,8 +1098,8 @@
                             <tr><td>编辑器</td><td>源码 / 预览字体字号行高、拼写检查、鼠标光标样式（原生 / 加粗）</td></tr>
                             <tr><td>实时模式</td><td>标记显现动画（聚焦 / 闪光 / 辉光 / 涟漪）、属性面板相关选项</td></tr>
                             <tr><td>AI 助手</td><td>供应商与模型、API 密钥、上下文轮数、引用上限</td></tr>
-                            <tr><td>Skill 管理</td><td>新增 / 编辑 / 删除 AI 技能，修改名称、ID、图标、简介与提示词正文；保存后 AI 面板即时刷新</td></tr>
-                            <tr><td>划词助手</td><td>增删 / 排序工具栏功能，修改显示名称；支持预设 / 自建技能与复制、粘贴、添加到对话，顶部实时预览</td></tr>
+                            <tr><td>Skill 管理</td><td>新增 / 编辑 / 删除 AI 技能，修改名称、ID、图标、简介、提示词正文与<strong>结果去向</strong>（发送到对话 / 直接改写文档）；保存后 AI 面板即时刷新</td></tr>
+                            <tr><td>划词助手</td><td>增删 / 排序工具栏功能，修改显示名称；支持预设 / 自建技能与复制、粘贴、添加到对话；可切换<strong>工具条 / 格式条</strong>并单独控制每种格式的显示，顶部实时预览</td></tr>
                             <tr><td>云端存储</td><td>WebDAV 服务器地址、凭据（存系统凭据库）、起始目录、测试连接、缓存同步与离线镜像</td></tr>
                             <tr><td>快捷键</td><td>可视化配置、按键录制、冲突检测、恢复默认</td></tr>
                             <tr><td>插件</td><td>EPUB 导出开关；KaTeX 公式与 Mermaid 已内置为核心渲染器，无需在插件页开启</td></tr>
@@ -1143,6 +1176,7 @@
                             <tr><td><kbd>F2</kbd></td><td>切换深浅模式</td><td><kbd>F3</kbd></td><td>循环四种编辑视图</td></tr>
                             <tr><td><kbd>F9</kbd></td><td>禅模式（仅源码 / 实时）</td><td><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>R</kbd></td><td>阅读模式</td></tr>
                             <tr><td><kbd>F11</kbd></td><td>切换全屏</td><td><kbd>F12</kbd></td><td>开发者工具</td></tr>
+                            <tr><td>双击 <kbd>Ctrl</kbd></td><td>文档内 AI（可在设置中改为 Ctrl+Enter 或关闭）</td><td></td><td></td></tr>
                             <tr><td><kbd>/</kbd> 或 <kbd>、</kbd></td><td>斜杠菜单</td><td><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd></td><td>演示模式</td></tr>
                         </tbody>
                     </table>
