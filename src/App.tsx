@@ -2856,39 +2856,51 @@ function App() {
 function ShortcutsPanel() {
   const { t } = useI18n()
   const map = getKeybindingsMap()
+  // 文档内 AI 创作键不走 keybindings 体系（双击 Ctrl 是特殊手势），单独一行显示当前设置
+  const inlineAIShortcut = useSettingsStore((s) => s.inlineAIShortcut)
   const categories = [...new Set(SHORTCUT_ACTIONS.map(a => a.categoryKey))]
+
+  const Row = ({ kbd, label }: { kbd: string; label: string }) => (
+    <div
+      className="flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-default select-none"
+      style={{
+        borderColor: 'var(--editor-border)',
+        background: 'var(--editor-surface)',
+        transition: 'background 0.15s'
+      }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--editor-hover)' }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--editor-surface)' }}
+    >
+      <kbd
+        className="text-[0.6875rem] font-mono font-medium px-2 py-0.5 rounded shrink-0"
+        style={{
+          color: 'var(--editor-text)',
+          background: 'var(--editor-bg)',
+          border: '1px solid var(--editor-border)'
+        }}
+      >{kbd}</kbd>
+      <span className="text-[0.8125rem] truncate" style={{ color: 'var(--editor-text)' }}>{label}</span>
+    </div>
+  )
+
   return (
     <div className="mt-4 space-y-5">
       {categories.map(cat => (
         <div key={cat}>
           <h3 className="text-[0.6875rem] font-semibold uppercase tracking-widest mb-2.5" style={{ color: 'var(--editor-accent)' }}>{t(cat)}</h3>
           <div className="grid grid-cols-3 gap-2">
-            {SHORTCUT_ACTIONS.filter(a => a.categoryKey === cat && a.defaultKey).map(action => {
-              const key = formatKey(map[action.id] || action.defaultKey)
-              return (
-                <div
-                  key={action.id}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-default select-none"
-                  style={{
-                    borderColor: 'var(--editor-border)',
-                    background: 'var(--editor-surface)',
-                    transition: 'background 0.15s'
-                  }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--editor-hover)' }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--editor-surface)' }}
-                >
-                  <kbd
-                    className="text-[0.6875rem] font-mono font-medium px-2 py-0.5 rounded shrink-0"
-                    style={{
-                      color: 'var(--editor-text)',
-                      background: 'var(--editor-bg)',
-                      border: '1px solid var(--editor-border)'
-                    }}
-                  >{key}</kbd>
-                  <span className="text-[0.8125rem] truncate" style={{ color: 'var(--editor-text)' }}>{t(action.labelKey)}</span>
-                </div>
-              )
-            })}
+            {/* 无默认键的条目：用户在设置里绑过才显示 */}
+            {SHORTCUT_ACTIONS
+              .filter(a => a.categoryKey === cat && (map[a.id] || a.defaultKey))
+              .map(action => (
+                <Row key={action.id} kbd={formatKey(map[action.id] || action.defaultKey)} label={t(action.labelKey)} />
+              ))}
+            {cat === 'shortcuts.view' && inlineAIShortcut !== 'off' && (
+              <Row
+                kbd={t(inlineAIShortcut === 'ctrlEnter' ? 'settings.inlineAIShortcutCtrlEnter' : 'settings.inlineAIShortcutDoubleCtrl')}
+                label={t('settings.inlineAIShortcut')}
+              />
+            )}
           </div>
         </div>
       ))}
