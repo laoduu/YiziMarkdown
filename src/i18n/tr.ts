@@ -440,6 +440,8 @@ export const tr = {
     skillDelivery: 'Çıktı',
     skillDeliveryChat: 'AI sohbetine gönder',
     skillDeliveryInline: 'Belgede düzenle',
+    skillDeliveryChatHint: 'Sağdaki sohbete gider',
+    skillDeliveryInlineHint: 'Seçimi yerinde değiştirir',
     skillNeedsDocShort: "Belge gerekli",
     skillContent: "Prompt içeriği (Markdown)",
     skillContentPlaceholder: "Skill talimatlarını Markdown ile yazın…",

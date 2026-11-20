@@ -440,6 +440,8 @@ export const uk = {
     skillDelivery: 'Призначення',
     skillDeliveryChat: 'Надіслати в чат ШІ',
     skillDeliveryInline: 'Редагувати документ',
+    skillDeliveryChatHint: 'Надсилає в чат праворуч',
+    skillDeliveryInlineHint: 'Замінює виділення',
     skillNeedsDocShort: "Потрібен документ",
     skillContent: "Вміст промпту (Markdown)",
     skillContentPlaceholder: "Напишіть інструкції навички в Markdown…",

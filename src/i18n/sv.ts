@@ -471,6 +471,8 @@ export const sv = {
     skillDelivery: 'Leverans',
     skillDeliveryChat: 'Skicka till AI-chatt',
     skillDeliveryInline: 'Redigera dokumentet',
+    skillDeliveryChatHint: 'Går till chatten till höger',
+    skillDeliveryInlineHint: 'Ersätter markeringen',
     skillNeedsDocShort: "Kräver dok.",
     skillContent: "Promptinnehåll (Markdown)",
     skillContentPlaceholder: "Skriv skillens instruktioner i Markdown…",

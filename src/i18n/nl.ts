@@ -471,6 +471,8 @@ export const nl = {
     skillDelivery: 'Bestemming',
     skillDeliveryChat: 'Naar AI-chat sturen',
     skillDeliveryInline: 'Direct in document bewerken',
+    skillDeliveryChatHint: 'Gaat naar de chat rechts',
+    skillDeliveryInlineHint: 'Vervangt de selectie',
     skillNeedsDocShort: "Doc nodig",
     skillContent: "Promptinhoud (Markdown)",
     skillContentPlaceholder: "Schrijf de skill-instructies in Markdown…",

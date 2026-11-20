@@ -9,7 +9,7 @@
     <meta name="author" content="YiziPaper">
     <meta name="robots" content="index, follow">
     <meta name="docs-src" content="src-tauri/skill-guide.md">
-    <meta name="docs-hash" content="ae80ae8b6449c26d2854e96d776283cc4d1f1aa654b700a13167bc1ea024aa55">
+    <meta name="docs-hash" content="c6c2f64d47347e73a0c5a374d525699977793bb84998d8dd090d3a6ceceaf616">
     <link rel="canonical" href="https://md.yizigpt.com/skill-spec.html">
 
     <!-- Open Graph -->
@@ -387,6 +387,7 @@
 </table></div>
 <blockquote>
 <p><code>delivery: &quot;inline&quot;</code> 的技能只在「划词浮栏」里生效：选中文字后点该技能，会打开文档内 AI 浮层并自动执行技能提示词，结果可用「替换选区 / 插入到下方」直接写回正文，也可以继续提「补充需求」。不选中文字时仍按普通技能送入右侧对话。</p>
+<p>内置技能里「润色改写」「Markdown 格式化」默认就是 <code>inline</code>（改的是原文，点完即可写回）；「演示稿提炼」「文档摘要」「全文翻译」默认 <code>chat</code>（产出是新内容，送进右侧对话查看）。想让某个内置技能改回对话，或者把自定义技能改成直通正文，都在「设置 → Skill 管理」的「结果去向」里切换。</p>
 </blockquote>
 <p><strong>第 3 步：重启应用</strong></p>
 <p>保存后重启 YiziMarkdown，新的 Skill 就会出现在列表中。</p>

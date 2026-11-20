@@ -440,6 +440,8 @@ export const it = {
     skillDelivery: 'Destinazione',
     skillDeliveryChat: 'Invia alla chat IA',
     skillDeliveryInline: 'Modifica il documento',
+    skillDeliveryChatHint: 'Va nella chat laterale',
+    skillDeliveryInlineHint: 'Sostituisce la selezione',
     skillNeedsDocShort: "Richiede doc.",
     skillContent: "Contenuto del prompt (Markdown)",
     skillContentPlaceholder: "Scrivi le istruzioni dello skill in Markdown…",

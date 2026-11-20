@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 8,
   "skills": [
     {
       "id": "slides-outline",
@@ -23,9 +23,10 @@
       "id": "polish-writing",
       "name": "润色改写",
       "summary": "润色文字，使其更通顺专业",
-      "description": "对用户输入或选中的内容进行润色：修正语法与不通顺之处、优化表达节奏，保持原意与原语言，不随意增删观点。可直接在对话中给出改写后的文本。",
+      "description": "对用户输入或选中的内容进行润色：修正语法与不通顺之处、优化表达节奏，保持原意与原语言，不随意增删观点。在对话里直接给出改写后的文本；划词时也可在正文里直接改写并替换选区。",
       "file": "polish-writing.md",
       "needsDoc": false,
+      "delivery": "inline",
       "icon": "pencil"
     },
     {
@@ -44,6 +45,7 @@
       "description": "将任意文本（纯文本、半结构化笔记、已带部分 Markdown 的内容）整理成语法规范的 Markdown 文档：补齐标题层级、段落空行、列表与任务列表、引用、表格、代码围栏等结构标记。只做格式规范化，不增删改任何文字，不提炼、不总结、不润色、不翻译。可直接格式化粘贴的文本，勾选引用当前文档时格式化当前文档。",
       "file": "markdown-format.md",
       "needsDoc": false,
+      "delivery": "inline",
       "icon": "file-code2"
     }
   ]

@@ -3,6 +3,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import {
   parseSkillManifest,
   serializeSkillManifest,
@@ -167,4 +168,17 @@ test('planSkillSave：草稿的 delivery 落到清单里', () => {
   }
   const plan = planSkillSave(manifest([]), draft, 'prompt', null)
   assert.equal(plan.manifest.skills[0].delivery, 'inline')
+})
+
+test('内置清单：润色改写 / Markdown 格式化默认直接改写文档', () => {
+  const raw = readFileSync(new URL('../skills/skills.json', import.meta.url), 'utf8')
+  const parsed = parseSkillManifest(raw)
+  const delivery = Object.fromEntries(parsed.skills.map((s) => [s.id, s.delivery]))
+  assert.equal(delivery['polish-writing'], 'inline', '润色改写应开箱直通正文')
+  assert.equal(delivery['markdown-format'], 'inline', 'Markdown 格式化应开箱直通正文')
+  // 产出是「新内容」而非「改原文」的技能仍走右侧对话
+  assert.equal(delivery['doc-summary'], 'chat')
+  assert.equal(delivery['slides-outline'], 'chat')
+  assert.equal(delivery['translate-fulltext'], 'chat')
+  assert.ok(parsed.version > 0, '清单需要版本号，升级时才会同步默认值')
 })

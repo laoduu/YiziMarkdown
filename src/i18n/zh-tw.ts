@@ -386,6 +386,8 @@ export const zhTW = {
     skillDelivery: '結果去向',
     skillDeliveryChat: '傳送到 AI 助理對話',
     skillDeliveryInline: '直接改寫文件',
+    skillDeliveryChatHint: '結果送進右側對話',
+    skillDeliveryInlineHint: '在正文裡取代選取範圍',
     skillNeedsDocShort: "需文件",
     skillContent: "提示詞內容（Markdown）",
     skillContentPlaceholder: "用 Markdown 撰寫技能執行說明…",

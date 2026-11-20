@@ -440,6 +440,8 @@ export const ko = {
     skillDelivery: '출력 방식',
     skillDeliveryChat: 'AI 채팅으로 보내기',
     skillDeliveryInline: '문서에서 직접 편집',
+    skillDeliveryChatHint: '오른쪽 채팅으로 전송',
+    skillDeliveryInlineHint: '선택 영역을 바로 교체',
     skillNeedsDocShort: "문서 필요",
     skillContent: "프롬프트 내용(Markdown)",
     skillContentPlaceholder: "스킬 지침을 Markdown으로 작성…",

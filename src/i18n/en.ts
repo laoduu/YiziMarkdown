@@ -386,6 +386,8 @@ export const en = {
     skillDelivery: 'Delivery',
     skillDeliveryChat: 'Send to AI chat',
     skillDeliveryInline: 'Edit the document inline',
+    skillDeliveryChatHint: 'Goes to the side chat',
+    skillDeliveryInlineHint: 'Replaces the selection in place',
     skillNeedsDocShort: "Needs document",
     skillContent: "Prompt content (Markdown)",
     skillContentPlaceholder: "Write the skill instructions in Markdown…",

@@ -386,6 +386,8 @@ export const zh = {
     skillDelivery: '结果去向',
     skillDeliveryChat: '发送到 AI 助手对话',
     skillDeliveryInline: '直接改写文档',
+    skillDeliveryChatHint: '结果送进右侧对话',
+    skillDeliveryInlineHint: '在正文里替换选区',
     skillNeedsDocShort: "需文档",
     skillContent: "提示词内容（Markdown）",
     skillContentPlaceholder: "用 Markdown 编写技能执行说明…",

@@ -1684,15 +1684,39 @@ function SkillsSettings() {
                 {t('settings.skillNeedsDoc')}
               </label>
               <div>
-                <label className="block text-[0.6875rem] text-[var(--sidebar-text)] mb-1">{t('settings.skillDelivery')}</label>
-                <select
-                  value={draft.delivery ?? 'chat'}
-                  onChange={(e) => setDraft({ ...draft, delivery: e.target.value === 'inline' ? 'inline' : 'chat' })}
-                  className="settings-select"
+                <label id="skill-delivery-label" className="block text-[0.6875rem] text-[var(--sidebar-text)] mb-1">{t('settings.skillDelivery')}</label>
+                <div
+                  role="radiogroup"
+                  aria-labelledby="skill-delivery-label"
+                  className="flex gap-0.5 rounded-lg border border-[var(--editor-border)] bg-[var(--editor-surface)] p-0.5"
                 >
-                  <option value="chat">{t('settings.skillDeliveryChat')}</option>
-                  <option value="inline">{t('settings.skillDeliveryInline')}</option>
-                </select>
+                  {([
+                    { value: 'chat' as const, icon: MessageSquarePlus, label: t('settings.skillDeliveryChat'), hint: t('settings.skillDeliveryChatHint') },
+                    { value: 'inline' as const, icon: TextCursorInput, label: t('settings.skillDeliveryInline'), hint: t('settings.skillDeliveryInlineHint') },
+                  ]).map(({ value, icon: Icon, label, hint }) => {
+                    const active = (draft.delivery ?? 'chat') === value
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        onClick={() => setDraft({ ...draft, delivery: value })}
+                        className={`flex flex-1 min-w-0 flex-col gap-0.5 rounded-md px-2.5 py-1.5 text-left transition-colors ${
+                          active
+                            ? 'bg-[var(--editor-accent)] text-[var(--on-accent)]'
+                            : 'text-[var(--sidebar-text)] hover:bg-[var(--editor-hover)] hover:text-[var(--editor-text)]'
+                        }`}
+                      >
+                        <span className="flex items-center gap-1.5 min-w-0">
+                          <Icon size={13} className="shrink-0" />
+                          <span className="text-[0.75rem] leading-tight">{label}</span>
+                        </span>
+                        <span className={`pl-[19px] text-[0.625rem] leading-tight ${active ? 'text-[var(--on-accent)]/75' : 'opacity-80'}`}>{hint}</span>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
               <div>

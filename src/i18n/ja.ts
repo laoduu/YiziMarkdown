@@ -440,6 +440,8 @@ export const ja = {
     skillDelivery: '出力先',
     skillDeliveryChat: 'AI チャットへ送る',
     skillDeliveryInline: '文書内で直接編集',
+    skillDeliveryChatHint: '右側のチャットに送る',
+    skillDeliveryInlineHint: '選択範囲をその場で置換',
     skillNeedsDocShort: "文書必須",
     skillContent: "プロンプト内容（Markdown）",
     skillContentPlaceholder: "スキルの手順を Markdown で記述…",

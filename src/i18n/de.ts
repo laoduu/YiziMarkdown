@@ -471,6 +471,8 @@ export const de = {
     skillDelivery: 'Ausgabe',
     skillDeliveryChat: 'An KI-Chat senden',
     skillDeliveryInline: 'Direkt im Dokument ändern',
+    skillDeliveryChatHint: 'Geht in den Chat rechts',
+    skillDeliveryInlineHint: 'Ersetzt die Auswahl im Text',
     skillNeedsDocShort: "Dok. nötig",
     skillContent: "Prompt-Inhalt (Markdown)",
     skillContentPlaceholder: "Skill-Anweisungen in Markdown schreiben…",

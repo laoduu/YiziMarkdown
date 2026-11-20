@@ -378,6 +378,8 @@ export const ru = {
     skillDelivery: 'Назначение',
     skillDeliveryChat: 'Отправить в чат ИИ',
     skillDeliveryInline: 'Править документ',
+    skillDeliveryChatHint: 'Уходит в чат справа',
+    skillDeliveryInlineHint: 'Заменяет выделение',
     skillNeedsDocShort: "Нужен документ",
     skillContent: "Содержимое промпта (Markdown)",
     skillContentPlaceholder: "Напишите инструкции навыка в Markdown…",
