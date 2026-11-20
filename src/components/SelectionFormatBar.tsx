@@ -122,7 +122,7 @@ function FormatButton({ id, def, interactive, active = false, onAction }: Format
           if (def.action) run(def.action)
         }}
       >
-        <Icon size={14} />
+        <Icon size={14} strokeWidth={active ? 2.6 : 2} />
       </button>
       {menu && createPortal(
         <div

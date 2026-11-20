@@ -3171,15 +3171,14 @@ a {
   background: var(--sel-toolbar-hover);
   color: var(--sel-toolbar-accent);
 }
-/* 已应用：与主格式栏的 active 一致 —— 主题强调色铺底，深色图标 */
+/* 已应用：只做淡淡的强调色托底 + 强调色图标（与浮层内其它 is-active 同一语言） */
 .selection-format-btn.is-active {
-  background: var(--sel-toolbar-accent);
-  color: #fff;
+  background: color-mix(in srgb, var(--sel-toolbar-accent) 10%, transparent);
+  color: var(--sel-toolbar-accent);
 }
 .selection-format-btn.is-active:hover {
-  background: var(--sel-toolbar-accent);
-  color: #fff;
-  filter: brightness(1.06);
+  background: color-mix(in srgb, var(--sel-toolbar-accent) 18%, transparent);
+  color: var(--sel-toolbar-accent);
 }
 .selection-toolbar-preview .selection-format-btn {
   cursor: default;
